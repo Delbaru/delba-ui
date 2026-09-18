@@ -1,10 +1,10 @@
 "use client";
 
-import Image, { type ImageProps } from 'next/image';
+import Image, { getImageProps, type ImageProps } from 'next/image';
 import { useMemo, useState, type CSSProperties } from 'react';
 import type React from 'react';
 
-import { BREAKPOINT, boxLayout, createLayoutClasses, cx, resolveResponsive, sizeClasses, splitRootDomProps, stateLinkProps, useMergedRefs, type GrowProps, type RadiusInput, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef } from '../core';
+import { BREAKPOINT, MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveResponsive, sizeClasses, splitRootDomProps, stateLinkProps, useMergedRefs, type GrowProps, type RadiusInput, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef } from '../core';
 import { useFancybox } from '../hooks/useFancybox';
 import { useSharedMotion, type SharedMotionProps } from '../hooks/useSharedMotion';
 
@@ -32,7 +32,22 @@ type ImgBaseProps = Omit<
   | 'alt'
   | 'onLoad'
   | 'onError'
+  | 'src'
 >;
+
+/** Один источник картинки — то, что принимает `next/image`: адрес или импорт файла. */
+export type ImgSource = ImageProps['src'];
+
+/**
+ * Свой кадр на каждую полосу ширины — «art direction»: `[desktop, mobile, tablet]`, порядок
+ * тот же, что у всех кортежей кита. `null` — ПРОПУСК полосы, как у пропов раскладки: своей
+ * `<source>` у неё нет, и она получает то, что получила бы по каскаду (планшет без своего
+ * кадра — десктопный, телефон без своего — планшетный, если он есть).
+ *
+ * Отдельный тип, а не `ResponsiveValue`: под `strictTuple` проекта тот запрещает скаляр, а
+ * `src="…"` строкой обязан работать как раньше — публичное в ките только добавляют.
+ */
+export type ImgSrcTuple = [ImgSource, ImgSource | null, ImgSource | null];
 
 type ImgRootSizeProps = {
   rootW?: ResponsiveValue<SizeValue>;
@@ -47,6 +62,13 @@ export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootS
   'data-point-events'?: string;
 
   alt: string;
+
+  /**
+   * Картинка. Строка или импорт — как у `next/image`. Кортеж `[desktop, mobile, tablet]` —
+   * свой кадр на полосу ширины (`ImgSrcTuple`): внутри рисуется `<picture>`, и браузер сам
+   * меняет кадр при смене ширины окна. Размеры, `sizes`, `objectFit` — общие на все кадры.
+   */
+  src: ImgSource | ImgSrcTuple;
 
   objectFit?: ResponsiveValue<ObjectFitKey>;
   objectPosition?: ResponsiveValue<ObjectPositionKey>;
@@ -158,6 +180,27 @@ const buildSizes = (
   return `(max-width: ${MOBILE_MAX}px) ${m}, (max-width: ${TABLET_MAX}px) ${t}, ${d}`;
 };
 
+/**
+ * Оптимизатор `next/image` не может собрать картинку по адресу НАШЕГО API (см. ниже у
+ * `unoptimized`): решается для каждого источника отдельно — в кортеже они бывают разными.
+ */
+const isOwnApiSource = (src: ImgSource | null | undefined): boolean =>
+  typeof src === 'string' && src.startsWith('/api/');
+
+/**
+ * Источники по полосам. Своя `<source>` нужна полосе, только если кадр у неё СВОЙ: совпал с
+ * десктопным — браузеру нечего переключать.
+ */
+function resolveSources(src: ImgSource | ImgSrcTuple): { desktop: ImgSource; mobile: ImgSource | null; tablet: ImgSource | null } {
+  if (!Array.isArray(src)) return { desktop: src, mobile: null, tablet: null };
+  const [desktop, mobile, tablet] = src;
+  return {
+    desktop,
+    mobile: mobile !== null && mobile !== desktop ? mobile : null,
+    tablet: tablet !== null && tablet !== desktop ? tablet : null,
+  };
+}
+
 function resolveFancyboxHref(src: ImageProps['src']): string | null {
   if (typeof src === 'string') {
     return src;
@@ -177,6 +220,7 @@ export function Img({
   style,
   'data-point-events': dataPointEvents,
   alt,
+  src,
   w,
   minW,
   maxW,
@@ -242,11 +286,12 @@ export function Img({
   //
   // Правилом, а не пропом на call-site: иначе про него забудут ровно там, где картинка личная,
   // и поймается это уже глазами на живых данных.
-  const unoptimized = String(elementProps.src ?? '').startsWith('/api/');
-  const imageProps = { ...elementProps, unoptimized };
+  const sources = resolveSources(src);
+  const imageProps = { ...elementProps, src: sources.desktop, unoptimized: isOwnApiSource(sources.desktop) };
+  const hasArtDirection = sources.mobile !== null || sources.tablet !== null;
 
   const fancyboxGroup = fancybox?.trim();
-  const fancyboxHref = useMemo(() => resolveFancyboxHref(elementProps.src), [elementProps.src]);
+  const fancyboxHref = useMemo(() => resolveFancyboxHref(sources.desktop), [sources.desktop]);
   const hasFancybox = Boolean(fancyboxGroup && fancyboxHref);
 
   useFancybox(hasFancybox);
@@ -273,6 +318,60 @@ export function Img({
     setIsLoaded(true);
     onLoad?.(event);
   };
+
+  const imageClassName = cx(
+    'ui-img-image',
+    ...c.value('objectFit', objectFit ?? 'cover'),
+    ...c.value('objectPosition', objectPosition ?? 'center'),
+  );
+
+  /**
+   * Кадр по полосам — `<picture>` через `getImageProps()`, как советует Next для art
+   * direction: у каждого источника свой `srcSet` от оптимизатора, а `<img>` внутри — это
+   * десктопный кадр со всеми атрибутами `next/image` (fill, sizes, loading). Порядок
+   * `<source>` — от узкой полосы к широкой: браузер берёт ПЕРВУЮ подошедшую.
+   */
+  const pictureProps = (source: ImgSource) =>
+    getImageProps({
+      ...imageProps,
+      src: source,
+      unoptimized: isOwnApiSource(source),
+      alt: normalizedAlt,
+      fill: true,
+      sizes: computedSizes,
+      quality: normalizedQuality,
+    }).props;
+
+  const mainImage = hasArtDirection ? (
+    <picture>
+      {sources.mobile !== null && (
+        <source media={MEDIA_QUERY.mobile} srcSet={pictureProps(sources.mobile).srcSet} sizes={computedSizes} />
+      )}
+      {sources.tablet !== null && (
+        <source media={MEDIA_QUERY.below} srcSet={pictureProps(sources.tablet).srcSet} sizes={computedSizes} />
+      )}
+      <img
+        {...pictureProps(sources.desktop)}
+        alt={normalizedAlt}
+        draggable={false}
+        className={imageClassName}
+        onLoad={handleLoad}
+        onError={onError}
+      />
+    </picture>
+  ) : (
+    <Image
+      {...imageProps}
+      alt={normalizedAlt}
+      draggable={false}
+      fill
+      sizes={computedSizes}
+      quality={normalizedQuality}
+      className={imageClassName}
+      onLoad={handleLoad}
+      onError={onError}
+    />
+  );
 
   return (
     <span
@@ -314,21 +413,7 @@ export function Img({
               )}
             />
           )}
-          <Image
-            {...imageProps}
-            alt={normalizedAlt}
-            draggable={false}
-            fill
-            sizes={computedSizes}
-            quality={normalizedQuality}
-            className={cx(
-              'ui-img-image',
-              ...c.value('objectFit', objectFit ?? 'cover'),
-              ...c.value('objectPosition', objectPosition ?? 'center'),
-            )}
-            onLoad={handleLoad}
-            onError={onError}
-          />
+          {mainImage}
         </a>
       ) : (
         <>
@@ -350,21 +435,7 @@ export function Img({
               )}
             />
           )}
-          <Image
-            {...imageProps}
-            alt={normalizedAlt}
-            draggable={false}
-            fill
-            sizes={computedSizes}
-            quality={normalizedQuality}
-            className={cx(
-              'ui-img-image',
-              ...c.value('objectFit', objectFit ?? 'cover'),
-              ...c.value('objectPosition', objectPosition ?? 'center'),
-            )}
-            onLoad={handleLoad}
-            onError={onError}
-          />
+          {mainImage}
         </>
       )}
     </span>
