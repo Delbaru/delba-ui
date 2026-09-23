@@ -248,6 +248,9 @@ export function Img({
   sizesHeight,
   blur = false,
   quality,
+  priority,
+  loading,
+  fetchPriority,
   onLoad,
   onError,
   linkState,
@@ -287,7 +290,15 @@ export function Img({
   // Правилом, а не пропом на call-site: иначе про него забудут ровно там, где картинка личная,
   // и поймается это уже глазами на живых данных.
   const sources = resolveSources(src);
-  const imageProps = { ...elementProps, src: sources.desktop, unoptimized: isOwnApiSource(sources.desktop) };
+  // `priority` — «картинка первого экрана»: в Next 16 это eager + high, без устаревшего `priority` и без
+  // preload-ссылки, которая у кадров по полосам тянула бы десктопный файл и на телефон.
+  const imageProps = {
+    ...elementProps,
+    loading: priority ? 'eager' : loading,
+    fetchPriority: priority ? 'high' : fetchPriority,
+    src: sources.desktop,
+    unoptimized: isOwnApiSource(sources.desktop),
+  } as const;
   const hasArtDirection = sources.mobile !== null || sources.tablet !== null;
 
   const fancyboxGroup = fancybox?.trim();
