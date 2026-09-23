@@ -20,6 +20,11 @@
 `below`, `mobile`, `tablet`, `reducedMotion`). **Единственный источник.** Раньше те же 767/1023/1024
 жили пятью копиями и расходились. В SCSS то же самое даёт `core/_mixins.scss`.
 
+`core/base/scale.ts` — масштаб: `UiScale` (базы `mobile`/`tablet`/`desktop` и потолок `max`), `DEFAULT_SCALE`,
+`scaleCss` (блок `--base-width`/`--rpx` по полосам) и `imageSizes` (атрибут `sizes` из ширин в rpx). Значения
+проекта — генерат `core/scale.ts` (`SCALE`); пока его нет, `import … from './scale'` берёт папку
+`core/scale/` с умолчаниями — файл резолвится раньше папки.
+
 ## Движение
 
 `core/base/motion.ts`:

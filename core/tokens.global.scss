@@ -5,7 +5,13 @@
 @use 'sass:meta';
 
 // Слои библиотеки: покой компонента < проп (утилита) < состояние компонента; стили проекта без слоя сильнее всех.
-@layer ui.components, ui.utilities, ui.states;
+@layer ui.scale, ui.components, ui.utilities, ui.states;
+
+// Масштаб: `--base-width` и `--rpx` по полосам из `scale` конфига (генерат). Слой — чтобы тема
+// проекта, которая ещё объявляет `--rpx` сама, перебивала его при любом порядке подключения.
+@layer ui.scale {
+  @include meta.load-css('./scale');
+}
 
 @layer ui.utilities {
   @include meta.load-css('./utilities');

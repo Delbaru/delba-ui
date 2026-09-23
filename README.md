@@ -55,7 +55,7 @@ node <путь>/UI/tools/cli.mjs check   # красные линии (--update �
 
 Конфиг ([`tools/config.ts`](tools/config.ts)) — всё необязательно: `scan` (`['src']`, кит
 сканируется всегда), `seeds`, `public` (`public`), `theme` (`theme`), `rules` (`['src']`),
-`baseline` (`.rules-baseline.json`), `skins`. Проекту нужны `typescript` и `tsx`.
+`baseline` (`.rules-baseline.json`), `skins`, `scale` (базы масштаба, см. ниже). Проекту нужны `typescript` и `tsx`.
 
 ## Что должен дать проект
 
@@ -72,6 +72,11 @@ node <путь>/UI/tools/cli.mjs check   # красные линии (--update �
   ```
 
   Конфиг — `{ scan: ['apps', 'libs'], seeds? }`, пути от cwd, пример — `tools/ui/utilities.config.ts` в socrat.
+- **Масштаб.** `1rpx = ширина окна / база полосы`, на десктопе шире потолка rpx не растёт. Базы —
+  `scale` в `ui.config.ts` (умолчания `{ mobile: 320, tablet: 768, desktop: 1920, max: 2560 }`); генератор
+  пишет из них `--base-width`/`--rpx` (`core/_scale.scss`, слой `ui.scale` — тема проекта со своим `--rpx`
+  его перебивает) и `core/scale.ts` для JS. По тем же числам `Img` считает `sizes`: `w={624}` →
+  `(min-width: 2560px) 832px, 32.5vw`. Тема проекта `--rpx` больше задавать не должна.
 - **Подключить [`core/tokens.global.scss`](core/tokens.global.scss) в глобальные стили** (`@use`): там
   утилиты раскладки и классы примитивов `ui-*` (`ui-flex`, `ui-text`, `ui-icon`…). У примитивов нет
   CSS-модулей, без этого файла они голые.

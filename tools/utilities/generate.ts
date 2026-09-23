@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
 
+import { resolveScale, scaleCss, type UiScale } from '../../core/base/scale';
 import { normalizeCss } from '../../core/utilities/keys';
 import { renderRules, type UtilityRule } from '../../core/utilities/rules';
 import { extractUtilityRules, type ExtractOptions, type Source } from './extract';
@@ -11,16 +12,21 @@ import { extractUtilityRules, type ExtractOptions, type Source } from './extract
 // Генератор таблицы утилит: разбирает исходники проекта компилятором TypeScript и пишет два
 // генерата кита (вне git, у каждого проекта свои):
 //   core/_utilities.scss   — классы утилит под значения, найденные в коде проекта;
-//   core/_field-sizes.scss — числовые высоты для полей (`height_56` ставит ещё и `--input-height`).
+//   core/_field-sizes.scss — числовые высоты для полей (`height_56` ставит ещё и `--input-height`);
+//   core/_scale.scss, core/scale.ts — масштаб (`--rpx` по полосам и те же базы для `sizes` у Img).
 
 export interface UtilitiesConfig extends ExtractOptions {
   /** Папки исходников — от `root`. */
   readonly scan: readonly string[];
+  /** Базовые ширины макета; не задано — умолчания кита. */
+  readonly scale?: Partial<UiScale>;
 }
 
 export const LIB = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT_CSS = path.join(LIB, 'core', '_utilities.scss');
 const OUT_FIELDS = path.join(LIB, 'core', '_field-sizes.scss');
+const OUT_SCALE_CSS = path.join(LIB, 'core', '_scale.scss');
+const OUT_SCALE_TS = path.join(LIB, 'core', 'scale.ts');
 /** Код самого генератора: его правка подхватывается только новым процессом. */
 export const OWN_SOURCES = [path.join(LIB, 'tools'), path.join(LIB, 'core', 'utilities')];
 const SKIP = /(^|[\\/])(node_modules|\.next|dist|generated|\.git|public)([\\/]|$)|\.d\.ts$|\.(test|spec)\.tsx?$/;
@@ -117,7 +123,14 @@ export function createUtilities(root: string, config: UtilitiesConfig) {
 
     const css = `${BANNER}\n${renderRules([...unique.values()])}\n`;
     const fields = `${BANNER}\n$height-values: (${heights.join(', ')}) !default;\n`;
-    const changed = [writeIfChanged(OUT_CSS, css), writeIfChanged(OUT_FIELDS, fields)].some(Boolean);
+    const scale = resolveScale(config.scale);
+    const scaleTs = `${BANNER}import type { UiScale } from './base/scale';\n\nexport const SCALE: UiScale = ${JSON.stringify(scale)};\n`;
+    const changed = [
+      writeIfChanged(OUT_CSS, css),
+      writeIfChanged(OUT_FIELDS, fields),
+      writeIfChanged(OUT_SCALE_CSS, `${BANNER}\n${scaleCss(scale)}`),
+      writeIfChanged(OUT_SCALE_TS, scaleTs),
+    ].some(Boolean);
 
     const ms = Math.round(performance.now() - started);
     console.log(`[ui:utilities] ${changed ? '✓ обновлено' : 'без изменений'}: ${unique.size} классов, ${(Buffer.byteLength(css) / 1024).toFixed(1)} КБ за ${ms} мс`);

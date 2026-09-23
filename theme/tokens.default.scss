@@ -15,6 +15,8 @@
 // НЕОБЯЗАТЕЛЬНЫЕ ручки — у них есть фолбэк, поэтому в договор они не входят и здесь не заданы:
 //   --on-fill        цвет текста на заливке Button (по умолчанию --black)
 //   --button-radius  форма Button (по умолчанию 999px, пилюля)
+//
+// `--base-width` и `--rpx` здесь нет: их даёт кит (`core/_scale.scss`) из `scale` в ui.config.ts.
 
 :where(:root) {
   --white-100: rgba(255, 255, 255, 1);
@@ -87,8 +89,6 @@
 
 @media (max-width: 767px) {
   :where(:root) {
-    --base-width: 320;
-    --rpx: calc(100vw / var(--base-width));
     @include typography;
   }
 
@@ -105,8 +105,6 @@
 
 @media (min-width: 768px) and (max-width: 1023px) {
   :where(:root) {
-    --base-width: 768;
-    --rpx: calc(100vw / var(--base-width));
     --s-container: calc(24 * var(--rpx));
     @include typography;
   }
@@ -124,11 +122,6 @@
 
 @media (min-width: 1024px) {
   :where(:root) {
-    --base-width: 1920;
-    --base-width-max: 2560;
-    --base-width-max-px: 2560px;
-    --scale-ratio: 1;
-    --rpx: min(max(calc(100vw / var(--base-width)), calc(100vw / var(--base-width-max)) * var(--scale-ratio)), calc(1px * var(--base-width-max) / var(--base-width)) * var(--scale-ratio));
     --s-container: calc(var(--rpx) * 16);
     --width-container: min(calc(calc(var(--rpx) * var(--base-width)) + (2 * var(--s-container))), var(--base-width-max-px));
     @include typography;

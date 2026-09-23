@@ -1,3 +1,4 @@
+import type { UiScale } from '../core/base/scale';
 import type { ExtractOptions } from './utilities/extract';
 
 /** Словари осей шкур и папка компонентов проекта (см. `skin/`). */
@@ -25,4 +26,9 @@ export interface UiConfig {
   /** Планка красных линий. По умолчанию `.rules-baseline.json`. */
   readonly baseline?: string;
   readonly skins?: UiSkins;
+  /**
+   * Базовые ширины макета, px: `1rpx = окно / база` на своей полосе, десктоп шире `max` не растёт.
+   * Из них генерируются `--rpx` и `sizes` у `Img`. Умолчания: 320 / 768 / 1920, потолок 2560.
+   */
+  readonly scale?: Partial<UiScale>;
 }

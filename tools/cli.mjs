@@ -41,7 +41,7 @@ async function load() {
   await loadConfig();
   const { createUtilities } = await import('./utilities/generate.ts');
   const { generateSkins } = await import('./skin.ts');
-  const utilities = createUtilities(root, { scan: [...(config.scan ?? ['src']), path.relative(root, KIT)], seeds: config.seeds });
+  const utilities = createUtilities(root, { scan: [...(config.scan ?? ['src']), path.relative(root, KIT)], seeds: config.seeds, scale: config.scale });
 
   // Иконки, которые компоненты зовут по адресу (/icons/ui/…). Прежняя копия снимается целиком,
   // чтобы убранная из кита иконка не жила в проекте вечно.

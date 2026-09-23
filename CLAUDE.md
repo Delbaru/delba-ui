@@ -89,7 +89,7 @@ public/    иконки компонентов (/icons/ui/…), расклады
 **Проверки запускаются из проекта-потребителя** — своей сборки у библиотеки нет. Команды — в
 [`README.md`](README.md) и в `Skill(ui-verify)`.
 
-**Генераты** `core/_utilities.scss` и `core/_field-sizes.scss` в репозиторий не попадают: у
+**Генераты** `core/_utilities.scss`, `core/_field-sizes.scss`, `core/_scale.scss` и `core/scale.ts` в репозиторий не попадают: у
 каждого проекта свои значения. Нет генерата — стили не соберутся.
 
 ---

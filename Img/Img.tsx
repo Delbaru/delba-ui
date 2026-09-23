@@ -4,7 +4,9 @@ import Image, { getImageProps, type ImageProps } from 'next/image';
 import { useMemo, useState, type CSSProperties } from 'react';
 import type React from 'react';
 
-import { BREAKPOINT, MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveResponsive, sizeClasses, splitRootDomProps, stateLinkProps, useMergedRefs, type GrowProps, type RadiusInput, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef } from '../core';
+import { MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveResponsive, sizeClasses, splitRootDomProps, stateLinkProps, useMergedRefs, type GrowProps, type RadiusInput, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef } from '../core';
+import { imageSizes } from '../core/base/scale';
+import { SCALE } from '../core/scale';
 import { useFancybox } from '../hooks/useFancybox';
 import { useSharedMotion, type SharedMotionProps } from '../hooks/useSharedMotion';
 
@@ -81,7 +83,8 @@ export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootS
 
   /**
    * Опционально: использовать другое значение для расчёта `sizes`, чем реальный rendered width/height.
-   * Полезно, если контейнер должен быть 100%, но хотим подсказать оптимизатору целевую ширину (например 1280px).
+   * Полезно, если контейнер должен быть 100%, но хотим подсказать оптимизатору целевую ширину.
+   * Число — rpx (как у `w`): в `sizes` оно уходит долей окна по базам `scale` проекта, процент — процентом окна.
    */
   sizesWidth?: ResponsiveValue<SizeValue>;
   sizesHeight?: ResponsiveValue<SizeValue>;
@@ -98,9 +101,6 @@ export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootS
   fancybox?: string;
 }
 
-const MOBILE_MAX = BREAKPOINT.mobileMax;
-const TABLET_MAX = BREAKPOINT.tabletMax;
-
 const parseAspect = (value?: string | null): number | null => {
   if (!value) return null;
 
@@ -116,23 +116,9 @@ const parseAspect = (value?: string | null): number | null => {
   return w / h;
 };
 
-const toSizeString = (value: SizeValue | null | undefined, ctx: string): string => {
-  if (value === null || value === undefined) {
-    throw new Error(`[Img] width is required for ${ctx}`);
-  }
-
-  if (typeof value === 'number') {
-    return `${value}px`;
-  }
-
-  const trimmed = value.toString().trim();
-  if (trimmed.endsWith('%')) {
-    const num = Number(trimmed.slice(0, -1));
-    if (!Number.isFinite(num)) throw new Error(`[Img] invalid percent width for ${ctx}: ${value}`);
-    return `${num}vw`;
-  }
-
-  throw new Error(`[Img] width must be number(px) or percent for ${ctx}. Got: ${value}`);
+const required = (value: SizeValue | null | undefined, ctx: string): SizeValue => {
+  if (value === null || value === undefined) throw new Error(`[Img] width is required for ${ctx}`);
+  return value;
 };
 
 const deriveWidthFromHeight = (
@@ -173,11 +159,8 @@ const buildSizes = (
   const widthMobile = wm ?? deriveWidthFromHeight(hm, parseAspect(am ?? ad ?? undefined), 'mobile');
   const widthTablet = wt ?? deriveWidthFromHeight(ht, parseAspect(at ?? ad ?? undefined), 'tablet');
 
-  const d = toSizeString(widthDesktop, 'desktop');
-  const m = toSizeString(widthMobile, 'mobile');
-  const t = toSizeString(widthTablet, 'tablet');
-
-  return `(max-width: ${MOBILE_MAX}px) ${m}, (max-width: ${TABLET_MAX}px) ${t}, ${d}`;
+  // Число — rpx, а не px: `sizes` пересчитывается в долю окна по базам масштаба проекта.
+  return imageSizes({ desktop: required(widthDesktop, 'desktop'), mobile: required(widthMobile, 'mobile'), tablet: required(widthTablet, 'tablet') }, SCALE);
 };
 
 /**

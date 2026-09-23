@@ -17,7 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss']);
+const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss', '_scale.scss']);
 // Генераты шкур несут токены ПРОЕКТА из его словарей — в договор кита они не входят.
 const GENERATED_SKIN = new Set(['_tokens.scss', '_classes.scss'].map((name) => path.join(ROOT, 'skin', name)));
 // Заглушки в тестах — не потребители темы: их значения в договор токенов не идут.
