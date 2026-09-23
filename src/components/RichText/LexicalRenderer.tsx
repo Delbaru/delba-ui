@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { cx } from '../../core';
 
 import styles from './RichText.module.scss';
-import { roleClassKeys } from './roles';
+import { isRichRole, roleClassKeys, textVariantClasses } from './roles';
 
 type LexicalTextNode = {
   type: 'text';
@@ -219,10 +219,16 @@ function resolveLinkHref(node: LexicalLinkNode): string | undefined {
   return node.fields?.url || node.url;
 }
 
-/** Классы роли блока — только те, что заданы в данных; блок без роли красит вариант текста. */
+/**
+ * Классы роли блока — только те, что заданы в данных; блок без роли красит вариант текста.
+ * Роль прежнего словаря (`RICH_ROLES`) — классом модуля, как раньше; любая другая — вариант
+ * типографики проекта, классом утилит (`textVariantClasses`).
+ */
 function roleClass(node: LexicalRoleFields): string | undefined {
+  const own = (role: unknown) => (isRichRole(role) ? undefined : role);
   const keys = roleClassKeys(node.role, node.roleM, node.roleT);
-  return keys.length > 0 ? cx(...keys.map((key) => styles[key])) : undefined;
+  const classes = [...keys.map((key) => styles[key]), ...textVariantClasses(own(node.role), own(node.roleM), own(node.roleT))];
+  return classes.length > 0 ? cx(...classes) : undefined;
 }
 
 function renderNode(node: LexicalNode, index: number): ReactNode {

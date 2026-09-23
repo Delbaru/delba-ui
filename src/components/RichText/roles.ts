@@ -56,6 +56,35 @@ export function roleClassKeys(role?: unknown, roleM?: unknown, roleT?: unknown):
   return keys;
 }
 
+/** Имя варианта типографики проекта — генератор утилит печатает его классом `text_<имя>`. */
+const VARIANT_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
+
+/** Годится ли значение в роль-вариант: имя, которое станет классом `text_<имя>`, и ничего сверх. */
+export function isTextVariantName(value: unknown): value is string {
+  return typeof value === 'string' && VARIANT_NAME.test(value);
+}
+
+/**
+ * Классы утилит для роли, которая — ВАРИАНТ типографики проекта (`p3`, `h2`): `text_<роль>`,
+ * `m_text_<роль>`, `t_text_<роль>`. Генератор печатает их для каждого варианта из
+ * `typography` и на каждой полосе, поэтому роль в данных — просто имя варианта, без таблиц
+ * соответствия: проект сменил набор — сменились и роли.
+ *
+ * Имени не проверяет по набору проекта: его знает генератор, а не рантайм. Роль, которой в
+ * наборе нет, даёт класс без правил — блок остаётся за вариантом текста, как без роли.
+ */
+export function textVariantClasses(role?: unknown, roleM?: unknown, roleT?: unknown): string[] {
+  const name = (value: unknown) => (isTextVariantName(value) ? value : null);
+  const classes: string[] = [];
+  const base = name(role);
+  const mobile = name(roleM);
+  const tablet = name(roleT);
+  if (base) classes.push(`text_${base}`);
+  if (mobile) classes.push(`m_text_${mobile}`);
+  if (tablet) classes.push(`t_text_${tablet}`);
+  return classes;
+}
+
 /**
  * Роль, которой блок ВЫГЛЯДИТ на полосе `breakpoint` (`'m'` — мобилка, `'t'` — планшет, без
  * аргумента — десктоп): своя роль полосы, иначе базовая, иначе роль тега по умолчанию.

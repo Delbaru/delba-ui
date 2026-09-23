@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { RICH_ROLES, isRichRole, resolveRole, roleClassKeys, tagDefaultRole } from './roles';
+import { RICH_ROLES, isRichRole, isTextVariantName, resolveRole, roleClassKeys, tagDefaultRole, textVariantClasses } from './roles';
 
 test('блок без роли класса не получает — его красит вариант текста', () => {
   assert.deepEqual(roleClassKeys(), []);
@@ -45,4 +45,18 @@ test('resolveRole: роль полосы, иначе базовая, иначе 
 test('resolveRole: мусор в данных пропускается', () => {
   assert.equal(resolveRole('h5', 'huge', 42, null, 'm'), 'subtitle');
   assert.equal(resolveRole('p', 'h3', 'nope', undefined, 'm'), 'h3');
+});
+
+test('роль-вариант проекта даёт утилиты генератора по полосам', () => {
+  assert.deepEqual(textVariantClasses('p3'), ['text_p3']);
+  assert.deepEqual(textVariantClasses('h2', 'p1', 'numbersPlus'), ['text_h2', 'm_text_p1', 't_text_numbersPlus']);
+  // Роль только на планшете — остальные полосы за вариантом текста.
+  assert.deepEqual(textVariantClasses(undefined, null, 'p4'), ['t_text_p4']);
+});
+
+test('в класс утилиты не попадает ничего, кроме имени варианта', () => {
+  assert.deepEqual(textVariantClasses('p3 evil', '1h', 'a-b'), []);
+  assert.deepEqual(textVariantClasses(42, {}, ''), []);
+  assert.equal(isTextVariantName('p3'), true);
+  assert.equal(isTextVariantName('p3 evil'), false);
 });

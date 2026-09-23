@@ -28,7 +28,7 @@
 | `@delba/ui/skin` | движок шкур для D-/Shared-компонентов | `import { defineSkin } from '@delba/ui/skin'` |
 | `@delba/ui/icons/*` | иконки кита (`assets/icons/ui/*`) | `import eye from '@delba/ui/icons/eye/style-1/eye.svg'` → `assetUrl(eye)` |
 | `@delba/ui/next` | плагин Next `withUi` и `UI_SASS` (типы — `tools/next.d.mts`) | `export default withUi(nextConfig)` |
-| `@delba/ui/rich-text` | роли и санитайзер rich-text без React и SCSS — для node-скриптов и route handlers | `import { sanitizeRichTextHtml, RICH_ROLES } from '@delba/ui/rich-text'` |
+| `@delba/ui/rich-text` | роли и санитайзер rich-text без React и SCSS — для node-скриптов и route handlers; роль-вариант проекта → классы `textVariantClasses` | `import { sanitizeRichTextHtml, textVariantClasses } from '@delba/ui/rich-text'` |
 | `@delba/ui/config` | тип `UiConfig` для `ui.config.ts` | `import type { UiConfig } from '@delba/ui/config'` |
 | `delba-ui` | CLI (bin пакета) | `delba-ui build`, `watch`, `check` |
 

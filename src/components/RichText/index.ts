@@ -1,5 +1,5 @@
 export { LexicalText, type LexicalTextProps, type LexicalTextVariant } from './RichText';
-export { RICH_ROLES, isRichRole, resolveRole, roleClassKeys, tagDefaultRole, type RichRole, type RichTag } from './roles';
+export { RICH_ROLES, isRichRole, resolveRole, roleClassKeys, isTextVariantName, tagDefaultRole, textVariantClasses, type RichRole, type RichTag } from './roles';
 
 /**
  * Классы CSS-модуля `RichText`: корень `RichText`, роли блока `role-*`, `role-m-*`, `role-t-*`.
