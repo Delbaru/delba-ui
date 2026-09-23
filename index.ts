@@ -35,3 +35,10 @@ export * from './VideoPlayer';
 export { cx, BREAKPOINT, MEDIA_QUERY, MOTION_END_BUFFER_MS, prefersReducedMotion } from './core';
 export { clamp, clamp01 } from './core/utils';
 export { pad, pluralize, type PluralForms } from './core/base/text-format';
+
+// Хуки и типы, которые нужны D-компонентам и страницам проекта.
+export { LenisScroll } from './LenisScroll';
+export { useOutsideDismiss, type DismissRef, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
+export { useMediaQuery } from './hooks/useMediaQuery';
+export { useInView, type UseInViewOptions } from './core/useInView';
+export type { GrowProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';
