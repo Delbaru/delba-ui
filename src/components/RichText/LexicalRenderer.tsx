@@ -221,13 +221,18 @@ function resolveLinkHref(node: LexicalLinkNode): string | undefined {
 
 /**
  * Классы роли блока — только те, что заданы в данных; блок без роли красит вариант текста.
- * Роль прежнего словаря (`RICH_ROLES`) — классом модуля, как раньше; любая другая — вариант
- * типографики проекта, классом утилит (`textVariantClasses`).
+ *
+ * Блок, чьи роли все из прежнего словаря (`RICH_ROLES`), — классами модуля, как раньше. Хоть
+ * одна роль вне словаря — вариант типографики проекта, и тогда ВЕСЬ блок идёт утилитами
+ * (`textVariantClasses`): `.role-h3` модуля и `m_text_p1` утилит одной специфичности, и какая
+ * победит на мобилке, решал бы порядок двух разных файлов стилей.
  */
 function roleClass(node: LexicalRoleFields): string | undefined {
-  const own = (role: unknown) => (isRichRole(role) ? undefined : role);
-  const keys = roleClassKeys(node.role, node.roleM, node.roleT);
-  const classes = [...keys.map((key) => styles[key]), ...textVariantClasses(own(node.role), own(node.roleM), own(node.roleT))];
+  const roles = [node.role, node.roleM, node.roleT].filter((role) => role !== undefined && role !== null && role !== '');
+  const legacy = roles.every((role) => isRichRole(role));
+  const classes = legacy
+    ? roleClassKeys(node.role, node.roleM, node.roleT).map((key) => styles[key])
+    : textVariantClasses(node.role, node.roleM, node.roleT);
   return classes.length > 0 ? cx(...classes) : undefined;
 }
 
