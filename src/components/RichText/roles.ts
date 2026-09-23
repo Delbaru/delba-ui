@@ -55,3 +55,24 @@ export function roleClassKeys(role?: unknown, roleM?: unknown, roleT?: unknown):
   if (isRichRole(roleT)) keys.push(`role-t-${roleT}`);
   return keys;
 }
+
+/**
+ * Роль, которой блок ВЫГЛЯДИТ на полосе `breakpoint` (`'m'` — мобилка, `'t'` — планшет, без
+ * аргумента — десктоп): своя роль полосы, иначе базовая, иначе роль тега по умолчанию.
+ *
+ * Нужна РЕДАКТОРУ — показать активный стиль блока и понять, наследует ли полоса десктоп
+ * (роль полосы равна базовой). Рендеру не нужна: он вешает только заданные классы
+ * (`roleClassKeys`), а полосу выбирает CSS. Мусор в данных пропускается, как у `roleClassKeys`.
+ */
+export function resolveRole(
+  tag: RichTag,
+  role?: unknown,
+  roleM?: unknown,
+  roleT?: unknown,
+  breakpoint?: 'm' | 't',
+): RichRole {
+  const override = breakpoint === 'm' ? roleM : breakpoint === 't' ? roleT : undefined;
+  if (isRichRole(override)) return override;
+  if (isRichRole(role)) return role;
+  return tagDefaultRole(tag);
+}

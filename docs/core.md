@@ -42,6 +42,16 @@
 `TEXT_ROLES` (`body`, `caption`, `micro`) и `textFont(name)`: шрифт роли — с фолбэком на прежний вариант.
 В компонентах кита — только роли, варианты проекта кит не называет.
 
+## HTML и иконки
+
+`src/core/base/html-sanitize.ts` — `sanitizeRichTextHtml(html, options?)`: DOMPurify по белому списку,
+безопасен в SSR. `{ rich: true }` (`SanitizeRichTextOptions`) добавляет разметку Markdown/GFM — `pre`,
+таблицы (`table`…`td`), `blockquote`, `hr`, `del`, `s` и атрибут `align`; без опции набор прежний.
+Скрипты, `on*` и `javascript:` режутся в обоих режимах.
+
+`src/components/Icon/useFetchedSvg.ts` — `preloadIcon(url)`: прогрев кэша SVG (оба ключа — сырой и
+перекрашиваемый) до показа иконки. На сервере и для инлайн-иконок ничего не делает.
+
 ## Хуки
 
 | Хук | Что делает |

@@ -633,3 +633,21 @@ $rich-roles: h1, h2, h3, title, subtitle, p, small, dop;
     }
   }
 }
+
+// Превью устройства: `data-device` на корне включает роли полосы БЕЗ медиазапроса — редактор
+// показывает мобилку и планшет при любой ширине окна. Только под явным атрибутом: корень без
+// него не совпадает ни с одним правилом ниже. Слой тот же, специфичность (0,3,0) бьёт и базовую
+// роль, и роль полосы из медиазапроса (0,1,0).
+@layer ui.utilities {
+  .RichText[data-device='tablet'] {
+    @each $role in $rich-roles {
+      .role-t-#{$role} { @include rich-role($role); }
+    }
+  }
+
+  .RichText[data-device='mobile'] {
+    @each $role in $rich-roles {
+      .role-m-#{$role} { @include rich-role($role); }
+    }
+  }
+}

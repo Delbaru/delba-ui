@@ -76,6 +76,21 @@ function fetchSvgCached(url: string, normalizeContent = false): Promise<ParsedSv
   return request;
 }
 
+/**
+ * Прогревает кэш SVG-иконки заранее — до того, как она понадобится на экране, чтобы кнопка
+ * не стояла пустой, пока файл едет. Греет оба ключа кэша (сырой и перекрашиваемый): какой
+ * попросит `Icon`, звонящему знать незачем. Ошибка загрузки глотается — `Icon` повторит сам.
+ * Инлайн-иконку из бандла не грузит; на сервере (нет `window` или `fetch`) ничего не делает.
+ * @param url — URL файла `.svg`; пустое значение игнорируется.
+ */
+export function preloadIcon(url: string | null | undefined): void {
+  if (!url || typeof window === 'undefined' || typeof fetch !== 'function') return;
+  for (const normalizeContent of [false, true]) {
+    if (getResolvedSvg(url, normalizeContent)) continue;
+    fetchSvgCached(url, normalizeContent).catch(() => undefined);
+  }
+}
+
 export interface FetchedSvgState {
   content: string | null;
   viewBox?: string;
