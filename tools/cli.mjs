@@ -47,7 +47,7 @@ async function load() {
   // чтобы убранная из кита иконка не жила в проекте вечно.
   const target = path.resolve(root, config.public ?? 'public');
   rmSync(path.join(target, 'icons', 'ui'), { recursive: true, force: true });
-  copyDir(path.join(KIT, 'public'), target);
+  copyDir(path.join(KIT, 'assets'), target);
 
   if (config.skins) {
     const changed = await generateSkins(root, config.skins);

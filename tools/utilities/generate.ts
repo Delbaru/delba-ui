@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
 
-import { resolveScale, scaleCss, type UiScale } from '../../core/base/scale';
-import { normalizeCss } from '../../core/utilities/keys';
-import { renderRules, type UtilityRule } from '../../core/utilities/rules';
+import { resolveScale, scaleCss, type UiScale } from '../../src/core/base/scale';
+import { normalizeCss } from '../../src/core/utilities/keys';
+import { renderRules, type UtilityRule } from '../../src/core/utilities/rules';
 import { extractUtilityRules, type ExtractOptions, type Source } from './extract';
 
 // Генератор таблицы утилит: разбирает исходники проекта компилятором TypeScript и пишет два
@@ -23,12 +23,12 @@ export interface UtilitiesConfig extends ExtractOptions {
 }
 
 export const LIB = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const OUT_CSS = path.join(LIB, 'core', '_utilities.scss');
-const OUT_FIELDS = path.join(LIB, 'core', '_field-sizes.scss');
-const OUT_SCALE_CSS = path.join(LIB, 'core', '_scale.scss');
-const OUT_SCALE_TS = path.join(LIB, 'core', 'scale.ts');
+const OUT_CSS = path.join(LIB, 'src', 'core', '_utilities.scss');
+const OUT_FIELDS = path.join(LIB, 'src', 'core', '_field-sizes.scss');
+const OUT_SCALE_CSS = path.join(LIB, 'src', 'core', '_scale.scss');
+const OUT_SCALE_TS = path.join(LIB, 'src', 'core', 'scale.ts');
 /** Код самого генератора: его правка подхватывается только новым процессом. */
-export const OWN_SOURCES = [path.join(LIB, 'tools'), path.join(LIB, 'core', 'utilities')];
+export const OWN_SOURCES = [path.join(LIB, 'tools'), path.join(LIB, 'src', 'core', 'utilities')];
 const SKIP = /(^|[\\/])(node_modules|\.next|dist|generated|\.git|public)([\\/]|$)|\.d\.ts$|\.(test|spec)\.tsx?$/;
 const BANNER = '// AUTO-GENERATED: tools/utilities (npm run ui:build). Не править руками.\n';
 

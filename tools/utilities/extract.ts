@@ -16,10 +16,10 @@
 
 import ts from 'typescript';
 
-import { entryKey, type UtilityEntry } from '../../core/utilities/keys';
-import { resolveUtility, type Utility } from '../../core/utilities/registry';
-import { domainRules, exactRules, looseRules, type UtilityRule } from '../../core/utilities/rules';
-import type { ResponsiveUtilityValue } from '../../core/utilities/classes';
+import { entryKey, type UtilityEntry } from '../../src/core/utilities/keys';
+import { resolveUtility, type Utility } from '../../src/core/utilities/registry';
+import { domainRules, exactRules, looseRules, type UtilityRule } from '../../src/core/utilities/rules';
+import type { ResponsiveUtilityValue } from '../../src/core/utilities/classes';
 
 export interface Source {
   readonly file: string;

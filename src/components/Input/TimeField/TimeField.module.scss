@@ -1,0 +1,38 @@
+@use '../../../core/mixins' as m;
+
+@layer ui.components {
+  .root {
+      position: relative;
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      font: m.role-font(body);
+      letter-spacing: normal;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: 'tnum';
+  }
+
+  .mask {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      pointer-events: none;
+      appearance: none;
+      color: var(--field-placeholder-color, var(--text-muted));
+      -webkit-text-fill-color: var(--field-placeholder-color, var(--text-muted));
+  }
+
+  .mask,
+  .fieldMasked {
+      font: inherit;
+      letter-spacing: inherit;
+      font-variant-numeric: inherit;
+      font-feature-settings: inherit;
+  }
+
+  .fieldMasked {
+      appearance: none;
+      position: relative;
+      z-index: 1;
+  }
+}

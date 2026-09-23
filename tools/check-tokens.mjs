@@ -23,10 +23,10 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss', '_scale.scss']);
 // Генераты шкур несут токены ПРОЕКТА из его словарей — в договор кита они не входят.
-const GENERATED_SKIN = new Set(['_tokens.scss', '_classes.scss'].map((name) => path.join(ROOT, 'skin', name)));
+const GENERATED_SKIN = new Set(['_tokens.scss', '_classes.scss'].map((name) => path.join(ROOT, 'src', 'skin', name)));
 // Заглушки в тестах — не потребители темы: их значения в договор токенов не идут.
 const TEST_FILE = /\.test\.tsx?$/;
-const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'tools', 'theme', 'public']);
+const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'tools', 'theme', 'assets']);
 const PROP_PREFIX_LIST = /ROOT_DATA_PROP_PREFIXES/;
 // Переименования договора: старое имя в теме проекта → новое. Одно место — и для подсказки, и для README.
 // Кит говорит ролями: статус по смыслу, а не по цвету (2026-09-23). Роли бренда `--secondary*` и
@@ -70,7 +70,7 @@ function add(map, key, user) {
 
 /** Роли типографики → прежний вариант: разбор `TEXT_ROLES` ядра, чтобы не держать второй список. */
 export function readRoles() {
-  const code = fs.readFileSync(path.join(ROOT, 'core', 'base', 'typography.ts'), 'utf8');
+  const code = fs.readFileSync(path.join(ROOT, 'src', 'core', 'base', 'typography.ts'), 'utf8');
   const body = /TEXT_ROLES = \{([^}]*)\}/.exec(code)?.[1] ?? '';
   return new Map([...body.matchAll(/(\w+):\s*'(\w+)'/g)].map((m) => [m[1], m[2]]));
 }

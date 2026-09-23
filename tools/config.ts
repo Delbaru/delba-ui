@@ -1,4 +1,4 @@
-import type { UiScale } from '../core/base/scale';
+import type { UiScale } from '../src/core/base/scale';
 import type { ExtractOptions } from './utilities/extract';
 
 /** Словари осей шкур и папка компонентов проекта (см. `skin/`). */

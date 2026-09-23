@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_EXT = /\.(ts|tsx|scss)$/;
-const SKIP_DIRS = new Set(['node_modules', '.git', 'tools', 'public']);
+const SKIP_DIRS = new Set(['node_modules', '.git', 'tools', 'assets']);
 const SPECIFIER_RE =
   /(?:import|export)\s[^'"`]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|^\s*import\s+['"]([^'"]+)['"]|@(?:use|forward|import)\s+['"]([^'"]+)['"]/gm;
 const PROJECT_ALIAS_RE = /^(@\/|~\/|@socrat\/|@d4y\/|src\/|apps\/|libs\/)/;

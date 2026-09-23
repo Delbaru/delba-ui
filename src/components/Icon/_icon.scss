@@ -1,0 +1,179 @@
+@use '../../core/mixins' as m;
+.ui-icon-root {
+    display: inline-flex;
+}
+
+.ui-icon-wrapper {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    line-height: 0;
+    vertical-align: middle;
+
+    .ui-icon {
+        transition: var(--transition-btn, var(--t-fast));
+
+        path,
+        circle,
+        rect {
+            transition: var(--transition-btn, var(--t-fast));
+        }
+    }
+
+    [data-icon-layer='default'],
+    [data-icon-layer='hover'] {
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+
+    [data-icon-layer='default'] {
+        opacity: 1;
+    }
+
+    [data-icon-layer='hover'] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+    }
+
+    &:hover,
+    &[state~='hover'],
+    &[state~='active'] {
+        [data-icon-layer='default'] {
+            opacity: 0;
+        }
+
+        [data-icon-layer='hover'] {
+            opacity: 1;
+        }
+    }
+}
+
+button:disabled .ui-icon[data-icon-root='true'],
+button:disabled .ui-icon-wrapper[data-icon-root='true'],
+button:disabled .ui-icon-root[data-icon-root='true'] {
+    filter: var(--disable-filter-for-icon);
+}
+
+.ui-icon-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+}
+
+.ui-icon-tooltip-wrapper {
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+.ui-icon-tooltip {
+    position: fixed;
+    left: var(--floating-left);
+    top: var(--floating-top);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity var(--t-d-fast) var(--t-t-f-ease),
+        visibility var(--t-d-fast) var(--t-t-f-ease),
+        transform var(--t-d-fast) var(--t-t-f-ease);
+    white-space: nowrap;
+    z-index: var(--z-top);
+    transform: translate3d(0, 0, 0);
+
+    &[data-placement='right'] {
+        transform: translate3d(calc(-8 * var(--rpx)), 0, 0);
+    }
+
+    &[data-placement='left'] {
+        transform: translate3d(calc(8 * var(--rpx)), 0, 0);
+    }
+
+    &[data-placement='top'] {
+        transform: translate3d(0, calc(8 * var(--rpx)), 0);
+    }
+
+    &[data-placement='bottom'] {
+        transform: translate3d(0, calc(-8 * var(--rpx)), 0);
+    }
+
+    &[state~='active'] {
+        opacity: 1;
+        visibility: visible;
+        transform: translate3d(0, 0, 0);
+    }
+
+    // Пружинка отдана СОДЕРЖИМОМУ, а не самой всплывашке: её коробку меряет
+    // useAnchoredFloating, и масштаб на ней увёл бы центрирование на пару пикселей —
+    // трансформ потомка на раскладку родителя не влияет.
+    > * {
+        transform: scale(0.96);
+        transform-origin: center;
+        transition: transform var(--t-d-fast) var(--t-t-f-ease);
+    }
+
+    &[state~='active'] > * {
+        transform: scale(1);
+        transition: transform var(--t-d-fast) var(--t-t-f-back);
+    }
+}
+
+@include m.reduced-motion {
+    .ui-icon-tooltip > *,
+    .ui-icon-tooltip[state~='active'] > * {
+        transform: none;
+    }
+}
+
+// Стили для обычной иконки (без wrapper). Дефолт цвета — в компоненте, не в SVG.
+.ui-icon {
+    --transition-btn: var(--t-fast);
+    --icon-stroke-width: inherit;
+    --icon-stroke-width-d: inherit;
+    --icon-stroke-width-m: inherit;
+    --icon-stroke-width-t: inherit;
+    --rotate-d: 0deg;
+    display: inline-block;
+    flex-shrink: 0;
+    vertical-align: middle;
+    color: inherit;
+    transition: var(--transition-btn, var(--t-fast));
+    transform: var(--perspective3d-transform,) rotate(var(--rotate-d, 0deg));
+    stroke-width: var(--icon-stroke-width, var(--icon-stroke-width-d, inherit));
+
+    // Пока SVG ещё грузится, иконка-плейсхолдер уже занимает своё место (без «шифта»),
+    // но прозрачна. Когда содержимое доехало, атрибут снимается и иконка плавно проявляется
+    // за счёт уже объявленного выше transition.
+    &[data-icon-loading='true'] {
+        opacity: 0;
+    }
+
+    path,
+    circle,
+    rect {
+        transition: var(--transition-btn, var(--t-fast));
+    }
+}
+
+@include m.reduced-motion {
+    .ui-icon[data-icon-loading='true'] {
+        opacity: 1;
+    }
+}
+
+// responsive rotate (order: desktop / mobile / tablet)
+@media (max-width: 767px) {
+    .ui-icon {
+        transform: var(--perspective3d-transform,) rotate(var(--rotate-m, var(--rotate-d, 0deg)));
+        stroke-width: var(--icon-stroke-width-m, var(--icon-stroke-width-d, inherit));
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    .ui-icon {
+        transform: var(--perspective3d-transform,) rotate(var(--rotate-t, var(--rotate-d, 0deg)));
+        stroke-width: var(--icon-stroke-width-t, var(--icon-stroke-width-d, inherit));
+    }
+}

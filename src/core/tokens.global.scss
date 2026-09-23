@@ -1,0 +1,109 @@
+// Глобальный слой утилит: классы раскладки и типографики (`p_8`, `n_p_0`, `columns_4`, `text_h2`).
+// Сам CSS собирает генератор (`tools/utilities`, в проекте — `npm run ui:build`) из реестра
+// `core/utilities/registry.ts` и значений, которые встречаются в коде. Файл @use'ится в
+// глобальные стили проекта, поэтому имена не хешируются: в DOM видно ровно имя класса.
+@use 'sass:meta';
+
+// Слои библиотеки: покой компонента < проп (утилита) < состояние компонента; стили проекта без слоя сильнее всех.
+@layer ui.scale, ui.components, ui.utilities, ui.states;
+
+// Масштаб: `--base-width` и `--rpx` по полосам из `scale` конфига (генерат). Слой — чтобы тема
+// проекта, которая ещё объявляет `--rpx` сама, перебивала его при любом порядке подключения.
+@layer ui.scale {
+  @include meta.load-css('./scale');
+}
+
+@layer ui.utilities {
+  @include meta.load-css('./utilities');
+}
+
+@layer ui.components {
+  @include meta.load-css('../components/Box/box');
+  @include meta.load-css('../components/Button/button');
+  @include meta.load-css('../components/Container/container');
+  @include meta.load-css('../components/Flex/flex');
+  @include meta.load-css('../components/Grid/grid');
+  @include meta.load-css('../components/Icon/icon');
+  @include meta.load-css('../components/Icon/swap/icon-swap');
+  @include meta.load-css('../components/Img/img');
+  @include meta.load-css('../components/Section/section');
+  @include meta.load-css('../components/Text/text');
+  @include meta.load-css('../components/Text/animations/counter/counter');
+  @include meta.load-css('../components/Text/animations/textClip/text-clip');
+  @include meta.load-css('../components/Text/animations/textReveal/text-reveal');
+  @include meta.load-css('../components/Text/animations/textSlide/text-slide');
+}
+
+// ── Краевой fade скролл-контейнеров (mask + scroll-driven animations) ─────────────────────────
+// Утилита-класс .scrollFadeY (ось Y) / .scrollFadeX (ось X). Мягко гасит контент у краёв области
+// прокрутки CSS-маской — без псевдоэлементов и лишних слоёв, не ломает клики (маска рулит только
+// прозрачностью). Зоны у краёв включает ТОЛЬКО активный скролл-таймлайн: когда скролла нет, маска
+// пустая (края не подрезаются); у самого верха/низа зона схлопывается в 0 (первая/последняя карточка
+// не глушится). Никакого JS. Размер зоны — var --scroll-fade (по умолчанию 16 дизайн-ед.).
+//
+// КАК ПОДКЛЮЧАТЬ: на Flex — проп `scrollFade` (или `scrollFade='x'`); он и вешает этот класс (см.
+// Flex.tsx). На не-Flex элементе — `composes: scrollFadeY from global;` в его .module.scss, либо класс
+// строкой в className. Размер переопределяется на месте: `--scroll-fade: calc(24 * var(--rpx));`.
+//
+// ВАЖНО: mask создаёт stacking context — плавающие оверлеи (кнопки-плавашки, тени) держите на
+// элементе-обёртке, а не на самом скролле, иначе их затянет под маску.
+//
+// Расплата: scroll-driven animations пока нет в Safari — там (внутри @supports не сматчится) fade не
+// появится вовсе. Это осознанно: лучше без fade, чем всегда подрезанные края.
+@property --scroll-fade-start {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroll-fade-end {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@layer ui.utilities {
+  // Верхняя/левая зона раскрывается на первых --scroll-fade пикселях прокрутки (у старта её нет).
+  @keyframes scrollFadeStart {
+    from { --scroll-fade-start: 0px; }
+    to { --scroll-fade-start: var(--scroll-fade); }
+  }
+
+  // Нижняя/правая зона держится всю дорогу и гаснет на последних --scroll-fade пикселях (у конца её нет).
+  @keyframes scrollFadeEnd {
+    from { --scroll-fade-end: var(--scroll-fade); }
+    to { --scroll-fade-end: 0px; }
+  }
+
+  .scrollFadeY {
+    --scroll-fade: calc(16 * var(--rpx));
+    --scroll-fade-start: 0px;
+    --scroll-fade-end: 0px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--scroll-fade-start), #000 calc(100% - var(--scroll-fade-end)), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 var(--scroll-fade-start), #000 calc(100% - var(--scroll-fade-end)), transparent 100%);
+
+    @supports (animation-timeline: scroll()) {
+      animation-name: scrollFadeStart, scrollFadeEnd;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(self block), scroll(self block);
+      animation-range: 0 var(--scroll-fade), calc(100% - var(--scroll-fade)) 100%;
+    }
+  }
+
+  .scrollFadeX {
+    --scroll-fade: calc(16 * var(--rpx));
+    --scroll-fade-start: 0px;
+    --scroll-fade-end: 0px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--scroll-fade-start), #000 calc(100% - var(--scroll-fade-end)), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 var(--scroll-fade-start), #000 calc(100% - var(--scroll-fade-end)), transparent 100%);
+
+    @supports (animation-timeline: scroll()) {
+      animation-name: scrollFadeStart, scrollFadeEnd;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(self inline), scroll(self inline);
+      animation-range: 0 var(--scroll-fade), calc(100% - var(--scroll-fade)) 100%;
+    }
+  }
+}

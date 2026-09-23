@@ -1,7 +1,7 @@
 # Генераты: каждый проект собирает их под себя (tools/cli.mjs build)
-core/_utilities.scss
-core/_field-sizes.scss
-skin/_tokens.scss
-skin/_classes.scss
-core/_scale.scss
-core/scale.ts
+src/core/_utilities.scss
+src/core/_field-sizes.scss
+src/skin/_tokens.scss
+src/skin/_classes.scss
+src/core/_scale.scss
+src/core/scale.ts

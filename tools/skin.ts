@@ -2,13 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { borderClass, fillClass, textClass } from '../skin/index';
+import { borderClass, fillClass, textClass } from '../src/skin/index';
 import type { UiSkins } from './config';
 
 // Генератор шкур: словари осей → skin/_tokens.scss (карты для движка) и skin/_classes.scss (классы
 // покоя), пресеты `*.skin.ts` → `_states.scss` рядом с компонентом. Все три — генераты, вне git.
 
-const SKIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'skin');
+const SKIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'skin');
 const BANNER = '// Автогенерат шкур кита (tools/skin.ts) — не править руками.\n\n';
 const EFFECTS = new Set(['opacity', 'filter', 'cursor', 'pointerEvents', 'borderColor']);
 
