@@ -65,3 +65,11 @@ export function boxLayout(c: ClassBuilder, box: BoxLayoutProps): string[] {
     ...c.value('grow', box.grow),
   ];
 }
+
+/** Колонка контента страницы — одна на Flex, Grid и Box, а не свой вариант у каждого. */
+export interface ContainerProp {
+  /** Поля `--s-container` по бокам, `max-width: --width-container`, по центру на всю доступную ширину. */
+  container?: boolean;
+}
+
+export const containerClass = (container: boolean | undefined) => (container ? 'ui-layout-container' : undefined);

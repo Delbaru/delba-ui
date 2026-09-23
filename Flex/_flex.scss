@@ -12,11 +12,6 @@
   }
 }
 
-.ui-flex-container {
-  padding-left: var(--s-container);
-  padding-right: var(--s-container);
-  max-width: var(--width-container);
-}
 
 // Опт-ин сворачивание (проп collapse у Flex). grid-template 0fr↔1fr + отступ (--collapse-gap)
 // в одном transition → размер и отступ закрываются синхронно. Внешний .ui-collapse анимирует,

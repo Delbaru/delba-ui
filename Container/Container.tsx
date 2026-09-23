@@ -15,6 +15,7 @@ export interface ContainerProps extends React.HTMLAttributes<HTMLDivElement>, La
   linkState?: StateLinkInput;
 }
 
+/** @deprecated Проп `container` у Flex, Grid или Box — та же колонка без вертикальных полей. */
 export function Container({
   ref,
   children,

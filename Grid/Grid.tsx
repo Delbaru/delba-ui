@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { boxLayout, createLayoutClasses, cx, splitBoxLayout, stateLinkProps, useMergedRefs, type AspectRatioProps, type BoxLayoutProps, type GrowProps, type LayoutSpaceProps, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef } from '../core';
+import { boxLayout, containerClass, createLayoutClasses, cx, splitBoxLayout, stateLinkProps, useMergedRefs, type AspectRatioProps, type BoxLayoutProps, type ContainerProp, type GrowProps, type LayoutSpaceProps, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef } from '../core';
 import { useSharedMotion, type SharedMotionProps } from '../hooks/useSharedMotion';
 
 type Track =
@@ -37,7 +37,7 @@ type AutoFlowKey = 'row' | 'column' | 'dense' | 'row_dense' | 'column_dense';
 
 const c = createLayoutClasses();
 
-export interface GridProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayoutProps, SharedMotionProps {
+export interface GridProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayoutProps, ContainerProp, SharedMotionProps {
   children?: React.ReactNode;
 
   columns?: ResponsiveValue<Track>;
@@ -77,6 +77,7 @@ export function Grid({
   areas,
   items,
   renderItem,
+  container,
   linkState,
   onMouseEnter,
   onMouseLeave,
@@ -93,6 +94,7 @@ export function Grid({
     {...stateLinkProps(linkState, { onMouseEnter, onMouseLeave, ...motionHandlers })}
     className={cx(
       'ui-grid',
+      containerClass(container),
       ...layout,
       ...c.value('columns', columns),
       ...c.value('rows', rows),

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState, type CSSProperties } from 'react';
 import type React from 'react';
-import { boxLayout, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type StateLinkInput, type WithRef } from '../core';
+import { boxLayout, containerClass, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ContainerProp, type ResponsiveValue, type StateLinkInput, type WithRef } from '../core';
 import { useSharedMotion, type SharedMotionProps } from '../hooks/useSharedMotion';
 import { usePresence } from '../hooks/usePresence';
 import { useSwapTransition } from '../hooks/useSwapTransition';
@@ -42,6 +42,7 @@ export interface FlexProps
   extends Omit<React.HTMLAttributes<HTMLElement>, 'dir' | 'href' | 'target' | 'rel' | 'download'>,
     Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
     BoxLayoutProps,
+    ContainerProp,
     SharedMotionProps {
   children?: React.ReactNode;
   style?: CSSProperties;
@@ -93,7 +94,6 @@ export interface FlexProps
    *  mask создаёт stacking context — плавающие оверлеи держите на элементе-обёртке, не на самом скролле. */
   scrollFade?: boolean | 'x' | 'y';
 
-  container?: boolean;
   linkState?: StateLinkInput;
   newTab?: boolean;
   nofollow?: boolean;
@@ -138,7 +138,7 @@ export function Flex({
       {...stateLinkProps(linkState, { onMouseEnter, onMouseLeave, ...motionHandlers })}
       className={cx(
         'ui-flex',
-        container && 'ui-flex-container',
+        containerClass(container),
         ...layout,
         ...c.value('gap', gap),
         ...c.value('rowGap', rowGap),
