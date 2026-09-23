@@ -147,7 +147,7 @@ if (isMain) {
 
   const typographyAt = args.indexOf('--typography');
   const variants = typographyAt < 0 ? [] : (args[typographyAt + 1] ?? '').split(',').filter(Boolean);
-  const files = args.filter((arg, i) => !arg.startsWith('--') && i !== typographyAt + 1).flatMap((target) => walk(path.resolve(target), /\.(scss|css)$/));
+  const files = args.filter((arg, i) => !arg.startsWith('--') && (typographyAt < 0 || i !== typographyAt + 1)).flatMap((target) => walk(path.resolve(target), /\.(scss|css)$/));
   if (args.includes('--with-defaults')) files.push(path.join(ROOT, 'theme', 'tokens.default.scss'));
   const styles = files.map((file) => stripComments(fs.readFileSync(file, 'utf8'))).join('\n');
   const declared = new Set([...styles.matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]));

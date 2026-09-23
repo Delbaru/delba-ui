@@ -30,7 +30,8 @@ export type TextVariantName = UiTypography extends { variants: infer V extends s
 /** Суффикс токенов варианта: `numbersPlus` → `numbers-plus`. */
 export const textToken = (name: string): string => name.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
 
-export const isTextRole = (name: string): name is TextRole => Object.hasOwn(TEXT_ROLES, name);
+// Не `Object.hasOwn`: у потребителей lib ниже es2022.
+export const isTextRole = (name: string): name is TextRole => Object.prototype.hasOwnProperty.call(TEXT_ROLES, name);
 
 /** Шрифт роли с фолбэком на прежний вариант: `var(--font-body, var(--font-p))`. */
 export const roleFont = (role: TextRole): string => `var(--font-${role}, var(--font-${TEXT_ROLES[role]}))`;
