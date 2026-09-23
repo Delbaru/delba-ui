@@ -247,7 +247,7 @@ export function Calendar({
                   : isDisabledDay
                       ? '#C5C6CC'
                       : isWeekendDay && isCurrentMonthDay
-                          ? 'var(--red)'
+                          ? 'var(--error)'
                           : undefined;
 
                 return (

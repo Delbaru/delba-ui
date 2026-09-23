@@ -91,6 +91,12 @@ node <путь>/UI/tools/cli.mjs check   # красные линии (--update �
   node <путь>/UI/tools/check-tokens.mjs --list                     # весь договор
   ```
 
+  Цвета договор называет ролями. Бренд — `--primary` (+ `-hover`, `-light`, `-dark`) и
+  `--tertiary` (только `Button variant="tertiary"`); статусы — `--error`, `--error-light`,
+  `--success`, `--warning`; нейтральные — `--background`, `--text`, `--black` (чернила полей),
+  `--gray` (приглушённый текст, плейсхолдер, disabled), `--gray-light` (линии и рамки), `--white-*`.
+  Служебное роли бренда не занимает: `--secondary` проект может отдать под бренд целиком.
+
   Для нового проекта есть стартовая тема [`theme/tokens.default.scss`](theme/tokens.default.scss):
   подключи её в глобальные стили, и библиотека заработает сразу. Специфичность у неё нулевая,
   так что своя тема проекта перебивает её при любом порядке подключения.
@@ -138,6 +144,21 @@ git add <путь>/UI && git commit -m "UI: обновить библиотек�
   помечай коммит `BREAKING:` и пиши в нём «как перейти».
 - **`null` в кортеже `[desktop, mobile, tablet]`** значит «пропустить брейкпоинт», а не
   «унаследовать desktop».
+
+## Миграция договора темы
+
+**2026-09-23 — статусы по смыслу, роли бренда не заняты служебным.** В теме проекта:
+
+| Было | Стало |
+|---|---|
+| `--red`, `--error-color` | `--error` |
+| `--red-light` | `--error-light` |
+| `--green`, `--success-color` | `--success` |
+| `--yellow` | `--warning` |
+
+`--secondary` / `--secondary-hover` кит больше не читает (плейсхолдеры, текст `Select`, disabled
+`Button`, бегунок `SwitchButton` → `--gray`), рамка `SwitchButton` вместо `--tertiary` — `--gray-light`.
+`check-tokens.mjs` узнаёт старые имена и подсказывает замену; таблица — `RENAMED` в нём.
 
 ## Отложено (решение владельца 2026-09-23)
 

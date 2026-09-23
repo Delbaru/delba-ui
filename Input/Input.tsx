@@ -319,7 +319,7 @@ export function Input({
             {label && (
                 <Flex dir={['row', 'row', 'row']} gap={[4, null, null]}>
                     <Text variant={['small', 'small', 'small']} color={labelColor}>{label}</Text>
-                    {required && ( <Text variant={['small', 'small', 'small']} color="var(--red)">*</Text> )}
+                    {required && ( <Text variant={['small', 'small', 'small']} color="var(--error)">*</Text> )}
                 </Flex>
             )}
             <Flex
@@ -440,7 +440,7 @@ export function Input({
                                 id={inlineErrorId}
                                 role='alert'
                                 variant={['p', 'p', 'p']}
-                                color='var(--red)'
+                                color='var(--error)'
                                 className={styles.inlineErrorText}
                             >
                                 {inlineError}
@@ -542,7 +542,7 @@ export function Input({
                         id={inlineErrorId}
                         role='alert'
                         variant={['small', 'small', 'small']}
-                        color='var(--red)'
+                        color='var(--error)'
                     >
                         {belowError ?? lastBelowError.current}
                     </Text>

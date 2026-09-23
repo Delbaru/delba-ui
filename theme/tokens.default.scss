@@ -5,8 +5,12 @@
 // независимо от порядка подключения. Подключать в глобальные стили проекта:
 //   @use '<путь до UI>/theme/tokens.default.scss';
 //
-// Не заданы намеренно: `--secondary`, `--tertiary` (варианты базового Button), `--black-70`
-// (CarouselNav). Проект, которому они нужны, задаёт их сам.
+// Цвета — ролями: бренд (`--primary*`, `--tertiary` — только вариант Button) · статусы
+// (`--error*`, `--success`, `--warning`) · нейтральные (фон, текст, `--gray` — приглушённый
+// текст, плейсхолдер, disabled; `--gray-light` — линии и рамки). Служебное ролей бренда не занимает.
+//
+// Не заданы намеренно: `--tertiary` (вариант базового Button), `--black-70` (CarouselNav).
+// Проект, которому они нужны, задаёт их сам.
 //
 // НЕОБЯЗАТЕЛЬНЫЕ ручки — у них есть фолбэк, поэтому в договор они не входят и здесь не заданы:
 //   --on-fill        цвет текста на заливке Button (по умолчанию --black)
@@ -24,15 +28,13 @@
   --primary-dark: #228BD3;
   --gray: #5D6677;
   --gray-light: #D8DCEA;
-  --green: #2D9463;
-  --red: #FB2929;
-  --red-light: #FFE9E9;
-  --yellow: #FDAE00;
 
   --text: var(--black);
   --background: #F2F3F8;
-  --error-color: var(--red);
-  --success-color: var(--green);
+  --error: #FB2929;
+  --error-light: #FFE9E9;
+  --success: #2D9463;
+  --warning: #FDAE00;
   --disable-filter-for-icon: brightness(0) saturate(100%) invert(51%) sepia(11%) saturate(17%) hue-rotate(24deg) brightness(87%) contrast(89%);
 
   --font-primary: 'Geologica', sans-serif;

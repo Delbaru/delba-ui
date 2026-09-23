@@ -36,7 +36,7 @@
               max-width: calc(var(--rpx) * var(--radio-dot, 12));
               max-height: calc(var(--rpx) * var(--radio-dot, 12));
               border-radius: 50%;
-              background: var(--success-color);
+              background: var(--success);
               opacity: 0;
               transition: var(--transition-radio);
           }
@@ -55,7 +55,7 @@
 
       .Input:checked + .Box {
           background: var(--white-100) !important;
-          border-color: var(--success-color) !important;
+          border-color: var(--success) !important;
 
           .Dot {opacity: 1;}
       }

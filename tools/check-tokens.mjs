@@ -24,6 +24,18 @@ const GENERATED_SKIN = new Set(['_tokens.scss', '_classes.scss'].map((name) => p
 const TEST_FILE = /\.test\.tsx?$/;
 const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'tools', 'theme', 'public']);
 const PROP_PREFIX_LIST = /ROOT_DATA_PROP_PREFIXES/;
+// Переименования договора: старое имя в теме проекта → новое. Одно место — и для подсказки, и для README.
+// Кит говорит ролями: статус по смыслу, а не по цвету (2026-09-23). Роли бренда `--secondary*` и
+// `--tertiary` кит больше не занимает под служебное — плейсхолдер и disabled читают `--gray`, рамка
+// SwitchButton — `--gray-light`; сами роли остаются проекту, поэтому в таблице их нет.
+export const RENAMED = {
+  '--red': '--error',
+  '--error-color': '--error',
+  '--red-light': '--error-light',
+  '--green': '--success',
+  '--success-color': '--success',
+  '--yellow': '--warning',
+};
 
 function walk(target, ext, out = []) {
   if (!fs.existsSync(target)) return out;
@@ -106,6 +118,10 @@ if (isMain) {
   const styles = files.map((file) => stripComments(fs.readFileSync(file, 'utf8'))).join('\n');
   const declared = new Set([...styles.matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]));
 
+  const hint = (name) => {
+    const old = Object.keys(RENAMED).filter((from) => RENAMED[from] === name && declared.has(from));
+    return old.length ? `  · переименуй ${old.join(' / ')} → ${name}` : '';
+  };
   const missing = [
     ...[...contract.tokens].filter(([name]) => !declared.has(name)).map(([name, users]) => [name, users]),
     ...[...contract.families].filter(([prefix]) => ![...declared].some((name) => name.startsWith(prefix))).map(([prefix, users]) => [`${prefix}*`, users]),
@@ -119,6 +135,6 @@ if (isMain) {
   }
 
   console.warn(`[ui:tokens] ⚠ договор темы: ${total - missing.length} из ${total}; нет:`);
-  for (const [name, users] of missing) console.warn(`  ${name.padEnd(28)} ← ${users.join(', ')}`);
+  for (const [name, users] of missing) console.warn(`  ${name.padEnd(28)} ← ${users.join(', ')}${hint(name)}`);
   process.exit(args.includes('--strict') ? 1 : 0);
 }

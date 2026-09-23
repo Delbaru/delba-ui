@@ -280,7 +280,7 @@ export function Textarea({
                 // рисовался только в Input, из-за чего textarea-поле в той же форме теряло метку.
                 <Flex dir={['row', 'row', 'row']} gap={[4, null, null]}>
                     <Text className={styles.Label} color={labelColor}>{label}</Text>
-                    {required && ( <Text className={styles.Label} color="var(--red)">*</Text> )}
+                    {required && ( <Text className={styles.Label} color="var(--error)">*</Text> )}
                 </Flex>
             )}
             <div
@@ -323,7 +323,7 @@ export function Textarea({
                         id={errorId}
                         role='alert'
                         variant={['p', 'p', 'p']}
-                        color='var(--red)'
+                        color='var(--error)'
                         className={styles.InlineError}
                     >
                         {inlineError}

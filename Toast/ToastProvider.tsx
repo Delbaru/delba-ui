@@ -32,13 +32,13 @@ export type ToastOptions = {
 };
 
 const TONE: Record<ToastTone, { glyph: string; fill: string }> = {
-  success: { glyph: '/icons/ui/check/style-3/check.svg', fill: 'var(--green)' },
+  success: { glyph: '/icons/ui/check/style-3/check.svg', fill: 'var(--success)' },
   // Жёлтый — ход принят, но ничего не сделал (действие ещё не подключено, недоступно на тарифе).
   // Зелёный чек на таком ходе врёт: человек читает его как выполненное.
-  warning: { glyph: '/icons/ui/exclamation/style-1/exclamation.svg', fill: 'var(--yellow)' },
+  warning: { glyph: '/icons/ui/exclamation/style-1/exclamation.svg', fill: 'var(--warning)' },
   // Красный тон — для отказа В ОТВЕТ НА ДЕЙСТВИЕ, у которого нет своего места для ошибки
   // (файл не прошёл проверку при загрузке). Ошибке ФОРМЫ место в поле, а не здесь.
-  error: { glyph: '/icons/ui/cross/style-7/cross.svg', fill: 'var(--red)' },
+  error: { glyph: '/icons/ui/cross/style-7/cross.svg', fill: 'var(--error)' },
 };
 
 /** Заливка кружка тоста — полным кортежем: проп респонсивный. */

@@ -44,15 +44,15 @@
 
           &[state~='success'] {
               .Box {
-                  background: var(--success-color);
-                  border-color: var(--success-color) !important;
+                  background: var(--success);
+                  border-color: var(--success) !important;
 
                   .icon { opacity: 1; }
               }
           }
       }
 
-      &[state~='error'] .Box { border-color: var(--error-color); }
+      &[state~='error'] .Box { border-color: var(--error); }
 
       &[state~='disabled'] {
           cursor: not-allowed;

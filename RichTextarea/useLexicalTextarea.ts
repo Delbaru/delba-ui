@@ -57,7 +57,7 @@ export function useLexicalTextarea(ref: Ref<LexicalTextareaHandle> | undefined, 
 
   const helperError = error ?? editorMeta.error;
   const helperText = helperError ?? comment;
-  const helperTextColor = helperError ? 'var(--red)' : 'var(--gray)';
+  const helperTextColor = helperError ? 'var(--error)' : 'var(--gray)';
   const helperTextId = helperText ? `${id}-comment` : undefined;
   const showCounter = minLength != null || maxLength != null;
   const hasVariables = variables.length > 0;

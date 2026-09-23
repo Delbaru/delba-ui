@@ -276,7 +276,7 @@ export function Select({
                     </Text>
 
                     {required && (
-                        <Text variant={['small', 'small', 'small']} color="var(--red)">
+                        <Text variant={['small', 'small', 'small']} color="var(--error)">
                             *
                         </Text>
                     )}
@@ -311,9 +311,9 @@ export function Select({
                         className={styles.TriggerContent}
                         style={{
                             color: showInlineError
-                                ? 'var(--red)'
+                                ? 'var(--error)'
                                 : !hasSelectedValue
-                                    ? placeholderColor ?? 'var(--secondary)'
+                                    ? placeholderColor ?? 'var(--gray)'
                                     : undefined,
                         }}
                     >
@@ -386,7 +386,7 @@ export function Select({
                                                 as="div"
                                                 variant={['small', 'small', 'small']}
                                                 className={styles.GroupLabel}
-                                                color="var(--secondary)"
+                                                color="var(--gray)"
                                             >
                                                 {item.label}
                                             </Text>

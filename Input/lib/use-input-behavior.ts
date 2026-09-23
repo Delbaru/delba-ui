@@ -248,7 +248,7 @@ export function useInputBehavior({
   });
 
   const helperText = displayError ?? comment;
-  const helperTextColor = displayError ? 'var(--red)' : 'var(--gray)';
+  const helperTextColor = displayError ? 'var(--error)' : 'var(--gray)';
 
   const [phoneUncontrolled, setPhoneUncontrolled] = useState(() => {
     if (!isPhone || valueProp !== undefined || !defaultValueString) return phoneMask.emptyValue(phoneFormat);

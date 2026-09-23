@@ -141,7 +141,7 @@ export function LexicalTextareaCounter({
   return (
     <Text
       variant={['small', null, null]}
-      color='var(--secondary)'
+      color='var(--gray)'
       style={{ whiteSpace: 'nowrap', lineHeight: 1 }}
     >
       {maxLength != null ? `${characters} / ${maxLength}` : `${characters}`}

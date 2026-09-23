@@ -112,11 +112,11 @@
       }
 
       .ClearButton:hover {
-          border-color: var(--red-light);
-          background: var(--red-light);
+          border-color: var(--error-light);
+          background: var(--error-light);
 
           .ClearIcon {
-              color: var(--red);
+              color: var(--error);
           }
       }
 

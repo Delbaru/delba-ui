@@ -116,7 +116,7 @@ export function LexicalTextarea({
   bg,
   color,
   placeholder,
-  placeholderColor = 'var(--secondary-hover)',
+  placeholderColor = 'var(--gray)',
   label,
   labelColor,
   comment,

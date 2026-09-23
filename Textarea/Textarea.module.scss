@@ -28,7 +28,7 @@
         font: var(--font-p);
         resize: none;
 
-        &::placeholder { color: var(--field-placeholder-color, var(--secondary-hover)); }
+        &::placeholder { color: var(--field-placeholder-color, var(--gray)); }
 
         // Нейтрализуем заливку автозаполнения Chrome/Safari (см. Input.module.scss): «замораживаем»
         // переход, чтобы прозрачное поле показывало фон контейнера, а не фон браузера.
@@ -76,7 +76,7 @@
         pointer-events: none;
       }
 
-      &[state~='error'] { border-color: var(--error-color); }
+      &[state~='error'] { border-color: var(--error); }
 
       &[state~='active'] {
         &:active {
@@ -104,9 +104,9 @@
 
     //   &:disabled,
     //   &[state~='disabled'] {
-    //       border-color: var(--secondary-hover);
-    //       background: var(--secondary-hover);
-    //       color: var(--secondary-hover);
+    //       border-color: var(--gray);
+    //       background: var(--gray);
+    //       color: var(--gray);
     //   }
 
     //   @media (max-width: 767px) {

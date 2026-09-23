@@ -185,7 +185,7 @@
           }
 
           &[state~='error'] {
-              border-color: var(--error-color);
+              border-color: var(--error);
           }
 
           &[state~='open'] {
@@ -196,7 +196,7 @@
               cursor: not-allowed;
 
               .TriggerText {
-                  color: var(--secondary);
+                  color: var(--gray);
               }
 
               .Chevron {
@@ -221,10 +221,10 @@
           }
 
           &[state~='open'][state~='error'] {
-              border-color: var(--error-color) !important;
+              border-color: var(--error) !important;
 
               .Dropdown {
-                  border-color: var(--error-color);
+                  border-color: var(--error);
               }
           }
       }

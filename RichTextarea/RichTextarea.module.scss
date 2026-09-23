@@ -172,7 +172,7 @@
     }
 
     &[data-state~='error'] {
-      border-color: var(--error-color);
+      border-color: var(--error);
     }
   }
 }
