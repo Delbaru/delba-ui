@@ -36,9 +36,45 @@ const RICH_TEXT_ALLOWED_TAGS = [
 
 const RICH_TEXT_ALLOWED_ATTR = ['href', 'rel', 'target', 'title'] as const;
 
-export const sanitizeRichTextHtml = (value: string): string =>
+// Расширенный набор для Markdown-ответов (GFM из `marked`): блок кода, таблицы, цитата, черта,
+// зачёркнутое. Отдельной опцией, а не в общий список: умолчание у потребителей кита не должно
+// поменяться ни на байт. `align` — им `marked` размечает выравнивание колонок таблицы.
+const RICH_TEXT_EXTRA_TAGS = [
+  'pre',
+  'table',
+  'thead',
+  'tbody',
+  'tfoot',
+  'tr',
+  'th',
+  'td',
+  'blockquote',
+  'hr',
+  'del',
+  's',
+] as const;
+
+const RICH_TEXT_EXTRA_ATTR = ['align'] as const;
+
+/** Опции `sanitizeRichTextHtml`. */
+export interface SanitizeRichTextOptions {
+  /**
+   * Расширенный набор разметки — для HTML из Markdown (GFM): дополнительно пропускает `pre`,
+   * `table`, `thead`, `tbody`, `tfoot`, `tr`, `th`, `td`, `blockquote`, `hr`, `del`, `s` и атрибут
+   * `align`. Скрипты, обработчики `on*` и `javascript:`-ссылки режутся так же, как без опции.
+   * По умолчанию `false` — прежний набор тегов пользовательского rich-text.
+   */
+  rich?: boolean;
+}
+
+/**
+ * Чистит HTML rich-text по белому списку тегов и атрибутов (DOMPurify, безопасно в SSR).
+ * @param value — исходный HTML.
+ * @param options — `{ rich: true }` расширяет набор под Markdown-ответы (таблицы, `pre`, цитаты).
+ */
+export const sanitizeRichTextHtml = (value: string, options?: SanitizeRichTextOptions): string =>
   DOMPurify.sanitize(value, {
-    ALLOWED_TAGS: [...RICH_TEXT_ALLOWED_TAGS],
-    ALLOWED_ATTR: [...RICH_TEXT_ALLOWED_ATTR],
+    ALLOWED_TAGS: options?.rich ? [...RICH_TEXT_ALLOWED_TAGS, ...RICH_TEXT_EXTRA_TAGS] : [...RICH_TEXT_ALLOWED_TAGS],
+    ALLOWED_ATTR: options?.rich ? [...RICH_TEXT_ALLOWED_ATTR, ...RICH_TEXT_EXTRA_ATTR] : [...RICH_TEXT_ALLOWED_ATTR],
     ALLOW_DATA_ATTR: false,
   });
