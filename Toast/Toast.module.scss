@@ -14,7 +14,7 @@
 
   .card {
       max-width: calc(560 * var(--rpx));
-      border: calc(1 * var(--rpx)) solid var(--gray-light);
+      border: calc(1 * var(--rpx)) solid var(--line);
       // Своего токена у тени нет — та же формула, что у поповера и сайдбара.
       box-shadow: 0 calc(8 * var(--rpx)) calc(32 * var(--rpx)) rgb(0 0 0 / 8%);
       pointer-events: auto;

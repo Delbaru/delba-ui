@@ -161,7 +161,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {/* Подробность — вариант ВЫЗОВА (у одного тоста она либо есть, либо нет и
                     не появится), поэтому обычное условие, а не сворачивание. */}
                 {item.description && (
-                  <Text variant={['small', null, null]} color='var(--gray)'>{item.description}</Text>
+                  <Text variant={['small', null, null]} color='var(--text-muted)'>{item.description}</Text>
                 )}
               </Flex>
             </Flex>

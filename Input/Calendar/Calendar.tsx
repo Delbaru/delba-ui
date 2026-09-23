@@ -85,7 +85,7 @@ export function Calendar({
       p={[16, null, null]}
       r={[16, null, null]}
       w={[336, null, null]}
-      border={[`calc(1 * var(--rpx)) solid var(--gray-light)`, null, null]}
+      border={[`calc(1 * var(--rpx)) solid var(--line)`, null, null]}
       bg='var(--white-100)'
       className={styles.Calendar}
       style={floatingStyle}
@@ -107,7 +107,7 @@ export function Calendar({
           h={[18, null, null]}
           rootR={[8, null, null]}
           rootBg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
-          border={['calc(1 * var(--rpx)) solid var(--gray-light)', null, null]}
+          border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
           onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, -1))}
           rootClassName={cx(styles.btn, styles.prev)}
         />
@@ -168,7 +168,7 @@ export function Calendar({
           h={[18, null, null]}
           rootR={[8, null, null]}
           rootBg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
-          border={['calc(1 * var(--rpx)) solid var(--gray-light)', null, null]}
+          border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
           onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, 1))}
           rootClassName={cx(styles.btn, styles.next)}
         />
@@ -196,7 +196,7 @@ export function Calendar({
                   type='button'
                   h={['100%', null, null]}
                   r={[8, null, null]}
-                  border={['calc(1 * var(--rpx)) solid var(--gray-light)', null, null]}
+                  border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
                   bg={isCurrentVisibleMonth ? 'var(--primary)' : 'var(--background)'}
                   onClick={() => handleMonthSelect(monthIndex)}
                 >

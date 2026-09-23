@@ -26,8 +26,8 @@ const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'tools', 'theme', 'p
 const PROP_PREFIX_LIST = /ROOT_DATA_PROP_PREFIXES/;
 // Переименования договора: старое имя в теме проекта → новое. Одно место — и для подсказки, и для README.
 // Кит говорит ролями: статус по смыслу, а не по цвету (2026-09-23). Роли бренда `--secondary*` и
-// `--tertiary` кит больше не занимает под служебное — плейсхолдер и disabled читают `--gray`, рамка
-// SwitchButton — `--gray-light`; сами роли остаются проекту, поэтому в таблице их нет.
+// `--tertiary` кит больше не занимает под служебное — плейсхолдер и disabled читают `--text-muted`, рамка
+// SwitchButton — `--line`; сами роли остаются проекту, поэтому в таблице их нет.
 export const RENAMED = {
   '--red': '--error',
   '--error-color': '--error',
@@ -35,6 +35,8 @@ export const RENAMED = {
   '--green': '--success',
   '--success-color': '--success',
   '--yellow': '--warning',
+  '--gray': '--text-muted',
+  '--gray-light': '--line',
 };
 
 function walk(target, ext, out = []) {

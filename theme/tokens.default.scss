@@ -6,8 +6,8 @@
 //   @use '<путь до UI>/theme/tokens.default.scss';
 //
 // Цвета — ролями: бренд (`--primary*`, `--tertiary` — только вариант Button) · статусы
-// (`--error*`, `--success`, `--warning`) · нейтральные (фон, текст, `--gray` — приглушённый
-// текст, плейсхолдер, disabled; `--gray-light` — линии и рамки). Служебное ролей бренда не занимает.
+// (`--error*`, `--success`, `--warning`) · нейтральные (фон, текст, `--text-muted` — приглушённый
+// текст, плейсхолдер, disabled; `--line` — линии и рамки). Служебное ролей бренда не занимает.
 //
 // Не заданы намеренно: `--tertiary` (вариант базового Button), `--black-70` (CarouselNav).
 // Проект, которому они нужны, задаёт их сам.
@@ -26,8 +26,8 @@
   --primary-light: #E9F4FF;
   --primary-hover: #F5F9FF;
   --primary-dark: #228BD3;
-  --gray: #5D6677;
-  --gray-light: #D8DCEA;
+  --text-muted: #5D6677;
+  --line: #D8DCEA;
 
   --text: var(--black);
   --background: #F2F3F8;

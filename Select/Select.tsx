@@ -313,7 +313,7 @@ export function Select({
                             color: showInlineError
                                 ? 'var(--error)'
                                 : !hasSelectedValue
-                                    ? placeholderColor ?? 'var(--gray)'
+                                    ? placeholderColor ?? 'var(--text-muted)'
                                     : undefined,
                         }}
                     >
@@ -386,7 +386,7 @@ export function Select({
                                                 as="div"
                                                 variant={['small', 'small', 'small']}
                                                 className={styles.GroupLabel}
-                                                color="var(--gray)"
+                                                color="var(--text-muted)"
                                             >
                                                 {item.label}
                                             </Text>
@@ -473,7 +473,7 @@ export function Select({
                     as="div"
                     variant={['small', 'small', 'small']}
                     id={commentId}
-                    color="var(--gray)"
+                    color="var(--text-muted)"
                     pl={fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl)}
                 >
                     {comment}

@@ -28,8 +28,8 @@
 
           &[disabled],
           &[state~='disabled'] {
-              background: var(--gray);
-              border-color: var(--gray);
+              background: var(--text-muted);
+              border-color: var(--text-muted);
               color: var(--black);
               pointer-events: none;
               opacity: 0.2;

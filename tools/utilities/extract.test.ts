@@ -63,7 +63,7 @@ test('ключ с большим набором значений — данны�
 
 test('шаблонная строка с условием вычисляется в обе стороны', () => {
   const classes = classesOf([
-    { file: 'a.tsx', text: "export const A = ({ on }) => <Flex border={[`calc(1.5 * var(--rpx)) solid ${on ? 'var(--primary)' : 'var(--gray-light)'}`, null, null]} />;" },
+    { file: 'a.tsx', text: "export const A = ({ on }) => <Flex border={[`calc(1.5 * var(--rpx)) solid ${on ? 'var(--primary)' : 'var(--line)'}`, null, null]} />;" },
   ]);
   assert.equal([...classes].filter((name) => name.startsWith('d_border_')).length, 2);
 });

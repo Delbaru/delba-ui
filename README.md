@@ -94,7 +94,7 @@ node <путь>/UI/tools/cli.mjs check   # красные линии (--update �
   Цвета договор называет ролями. Бренд — `--primary` (+ `-hover`, `-light`, `-dark`) и
   `--tertiary` (только `Button variant="tertiary"`); статусы — `--error`, `--error-light`,
   `--success`, `--warning`; нейтральные — `--background`, `--text`, `--black` (чернила полей),
-  `--gray` (приглушённый текст, плейсхолдер, disabled), `--gray-light` (линии и рамки), `--white-*`.
+  `--text-muted` (приглушённый текст, плейсхолдер, disabled), `--line` (линии и рамки), `--white-*`.
   Служебное роли бренда не занимает: `--secondary` проект может отдать под бренд целиком.
 
   Для нового проекта есть стартовая тема [`theme/tokens.default.scss`](theme/tokens.default.scss):
@@ -157,7 +157,7 @@ git add <путь>/UI && git commit -m "UI: обновить библиотек�
 | `--yellow` | `--warning` |
 
 `--secondary` / `--secondary-hover` кит больше не читает (плейсхолдеры, текст `Select`, disabled
-`Button`, бегунок `SwitchButton` → `--gray`), рамка `SwitchButton` вместо `--tertiary` — `--gray-light`.
+`Button`, бегунок `SwitchButton` → `--text-muted`), рамка `SwitchButton` вместо `--tertiary` — `--line`.
 `check-tokens.mjs` узнаёт старые имена и подсказывает замену; таблица — `RENAMED` в нём.
 
 ## Отложено (решение владельца 2026-09-23)

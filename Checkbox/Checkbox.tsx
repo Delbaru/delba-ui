@@ -111,7 +111,7 @@ export function Checkbox({
                     // перебить ничем (§12 «отдай правило ПЕРЕМЕННОЙ, а не спорь
                     // специфичностью»). Публичной части нужен `hair` — там квадрат стоит в
                     // ряду с полями на такой же нити.
-                    border={['calc(1 * var(--rpx)) solid var(--checkbox-box-border, var(--gray))', 'calc(1 * var(--rpx)) solid var(--checkbox-box-border, var(--gray))', 'calc(1 * var(--rpx)) solid var(--checkbox-box-border, var(--gray))']}
+                    border={['calc(1 * var(--rpx)) solid var(--checkbox-box-border, var(--text-muted))', 'calc(1 * var(--rpx)) solid var(--checkbox-box-border, var(--text-muted))', 'calc(1 * var(--rpx)) solid var(--checkbox-box-border, var(--text-muted))']}
                     aria-hidden
                     {...stateProps(isChecked && 'active')}
                 >

@@ -74,7 +74,7 @@
 
           .Dropdown {
               background: var(--white-100);
-              border: calc(1 * var(--rpx)) solid var(--gray-light);
+              border: calc(1 * var(--rpx)) solid var(--line);
               border-top: none;
               // Скругления — ПЕРЕМЕННЫМИ, а не числами: пресет-обёртка вправе сказать, какой формы
               // её выпадашка, а править ради этого правило атома нельзя — оно общее на все селекты
@@ -131,12 +131,12 @@
                   color var(--t-d-fast);
 
               // Маркер множественного выбора. Рисунок повторяет квадрат атома `Checkbox`
-              // (24, r8, нить --gray, залитый --primary с белой галочкой), но живёт здесь:
+              // (24, r8, нить --text-muted, залитый --primary с белой галочкой), но живёт здесь:
               // рамка и заливка ОБЯЗАНЫ переключаться состоянием строки, а проп `border`
               // у Flex садится инлайном и без `!important` уже не перебивается (§9.3).
               .OptionCheck {
                   flex-shrink: 0;
-                  border: calc(1 * var(--rpx)) solid var(--gray);
+                  border: calc(1 * var(--rpx)) solid var(--text-muted);
                   transition:
                       background var(--t-d-fast),
                       border-color var(--t-d-fast);
@@ -171,7 +171,7 @@
               &[state~='focused'],
               &[state~='hover'],
               &[state~='selected'] {
-                  background: var(--gray-light);
+                  background: var(--line);
               }
 
               &[state~='selected'] .OptionCheck {
@@ -196,7 +196,7 @@
               cursor: not-allowed;
 
               .TriggerText {
-                  color: var(--gray);
+                  color: var(--text-muted);
               }
 
               .Chevron {
@@ -235,7 +235,7 @@
           &:hover:not([state~='disabled']),
           &[state~='hover']:not([state~='disabled']),
           &[state~='open']:not([state~='disabled']) {
-              border-color: var(--gray-light);
+              border-color: var(--line);
           }
       }
 

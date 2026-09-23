@@ -44,8 +44,8 @@
 
   .tooltipWrapper {
       &:hover .info path{
-          --icon-stroke: var(--gray);
-          --icon-fill: var(--gray);
+          --icon-stroke: var(--text-muted);
+          --icon-fill: var(--text-muted);
       }
   }
 

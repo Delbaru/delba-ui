@@ -36,7 +36,7 @@ export interface SkeletonProps {
  */
 export function Skeleton({ w = ['100%', null, null], h = [16, null, null], r = [8, null, null], rows = 1, gap = [8, null, null], className }: SkeletonProps) {
     if (rows === 1) {
-        return <Flex w={w} h={h} r={r} bg='var(--gray-light)' className={cx(styles.Skeleton, className)} />;
+        return <Flex w={w} h={h} r={r} bg='var(--line)' className={cx(styles.Skeleton, className)} />;
     }
 
     return (
@@ -48,7 +48,7 @@ export function Skeleton({ w = ['100%', null, null], h = [16, null, null], r = [
                     w={index === rows - 1 ? ['70%', null, null] : ['100%', null, null]}
                     h={h}
                     r={r}
-                    bg='var(--gray-light)'
+                    bg='var(--line)'
                     className={styles.Skeleton}
                 />
             ))}

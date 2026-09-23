@@ -135,12 +135,12 @@ grep -rn 'var(---' --include='*.scss' --include='*.tsx' --include='*.ts' .
 
 Симптом: проект задаёт `--secondary` бронзой — и бронзовыми становятся плейсхолдеры, текст
 `Select`, disabled-кнопка; `--tertiary` синим — синеет рамка `SwitchButton`. Темы подстраивались
-алиасами «ради кита» (`--secondary: var(--gray)`), и бренд терял имя.
+алиасами «ради кита» (`--secondary: var(--text-muted)`), и бренд терял имя.
 
 Причина: кит читал `--secondary*` / `--tertiary` как «приглушённое» и «рамку», а статусы — по
 цвету (`--red`, `--green`, `--yellow`, плюс дубли `--error-color`, `--success-color`).
 
-Лечение (BREAKING, 2026-09-23): служебное — нейтральными (`--gray`, `--gray-light`), статусы —
+Лечение (BREAKING, 2026-09-23): служебное — нейтральными (`--text-muted`, `--line`), статусы —
 по смыслу (`--error`, `--error-light`, `--success`, `--warning`). Таблица переименований —
 `RENAMED` в `tools/check-tokens.mjs`, он же подсказывает замену по теме проекта.
 

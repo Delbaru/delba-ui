@@ -88,7 +88,7 @@
               font-variant-numeric: lining-nums proportional-nums;
 
               &::placeholder {
-                  color: var(--field-placeholder-color, var(--gray));
+                  color: var(--field-placeholder-color, var(--text-muted));
               }
 
               &::-webkit-outer-spin-button,
@@ -191,7 +191,7 @@
               flex-shrink: 0;
 
               svg path[fill]:not([fill='none']) {
-                  fill: var(--gray);
+                  fill: var(--text-muted);
                   transition: fill var(--t-d-fast) var(--t-t-f-ease);
               }
 
@@ -255,7 +255,7 @@
           // Но легче ровно на СТУПЕНЬ (500 против 600 у поля), а не вдвое: подсказка-образец набрана
           // цифрами, и рядом с набранным номером Regular читался бы как другой шрифт, а не как подсказка.
           .phoneMaskDim {
-              color: var(--gray);
+              color: var(--text-muted);
               font-weight: 500;
               letter-spacing: calc(1.8 * var(--rpx));
 
@@ -281,19 +281,19 @@
 
           &[state~='active'] {
               &:active {
-                  border-color: var(--gray);
+                  border-color: var(--text-muted);
               }
           }
 
           // Наведение подсвечивает рамку — это affordance ввода. А вот ЗАПОЛНЕННОСТЬ рамку не
           // трогает: в макетах поле со значением выглядит ровно как пустое (#D8DCEA = `hair`).
-          // `[state~='filled'] → --gray` перекрывал осевой .sk_border_* по специфичности (0,4,0
+          // `[state~='filled'] → --text-muted` перекрывал осевой .sk_border_* по специфичности (0,4,0
           // против 0,1,0), то есть любое заполненное поле в приложении темнело мимо словаря LINES
-          // (--gray там вообще нет — это цвет текста). Убрано, см. Frontend.md §12.
+          // (--text-muted там вообще нет — это цвет текста). Убрано, см. Frontend.md §12.
           //
           // У readOnly-поля гасим и hover: вводить в него нельзя, а подсветка обещает обратное.
           &:not([state~='error']):not([state~='readonly']):hover {
-              border-color: var(--gray);
+              border-color: var(--text-muted);
           }
 
           // Поле-витрина (значение пришло извне): ни курсора ввода, ни клика «поставить каретку».

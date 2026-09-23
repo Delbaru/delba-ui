@@ -26,7 +26,7 @@
           max-width: calc(var(--rpx) * var(--radio-box, 20));
           max-height: calc(var(--rpx) * var(--radio-box, 20));
           border-radius: 50%;
-          border: calc(2 * var(--rpx)) solid var(--gray);
+          border: calc(2 * var(--rpx)) solid var(--text-muted);
           background: var(--white-100);
           transition: var(--transition-radio);
 
@@ -49,8 +49,8 @@
 
       &:not([state~='disabled']):hover .Input:checked+.Box,
       &[state~='hover']:not(.Input:checked) + .Box {
-          background: var(--gray);
-          border-color: var(--gray);
+          background: var(--text-muted);
+          border-color: var(--text-muted);
       }
 
       .Input:checked + .Box {

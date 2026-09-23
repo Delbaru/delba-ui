@@ -116,7 +116,7 @@ export function LexicalTextarea({
   bg,
   color,
   placeholder,
-  placeholderColor = 'var(--gray)',
+  placeholderColor = 'var(--text-muted)',
   label,
   labelColor,
   comment,
@@ -266,7 +266,7 @@ export function LexicalTextarea({
             gap={[16, 8, 16]}
             mt={[16, 16, 16]}
             pt={[16, 16, 16]}
-            borderT={['calc(1 * var(--rpx)) solid var(--gray-light)', null, null]}
+            borderT={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
           >
             <LexicalTextareaToolbar hasVariables={hasVariables} allowLink={allowLink} />
             {showCounter && <LexicalTextareaCounter characters={editorMeta.payload.characters} maxLength={maxLength} />}

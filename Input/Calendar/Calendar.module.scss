@@ -36,7 +36,7 @@
           }
 
           &[state~='hover']:not([state~='selected']):not([state~='active']):not([state~='disabled']) {
-              background: var(--gray-light) !important;
+              background: var(--line) !important;
           }
 
           &[state~='active'],
@@ -60,7 +60,7 @@
               pointer-events: none;
 
               svg path {
-                  stroke: var(--gray-light);
+                  stroke: var(--line);
               }
           }
       }

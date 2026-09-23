@@ -16,8 +16,8 @@
       width: 100%;
       pointer-events: none;
       appearance: none;
-      color: var(--field-placeholder-color, var(--gray));
-      -webkit-text-fill-color: var(--field-placeholder-color, var(--gray));
+      color: var(--field-placeholder-color, var(--text-muted));
+      -webkit-text-fill-color: var(--field-placeholder-color, var(--text-muted));
   }
 
   .mask,

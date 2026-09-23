@@ -572,7 +572,7 @@ export function Input({
                     as='div'
                     id={commentId}
                     variant={['small', 'small', 'small']}
-                    color='var(--gray)'
+                    color='var(--text-muted)'
                     pl={fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl)}
                 >
                     {commentText}

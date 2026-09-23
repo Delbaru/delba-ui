@@ -141,7 +141,7 @@ export function LexicalTextareaCounter({
   return (
     <Text
       variant={['small', null, null]}
-      color='var(--gray)'
+      color='var(--text-muted)'
       style={{ whiteSpace: 'nowrap', lineHeight: 1 }}
     >
       {maxLength != null ? `${characters} / ${maxLength}` : `${characters}`}
@@ -293,12 +293,12 @@ export function LexicalTextareaToolbar({ hasVariables, allowLink = true }: { has
             />
           ))}
 
-          {groupIndex < toolbarGroups.length - 1 && <Flex w={[1, null, null]} h={[20, null, null]} bg='var(--gray-light)' />}
+          {groupIndex < toolbarGroups.length - 1 && <Flex w={[1, null, null]} h={[20, null, null]} bg='var(--line)' />}
         </Fragment>
       ))}
 
       {hasVariables && (
-        <Text variant={['dop', null, null]} color='var(--gray)'>
+        <Text variant={['dop', null, null]} color='var(--text-muted)'>
           Введите @ для вставки переменной
         </Text>
       )}

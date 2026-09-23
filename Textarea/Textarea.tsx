@@ -334,7 +334,7 @@ export function Textarea({
                         variant={["small", null, null]}
                         fontSize={[8, null, null]}
                         className={styles.Counter}
-                        color="var(--gray)"
+                        color="var(--text-muted)"
                         aria-live="polite"
                     >
                         {counterLabel}
@@ -352,7 +352,7 @@ export function Textarea({
                 <Text
                     as='div'
                     variant={['small', null, null]}
-                    color='var(--gray)'
+                    color='var(--text-muted)'
                     textAlign={['right', null, null]}
                     w={['100%', null, null]}
                     aria-live='polite'
@@ -365,7 +365,7 @@ export function Textarea({
                     as='div'
                     variant={['small', 'small', 'small']}
                     id={commentId}
-                    color='var(--gray)'
+                    color='var(--text-muted)'
                     pl={fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl)}
                 >
                     {comment}

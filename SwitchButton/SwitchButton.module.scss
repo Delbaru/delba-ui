@@ -23,7 +23,7 @@
       width: var(--switch-track-width);
       height: var(--switch-track-height);
       border-radius: calc(var(--switch-track-height) / 2);
-      border: calc(1 * var(--rpx)) solid var(--gray-light);
+      border: calc(1 * var(--rpx)) solid var(--line);
       background: var(--background);
       transition: var(--switch-transition);
 
@@ -33,7 +33,7 @@
         width: var(--switch-thumb-size);
         height: var(--switch-thumb-size);
         border-radius: 50%;
-        background: var(--gray);
+        background: var(--text-muted);
         transition: var(--switch-transition);
         transform: translateX(0);
       }
@@ -50,7 +50,7 @@
     }
 
     &:not([state~='disabled']):hover .Track,
-    &[state~='hover']:not([state~='disabled']) .Track {border-color: var(--gray);}
+    &[state~='hover']:not([state~='disabled']) .Track {border-color: var(--text-muted);}
     &:not([state~='disabled']):hover .Input:checked + .Track,
     &[state~='hover']:not([state~='disabled']) .Input:checked + .Track {background: var(--primary-hover);border-color: var(--primary-hover);}
 
