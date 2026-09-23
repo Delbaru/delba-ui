@@ -1,6 +1,6 @@
 import { slotClassName, utilitySlots, type ResponsiveUtilityValue } from './classes';
 import { escapeClassName, type UtilityEntry } from './keys';
-import { BREAKPOINTS, MEDIA, UTILITIES, type Breakpoint, type Utility } from './registry';
+import { BREAKPOINTS, MEDIA, UTILITIES, textDomain, type Breakpoint, type Utility } from './registry';
 
 /**
  * Правила таблицы утилит для генератора. В бандл приложения этот модуль не попадает: рантайму
@@ -30,9 +30,12 @@ export function looseRules(utility: Utility, entry: UtilityEntry): UtilityRule[]
   return [null, ...BREAKPOINTS].flatMap((breakpoint) => rule(utility, breakpoint, entry) ?? []);
 }
 
-/** Закрытые словари печатаются целиком — искать их значения в коде не нужно. */
-export function domainRules(): UtilityRule[] {
-  return UTILITIES.flatMap((utility) => (utility.domain ?? []).flatMap((entry) => looseRules(utility, entry)));
+/** Закрытые словари печатаются целиком — искать их значения в коде не нужно. `typography` — варианты проекта. */
+export function domainRules(typography?: readonly string[]): UtilityRule[] {
+  return UTILITIES.flatMap((utility) => {
+    const domain = utility.name === 'text' && typography ? textDomain(typography) : (utility.domain ?? []);
+    return domain.flatMap((entry) => looseRules(utility, entry));
+  });
 }
 
 /**

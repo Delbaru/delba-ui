@@ -306,7 +306,7 @@ export function MediaDropDown({
                             className={styles.TriggerIcon}
                         />
                     </Flex>
-                    <Text variant={['small', 'small', 'small']} className={styles.TriggerLabel}>
+                    <Text variant={['caption', 'caption', 'caption']} className={styles.TriggerLabel}>
                         {triggerLabel}
                     </Text>
                 </Flex>
@@ -389,7 +389,7 @@ export function MediaDropDown({
                                             h={[16, 16, 16]}
                                             className={styles.TypeIcon}
                                         />
-                                        <Text variant={['dop', 'dop', 'dop']} className={styles.TypeLabel}>
+                                        <Text variant={['micro', 'micro', 'micro']} className={styles.TypeLabel}>
                                             {media.label}
                                         </Text>
                                     </Flex>
@@ -405,7 +405,7 @@ export function MediaDropDown({
                                     h={[16, 16, 16]}
                                     className={styles.UploadIcon}
                                 />
-                                <Text variant={['dop', 'dop', 'dop']} className={styles.UploadLabel}>
+                                <Text variant={['micro', 'micro', 'micro']} className={styles.UploadLabel}>
                                     Выбрать файл
                                 </Text>
                             </button>
@@ -417,7 +417,7 @@ export function MediaDropDown({
                                 className={styles.Divider}
                             >
                                 <span className={styles.DividerLine} />
-                                <Text variant={['dop', 'dop', 'dop']} className={styles.DividerText}>
+                                <Text variant={['micro', 'micro', 'micro']} className={styles.DividerText}>
                                     или
                                 </Text>
                                 <span className={styles.DividerLine} />
@@ -433,7 +433,7 @@ export function MediaDropDown({
                                     className={styles.LinkInput}
                                 />
                             </div>
-                            <Text variant={['dop', 'dop', 'dop']} className={styles.LinkHint}>
+                            <Text variant={['micro', 'micro', 'micro']} className={styles.LinkHint}>
                                 {selectedMedia.hint}
                             </Text>
                         </Flex>

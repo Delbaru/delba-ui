@@ -17,6 +17,7 @@ import { Box } from '../Box';
 import { Flex } from '../Flex';
 import { Text } from '../Text';
 import { cx, mergeComponentStates, type BorderStyleProps, type ComponentStateValue, type GrowProps, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type StateLinkInput, type WithRef } from '../core';
+import { roleFont } from '../core/base/typography';
 import richTextStyles from '../RichText/RichText.module.scss';
 import type { LexicalTextVariant } from '../RichText';
 import { LexicalTextareaCounter, LexicalTextareaToolbar } from './LexicalTextareaToolbar';
@@ -147,9 +148,9 @@ export function LexicalTextarea({
   const fieldState = mergeComponentStates(state, helperError && 'error');
   const fieldStyle = {
     ...(color ? { color } : null),
-    ['--font-p1' as string]: 'var(--font-p)',
-    ['--font-p2' as string]: 'var(--font-p)',
-    ['--font-p3' as string]: 'var(--font-p)',
+    ['--font-p1' as string]: roleFont('body'),
+    ['--font-p2' as string]: roleFont('body'),
+    ['--font-p3' as string]: roleFont('body'),
   } satisfies CSSProperties;
   const contentClassName = cx(styles.ContentEditable, richTextStyles.RichText, richTextStyles[variant]);
 
@@ -250,7 +251,7 @@ export function LexicalTextarea({
                 />
               }
               placeholder={placeholder ? (
-                <Text as='div' variant={['p', null, null]} color={placeholderColor} className={styles.Placeholder}>
+                <Text as='div' variant={['body', null, null]} color={placeholderColor} className={styles.Placeholder}>
                   {placeholder}
                 </Text>
               ) : null}
@@ -277,7 +278,7 @@ export function LexicalTextarea({
       {helperText && (
         <Text
           as='div'
-          variant={['small', 'small', 'small']}
+          variant={['caption', 'caption', 'caption']}
           mt={[8, 4, 8]}
           id={helperTextId}
           color={helperTextColor}

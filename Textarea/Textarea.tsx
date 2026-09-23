@@ -322,7 +322,7 @@ export function Textarea({
                         as='div'
                         id={errorId}
                         role='alert'
-                        variant={['p', 'p', 'p']}
+                        variant={['body', 'body', 'body']}
                         color='var(--error)'
                         className={styles.InlineError}
                     >
@@ -331,7 +331,7 @@ export function Textarea({
                 )}
                 {showCounter && countPlacement === 'inside' && (
                     <Text
-                        variant={["small", null, null]}
+                        variant={["caption", null, null]}
                         fontSize={[8, null, null]}
                         className={styles.Counter}
                         color="var(--text-muted)"
@@ -351,7 +351,7 @@ export function Textarea({
             {showCounter && countPlacement === 'below' && (
                 <Text
                     as='div'
-                    variant={['small', null, null]}
+                    variant={['caption', null, null]}
                     color='var(--text-muted)'
                     textAlign={['right', null, null]}
                     w={['100%', null, null]}
@@ -363,7 +363,7 @@ export function Textarea({
             {!displayError && comment && (
                 <Text
                     as='div'
-                    variant={['small', 'small', 'small']}
+                    variant={['caption', 'caption', 'caption']}
                     id={commentId}
                     color='var(--text-muted)'
                     pl={fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl)}

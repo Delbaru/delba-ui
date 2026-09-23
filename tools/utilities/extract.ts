@@ -29,6 +29,8 @@ export interface Source {
 export interface ExtractOptions {
   /** Значения из словарей, которые на вызовах пишутся ИМЕНЕМ (`radius='md'`): `{ r: [8, 12, 16] }`. */
   readonly seeds?: Readonly<Record<string, readonly UtilityEntry[]>>;
+  /** Варианты типографики проекта (`typography` в ui.config.ts); не заданы — прежний набор кита. */
+  readonly typography?: readonly string[];
   /** Путь модуля импорта → файл (относительные пути и алиасы проекта). */
   readonly resolveModule?: (fromFile: string, specifier: string) => string | undefined;
 }
@@ -536,7 +538,7 @@ export function extractUtilityRules(sources: readonly Source[], options: Extract
     return out;
   };
 
-  const rules: UtilityRule[] = [...domainRules()];
+  const rules: UtilityRule[] = [...domainRules(options.typography)];
   const dataEntries = new Map<string, { readonly utility: Utility; readonly entries: Map<string, UtilityEntry> }>();
 
   for (const facts of files) {

@@ -1,3 +1,5 @@
+@use '../core/mixins' as m;
+
 :where(.ui-text) {
   margin: 0;
 }
@@ -24,9 +26,9 @@
   display: inline-block;
   margin-left: calc(4 * var(--rpx));
   transform: translateY(-1cap);
-  font: var(--font-subtitle);
-  text-transform: var(--tt-subtitle);
-  letter-spacing: var(--ls-subtitle);
+  font: m.role-font(body, subtitle);
+  text-transform: var(--tt-body, var(--tt-subtitle));
+  letter-spacing: var(--ls-body, var(--ls-subtitle));
   color: var(--error);
 }
 

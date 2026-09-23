@@ -6,6 +6,7 @@ import type React from 'react';
 import { useRef, type CSSProperties } from 'react';
 
 import { boxLayout, buildClampStyle, createLayoutClasses, cx, normalizeComponentState, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveInput, type ResponsiveValue, type StateLinkInput, type WithRef } from '../core';
+import type { TextRole, TextVariantName } from '../core/base/typography';
 import { useSharedMotion, type SharedMotionProps } from '../hooks/useSharedMotion';
 import { resolveAnimation } from './animations/resolveAnimation';
 import type { AnimationInput } from './animations/types';
@@ -13,8 +14,11 @@ import type { LineHeightValue } from './typography';
 import { resolveTextContent, type TextFormat } from './formatContent';
 import { bindTextContent } from './nonBreaking';
 
-/** 'inherit' — не навязывать типографику: для Text внутри Text (цветные куски чужого заголовка). */
-type VariantKey = 'h1' | 'h2' | 'h3' | 'h4' | 'p1' | 'p2' | 'p3' | 'subtitle' | 'title' | 'p' | 'small' | 'dop' | 'inherit';
+/**
+ * Вариант проекта (`UiTypography`), служебная роль кита или 'inherit' — не навязывать типографику:
+ * для Text внутри Text (цветные куски чужого заголовка).
+ */
+type VariantKey = TextVariantName | TextRole | 'inherit';
 type FontFamilyKey = 'primary' | 'secondary' | 'inherit';
 type TextAlignValue = 'left' | 'right' | 'center' | 'justify' | 'start' | 'end';
 type WhiteSpaceValue = 'normal' | 'nowrap' | 'pre' | 'pre-wrap' | 'pre-line' | 'break-spaces';
@@ -61,7 +65,7 @@ export interface TextProps
 export function Text({
   ref,
   as = 'div',
-  variant = ['p', 'p', 'p'],
+  variant = ['body', 'body', 'body'],
   animation,
   animate,
   fontSize,

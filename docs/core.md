@@ -38,6 +38,9 @@
 `core/base/text-format.ts` — `pluralize(value, [one, few, many])` и `pad(value, length = 2)`.
 `core/utils.ts` — `clamp` и `clamp01`. `core/base/cn.ts` — `cx` (склейка КЛАССОВ; состояния,
 идентификаторы для `aria-*` и значения `transform` ею не склеивают).
+`core/base/typography.ts` — варианты проекта (`UiTypography`, `TextVariantName`), служебные роли
+`TEXT_ROLES` (`body`, `caption`, `micro`) и `textFont(name)`: шрифт роли — с фолбэком на прежний вариант.
+В компонентах кита — только роли, варианты проекта кит не называет.
 
 ## Хуки
 
@@ -53,7 +56,7 @@
 
 ## SCSS
 
-`core/_mixins.scss` — `reduced-motion`, `truncate`, `line-clamp($n)`, `fill`, `hidden-control`,
+`core/_mixins.scss` — `role-font($role, $legacy?)` (шрифт служебной роли), `reduced-motion`, `truncate`, `line-clamp($n)`, `fill`, `hidden-control`,
 `thin-scrollbar-track`, `thin-scrollbar-hover`, `hide-scrollbar`.
 `core/tokens.global.scss` — классы примитивов `ui-*` и подключение генерата по слоям.
 `core/scss-utils.scss` — `withBreakpoints` (остальные миксины там вытеснены генератором утилит).

@@ -74,7 +74,7 @@ function ChoiceInfoTooltip({
                     border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
                     className={styles.card}
                 >
-                    <Text variant={['small', null, null]}>{description}</Text>
+                    <Text variant={['caption', null, null]}>{description}</Text>
                 </Flex>
 
                 <Icon
@@ -198,7 +198,7 @@ export function ChoiceButtons({
                                 className={cx(styles.button, buttonClassName)}
                             >
                                 <Flex dir={['row', null, null]} align={['center', null, null]} gap={[8, null, null]}>
-                                    <Text variant={['p', null, null]} color='var(--text-muted)' className={cx(styles.label, textClassName)}>
+                                    <Text variant={['body', null, null]} color='var(--text-muted)' className={cx(styles.label, textClassName)}>
                                         {item.label}
                                     </Text>
 

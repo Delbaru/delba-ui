@@ -5,6 +5,7 @@ import type React from 'react';
 import styles from './Input.module.scss';
 import { Skeleton } from '../Skeleton';
 import { cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../core';
+import { textFont, type TextRole, type TextVariantName } from '../core/base/typography';
 import { Icon } from '../Icon';
 import { Text } from '../Text';
 import { Flex } from '../Flex';
@@ -19,8 +20,8 @@ import { useTooltip } from '../hooks/useTooltip';
 
 type VariantKey = 'primary' | 'secondary';
 type SizeKey = 'default' | 'fullWidth';
-// Типографика поля ввода по токену дизайн-системы (--font-*). По умолчанию поле — `p`.
-type FontKey = 'h1' | 'h2' | 'h3' | 'subtitle' | 'title' | 'p' | 'small' | 'dop';
+// Типографика поля — вариант проекта или роль кита (--font-*). По умолчанию поле — роль `body`.
+type FontKey = TextVariantName | TextRole;
 
 const c = createLayoutClasses(styles, { local: { h: 'height' } });
 
@@ -39,7 +40,7 @@ export interface InputProps
 
     variant?: ResponsiveValue<VariantKey>;
     size?: ResponsiveValue<SizeKey>;
-    // Типографика поля (--font-*). Не задан → дефолт поля (p).
+    /** Типографика поля (--font-*). Не задан → роль `body`. */
     font?: FontKey;
 
     bg?: string;
@@ -303,7 +304,8 @@ export function Input({
     // Класс кегля садится на РЯД, а не на `<input>`: его читают ещё маска телефона и префикс
     // «+7», а они полю не потомки, а соседи (см. `--field-font` в модуле).
     const fieldClassName = styles.field;
-    const fontClassName = font ? styles[`font_${font}`] : undefined;
+    const fontClassName = font ? styles.font : undefined;
+    const fontStyle = font ? ({ ['--field-font-variant' as string]: textFont(font) } satisfies CSSProperties) : undefined;
 
     return (
         <Flex
@@ -318,8 +320,8 @@ export function Input({
         >
             {label && (
                 <Flex dir={['row', 'row', 'row']} gap={[4, null, null]}>
-                    <Text variant={['small', 'small', 'small']} color={labelColor}>{label}</Text>
-                    {required && ( <Text variant={['small', 'small', 'small']} color="var(--error)">*</Text> )}
+                    <Text variant={['caption', 'caption', 'caption']} color={labelColor}>{label}</Text>
+                    {required && ( <Text variant={['caption', 'caption', 'caption']} color="var(--error)">*</Text> )}
                 </Flex>
             )}
             <Flex
@@ -327,6 +329,7 @@ export function Input({
                 dir={['row', 'row', 'row']}
                 align={['center', 'center', 'center']}
                 className={cx(styles.input, fontClassName, ...fieldClasses, rowClassName)}
+                style={fontStyle}
                 {...stateProps(state, hasError && 'error', isFieldActive && 'active', hasValue && 'filled', isReadOnly && 'readonly')}
                 data-phone-prefix={isPhone || undefined}
                 data-inline-error={inlineError ? 'true' : undefined}
@@ -439,7 +442,7 @@ export function Input({
                                 as='div'
                                 id={inlineErrorId}
                                 role='alert'
-                                variant={['p', 'p', 'p']}
+                                variant={['body', 'body', 'body']}
                                 color='var(--error)'
                                 className={styles.inlineErrorText}
                             >
@@ -541,7 +544,7 @@ export function Input({
                         as='div'
                         id={inlineErrorId}
                         role='alert'
-                        variant={['small', 'small', 'small']}
+                        variant={['caption', 'caption', 'caption']}
                         color='var(--error)'
                     >
                         {belowError ?? lastBelowError.current}
@@ -571,7 +574,7 @@ export function Input({
                 <Text
                     as='div'
                     id={commentId}
-                    variant={['small', 'small', 'small']}
+                    variant={['caption', 'caption', 'caption']}
                     color='var(--text-muted)'
                     pl={fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl)}
                 >

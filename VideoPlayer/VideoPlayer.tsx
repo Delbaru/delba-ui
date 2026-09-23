@@ -164,7 +164,7 @@ function TimelinePreview({ ref, src }: WithRef<{ src?: string }, TimelinePreview
         <div ref={boxRef} className={styles.preview} data-visible={visible ? 'true' : 'false'} aria-hidden='true'>
             {src ? <video ref={videoRef} className={styles.previewVideo} src={src} muted preload='metadata' playsInline /> : null}
 
-            <Text variant={['dop', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{formatClock(sec)}</Text>
+            <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{formatClock(sec)}</Text>
 
             <span ref={caretRef} className={styles.previewCaret} aria-hidden='true' />
         </div>
@@ -431,7 +431,7 @@ export function VideoPlayer({
                 <div className={cx(styles.overlay, styles.labelBar)}>
                     {labelIcon ? <BarIcon src={labelIcon} withStroke /> : null}
 
-                    <Text variant={['p', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{label}</Text>
+                    <Text variant={['body', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{label}</Text>
                 </div>
             ) : null}
 
@@ -474,7 +474,7 @@ export function VideoPlayer({
                     ) : null}
 
                     {show('time') ? (
-                        <Text variant={['dop', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>
+                        <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>
                             {formatClock(currentSec)} / {formatClock(Math.floor(state.duration))}
                         </Text>
                     ) : null}

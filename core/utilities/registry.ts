@@ -1,4 +1,5 @@
 import { MEDIA_QUERY } from '../base/breakpoints';
+import { isTextRole, LEGACY_TEXT_VARIANTS, TEXT_ROLES, textToken } from '../base/typography';
 import { entryKey, expandShorthand, type UtilityEntry, type UtilityScalar } from './keys';
 
 /**
@@ -96,17 +97,21 @@ const enumOf = (property: string, map: Readonly<Record<string, string>>) => ({
 const ALIGN_ITEMS = { stretch: 'stretch', center: 'center', flex_start: 'flex-start', flex_end: 'flex-end', start: 'start', end: 'end', baseline: 'baseline' };
 const JUSTIFY_CONTENT = { flex_start: 'flex-start', flex_end: 'flex-end', start: 'start', end: 'end', center: 'center', space_between: 'space-between', space_around: 'space-around', space_evenly: 'space-evenly' };
 
-/** Имя варианта типографики → суффикс токенов темы (`--font-*`, `--tt-*`, `--ls-*`). */
-const TEXT_VARIANTS: Readonly<Record<string, string>> = {
-  numbers: 'numbers', numbersPlus: 'numbers-plus', h1: 'h1', h2: 'h2', h3: 'h3', h4: 'h4',
-  p1: 'p1', p2: 'p2', p3: 'p3', subtitle: 'subtitle', title: 'title', p: 'p', small: 'small', dop: 'dop',
-};
+/** Имя варианта: вариант проекта или служебная роль кита (`core/base/typography.ts`). */
+const TEXT_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
 
+/** Токены варианта `--font-*`, `--tt-*`, `--ls-*`; у роли — с фолбэком на прежний вариант. */
 const textVariant = (value: UtilityEntry) => {
   if (value === 'inherit') return 'font: inherit; text-transform: inherit; letter-spacing: inherit';
-  const token = typeof value === 'string' ? TEXT_VARIANTS[value] : undefined;
-  return token ? `font: var(--font-${token}); text-transform: var(--tt-${token}); letter-spacing: var(--ls-${token})` : null;
+  if (typeof value !== 'string' || !TEXT_NAME.test(value)) return null;
+  const token = textToken(value);
+  if (!isTextRole(value)) return `font: var(--font-${token}); text-transform: var(--tt-${token}); letter-spacing: var(--ls-${token})`;
+  const old = TEXT_ROLES[value];
+  return `font: var(--font-${token}, var(--font-${old})); text-transform: var(--tt-${token}, var(--tt-${old})); letter-spacing: var(--ls-${token}, var(--ls-${old}))`;
 };
+
+/** Словарь `text`: варианты проекта (не заданы — прежний набор), роли кита и `inherit`. */
+export const textDomain = (variants: readonly string[] = LEGACY_TEXT_VARIANTS): string[] => [...variants, ...Object.keys(TEXT_ROLES), 'inherit'];
 
 /** Высота строки: число — доля (`1.2` → класс `lineHeight_1.2`) или `normal`. */
 const lineHeight = (value: UtilityEntry) => {
@@ -175,7 +180,7 @@ export const UTILITIES: readonly Utility[] = [
   { name: 'rowStart', declare: numberOf('grid-row-start') },
   { name: 'rowEnd', declare: numberOf('grid-row-end') },
 
-  { name: 'text', declare: textVariant, domain: [...Object.keys(TEXT_VARIANTS), 'inherit'] },
+  { name: 'text', declare: textVariant, domain: textDomain() },
   { name: 'fontSize', declare: numberOf('font-size', rpx) },
   { name: 'fontWeight', declare: numberOf('font-weight'), domain: range(100, 900, 100) },
   { name: 'lineHeight', declare: lineHeight },

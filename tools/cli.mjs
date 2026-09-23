@@ -41,7 +41,7 @@ async function load() {
   await loadConfig();
   const { createUtilities } = await import('./utilities/generate.ts');
   const { generateSkins } = await import('./skin.ts');
-  const utilities = createUtilities(root, { scan: [...(config.scan ?? ['src']), path.relative(root, KIT)], seeds: config.seeds, scale: config.scale });
+  const utilities = createUtilities(root, { scan: [...(config.scan ?? ['src']), path.relative(root, KIT)], seeds: config.seeds, typography: config.typography, scale: config.scale });
 
   // Иконки, которые компоненты зовут по адресу (/icons/ui/…). Прежняя копия снимается целиком,
   // чтобы убранная из кита иконка не жила в проекте вечно.
@@ -117,7 +117,8 @@ function check() {
     const run = (script, args) => spawnSync(process.execPath, [path.join(TOOLS, script), ...args], { cwd: root, stdio: 'inherit' }).status === 0;
     const update = argv.includes('--update') ? ['--update'] : [];
     const rules = run('check-rules.mjs', ['--baseline', config.baseline ?? '.rules-baseline.json', ...update, ...(config.rules ?? ['src'])]);
-    const tokens = run('check-tokens.mjs', [config.theme ?? 'theme'].flat());
+    const typography = config.typography ? ['--typography', config.typography.join(',')] : [];
+    const tokens = run('check-tokens.mjs', [...[config.theme ?? 'theme'].flat(), ...typography]);
     return rules && tokens;
   });
 }

@@ -11,7 +11,11 @@
 //   • семейство, которое читается через интерполяцию (`var(--font-#{$variant})`) — хватает
 //     хотя бы одного токена с таким префиксом;
 //   • атрибутное правило (`[data-hide-mobile]`), которое ставят компоненты библиотеки.
-// `--with-defaults` засчитывает стартовую тему `theme/tokens.default.scss`.
+//   • служебные роли типографики (`--font-body`…, `TEXT_ROLES` в core/base/typography.ts), хоть кит
+//     и читает их с фолбэком на прежний вариант: фолбэк — для тем, написанных до ролей.
+// Токен, стоящий фолбэком другого (`var(--a, var(--b))`), в договор не входит.
+// `--with-defaults` засчитывает стартовую тему `theme/tokens.default.scss`; `--typography h1,p1` —
+// варианты проекта из ui.config.ts: у каждого в теме должен быть `--font-<имя>`.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -64,6 +68,30 @@ function add(map, key, user) {
   map.get(key).add(user);
 }
 
+/** Роли типографики → прежний вариант: разбор `TEXT_ROLES` ядра, чтобы не держать второй список. */
+export function readRoles() {
+  const code = fs.readFileSync(path.join(ROOT, 'core', 'base', 'typography.ts'), 'utf8');
+  const body = /TEXT_ROLES = \{([^}]*)\}/.exec(code)?.[1] ?? '';
+  return new Map([...body.matchAll(/(\w+):\s*'(\w+)'/g)].map((m) => [m[1], m[2]]));
+}
+
+/** Токены, стоящие фолбэком другого `var()`: `var(--a, var(--b))` → --b. */
+function fallbackTokens(code) {
+  const out = new Set();
+  const stack = [];
+  for (let i = 0; i < code.length; i += 1) {
+    const char = code[i];
+    if (char === '(') {
+      const isVar = code.slice(i - 3, i) === 'var';
+      const name = isVar && stack.some((frame) => frame.isVar && frame.comma) && /^\s*(--[A-Za-z0-9_-]+)/.exec(code.slice(i + 1, i + 80))?.[1];
+      if (name) out.add(name);
+      stack.push({ isVar, comma: false });
+    } else if (char === ')') stack.pop();
+    else if (char === ',' && stack.length) stack[stack.length - 1].comma = true;
+  }
+  return out;
+}
+
 export function readContract() {
   const required = new Map();
   const families = new Map();
@@ -75,9 +103,10 @@ export function readContract() {
     const code = stripComments(fs.readFileSync(file, 'utf8'));
     const user = path.relative(ROOT, file).split(path.sep)[0];
 
+    const fallbacks = fallbackTokens(code);
     for (const m of code.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)(#\{|\$\{)?\s*(,)?/g)) {
       if (m[2]) add(families, m[1], user);
-      else if (!m[3]) add(required, m[1], user);
+      else if (!m[3] && !fallbacks.has(m[1])) add(required, m[1], user);
     }
     for (const m of code.matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)) internal.add(m[1]);
     for (const m of code.matchAll(/['"`](--[A-Za-z0-9_-]+)['"`]/g)) internal.add(m[1]);
@@ -88,6 +117,7 @@ export function readContract() {
   }
 
   const ownPrefix = (name) => [...internalPrefixes].some((prefix) => name.startsWith(prefix));
+  for (const role of readRoles().keys()) add(required, `--font-${role}`, 'роль типографики');
   const tokens = [...required]
     .filter(([name]) => !internal.has(name) && !ownPrefix(name))
     .sort(([a], [b]) => a.localeCompare(b));
@@ -115,12 +145,17 @@ if (isMain) {
     process.exit(0);
   }
 
-  const files = args.filter((arg) => !arg.startsWith('--')).flatMap((target) => walk(path.resolve(target), /\.(scss|css)$/));
+  const typographyAt = args.indexOf('--typography');
+  const variants = typographyAt < 0 ? [] : (args[typographyAt + 1] ?? '').split(',').filter(Boolean);
+  const files = args.filter((arg, i) => !arg.startsWith('--') && i !== typographyAt + 1).flatMap((target) => walk(path.resolve(target), /\.(scss|css)$/));
   if (args.includes('--with-defaults')) files.push(path.join(ROOT, 'theme', 'tokens.default.scss'));
   const styles = files.map((file) => stripComments(fs.readFileSync(file, 'utf8'))).join('\n');
   const declared = new Set([...styles.matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]));
 
+  const roles = readRoles();
   const hint = (name) => {
+    const legacy = roles.get(name.replace(/^--font-/, ''));
+    if (legacy) return `  · свяжи со своим вариантом: ${name}: var(--font-…)${declared.has(`--font-${legacy}`) ? ` (до ролей кит брал --font-${legacy})` : ''}`;
     const old = Object.keys(RENAMED).filter((from) => RENAMED[from] === name && declared.has(from));
     return old.length ? `  · переименуй ${old.join(' / ')} → ${name}` : '';
   };
@@ -128,8 +163,9 @@ if (isMain) {
     ...[...contract.tokens].filter(([name]) => !declared.has(name)).map(([name, users]) => [name, users]),
     ...[...contract.families].filter(([prefix]) => ![...declared].some((name) => name.startsWith(prefix))).map(([prefix, users]) => [`${prefix}*`, users]),
     ...[...contract.attributes].filter(([attr]) => !styles.includes(`[${attr}`)).map(([attr, users]) => [`[${attr}]`, users]),
+    ...variants.map((name) => `--font-${name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`).filter((name) => !declared.has(name)).map((name) => [name, ['typography в ui.config.ts']]),
   ];
-  const total = contract.tokens.size + contract.families.size + contract.attributes.size;
+  const total = contract.tokens.size + contract.families.size + contract.attributes.size + variants.length;
 
   if (!missing.length) {
     console.log(`[ui:tokens] ✓ договор темы выполнен: ${total} из ${total}`);

@@ -1,3 +1,4 @@
+@use '../core/mixins' as m;
 @use '../core/scss-utils' as utils;
 @use '../core/field-sizes' as fields;
 
@@ -25,7 +26,7 @@
         color: inherit;
         outline: none;
         caret-color: var(--primary);
-        font: var(--font-p);
+        font: m.role-font(body);
         resize: none;
 
         &::placeholder { color: var(--field-placeholder-color, var(--text-muted)); }

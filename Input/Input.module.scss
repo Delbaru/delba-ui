@@ -1,3 +1,4 @@
+@use '../core/mixins' as m;
 @use '../core/scss-utils' as utils;
 @use '../core/field-sizes' as fields;
 
@@ -41,17 +42,11 @@
           // префикс «+7» — соседи поля, и одинаковый кегль у них обязан браться из одного места.
           // Проп `font` пишет класс сюда же (Input.tsx), а пресет-обёртка вправе задать свой
           // `--field-font` в машинной зоне скина (так набрана пилюля окна входа).
-          // Дефолт живёт фолбэком в `var(--field-font, var(--font-p))` у потребителей, а не
+          // Дефолт живёт фолбэком `var(--field-font, <роль body>)` у потребителей, а не
           // объявлением здесь: правило `.input` весило бы ровно столько же, сколько `.skin-*`
           // с call-site, и победитель зависел бы от порядка вставки CSS-модулей.
-          &.font_h1 { --field-font: var(--font-h1); }
-          &.font_h2 { --field-font: var(--font-h2); }
-          &.font_h3 { --field-font: var(--font-h3); }
-          &.font_subtitle { --field-font: var(--font-subtitle); }
-          &.font_title { --field-font: var(--font-title); }
-          &.font_p { --field-font: var(--font-p); }
-          &.font_small { --field-font: var(--font-small); }
-          &.font_dop { --field-font: var(--font-dop); }
+          // Вариант проекта приходит inline-переменной (Input.tsx); класс держит прежний вес правила.
+          &.font { --field-font: var(--field-font-variant); }
 
           .fieldSlot {
               position: relative;
@@ -78,7 +73,7 @@
               // Типографика ряда, а не своя: набранный текст, слой-маска телефона и префикс «+7» —
               // соседи, а не потомки поля, и разойтись по кеглю им нельзя. Источник один —
               // `--field-font` на РЯДУ (см. `.input` ниже).
-              font: var(--field-font, var(--font-p));
+              font: var(--field-font, #{m.role-font(body)});
               // Линейные цифры — как у `Text` (Text/_text.scss). Без этого Raleway рисует в поле
               // СТАРОСТИЛЬНЫЕ: «3» и «4» свисают под строку, «1» ростом с x-height — набранный номер
               // выглядит скачущим, хотя кегль верный.
@@ -239,7 +234,7 @@
               white-space: nowrap;
               // Тот же кегль, что у набранного текста: маска и значение стоят на одном месте, и
               // разный размер читается как «поле подменили» (см. §12 «Поля и формы»).
-              font: var(--field-font, var(--font-p));
+              font: var(--field-font, #{m.role-font(body)});
               font-variant-numeric: lining-nums proportional-nums;
               color: var(--black);
           }
@@ -272,7 +267,7 @@
               flex-shrink: 0;
               margin-right: calc(8 * var(--rpx));
               // Кегль тот же, что у поля и у маски: «+7» — часть НОМЕРА, а не подпись рядом.
-              font: var(--field-font, var(--font-p));
+              font: var(--field-font, #{m.role-font(body)});
               // После шортката — он сбрасывает начертание цифр (см. `.field` выше).
               font-variant-numeric: lining-nums proportional-nums;
           }

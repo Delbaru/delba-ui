@@ -109,7 +109,7 @@ function isPrimitiveNode(node: React.ReactNode): node is string | number {
 function renderSelectNode(node: React.ReactNode, textClassName: string | undefined): React.ReactNode {
     if (isPrimitiveNode(node)) {
         return (
-            <Text variant={['p', 'p', 'p']} className={textClassName} color="inherit">
+            <Text variant={['body', 'body', 'body']} className={textClassName} color="inherit">
                 {node}
             </Text>
         );
@@ -271,12 +271,12 @@ export function Select({
         >
             {label && (
                 <Flex dir={['row', 'row', 'row']} gap={required ? [4, 4, 4] : [0, 0, 0]}>
-                    <Text variant={['small', 'small', 'small']} color={labelColor}>
+                    <Text variant={['caption', 'caption', 'caption']} color={labelColor}>
                         {label}
                     </Text>
 
                     {required && (
-                        <Text variant={['small', 'small', 'small']} color="var(--error)">
+                        <Text variant={['caption', 'caption', 'caption']} color="var(--error)">
                             *
                         </Text>
                     )}
@@ -332,7 +332,7 @@ export function Select({
                                 as="div"
                                 id={errorId}
                                 role="alert"
-                                variant={['p', 'p', 'p']}
+                                variant={['body', 'body', 'body']}
                                 color="inherit"
                                 className={styles.TriggerText}
                             >
@@ -384,7 +384,7 @@ export function Select({
                                             <Text
                                                 key={item.key}
                                                 as="div"
-                                                variant={['small', 'small', 'small']}
+                                                variant={['caption', 'caption', 'caption']}
                                                 className={styles.GroupLabel}
                                                 color="var(--text-muted)"
                                             >
@@ -471,7 +471,7 @@ export function Select({
             {!displayError && comment && (
                 <Text
                     as="div"
-                    variant={['small', 'small', 'small']}
+                    variant={['caption', 'caption', 'caption']}
                     id={commentId}
                     color="var(--text-muted)"
                     pl={fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl)}

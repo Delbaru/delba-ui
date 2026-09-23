@@ -111,7 +111,7 @@ function ToolbarIconButton({
       alignItems={['center', null, null]}
       tooltip={
         <Text
-          variant={['dop', null, null]}
+          variant={['micro', null, null]}
           bg='rgba(43,47,51,0.8)'
           color='var(--white-100)'
           p={[4, 8, 4, 8]}
@@ -140,7 +140,7 @@ export function LexicalTextareaCounter({
 }) {
   return (
     <Text
-      variant={['small', null, null]}
+      variant={['caption', null, null]}
       color='var(--text-muted)'
       style={{ whiteSpace: 'nowrap', lineHeight: 1 }}
     >
@@ -298,7 +298,7 @@ export function LexicalTextareaToolbar({ hasVariables, allowLink = true }: { has
       ))}
 
       {hasVariables && (
-        <Text variant={['dop', null, null]} color='var(--text-muted)'>
+        <Text variant={['micro', null, null]} color='var(--text-muted)'>
           Введите @ для вставки переменной
         </Text>
       )}

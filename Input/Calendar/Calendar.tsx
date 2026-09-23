@@ -121,7 +121,7 @@ export function Calendar({
             onClick={toggleMonthPickerActive}
             {...stateProps(isMonthPickerActive && 'active')}
           >
-            <Text variant={['subtitle', null, null]}>{visibleMonthLabel}</Text>
+            <Text variant={['inherit', null, null]}>{visibleMonthLabel}</Text>
 
             <Icon
               src='/icons/ui/arrows/style-3/arrow.svg'
@@ -132,7 +132,7 @@ export function Calendar({
           </Flex>
 
           <Flex dir={['row', 'row', 'row']} align={['center', 'center', 'center']} gap={[4, null, null]} className={styles.yearPick}>
-            <Text variant={['subtitle', null, null]}>{visibleYear}</Text>
+            <Text variant={['inherit', null, null]}>{visibleYear}</Text>
 
             {/* Глиф прежний, растёт только зона попадания: при корне 12×8 в стрелку года целились
                 мишенью 10×7 пикселей. Зазор между ними теперь внутри корней. */}
@@ -201,7 +201,7 @@ export function Calendar({
                   onClick={() => handleMonthSelect(monthIndex)}
                 >
                   <Text
-                    variant={['small', 'small', 'small']}
+                    variant={['caption', 'caption', 'caption']}
                     color={isCurrentVisibleMonth ? 'var(--white-100)' : undefined}
                   >
                     {monthLabel.slice(0, 3)}
@@ -221,7 +221,7 @@ export function Calendar({
                   w={[40, null, null]}
                   h={[40, null, null]}
                 >
-                  <Text variant={['small', 'small', 'small']} color='#AAA'>{weekday}</Text>
+                  <Text variant={['caption', 'caption', 'caption']} color='#AAA'>{weekday}</Text>
                 </Flex>
               ))}
             </Grid>
@@ -270,7 +270,7 @@ export function Calendar({
                   >
                     <Text
                       className={styles.dayText}
-                      variant={['small', 'small', 'small']}
+                      variant={['caption', 'caption', 'caption']}
                       color={dayTextColor}
                     >
                       {day.getDate()}

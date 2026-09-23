@@ -42,3 +42,4 @@ export { useOutsideDismiss, type DismissRef, type UseOutsideDismissOptions } fro
 export { useMediaQuery } from './hooks/useMediaQuery';
 export { useInView, type UseInViewOptions } from './core/useInView';
 export type { GrowProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';
+export type { TextRole, TextVariantName } from './core/base/typography';

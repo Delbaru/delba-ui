@@ -1,3 +1,5 @@
+@use '../core/mixins' as m;
+
 @layer ui.components {
   // Фундамент всех тултипов: фикс-позиция от useAnchoredFloating + плавное появление/исчезновение.
   // Внешний вид (плашка/карточка) — отдельно: .surface или контент потребителя.
@@ -48,7 +50,7 @@
       border-radius: calc(8 * var(--rpx));
       background: rgba(43, 47, 51, 0.8);
       color: var(--white-100);
-      font: var(--font-dop);
+      font: m.role-font(micro);
       text-align: center;
       white-space: normal;
       overflow-wrap: anywhere;

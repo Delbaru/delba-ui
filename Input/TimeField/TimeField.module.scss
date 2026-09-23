@@ -1,10 +1,12 @@
+@use '../../core/mixins' as m;
+
 @layer ui.components {
   .root {
       position: relative;
       display: flex;
       flex: 1;
       min-width: 0;
-      font: var(--font-p);
+      font: m.role-font(body);
       letter-spacing: normal;
       font-variant-numeric: tabular-nums;
       font-feature-settings: 'tnum';

@@ -55,7 +55,7 @@ node <путь>/UI/tools/cli.mjs check   # красные линии (--update �
 
 Конфиг ([`tools/config.ts`](tools/config.ts)) — всё необязательно: `scan` (`['src']`, кит
 сканируется всегда), `seeds`, `public` (`public`), `theme` (`theme`), `rules` (`['src']`),
-`baseline` (`.rules-baseline.json`), `skins`, `scale` (базы масштаба, см. ниже). Проекту нужны `typescript` и `tsx`.
+`baseline` (`.rules-baseline.json`), `skins`, `scale` (базы масштаба, см. ниже), `typography` (варианты типографики, см. «Тему»). Проекту нужны `typescript` и `tsx`.
 
 ## Что должен дать проект
 
@@ -71,7 +71,7 @@ node <путь>/UI/tools/cli.mjs check   # красные линии (--update �
   node --import tsx <путь>/tools/utilities/cli.ts build --config <конфиг проекта>   # или watch
   ```
 
-  Конфиг — `{ scan: ['apps', 'libs'], seeds? }`, пути от cwd, пример — `tools/ui/utilities.config.ts` в socrat.
+  Конфиг — `{ scan: ['apps', 'libs'], seeds?, typography? }`, пути от cwd, пример — `tools/ui/utilities.config.ts` в socrat.
 - **Масштаб.** `1rpx = ширина окна / база полосы`, на десктопе шире потолка rpx не растёт. Базы —
   `scale` в `ui.config.ts` (умолчания `{ mobile: 320, tablet: 768, desktop: 1920, max: 2560 }`); генератор
   пишет из них `--base-width`/`--rpx` (`core/_scale.scss`, слой `ui.scale` — тема проекта со своим `--rpx`
@@ -101,6 +101,29 @@ node <путь>/UI/tools/cli.mjs check   # красные линии (--update �
   `--success`, `--warning`; нейтральные — `--background`, `--text`, `--black` (чернила полей),
   `--text-muted` (приглушённый текст, плейсхолдер, disabled), `--line` (линии и рамки), `--white-*`.
   Служебное роли бренда не занимает: `--secondary` проект может отдать под бренд целиком.
+
+  **Типографика — у проекта, как цвета.** Набор вариантов объявляется одним списком в
+  `ui.config.ts`, тип выводится из него (второго списка нет):
+
+  ```ts
+  // ui.config.ts
+  typography: ['h1', 'h2', 'h3', 'p1', 'p2', 'p3', 'p4', 'p5'] as const,
+  // index.d.ts (глобальная декларация, рядом с UiRules)
+  interface UiTypography { variants: (typeof import('./ui.config'))['default']['typography'][number] }
+  ```
+
+  Тогда `Text variant` и `Input font` принимают только эти имена, генератор печатает классы
+  `text_<имя>` на `--font-<имя>`, `--tt-<имя>`, `--ls-<имя>` (`numbersPlus` → `numbers-plus`), а
+  `check` требует `--font-<имя>` в теме. Ничего не объявлено — прежний набор (`h1`–`h4`, `p1`–`p3`,
+  `title`, `subtitle`, `p`, `small`, `dop`, `numbers`, `numbersPlus`), для проектов до этого решения.
+
+  Свои компоненты кит набирает **служебными ролями**, а не вариантами проекта: `--font-body`
+  (текст полей, тостов, подписей элементов), `--font-caption` (подписи и комментарии полей),
+  `--font-micro` (тултип, тайм-код). Тема связывает роль со своим вариантом
+  (`--font-caption: var(--font-p4)`); роль есть и в `Text variant` (`'caption'`). Роли в договоре,
+  но кит читает их с фолбэком на прежний вариант (`var(--font-body, var(--font-p))`), поэтому тема
+  без ролей выглядит как раньше, а `check` подсказывает, что добавить. `RichText` читает варианты
+  контента с пустым фолбэком (`var(--font-h4,)`): нет токена — шрифт наследуется от `Text`.
 
   Для нового проекта есть стартовая тема [`theme/tokens.default.scss`](theme/tokens.default.scss):
   подключи её в глобальные стили, и библиотека заработает сразу. Специфичность у неё нулевая,

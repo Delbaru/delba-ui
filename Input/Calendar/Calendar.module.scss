@@ -1,3 +1,7 @@
+@use 'sass:map';
+@use '../../core/mixins' as m;
+@use '../../core/scss-utils' as utils;
+
 @layer ui.components {
   .Calendar {
       position: fixed;
@@ -67,6 +71,14 @@
 
       .prev {
           transform: scaleX(-1);
+      }
+
+      // Подпись месяца и года — только desktop, как прежний вариант `['subtitle', null, null]`.
+      @media #{map.get(utils.$breakpoints, d)} {
+          .monthPick,
+          .yearPick {
+              font: m.role-font(body, subtitle);
+          }
       }
 
       // У года кликабельны только стрелки: «рука» над самой цифрой обещала действие, которого нет.

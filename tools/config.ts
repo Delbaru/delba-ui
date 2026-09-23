@@ -17,6 +17,12 @@ export interface UiConfig {
   readonly scan?: readonly string[];
   /** Значения, которые на вызовах пишут именем (`size='lg'`), а скан видит только литералы. */
   readonly seeds?: ExtractOptions['seeds'];
+  /**
+   * Варианты типографики проекта: `['h1', 'p1']` → классы `text_h1`, `text_p1` на токенах
+   * `--font-h1`, `--tt-h1`, `--ls-h1`. Не задан — прежний набор кита. `UiTypography` проекта
+   * выводится из этого же списка (README, «Типографика»), второго нет.
+   */
+  readonly typography?: ExtractOptions['typography'];
   /** Куда раскладывать `public/` кита. По умолчанию `public`. */
   readonly public?: string;
   /** Стили темы для договора токенов. По умолчанию `theme`. */
