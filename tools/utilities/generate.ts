@@ -34,12 +34,17 @@ const BANNER = '// AUTO-GENERATED: tools/utilities (npm run ui:build). Не пр
 
 const isOwn = (file: string) => OWN_SOURCES.some((dir) => file.startsWith(dir + path.sep));
 
-function walk(dir: string, out: string[] = []): string[] {
+/**
+ * Файлы `.ts/.tsx` папки скана. SKIP проверяется по пути ОТ корня скана, а не по абсолютному: кит,
+ * поставленный git-зависимостью, сам лежит в `<проект>/node_modules/@delba/ui` — по полному пути
+ * он выпал бы целиком, а `node_modules` внутри корня скана должен пропускаться, как и раньше.
+ */
+export function walk(root: string, dir = root, out: string[] = []): string[] {
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    if (SKIP.test(full)) continue;
-    if (entry.isDirectory()) walk(full, out);
+    if (SKIP.test(path.relative(root, full))) continue;
+    if (entry.isDirectory()) walk(root, full, out);
     else if (/\.tsx?$/.test(entry.name) && !isOwn(full)) out.push(full);
   }
   return out;
@@ -151,7 +156,7 @@ export function createUtilities(root: string, config: UtilitiesConfig) {
       fs.watch(full, { recursive: true }, (_event, file) => {
         if (!file) return;
         const changed = path.join(full, String(file));
-        if (!/\.tsx?$/.test(changed) || SKIP.test(changed) || isOwn(changed)) return;
+        if (!/\.tsx?$/.test(changed) || SKIP.test(path.relative(full, changed)) || isOwn(changed)) return;
         clearTimeout(timer);
         timer = setTimeout(build, 200);
       });

@@ -132,3 +132,16 @@ Turbopack — по `exports`, через симлинк `node_modules/@delba/ui`
 кеширует резолв в `.next/cache/turbopack`, TS — `.next/cache/.tsbuildinfo` (и `tsconfig.tsbuildinfo`).
 Лечение: после смены раскладки или зависимостей кита удалить эти кеши и перезапустить `next dev`
 (`touch next.config.mjs` перезапускает его сам).
+
+---
+
+### Кит в `node_modules` — генератор не видит ни одного его литерала
+
+Симптом: кит поставлен git-зависимостью (Delba CMS), `delba-ui build` проходит, а классов литералов
+самого кита (`gap 8`, `r 8`, `w={[24, 24, 24]}` в его компонентах) в `_utilities.scss` нет — узлы кита
+без стилей. Причина: обход генератора (`walk` в `tools/utilities/generate.ts`) проверял `SKIP`
+(`node_modules`, `.next`, `dist`…) по АБСОЛЮТНОМУ пути, а кит лежал в `<проект>/node_modules/@delba/ui` —
+каждый его файл отбрасывался. У сайта этого не было: pnpm-воркспейс даёт симлинк, и кит сканируется
+по realpath `../delba-ui`. Лечение: `SKIP` — по пути от корня скана (`path.relative(root, file)`), так
+же в watch. Тест — `tools/utilities/generate.test.ts`: кит под `node_modules` сканируется, `node_modules`
+внутри скана пропускается.
