@@ -18,6 +18,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss']);
+// Генераты шкур несут токены ПРОЕКТА из его словарей — в договор кита они не входят.
+const GENERATED_SKIN = new Set(['_tokens.scss', '_classes.scss'].map((name) => path.join(ROOT, 'skin', name)));
 // Заглушки в тестах — не потребители темы: их значения в договор токенов не идут.
 const TEST_FILE = /\.test\.tsx?$/;
 const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'tools', 'theme', 'public']);
@@ -32,7 +34,7 @@ function walk(target, ext, out = []) {
   for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) walk(path.join(target, entry.name), ext, out);
-    } else if (ext.test(entry.name) && !GENERATED.has(entry.name) && !TEST_FILE.test(entry.name)) {
+    } else if (ext.test(entry.name) && !GENERATED.has(entry.name) && !GENERATED_SKIN.has(path.join(target, entry.name)) && !TEST_FILE.test(entry.name)) {
       out.push(path.join(target, entry.name));
     }
   }

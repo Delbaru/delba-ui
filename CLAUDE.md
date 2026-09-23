@@ -78,8 +78,11 @@ core/      ядро: раскладка (box, responsive, utilities), breakpoint
 hooks/     общие хуки: useMediaQuery, useOutsideDismiss, usePresence, useSwapTransition,
            useAnchoredFloating, useSharedMotion, useTextOverflow, useTooltip, useFancybox
 theme/     tokens.default.scss — стартовая тема (нулевая специфичность, перебивается проектом)
-tools/     check-boundary.mjs, check-tokens.mjs, check-rules.mjs, utilities/ (генератор)
-public/    иконки компонентов (/icons/ui/…), раскладываются скриптом проекта
+skin/      движок шкур компонентов проекта (defineSkin, resolveSkin, states()); словари — у проекта
+tools/     cli.mjs (build | watch | check по ui.config.ts проекта), skin.ts, utilities/ (генератор),
+           check-boundary.mjs, check-tokens.mjs, check-rules.mjs
+next.mjs   плагин Next: withUi(config) — sassOptions и генераты в build/dev
+public/    иконки компонентов (/icons/ui/…), раскладывает CLI
 <Компонент>/  сам компонент, его SCSS, типы и index.ts
 ```
 

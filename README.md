@@ -26,35 +26,63 @@ node <путь>/UI/tools/check-boundary.mjs
 
 ```bash
 git submodule add -b main https://github.com/Delbaru/components.git <путь>/UI
-npm run ui:build
 ```
 
 Клонировать проект вместе с библиотекой: `git clone --recurse-submodules …`. Если проект уже
 склонирован: `git submodule update --init`.
+
+**Next** — плагин [`next.mjs`](next.mjs), больше ничего запускать не нужно:
+
+```js
+// next.config.mjs
+import { withUi } from '<путь>/UI/next.mjs';
+export default withUi(nextConfig);
+```
+
+Он ставит `sassOptions` (modern API и `loadPaths`, чтобы модули звали ядро коротким
+`@use 'UI/core/mixins'`) и зовёт генерацию [`tools/cli.mjs`](tools/cli.mjs): в `next build` — один
+раз до сборки, в `next dev` — сборка и watcher, который умирает вместе с dev. Проверки —
+`node <путь>/UI/tools/cli.mjs check` из папки приложения.
+
+**CLI** (из папки приложения, конфиг — `ui.config.ts` рядом, пример — `site/ui.config.ts` в
+serdcaBezGranic):
+
+```bash
+node <путь>/UI/tools/cli.mjs build   # public кита → public приложения, шкуры, утилиты
+node <путь>/UI/tools/cli.mjs watch   # то же и следит; правка конфига или пресета — перезапуск
+node <путь>/UI/tools/cli.mjs check   # красные линии (--update опускает планку) и договор темы
+```
+
+Конфиг ([`tools/config.ts`](tools/config.ts)) — всё необязательно: `scan` (`['src']`, кит
+сканируется всегда), `seeds`, `public` (`public`), `theme` (`theme`), `rules` (`['src']`),
+`baseline` (`.rules-baseline.json`), `skins`. Проекту нужны `typescript` и `tsx`.
 
 ## Что должен дать проект
 
 - **Пакеты** — `peerDependencies` в [`package.json`](package.json). Там же `sideEffects`:
   благодаря ему сборка выкидывает со страницы то, что она не использует (Lexical, Swiper,
   видеоплеер), даже если импорт идёт через общий вход.
-- **Запуск генератора утилит** ([`tools/utilities`](tools/utilities)) своим скриптом и своим конфигом:
+- **Генераты.** `core/_utilities.scss` (классы под значения, которые реально встречаются в коде) и
+  `core/_field-sizes.scss` пишет генератор утилит [`tools/utilities`](tools/utilities). Без них
+  сборка стилей не пройдёт, в репозиторий они не попадают: у каждого проекта свои. Их делает CLI
+  выше; проект со своим скриптом зовёт генератор напрямую:
 
   ```bash
   node --import tsx <путь>/tools/utilities/cli.ts build --config <конфиг проекта>   # или watch
   ```
 
-  Генератор разбирает исходники проекта компилятором TypeScript и пишет `core/_utilities.scss`
-  (классы под значения, которые реально встречаются в коде) и `core/_field-sizes.scss`. Без них
-  сборка стилей не пройдёт, в репозиторий они не попадают: у каждого проекта свои. Конфиг — это
-  `{ scan: ['apps', 'libs'], seeds? }`, пример — `tools/ui/utilities.config.ts` в socrat.
-  Проекту нужны `typescript` и `tsx`.
+  Конфиг — `{ scan: ['apps', 'libs'], seeds? }`, пути от cwd, пример — `tools/ui/utilities.config.ts` в socrat.
 - **Подключить [`core/tokens.global.scss`](core/tokens.global.scss) в глобальные стили** (`@use`): там
   утилиты раскладки и классы примитивов `ui-*` (`ui-flex`, `ui-text`, `ui-icon`…). У примитивов нет
   CSS-модулей, без этого файла они голые.
 - **Статику из [`public/`](public).** Там иконки, которые компоненты зовут по адресу
-  (`/icons/ui/…`: глаз в поле пароля, стрелки календаря, кнопки видеоплеера, тост). Скрипт
-  раскладки ассетов проекта обязан копировать `public/` библиотеки в `public/` приложения,
-  рядом со своими ассетами.
+  (`/icons/ui/…`: глаз в поле пароля, стрелки календаря, кнопки видеоплеера, тост). CLI
+  раскладывает её сам; без него проект копирует `public/` библиотеки в `public/` приложения.
+- **Шкуры — по желанию.** Движок [`skin/`](skin) (`defineSkin`, `resolveSkin`, `skinPad`,
+  `skinRadius`, импорт `<алиас>/skin`) для компонентов проекта с пресетами. Данные — у проекта:
+  в `skins` конфига словари `fills`/`lines`/`texts` и `dir` с компонентами, где лежат
+  `*.skin.ts`. Генератор пишет `skin/_tokens.scss`, `skin/_classes.scss` (классы покоя `sk_*` —
+  `@use` в глобальные стили) и `_states.scss` рядом с каждым компонентом (`@use './states'` в его модуле).
 - **Тему.** Договор — это CSS-переменные, семейства типографики и атрибутные правила
   (`[data-hide-mobile]`…), которые библиотека берёт у проекта. Проверка:
 

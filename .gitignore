@@ -1,3 +1,5 @@
-# Генераты: каждый проект собирает их под себя (`npm run ui:build`)
+# Генераты: каждый проект собирает их под себя (tools/cli.mjs build)
 core/_utilities.scss
 core/_field-sizes.scss
+skin/_tokens.scss
+skin/_classes.scss

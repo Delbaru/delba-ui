@@ -1,0 +1,100 @@
+@use 'sass:map';
+@use 'sass:list';
+@use './tokens' as t;
+
+// Движок состояний шкур: то, что классом покоя не выразить (:hover, [state~=…]). Словари осей —
+// генерат _tokens.scss из конфига проекта; правила пресетов печатает генератор в `_states.scss`
+// компонента (tools/cli.mjs).
+
+// Псевдоклассы, которые состояние получает само (pseudo: false — отключить) и только по запросу.
+$auto-pseudo: (hover, active, focus-visible);
+$opt-pseudo: (disabled, checked);
+
+@function _binds-pseudo($state, $props) {
+  $ask: map.get($props, pseudo);
+  @if list.index($auto-pseudo, $state) {
+    @return $ask != false;
+  }
+  @if list.index($opt-pseudo, $state) {
+    @return $ask == true;
+  }
+  @return false;
+}
+
+@function _guard($tokens) {
+  $out: '';
+  @each $token in $tokens {
+    $out: '#{$out}:not([state~=\'#{$token}\'])';
+    @if list.index($opt-pseudo, $token) {
+      $out: '#{$out}:not(:#{$token})';
+    }
+  }
+  @return $out;
+}
+
+// Имена осей без кавычек (white) Sass читает как цвета — ключ ищем строкой.
+@function _get($map, $name, $axis) {
+  @if not map.has-key($map, '#{$name}') {
+    @error '#{$axis}: неизвестное значение «#{$name}». Есть: #{map.keys($map)}.';
+  }
+  @return map.get($map, '#{$name}');
+}
+
+@mixin _body($props) {
+  $fill: map.get($props, fill);
+  @if $fill != null {
+    background: _get(t.$fills, $fill, fill);
+  }
+
+  $border: map.get($props, border);
+  @if $border == none {
+    border-color: transparent;
+  } @else if $border != null {
+    $spec: _get(t.$lines, $border, border);
+    border: calc(#{list.nth($spec, 1)} * var(--rpx)) solid list.nth($spec, 2);
+  }
+
+  $border-color: map.get($props, borderColor);
+  @if $border-color != null {
+    border-color: list.nth(_get(t.$lines, $border-color, borderColor), 2);
+  }
+
+  $text: map.get($props, textColor);
+  @if $text != null {
+    color: _get(t.$texts, $text, textColor);
+  }
+
+  @each $prop, $css in (opacity: opacity, filter: filter, cursor: cursor, pointerEvents: pointer-events) {
+    $value: map.get($props, $prop);
+    @if $value != null {
+      #{$css}: $value;
+    }
+  }
+}
+
+/// Эффекты покоя пресета, которых нет в осях (cursor и т.п.).
+@mixin base($props) {
+  @include _body($props);
+}
+
+/// Карта состояний → правила: `(hover: (fill: primary-hover), disabled: (opacity: 0.45, pseudo: true))`.
+@mixin states($map) {
+  @each $state, $props in $map {
+    $guard: map.get($props, guard);
+    $prefix: '';
+    @if $guard != null {
+      $prefix: _guard($guard);
+    }
+
+    @if _binds-pseudo($state, $props) {
+      &#{$prefix}:#{$state},
+      &#{$prefix}[state~='#{$state}'] {
+        @include _body($props);
+      }
+    } @else {
+      &#{$prefix}[state~='#{$state}'] {
+        @include _body($props);
+      }
+    }
+  }
+}
