@@ -210,7 +210,8 @@ function extractLexicalPlainText(node: unknown): string {
   return '';
 }
 
-export type LexicalTextVariant = 'default' | 'style-1' | 'style-2' | 'style-3' | 'style-4' | 'style-5';
+/** `plain` — без типографики варианта: блоки наследуют шрифт окружения, роль (`role-*`) по-прежнему красит блок. */
+export type LexicalTextVariant = 'default' | 'plain' | 'style-1' | 'style-2' | 'style-3' | 'style-4' | 'style-5';
 
 export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color'>, RadiusPropsShort, GrowProps, SharedMotionProps {
   content?: string | any; // string for HTML, object for Lexical JSON
