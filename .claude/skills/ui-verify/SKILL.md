@@ -12,17 +12,16 @@ description: Приёмка правки в общей библиотеке comp
 
 ## 1. Обязательный минимум
 
-Своей сборки у библиотеки нет — всё запускается из проекта-потребителя, `<путь>` — папка
-библиотеки внутри него.
+Кит — пакет воркспейса `@delba/ui`; из корня проекта:
 
 ```bash
-npx tsgo -p <путь>/tsconfig.json --noEmit             # строгие типы библиотеки
-node --import tsx --test "<путь>/**/*.test.ts"        # юнит-тесты ядра
-node <путь>/tools/check-boundary.mjs                  # импортов наружу нет
-node <путь>/tools/check-tokens.mjs <стили проекта…>   # договор темы
+pnpm --filter @delba/ui typecheck    # строгие типы библиотеки
+pnpm --filter @delba/ui test         # юнит-тесты ядра и tools
+pnpm --filter @delba/ui boundary     # импортов наружу нет
+pnpm check                           # проект: генераты, типы, красные линии, договор темы, старые пути (delba-ui check)
 ```
 
-В socrat короче: `npm run typecheck`, `npm run test:ui`, `npm run ui:build`.
+Проект на ките 1.x (сабмодуль `UI` без пакета) гоняет то же скриптами: `node <UI>/tools/check-*.mjs`.
 
 ⚠️ Правил глобальный тип — гоняй типы с `--incremental false`: инкрементальный кеш врёт.
 ⚠️ Добавил значение пропа — прогони генератор утилит, иначе класс молча мёртвый.

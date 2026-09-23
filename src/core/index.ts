@@ -37,6 +37,7 @@ export type { LayoutSpaceProps, NumericSpaceProps, SizePropsShort, SizeInput, Ra
 
 // link utilities
 export { buildRel, isInternalHref, resolveLinkProps, shouldUseNextLink } from './base/link-utils';
+export { assetUrl } from './base/svg-asset';
 export { splitRootDomProps } from './base/root-dom-props';
 
 // HTML / text utilities

@@ -1,12 +1,14 @@
 #!/usr/bin/env node
-// CLI кита, запуск из папки проекта: build | watch | check [--update] [--config ui.config.ts].
-//   build — public кита в public проекта, шкуры, утилиты; watch — то же и следит за правками;
-//   check — красные линии (с планкой проекта) и договор темы.
+// CLI кита (`delba-ui` из bin пакета), запуск из папки проекта: build | watch | check [--update] [--config ui.config.ts].
+//   build — шкуры и утилиты; watch — то же и следит за правками;
+//   check — красные линии (с планкой проекта), договор темы и старые пути к киту.
 import { spawn, spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, watch } from 'node:fs';
+import { existsSync, readdirSync, watch } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+import { reportLegacy } from './check-migration.mjs';
 
 const TOOLS = path.dirname(fileURLToPath(import.meta.url));
 const KIT = path.dirname(TOOLS);
@@ -43,30 +45,16 @@ async function load() {
   const { generateSkins } = await import('./skin.ts');
   const utilities = createUtilities(root, { scan: [...(config.scan ?? ['src']), path.relative(root, KIT)], seeds: config.seeds, typography: config.typography, scale: config.scale });
 
-  // Иконки, которые компоненты зовут по адресу (/icons/ui/…). Прежняя копия снимается целиком,
-  // чтобы убранная из кита иконка не жила в проекте вечно.
-  const target = path.resolve(root, config.public ?? 'public');
-  rmSync(path.join(target, 'icons', 'ui'), { recursive: true, force: true });
-  copyDir(path.join(KIT, 'assets'), target);
+  // Иконки кита — импорты в его компонентах; копия в public проекта от кита 1.x больше не нужна.
+  if (config.public || existsSync(path.resolve(root, 'public', 'icons', 'ui'))) {
+    console.warn('[ui] public/icons/ui и `public` в ui.config.ts больше не нужны: иконки кита приходят импортом (README кита, «Переход на 2.0»)');
+  }
 
   if (config.skins) {
     const changed = await generateSkins(root, config.skins);
     console.log(`[ui:skin] ${changed ? `✓ обновлено файлов: ${changed}` : 'без изменений'}`);
   }
   return utilities;
-}
-
-// Не fs.cpSync: в Node 22.23 на Windows он с `recursive` роняет процесс (0xC0000409) без единой
-// строки ошибки, если в пути есть кириллица.
-function copyDir(from, to) {
-  if (!existsSync(from)) return;
-  mkdirSync(to, { recursive: true });
-  for (const entry of readdirSync(from, { withFileTypes: true })) {
-    const source = path.join(from, entry.name);
-    const target = path.join(to, entry.name);
-    if (entry.isDirectory()) copyDir(source, target);
-    else copyFileSync(source, target);
-  }
 }
 
 // Watch — надзиратель и рабочий: рабочий выходит с кодом 0, когда надо перечитать модули, и
@@ -119,7 +107,9 @@ function check() {
     const rules = run('check-rules.mjs', ['--baseline', config.baseline ?? '.rules-baseline.json', ...update, ...(config.rules ?? ['src'])]);
     const typography = config.typography ? ['--typography', config.typography.join(',')] : [];
     const tokens = run('check-tokens.mjs', [...[config.theme ?? 'theme'].flat(), ...typography]);
-    return rules && tokens;
+    const configs = readdirSync(root).filter((file) => /^(next|ui).config./.test(file));
+    const legacy = reportLegacy([...(config.rules ?? ['src']), ...configs]);
+    return rules && tokens && legacy;
   });
 }
 
@@ -130,7 +120,7 @@ const commands = {
 };
 
 if (!commands[command]) {
-  console.error('Usage: node <UI>/tools/cli.mjs <build|watch|check> [--config ui.config.ts]');
+  console.error('Usage: delba-ui <build|watch|check> [--update] [--config ui.config.ts]');
   process.exit(1);
 }
 try {

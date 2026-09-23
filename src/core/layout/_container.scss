@@ -1,0 +1,9 @@
+// Проп `container` у Flex, Grid и Box: колонка контента по центру, без вертикальных полей — их задаёт секция.
+.ui-layout-container {
+  padding-left: var(--s-container);
+  padding-right: var(--s-container);
+  max-width: var(--width-container);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}

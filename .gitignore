@@ -1,7 +1,10 @@
-# Генераты: каждый проект собирает их под себя (tools/cli.mjs build)
+# Генераты: каждый проект собирает их под себя (delba-ui build)
 src/core/_utilities.scss
 src/core/_field-sizes.scss
 src/skin/_tokens.scss
 src/skin/_classes.scss
 src/core/_scale.scss
 src/core/scale.ts
+
+# Ссылки pnpm на peer-зависимости: кит — пакет воркспейса проекта
+node_modules

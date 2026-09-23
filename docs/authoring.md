@@ -39,7 +39,7 @@ TabTrack/
 ## 3. TSX
 
 - **Пропы раскладки не изобретаются.** Коробка (отступы, размеры, радиусы, рамка, фон, `grow`)
-  приходит из `core/layout/box.ts`: `splitBoxLayout` отделяет её от DOM-пропов, `boxLayout`
+  приходит из `src/core/layout/box.ts`: `splitBoxLayout` отделяет её от DOM-пропов, `boxLayout`
   отдаёт классы. Подмножество выражается типом (`Pick`/`Omit<BoxLayoutProps, …>`), а не копией.
 - **Респонсив-проп** — `ResponsiveValue<T>`; помощники ядра принимают `ResponsiveInput<T>`.
   Проект может включить строгий режим (`UiRules.strictTuple`), и тогда скаляр у него не соберётся —
@@ -55,7 +55,7 @@ TabTrack/
 
 - **Покой компонента — в `@layer ui.components`**, состояния — в `@layer ui.states`. Порядок
   слоёв объявлен в проекте; правило состояния, написанное в покое, проигрывает утилите пропа.
-- **Повторяющийся рецепт — миксин из `core/_mixins.scss`** (`reduced-motion`, `truncate`,
+- **Повторяющийся рецепт — миксин из `src/core/_mixins.scss`** (`reduced-motion`, `truncate`,
   `line-clamp`, `fill`, `hidden-control`, скроллбар). Не нашёл нужного — добавь туда, а не копируй.
 - **Только непропсовое**: `position`, `overflow`, `transform`, `transition`, `z-index`,
   `pointer-events`, `opacity`, `display`, `filter`, псевдоэлементы, селекторы состояний.
@@ -70,8 +70,8 @@ TabTrack/
 
 ## 5. Классы
 
-Примитивы (`Flex`, `Grid`, `Text` с анимациями, `Icon`, `Img`, `Button`, `Container`, `Section`)
-носят глобальные короткие классы `ui-*` из `core/tokens.global.scss`: хеш CSS-модуля на каждом
+Примитивы (`Flex`, `Grid`, `Text` с анимациями, `Icon`, `Img`, `Button`, `Section`)
+носят глобальные короткие классы `ui-*` из `src/core/tokens.global.scss`: хеш CSS-модуля на каждом
 узле весил в разметке больше самих стилей. CSS-модуль оставляют крупному виджету.
 
 Классы утилит (`p_8`, `n_p_0`, `w_100%`, `bg_--primary`) печатает генератор

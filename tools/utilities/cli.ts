@@ -6,7 +6,7 @@
  *   node --import tsx <UI>/tools/utilities/cli.ts watch --config tools/ui/utilities.config.ts
  *
  * Конфиг проекта (default export): `{ scan: ['apps', 'libs'], seeds? }`, пути — от cwd.
- * Проще — `tools/cli.mjs` кита: он же раскладывает public, шкуры и проверки.
+ * Проще — CLI `delba-ui` (bin пакета): он же собирает шкуры и гоняет проверки.
  */
 
 import path from 'node:path';

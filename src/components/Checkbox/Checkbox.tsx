@@ -3,10 +3,12 @@
 import { useEffect, useId, useRef, type CSSProperties } from 'react';
 import type React from 'react';
 import styles from './Checkbox.module.scss';
-import { boxLayout, createLayoutClasses, cx, splitBoxLayout, splitRootDomProps, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
+import { assetUrl, boxLayout, createLayoutClasses, cx, splitBoxLayout, splitRootDomProps, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
 import { Icon } from '../Icon';
 import { Flex } from '../Flex';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+
+import checkIcon from '../../../assets/icons/ui/check/succsess_check_black.svg';
 
 const c = createLayoutClasses(styles);
 
@@ -116,7 +118,7 @@ export function Checkbox({
                     {...stateProps(isChecked && 'active')}
                 >
                     <Icon
-                        src="/icons/ui/check/succsess_check_black.svg"
+                        src={assetUrl(checkIcon)}
                         w={iconSize ?? [16, 16, 16]}
                         h={iconSize ?? [16, 16, 16]}
                         fill='var(--white-100)'

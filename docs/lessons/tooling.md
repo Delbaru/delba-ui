@@ -109,3 +109,26 @@ ESM-хук tsx до `require` не доходит.
 watcher не держал dev живым. От повторного запуска в других процессах Next — метка в `process.env`
 (дочерние процессы её наследуют). Проверено: `taskkill /F` одного сервера Next снимает watcher,
 порт свободен.
+
+---
+
+### SCSS кита через `exports` пакета — потерянные относительные `@use`
+
+Симптом: `@use '@delba/ui/styles'` с `exports["./styles"]` → `Can't find stylesheet to import`
+на `meta.load-css('./scale')` внутри `tokens.global.scss`; `@use '@delba/ui/skin'` при JS-входе `./skin`
+отдавал sass файл `index.ts` («expected "{"»). Причина: bare-имя резолвит импортёр sass-loader в
+Turbopack — по `exports`, через симлинк `node_modules/@delba/ui`, без учёта `restrictions` на `.scss`; от
+файла, который он отдал, относительные `@use`/`load-css` уже не находятся. Лечение: SCSS-входы — файлы
+в `tools/sass/@delba/ui/*` (`@forward` в ядро), папка — в `sassOptions.loadPaths` плагина; в `exports`
+только JS; SCSS-имя не совпадает с JS-входом (`skin-states`). Проверено: вернуть `./styles` в
+`exports` — сборка снова падает на `load-css`.
+
+---
+
+### После переезда кита сборка «помнит» старый резолв
+
+Симптом: правильный код, а `next build` падает прежней ошибкой — SCSS-резолв на старый файл,
+«missing properties href, rel…» в типах (это `Pick<any, …>`: `React` не нашёлся). Причина: Turbopack
+кеширует резолв в `.next/cache/turbopack`, TS — `.next/cache/.tsbuildinfo` (и `tsconfig.tsbuildinfo`).
+Лечение: после смены раскладки или зависимостей кита удалить эти кеши и перезапустить `next dev`
+(`touch next.config.mjs` перезапускает его сам).

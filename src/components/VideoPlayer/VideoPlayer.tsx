@@ -13,7 +13,7 @@ import {
 
 import styles from './VideoPlayer.module.scss';
 
-import { clamp01, pad } from '../../core';
+import { assetUrl, clamp01, pad } from '../../core';
 import { createLayoutClasses, cx, radiusClasses, resolveRadiusInput, sizeClasses, type WithRef, useMergedRefs } from '../../core';
 import { Icon } from '../Icon';
 import { Text } from '../Text';
@@ -23,18 +23,25 @@ import { usePointerRatio } from './usePointerRatio';
 import { useVideoPlayer } from './useVideoPlayer';
 import type { MediaSource, VideoPlayerApi, VideoPlayerApiRef, VideoPlayerControlKey, VideoPlayerProps } from './types';
 
+import playIcon from '../../../assets/icons/ui/play/style-2/play.svg';
+import pauseIcon from '../../../assets/icons/ui/pause/style-1/pause.svg';
+import volumeIcon from '../../../assets/icons/ui/volume/style-1/volume.svg';
+import volumeMutedIcon from '../../../assets/icons/ui/volume/style-1/volume-muted.svg';
+import fullscreenIcon from '../../../assets/icons/ui/fullscreen/style-1/fullscreen.svg';
+import fullscreenQuitIcon from '../../../assets/icons/ui/fullscreen/style-1/fullscreen-quit.svg';
+
 const c = createLayoutClasses(styles);
 
 const DEFAULT_CONTROLS: VideoPlayerControlKey[] = ['play', 'timeline', 'time', 'volume', 'fullscreen'];
 
 // Иконки бара — Solar bold, как в макете (node 3284:22814).
 const ICON = {
-    play: '/icons/ui/play/style-2/play.svg',
-    pause: '/icons/ui/pause/style-1/pause.svg',
-    volume: '/icons/ui/volume/style-1/volume.svg',
-    volumeMuted: '/icons/ui/volume/style-1/volume-muted.svg',
-    fullscreen: '/icons/ui/fullscreen/style-1/fullscreen.svg',
-    fullscreenQuit: '/icons/ui/fullscreen/style-1/fullscreen-quit.svg',
+    play: assetUrl(playIcon),
+    pause: assetUrl(pauseIcon),
+    volume: assetUrl(volumeIcon),
+    volumeMuted: assetUrl(volumeMutedIcon),
+    fullscreen: assetUrl(fullscreenIcon),
+    fullscreenQuit: assetUrl(fullscreenQuitIcon),
 };
 
 // Через сколько мс простоя прятать управление во время воспроизведения.

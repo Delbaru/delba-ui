@@ -51,13 +51,13 @@
 4. **Строгий TypeScript.** `any`, `!`, `@ts-ignore`, `eslint-disable` — запрещены. `tsconfig.json`
    включает `noUncheckedIndexedAccess`, `noImplicitReturns`, `noUnusedLocals` и другие: индексация
    массива даёт `T | undefined`, и это говорится проверкой, а не утверждением.
-5. **Классы примитивов — глобальные `ui-*`** из `core/tokens.global.scss`. CSS-модуль заводится
+5. **Классы примитивов — глобальные `ui-*`** из `src/core/tokens.global.scss`. CSS-модуль заводится
    только крупному виджету (поле, модалка, плеер), а не каждому узлу.
 6. **Слои обязательны.** Покой компонента — `@layer ui.components`, пропы — `ui.utilities`,
    состояния (фокус, ошибка, открыто) — `ui.states`. Правило состояния, написанное в покое,
    проигрывает утилите пропа — это уже ловило дважды.
 7. **Ядро не дублируется.** Брейкпоинт, «меньше движения», длительность анимации, `clamp`,
-   склейка классов, коробка, миксины SCSS — уже есть в `core/`. Своя копия = ошибка ревью.
+   склейка классов, коробка, миксины SCSS — уже есть в `src/core/`. Своя копия = ошибка ревью.
 8. **Публичное только добавляют.** Переименование и удаление ломает три проекта. Ломаешь
    осознанно — пометь коммит `BREAKING:` и напиши в нём, как перейти.
 9. **«Не используется» ≠ «мертво».** Компонент без вызовов в одном проекте живёт ради других.
@@ -73,23 +73,26 @@
 ## 3. Устройство
 
 ```
-core/      ядро: раскладка (box, responsive, utilities), breakpoints, motion, text-format,
-           cn (cx), _mixins.scss, tokens.global.scss, генерат _utilities.scss
-hooks/     общие хуки: useMediaQuery, useOutsideDismiss, usePresence, useSwapTransition,
-           useAnchoredFloating, useSharedMotion, useTextOverflow, useTooltip, useFancybox
-theme/     tokens.default.scss — стартовая тема (нулевая специфичность, перебивается проектом)
-skin/      движок шкур компонентов проекта (defineSkin, resolveSkin, states()); словари — у проекта
-tools/     cli.mjs (build | watch | check по ui.config.ts проекта), skin.ts, utilities/ (генератор),
-           check-boundary.mjs, check-tokens.mjs, check-rules.mjs
-next.mjs   плагин Next: withUi(config) — sassOptions и генераты в build/dev
-public/    иконки компонентов (/icons/ui/…), раскладывает CLI
-<Компонент>/  сам компонент, его SCSS, типы и index.ts
+src/index.ts         публичный вход `@delba/ui`; остальное в src — приватно (карта `exports` в package.json)
+src/components/<Имя>/ компонент: TSX, SCSS, типы, index.ts
+src/core/            ядро: раскладка (box, responsive, utilities), breakpoints, motion, text-format,
+                     cn (cx), treePath, _mixins.scss, tokens.global.scss, генераты _utilities/_scale
+src/hooks/           общие хуки: useMediaQuery, useOutsideDismiss, usePresence, useSwapTransition,
+                     useAnchoredFloating, useSharedMotion, useTextOverflow, useTooltip, useFancybox
+src/skin/            движок шкур (`@delba/ui/skin`): defineSkin, resolveSkin, states(); словари — у проекта
+assets/icons/ui/     иконки компонентов — импортом (`assetUrl`), проекту не копируются
+theme/               tokens.default.scss — стартовая тема (нулевая специфичность, перебивается проектом)
+tools/               cli.mjs (bin `delba-ui`: build | watch | check), next.mjs (`@delba/ui/next`),
+                     config.ts (`@delba/ui/config`), sass/ (SCSS-входы `@delba/ui/*`), skin.ts,
+                     utilities/ (генератор), check-boundary|tokens|rules|migration.mjs
 ```
 
-**Проверки запускаются из проекта-потребителя** — своей сборки у библиотеки нет. Команды — в
-[`README.md`](README.md) и в `Skill(ui-verify)`.
+**Кит — пакет воркспейса проекта** (`@delba/ui`), своей сборки у него нет. Проверки самого кита —
+`pnpm --filter @delba/ui typecheck | test | boundary`, остальные — из проекта: [`README.md`](README.md) и
+`Skill(ui-verify)`. Новый публичный вход — строка в `exports` и `src/index.ts`; импорт снаружи в обход
+них — не вход, а ошибка.
 
-**Генераты** `core/_utilities.scss`, `core/_field-sizes.scss`, `core/_scale.scss` и `core/scale.ts` в репозиторий не попадают: у
+**Генераты** `src/core/_utilities.scss`, `src/core/_field-sizes.scss`, `src/core/_scale.scss` и `src/core/scale.ts` в репозиторий не попадают: у
 каждого проекта свои значения. Нет генерата — стили не соберутся.
 
 ---

@@ -43,7 +43,8 @@ export interface IconProps extends IconBaseSvgProps, SizeInput, RadiusInput, Ico
   // Пример: src={ArrowIcon}
   src?: string | IconComponent;
   
-  // Имя иконки (загружается из public/icons/{name}.svg)
+  // Имя иконки проекта (загружается из его public/icons/{name}.svg). Иконки кита — импортом:
+  // import arrow from '@delba/ui/icons/arrows/arrow_bold.svg' → src={assetUrl(arrow)}
   // Пример: name="ui/arrows/arrow_bold" -> загружает /icons/ui/arrows/arrow_bold.svg
   name?: string;
   
@@ -109,7 +110,7 @@ export interface IconProps extends IconBaseSvgProps, SizeInput, RadiusInput, Ico
  * 2. С URL:
  *    <Icon src="https://example.com/icon.svg" w={24} h={24} />
  * 
- * 3. С именем иконки (из public/icons/{name}.svg):
+ * 3. С именем иконки проекта (из его public/icons/{name}.svg; иконки кита — импортом и assetUrl):
  *    <Icon name="ui/arrows/arrow_bold" w={24} h={24} />
  * 
  * 4. С hover эффектом:

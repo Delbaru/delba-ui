@@ -3,13 +3,16 @@
 import styles from './MediaDropDown.module.scss';
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
-import { cx, stateProps, type WithRef, useMergedRefs } from '../../core';
+import { assetUrl, cx, stateProps, type WithRef, useMergedRefs } from '../../core';
 import { resolveSvgAssetSource } from '../../core/base/svg-asset';
 import { useOutsideDismiss } from '../../hooks/useOutsideDismiss';
 import { Flex } from '../Flex';
 import { Text } from '../Text';
 import { Icon } from '../Icon';
 import SkipNextOutlineIconAsset from '../RichTextarea/assets/skip-next-outline.svg';
+
+import eyeIcon from '../../../assets/icons/ui/eye/style-1/eye.svg';
+import deleteIcon from '../../../assets/icons/ui/delete/style-1/delete.svg';
 
 const SkipNextOutlineIcon = resolveSvgAssetSource(SkipNextOutlineIconAsset) ?? '';
 
@@ -334,7 +337,7 @@ export function MediaDropDown({
                                 />
                             ) : (
                                 <Icon
-                                    src="/icons/ui/eye/style-1/eye.svg"
+                                    src={assetUrl(eyeIcon)}
                                     w={[20, 20, 20]}
                                     h={[20, 20, 20]}
                                     fill="currentColor"
@@ -351,7 +354,7 @@ export function MediaDropDown({
                             onClick={handleClearSelection}
                         >
                             <Icon
-                                src="/icons/ui/delete/style-1/delete.svg"
+                                src={assetUrl(deleteIcon)}
                                 w={[20, 20, 20]}
                                 h={[20, 20, 20]}
                                 stroke="currentColor"

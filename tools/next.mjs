@@ -1,11 +1,10 @@
 // Плагин Next: `export default withUi(nextConfig)`. Даёт sassOptions под кит и генераты кита
-// (tools/cli.mjs): в `next build` — одна сборка до компиляции, в `next dev` — сборка и watcher.
+// (CLI `delba-ui`): в `next build` — одна сборка до компиляции, в `next dev` — сборка и watcher.
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const TOOLS = path.dirname(fileURLToPath(import.meta.url));
-const KIT = path.dirname(TOOLS);
 const CLI = path.join(TOOLS, 'cli.mjs');
 
 function generate(phase) {
@@ -26,19 +25,24 @@ function generate(phase) {
   watcher.channel?.unref();
 }
 
-/** Подключает кит к Next: sassOptions (`@use 'ui/core/mixins'`) и генераты кита. */
+/** Папка SCSS-входов кита для `sassOptions.loadPaths`: `@use '@delba/ui/mixins'` и прочие. */
+export const UI_SASS = path.join(TOOLS, 'sass');
+
+/** Подключает кит к Next: исходники кита в сборку, SCSS-входы `@delba/ui/*` и генераты. */
 export function withUi(nextConfig = {}) {
   return async (phase, context) => {
     const config = typeof nextConfig === 'function' ? await nextConfig(phase, context) : nextConfig;
     generate(phase);
     return {
       ...config,
-      // Легаси-API sass зовёт импортёр без базового URL и не находит `meta.load-css` ядра;
-      // loadPaths — чтобы модули звали ядро коротким `ui/…`, а не цепочкой `../`.
+      // Кит — исходники TS, а не собранный пакет: без этого Next не компилирует его из node_modules.
+      transpilePackages: [...new Set([...(config.transpilePackages ?? []), '@delba/ui'])],
+      // SCSS-входы — файлы в loadPaths, а не `exports`: файл, отданный импортёром сборщика, теряет
+      // относительные `@use` и `meta.load-css` внутри себя (Turbopack не резолвит их от него).
       sassOptions: {
         api: 'modern-compiler',
         ...config.sassOptions,
-        loadPaths: [path.dirname(KIT), ...(config.sassOptions?.loadPaths ?? [])],
+        loadPaths: [UI_SASS, ...(config.sassOptions?.loadPaths ?? [])],
       },
     };
   };

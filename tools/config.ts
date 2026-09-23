@@ -11,7 +11,7 @@ export interface UiSkins {
   readonly texts: Readonly<Record<string, string>>;
 }
 
-/** Конфиг проекта для `tools/cli.mjs` (default export `ui.config.ts`). Пути — от папки проекта. */
+/** Конфиг проекта для CLI `delba-ui` и плагина `withUi` (default export `ui.config.ts`). Пути — от папки проекта. */
 export interface UiConfig {
   /** Исходники для генератора утилит; сам кит сканируется всегда. По умолчанию `['src']`. */
   readonly scan?: readonly string[];
@@ -23,8 +23,6 @@ export interface UiConfig {
    * выводится из этого же списка (README, «Типографика»), второго нет.
    */
   readonly typography?: ExtractOptions['typography'];
-  /** Куда раскладывать `public/` кита. По умолчанию `public`. */
-  readonly public?: string;
   /** Стили темы для договора токенов. По умолчанию `theme`. */
   readonly theme?: string | readonly string[];
   /** Папки под счётчик красных линий. По умолчанию `['src']`. */

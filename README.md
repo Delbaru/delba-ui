@@ -1,8 +1,8 @@
-# components — общая UI-библиотека
+# @delba/ui — общая UI-библиотека
 
 Примитивы дизайн-системы (`Flex`, `Grid`, `Text`, `Icon`, `Img`, `Button`, `Modal`, `Select`,
-`Input`…) и хуки, на которых они держатся. Подключается в проект git-сабмодулем. Каждый проект
-закреплён на своём коммите и обновляется, только когда сам решит.
+`Input`…) и хуки, на которых они держатся. Подключается в проект git-сабмодулем и **пакетом его
+воркспейса** `@delba/ui`. Каждый проект закреплён на своём коммите и обновляется, только когда сам решит.
 
 **История этого репозитория не переписывается** (никаких force-push): проекты ссылаются на
 конкретные коммиты, и стёртый коммит ломает их свежий клон.
@@ -16,84 +16,126 @@
 ## Граница
 
 Ни один файл отсюда не импортирует ничего снаружи этой папки. Всё продуктовое — скины,
-пресеты, `Shared*`-компоненты, словари, значения токенов — живёт в проекте. Сторож:
+пресеты, `Shared*`-компоненты, словари, значения токенов — живёт в проекте. Сторож —
+`pnpm --filter @delba/ui boundary`.
 
-```bash
-node <путь>/UI/tools/check-boundary.mjs
-```
+И в обратную сторону: проект берёт у кита **только объявленные входы**; внутренняя раскладка
+(`src/components`, `src/core`…) может переехать в любой момент.
+
+| Вход | Что | Пример |
+|---|---|---|
+| `@delba/ui` | компоненты, хуки, типы (`src/index.ts`) | `import { Flex, Text } from '@delba/ui'` |
+| `@delba/ui/skin` | движок шкур для D-/Shared-компонентов | `import { defineSkin } from '@delba/ui/skin'` |
+| `@delba/ui/icons/*` | иконки кита (`assets/icons/ui/*`) | `import eye from '@delba/ui/icons/eye/style-1/eye.svg'` → `assetUrl(eye)` |
+| `@delba/ui/next` | плагин Next `withUi` и `UI_SASS` | `export default withUi(nextConfig)` |
+| `@delba/ui/config` | тип `UiConfig` для `ui.config.ts` | `import type { UiConfig } from '@delba/ui/config'` |
+| `delba-ui` | CLI (bin пакета) | `delba-ui build`, `watch`, `check` |
+
+SCSS-входы — под теми же именами, но их даёт `loadPaths` плагина (`UI_SASS` = `tools/sass`), а не `exports`:
+
+| SCSS | Куда |
+|---|---|
+| `@use '@delba/ui/styles'` | глобальные стили: утилиты раскладки и классы примитивов `ui-*` |
+| `@use '@delba/ui/theme'` | глобальные стили нового проекта: стартовая тема |
+| `@use '@delba/ui/skin-classes'` | глобальные стили: классы покоя шкур (генерат) |
+| `@use '@delba/ui/mixins' as m` | CSS-модули проекта: миксины ядра (`m.reduced-motion`, `m.truncate`…) |
+| `@use '@delba/ui/skin-states' as *` | генераты `_states.scss` шкур — пишет CLI |
+
+Почему не через `exports`: файл, который отдал импортёр сборщика (sass-loader в Turbopack), теряет
+относительные `@use` и `meta.load-css` внутри себя, а ядро кита на них стоит. Файлы из `loadPaths`
+sass читает сам. Поэтому SCSS-имя не совпадает с JS-входом: `skin` занят кодом, отсюда `skin-states`.
 
 ## Подключение
 
 ```bash
-git submodule add -b main https://github.com/Delbaru/delba-ui.git <путь>/UI
+git submodule add -b main https://github.com/Delbaru/delba-ui.git delba-ui
 ```
 
-Клонировать проект вместе с библиотекой: `git clone --recurse-submodules …`. Если проект уже
-склонирован: `git submodule update --init`.
+```yaml
+# pnpm-workspace.yaml
+packages:
+  - site
+  - delba-ui
+```
 
-**Next** — плагин [`next.mjs`](next.mjs), больше ничего запускать не нужно:
+```jsonc
+// site/package.json
+"dependencies": { "@delba/ui": "workspace:*" /* + peer-зависимости кита, см. его package.json */ },
+"scripts": { "check": "delba-ui build && tsc --noEmit && eslint . && delba-ui check" }
+```
 
 ```js
 // next.config.mjs
-import { withUi } from '<путь>/UI/next.mjs';
+import { withUi } from '@delba/ui/next';
 export default withUi(nextConfig);
 ```
 
-Он ставит `sassOptions` (modern API и `loadPaths`, чтобы модули звали ядро коротким
-`@use 'UI/core/mixins'`) и зовёт генерацию [`tools/cli.mjs`](tools/cli.mjs): в `next build` — один
-раз до сборки, в `next dev` — сборка и watcher, который умирает вместе с dev. Проверки —
-`node <путь>/UI/tools/cli.mjs check` из папки приложения.
+Алиасов `@delba/ui` в `tsconfig.json` не нужно: tsc, eslint-import-resolver и Turbopack находят пакет
+по `exports`. Клонировать проект вместе с библиотекой — `git clone --recurse-submodules …`; уже
+склонирован — `git submodule update --init`.
+
+**Один React.** Кит объявляет `react`, `next`, `swiper`… в `peerDependencies`; pnpm ставит их ему
+ссылками на те же копии, что у приложения (диапазоны совпадают), поэтому хойстинг (`shamefullyHoist`)
+киту не нужен. Проверка: `require.resolve('react')` от файла кита и от файла приложения дают один
+`realpath`. Разъедутся диапазоны — будет две копии и «Invalid hook call»: держите peer кита и
+зависимости приложения в одних границах.
+
+Плагин `withUi` добавляет кит в `transpilePackages`, ставит `sassOptions` (modern API и `loadPaths`
+для SCSS-входов) и зовёт генерацию CLI: в `next build` — один раз до сборки, в `next dev` — сборка и
+watcher, который умирает вместе с dev. Проект со своим конфигом Next берёт `UI_SASS` из
+`@delba/ui/next` и кладёт его в `sassOptions.loadPaths` сам.
 
 **CLI** (из папки приложения, конфиг — `ui.config.ts` рядом, пример — `site/ui.config.ts` в
 serdcaBezGranic):
 
 ```bash
-node <путь>/UI/tools/cli.mjs build   # public кита → public приложения, шкуры, утилиты
-node <путь>/UI/tools/cli.mjs watch   # то же и следит; правка конфига или пресета — перезапуск
-node <путь>/UI/tools/cli.mjs check   # красные линии (--update опускает планку) и договор темы
+delba-ui build   # шкуры, утилиты, масштаб
+delba-ui watch   # то же и следит; правка конфига или пресета — перезапуск
+delba-ui check   # красные линии (--update опускает планку), договор темы, старые пути к киту
 ```
 
 Конфиг ([`tools/config.ts`](tools/config.ts)) — всё необязательно: `scan` (`['src']`, кит
-сканируется всегда), `seeds`, `public` (`public`), `theme` (`theme`), `rules` (`['src']`),
-`baseline` (`.rules-baseline.json`), `skins`, `scale` (базы масштаба, см. ниже), `typography` (варианты типографики, см. «Тему»). Проекту нужны `typescript` и `tsx`.
+сканируется всегда), `seeds`, `theme` (`theme`), `rules` (`['src']`), `baseline`
+(`.rules-baseline.json`), `skins`, `scale` (базы масштаба, см. ниже), `typography` (варианты
+типографики, см. «Тему»). `tsx` для CLI кит несёт сам; `typescript` и `sass` — peer.
 
 ## Что должен дать проект
 
 - **Пакеты** — `peerDependencies` в [`package.json`](package.json). Там же `sideEffects`:
   благодаря ему сборка выкидывает со страницы то, что она не использует (Lexical, Swiper,
-  видеоплеер), даже если импорт идёт через общий вход.
-- **Генераты.** `core/_utilities.scss` (классы под значения, которые реально встречаются в коде) и
-  `core/_field-sizes.scss` пишет генератор утилит [`tools/utilities`](tools/utilities). Без них
+  видеоплеер), даже если импорт идёт через общий вход. Стенд, который ставит без devDependencies,
+  должен найти peer-пакеты в `dependencies` приложения.
+- **Генераты.** `src/core/_utilities.scss` (классы под значения, которые реально встречаются в коде) и
+  `src/core/_field-sizes.scss` пишет генератор утилит [`tools/utilities`](tools/utilities). Без них
   сборка стилей не пройдёт, в репозиторий они не попадают: у каждого проекта свои. Их делает CLI
   выше; проект со своим скриптом зовёт генератор напрямую:
 
   ```bash
-  node --import tsx <путь>/tools/utilities/cli.ts build --config <конфиг проекта>   # или watch
+  node --import tsx <кит>/tools/utilities/cli.ts build --config <конфиг проекта>   # или watch
   ```
 
   Конфиг — `{ scan: ['apps', 'libs'], seeds?, typography? }`, пути от cwd, пример — `tools/ui/utilities.config.ts` в socrat.
 - **Масштаб.** `1rpx = ширина окна / база полосы`, на десктопе шире потолка rpx не растёт. Базы —
   `scale` в `ui.config.ts` (умолчания `{ mobile: 320, tablet: 768, desktop: 1920, max: 2560 }`); генератор
-  пишет из них `--base-width`/`--rpx` (`core/_scale.scss`, слой `ui.scale` — тема проекта со своим `--rpx`
-  его перебивает) и `core/scale.ts` для JS. По тем же числам `Img` считает `sizes`: `w={624}` →
+  пишет из них `--base-width`/`--rpx` (`src/core/_scale.scss`, слой `ui.scale` — тема проекта со своим `--rpx`
+  его перебивает) и `src/core/scale.ts` для JS. По тем же числам `Img` считает `sizes`: `w={624}` →
   `(min-width: 2560px) 832px, 32.5vw`. Тема проекта `--rpx` больше задавать не должна.
-- **Подключить [`core/tokens.global.scss`](core/tokens.global.scss) в глобальные стили** (`@use`): там
-  утилиты раскладки и классы примитивов `ui-*` (`ui-flex`, `ui-text`, `ui-icon`…). У примитивов нет
-  CSS-модулей, без этого файла они голые.
-- **Статику из [`public/`](public).** Там иконки, которые компоненты зовут по адресу
-  (`/icons/ui/…`: глаз в поле пароля, стрелки календаря, кнопки видеоплеера, тост). CLI
-  раскладывает её сам; без него проект копирует `public/` библиотеки в `public/` приложения.
-- **Шкуры — по желанию.** Движок [`skin/`](skin) (`defineSkin`, `resolveSkin`, `skinPad`,
-  `skinRadius`, импорт `<алиас>/skin`) для компонентов проекта с пресетами. Данные — у проекта:
-  в `skins` конфига словари `fills`/`lines`/`texts` и `dir` с компонентами, где лежат
-  `*.skin.ts`. Генератор пишет `skin/_tokens.scss`, `skin/_classes.scss` (классы покоя `sk_*` —
-  `@use` в глобальные стили) и `_states.scss` рядом с каждым компонентом (`@use './states'` в его модуле).
+- **`@use '@delba/ui/styles'` в глобальных стилях**: там утилиты раскладки и классы примитивов `ui-*`
+  (`ui-flex`, `ui-text`, `ui-icon`…). У примитивов нет CSS-модулей, без этого файла они голые.
+- **Иконки кита копировать не нужно.** Компоненты берут их импортом из `assets/`, сборщик кладёт их
+  в свою статику (`/_next/static/media/…`). В коде проекта иконки кита — тоже импортом:
+  `import eye from '@delba/ui/icons/eye/style-1/eye.svg'` и `<Icon src={assetUrl(eye)} />`.
+- **Шкуры — по желанию.** Движок `@delba/ui/skin` (`defineSkin`, `resolveSkin`, `skinPad`,
+  `skinRadius`) для компонентов проекта с пресетами. Данные — у проекта: в `skins` конфига словари
+  `fills`/`lines`/`texts` и `dir` с компонентами, где лежат `*.skin.ts`. Генератор пишет
+  `src/skin/_tokens.scss`, `src/skin/_classes.scss` (классы покоя `sk_*` — `@use '@delba/ui/skin-classes'`
+  в глобальные стили) и `_states.scss` рядом с каждым компонентом (`@use './states'` в его модуле).
 - **Тему.** Договор — это CSS-переменные, семейства типографики и атрибутные правила
-  (`[data-hide-mobile]`…), которые библиотека берёт у проекта. Проверка:
+  (`[data-hide-mobile]`…), которые библиотека берёт у проекта. Проверка — `delba-ui check`, без CLI:
 
   ```bash
-  node <путь>/UI/tools/check-tokens.mjs <папки стилей проекта…>    # чего не хватает
-  node <путь>/UI/tools/check-tokens.mjs --list                     # весь договор
+  node <кит>/tools/check-tokens.mjs <папки стилей проекта…>    # чего не хватает
+  node <кит>/tools/check-tokens.mjs --list                     # весь договор
   ```
 
   Цвета договор называет ролями. Бренд — `--primary` (+ `-hover`, `-light`, `-dark`) и
@@ -126,7 +168,7 @@ node <путь>/UI/tools/cli.mjs check   # красные линии (--update �
   контента с пустым фолбэком (`var(--font-h4,)`): нет токена — шрифт наследуется от `Text`.
 
   Для нового проекта есть стартовая тема [`theme/tokens.default.scss`](theme/tokens.default.scss):
-  подключи её в глобальные стили, и библиотека заработает сразу. Специфичность у неё нулевая,
+  `@use '@delba/ui/theme'` в глобальных стилях, и библиотека заработает сразу. Специфичность у неё нулевая,
   так что своя тема проекта перебивает её при любом порядке подключения.
 
 ## Словари — у проекта
@@ -136,15 +178,17 @@ node <путь>/UI/tools/cli.mjs check   # красные линии (--update �
 
 ## Проверки качества
 
-Всё ниже запускается из корня проекта, `<путь>` — папка библиотеки.
+Из корня проекта:
 
 ```bash
-npx tsgo -p <путь>/tsconfig.json --noEmit            # строгий TypeScript самой библиотеки
-node --import tsx --test "<путь>/**/*.test.ts"       # юнит-тесты ядра
-node <путь>/tools/check-boundary.mjs                 # ни одного импорта наружу папки
-node <путь>/tools/check-tokens.mjs <стили проекта…>  # договор темы
-node <путь>/tools/check-rules.mjs --baseline <файл> <папки проекта…>   # красные линии с храповиком
+pnpm --filter @delba/ui typecheck    # строгий TypeScript самой библиотеки
+pnpm --filter @delba/ui test         # юнит-тесты ядра и tools
+pnpm --filter @delba/ui boundary     # ни одного импорта наружу папки
 ```
+
+Из папки приложения — `delba-ui check`: красные линии с храповиком (`check-rules.mjs`), договор темы
+(`check-tokens.mjs`) и старые пути к киту (`check-migration.mjs`). Каждый скрипт запускается и сам:
+`node <кит>/tools/check-rules.mjs --baseline <файл> <папки проекта…>`.
 
 `tsconfig.json` библиотеки строже обычного: помимо `strict` включены `noUncheckedIndexedAccess`,
 `noImplicitReturns`, `noImplicitOverride`, `noFallthroughCasesInSwitch`, `noUnusedLocals` и
@@ -158,10 +202,13 @@ node <путь>/tools/check-rules.mjs --baseline <файл> <папки прое
 ## Обновление в проекте
 
 ```bash
-git -C <путь>/UI pull origin main
-npm run ui:build && npm run typecheck
-git add <путь>/UI && git commit -m "UI: обновить библиотеку"
+git -C delba-ui pull origin main
+pnpm install && pnpm check            # новые peer или входы кита — install обязателен
+git add delba-ui pnpm-lock.yaml && git commit -m "UI: обновить библиотеку"
 ```
+
+После обновления, сменившего зависимости или раскладку, перезапустите `next dev`, а при странных
+ошибках резолва — удалите `.next/cache` (Turbopack кеширует резолв SCSS, tsc — `.tsbuildinfo`).
 
 Правка изнутри проекта: в папке сабмодуля `git switch main` → правка → коммит и пуш сюда →
 в проекте закоммитить сдвиг ссылки.
@@ -172,6 +219,81 @@ git add <путь>/UI && git commit -m "UI: обновить библиотек�
   помечай коммит `BREAKING:` и пиши в нём «как перейти».
 - **`null` в кортеже `[desktop, mobile, tablet]`** значит «пропустить брейкпоинт», а не
   «унаследовать desktop».
+
+## Переход на 2.0
+
+**2026-09-23 — кит стал пакетом `@delba/ui` с картой `exports`.** Проект на 1.x лез внутрь папки
+сабмодуля; теперь раскладка приватна (`src/components`, `src/core`, `assets`), а входы — в таблице
+«Граница». `delba-ui check` (и `check-tokens.mjs`, который зовут socrat и D4Y) находит старые пути и
+`<Container/>` и печатает замену построчно: `node <кит>/tools/check-migration.mjs <папки проекта…>`.
+
+**1. Пакет воркспейса.** Папку сабмодуля (`UI`, `delba-ui` — как угодно) — в `packages` у
+`pnpm-workspace.yaml`, приложению — `"@delba/ui": "workspace:*"`, затем `pnpm install`. Алиасы на
+папку кита в `tsconfig` (`@socrat/shared/ui/ui`, `…/container`, `…/grid`, `@delba/ui/*`) — убрать или
+перенаправить на пакет. `shamefullyHoist` ради кита больше не нужен (см. «Один React»).
+
+**2. Пути.**
+
+| Было (1.x) | Стало (2.0) |
+|---|---|
+| `import … from '<UI>'` / `'<UI>/Grid'` / `'<UI>/Modal'` / `'<UI>/Toast'` / `'<UI>/RichTextarea'` | `import … from '@delba/ui'` |
+| `'<UI>/core'`: `cx`, `MEDIA_QUERY`, `clamp`, `prefersReducedMotion`, `MOTION_END_BUFFER_MS`, `ResponsiveValue`… | `'@delba/ui'` (там же теперь `mergeComponentStates`, `ComponentStateValue`, `assetUrl`) |
+| `'<UI>/core/component-state'`, `'<UI>/core/utils'`, `'<UI>/hooks/…'`, `'<UI>/core/useInView'`, `'<UI>/LenisScroll'` | `'@delba/ui'` |
+| `'<UI>/skin'` | `'@delba/ui/skin'` |
+| `import { withUi } from '<UI>/next.mjs'` | `import { withUi } from '@delba/ui/next'` |
+| `import type { UiConfig } from '<UI>/tools/config'` | `import type { UiConfig } from '@delba/ui/config'` |
+| `node <UI>/tools/cli.mjs build` | `delba-ui build` (bin пакета) |
+| `node --import tsx <UI>/tools/utilities/cli.ts …` | без изменений (путь `tools/` тот же) |
+
+Нужного символа нет в `@delba/ui` — это повод добавить его во вход кита, а не лезть в `src/`.
+
+**3. SCSS.**
+
+| Было | Стало |
+|---|---|
+| `@use '<путь>/UI/core/tokens.global.scss'` | `@use '@delba/ui/styles'` |
+| `@use '<путь>/UI/theme/tokens.default.scss'` | `@use '@delba/ui/theme'` |
+| `@use '<путь>/UI/skin/classes'` | `@use '@delba/ui/skin-classes'` |
+| `@use 'mixins'` / `@use 'UI/core/mixins'` / `@use '../../UI/core/mixins'` | `@use '@delba/ui/mixins' as m` |
+| `sassOptions.loadPaths: [<путь>/UI/core]` или `[<родитель UI>]` | `withUi` ставит сам; без него — `loadPaths: [UI_SASS]` из `@delba/ui/next` |
+
+`_states.scss` шкур перегенерирует CLI (`@use '@delba/ui/skin-states'`). Свои `loadPaths` проекта
+(`src/styles` у socrat) остаются — `withUi` дописывает свой путь к ним.
+
+**4. Иконки.** Кит больше не копирует `public/` в проект (`public` в `ui.config.ts` удалён, CLI
+подскажет). Компоненты кита берут иконки импортом — копия не нужна. Если проект сам зовёт иконки
+кита по адресу `/icons/ui/…` (у socrat их сотни), два пути:
+- импорт: `import arrow from '@delba/ui/icons/arrows/style-3/arrow.svg'` и `<Icon src={assetUrl(arrow)} />`;
+- или прежняя раскладка своим скриптом: источник теперь `<UI>/assets/icons/ui`, а не `<UI>/public/icons/ui`
+  (у socrat — `LIBRARY_SOURCE` в `tools/assets/sync.mjs`).
+
+Если в проекте SVGR на все `*.svg`, импорт даст компонент — `Icon` принимает и его (`src={Arrow}`).
+
+**5. `<Container/>` удалён** (`@deprecated` с 1.x). Колонку даёт проп `container` у `Box`, `Flex`,
+`Grid`: те же поля по бокам и `max-width`, но **без вертикальных полей** — их задаёт секция. Замена
+«один в один» (вертикальные поля сохраняются, `pt`/`pb` на вызове их перебивают, как раньше) — свой
+компонент в проекте, импорт на вызовах не меняется:
+
+```tsx
+// libs/shared/ui/src/lib/components/Container/Container.tsx (socrat); алиас @socrat/shared/ui/container → сюда
+import { Box, cx, type BoxProps } from '@delba/ui';
+import styles from './Container.module.scss';
+
+/** Колонка контента с полями `--s-container` со всех сторон — как `<Container/>` кита 1.x. */
+export const Container = ({ className, ...props }: BoxProps) => <Box container className={cx(styles.root, className)} {...props} />;
+```
+
+```scss
+// Container.module.scss — в слое покоя, чтобы проп pt/pb (ui.utilities) его перебивал
+@layer ui.components {
+  .root { padding-top: var(--s-container); padding-bottom: var(--s-container); }
+}
+```
+
+Где вертикальные поля не нужны (секция задаёт свои) — прямо на вызове: `<Container …>` → `<Box container …>`
+(или `<Flex container …>`/`<Grid container …>`, если внутри одна раскладка — тогда обёртка лишняя).
+
+**6. `controls/Button`** (реэкспорт `Button`) удалён — `import { Button } from '@delba/ui'`.
 
 ## Миграция договора темы
 
@@ -190,9 +312,7 @@ git add <путь>/UI && git commit -m "UI: обновить библиотек�
 
 ## Отложено (решение владельца 2026-09-23)
 
-- **Раскладка по папкам и карта `exports`.** Примитивы — в `src/components`, ядро и хуки — в
-  `src/`, `public` → `assets`; проекты импортируют только объявленные входы (`@delba/ui`,
-  `/mixins`, `/next`, `/skin`), тогда внутренняя раскладка больше никого не ломает. Один
-  `BREAKING:` для socrat и D4Y — в одной серии с переименованием в `delba-ui`.
-- **`<Container/>` устарел**: колонку контента даёт проп `container` у Flex, Grid и Box (без вертикальных полей — их задаёт секция). Удалить в той же серии, с миграцией для socrat.
-- **Иконки кита — импортом**, чтобы проекту не нужно было копировать `public/` кита в свой.
+- ~~**Раскладка по папкам и карта `exports`.**~~ Сделано в 2.0: `src/components`, `src/core`,
+  `assets`, пакет `@delba/ui` (см. «Переход на 2.0»). Переименование репозитория в `delba-ui` — уже.
+- ~~**`<Container/>` устарел.**~~ Удалён в 2.0, замена — проп `container` у Flex, Grid и Box.
+- ~~**Иконки кита — импортом.**~~ Сделано в 2.0: `assets/` импортом, копия в `public/` не нужна.

@@ -14,9 +14,15 @@ import { createPortal } from 'react-dom';
 
 import styles from './Toast.module.scss';
 
+import { assetUrl } from '../../core';
+
 import { Flex } from '../Flex';
 import { Icon } from '../Icon';
 import { Text } from '../Text';
+
+import checkIcon from '../../../assets/icons/ui/check/style-3/check.svg';
+import exclamationIcon from '../../../assets/icons/ui/exclamation/style-1/exclamation.svg';
+import crossIcon from '../../../assets/icons/ui/cross/style-7/cross.svg';
 
 /** Тон — это ГЛИФ и цвет его кружка, больше ничего: карточка у тоста одна. */
 export type ToastTone = 'success' | 'warning' | 'error';
@@ -32,13 +38,13 @@ export type ToastOptions = {
 };
 
 const TONE: Record<ToastTone, { glyph: string; fill: string }> = {
-  success: { glyph: '/icons/ui/check/style-3/check.svg', fill: 'var(--success)' },
+  success: { glyph: assetUrl(checkIcon), fill: 'var(--success)' },
   // Жёлтый — ход принят, но ничего не сделал (действие ещё не подключено, недоступно на тарифе).
   // Зелёный чек на таком ходе врёт: человек читает его как выполненное.
-  warning: { glyph: '/icons/ui/exclamation/style-1/exclamation.svg', fill: 'var(--warning)' },
+  warning: { glyph: assetUrl(exclamationIcon), fill: 'var(--warning)' },
   // Красный тон — для отказа В ОТВЕТ НА ДЕЙСТВИЕ, у которого нет своего места для ошибки
   // (файл не прошёл проверку при загрузке). Ошибке ФОРМЫ место в поле, а не здесь.
-  error: { glyph: '/icons/ui/cross/style-7/cross.svg', fill: 'var(--error)' },
+  error: { glyph: assetUrl(crossIcon), fill: 'var(--error)' },
 };
 
 /** Заливка кружка тоста — полным кортежем: проп респонсивный. */

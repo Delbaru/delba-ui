@@ -9,12 +9,14 @@ import { Select } from '../Select';
 import { TabTrack } from '../TabTrack';
 import { Text } from '../Text';
 import { Tooltip } from '../Tooltip';
-import { cx } from '../../core';
+import { assetUrl, cx } from '../../core';
 import { resolveSvgAssetSource } from '../../core/base/svg-asset';
 import { useTooltip } from '../../hooks/useTooltip';
 
 import styles from './ChoiceButtons.module.scss';
 import UpIcon from './assets/up.svg';
+
+import infoIcon from '../../../assets/icons/ui/info/style-1/info.svg';
 
 const tooltipArrowIconSrc = resolveSvgAssetSource(UpIcon);
 
@@ -50,7 +52,7 @@ function ChoiceInfoTooltip({
             className={styles.tooltipWrapper}
         >
             <Icon
-                src='/icons/ui/info/style-1/info.svg'
+                src={assetUrl(infoIcon)}
                 w={[20, null, null]}
                 h={[20, null, null]}
                 strokeWidth={[1.25, null, null]}

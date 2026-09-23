@@ -9,9 +9,12 @@ import { Flex } from '../../Flex';
 import { Grid } from '../../Grid';
 import { Icon } from '../../Icon';
 import { Text } from '../../Text';
-import { cx, stateProps } from '../../../core';
+import { assetUrl, cx, stateProps } from '../../../core';
 import styles from './Calendar.module.scss';
 import * as datePicker from '../lib/date-picker';
+
+import arrowIcon from '../../../../assets/icons/ui/arrows/style-2/arrow.svg';
+import chevronIcon from '../../../../assets/icons/ui/arrows/style-3/arrow.svg';
 
 interface CalendarProps {
   id: string;
@@ -100,7 +103,7 @@ export function Calendar({
         gap={[8, null, null]}
       >
         <Icon
-          src='/icons/ui/arrows/style-2/arrow.svg'
+          src={assetUrl(arrowIcon)}
           rootW={[40, null, null]}
           rootH={[40, null, null]}
           w={[18, null, null]}
@@ -124,7 +127,7 @@ export function Calendar({
             <Text variant={['inherit', null, null]}>{visibleMonthLabel}</Text>
 
             <Icon
-              src='/icons/ui/arrows/style-3/arrow.svg'
+              src={assetUrl(chevronIcon)}
               w={[20, null, null]}
               h={[20, null, null]}
               rootClassName={cx(styles.btn, styles.prev)}
@@ -138,7 +141,7 @@ export function Calendar({
                 мишенью 10×7 пикселей. Зазор между ними теперь внутри корней. */}
             <Flex dir={['column', 'column', 'column']} align={['center', 'center', 'center']}>
               <Icon
-                src='/icons/ui/arrows/style-3/arrow.svg'
+                src={assetUrl(chevronIcon)}
                 rootW={[20, null, null]}
                 rootH={[16, null, null]}
                 w={[16, null, null]}
@@ -148,7 +151,7 @@ export function Calendar({
               />
 
               <Icon
-                src='/icons/ui/arrows/style-3/arrow.svg'
+                src={assetUrl(chevronIcon)}
                 rootW={[20, null, null]}
                 rootH={[16, null, null]}
                 w={[16, null, null]}
@@ -161,7 +164,7 @@ export function Calendar({
         </Flex>
 
         <Icon
-          src='/icons/ui/arrows/style-2/arrow.svg'
+          src={assetUrl(arrowIcon)}
           rootW={[40, null, null]}
           rootH={[40, null, null]}
           w={[18, null, null]}

@@ -20,7 +20,7 @@
 @layer ui.components {
   @include meta.load-css('../components/Box/box');
   @include meta.load-css('../components/Button/button');
-  @include meta.load-css('../components/Container/container');
+  @include meta.load-css('./layout/container');
   @include meta.load-css('../components/Flex/flex');
   @include meta.load-css('../components/Grid/grid');
   @include meta.load-css('../components/Icon/icon');

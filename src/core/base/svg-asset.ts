@@ -23,3 +23,6 @@ export function resolveSvgAssetSource(asset: unknown) {
 
   return undefined;
 }
+
+/** Иконка из `assets/` кита, взятая импортом, → адрес для `Icon src`: сборщик отдаёт строку или `{ src }`. */
+export const assetUrl = (asset: string | { src: string }): string => (typeof asset === 'string' ? asset : asset.src);

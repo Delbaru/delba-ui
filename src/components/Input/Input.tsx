@@ -4,7 +4,7 @@ import { useCallback, useRef, useState, type CSSProperties } from 'react';
 import type React from 'react';
 import styles from './Input.module.scss';
 import { Skeleton } from '../Skeleton';
-import { cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
+import { assetUrl, cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
 import { textFont, type TextRole, type TextVariantName } from '../../core/base/typography';
 import { Icon } from '../Icon';
 import { Text } from '../Text';
@@ -17,6 +17,11 @@ import { Tooltip } from '../Tooltip';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useTextOverflow } from '../../hooks/useTextOverflow';
 import { useTooltip } from '../../hooks/useTooltip';
+
+import calendarIcon from '../../../assets/icons/ui/calendar/style-1/calendar.svg';
+import chevronIcon from '../../../assets/icons/ui/arrows/style-3/arrow.svg';
+import gazeAwayIcon from '../../../assets/icons/ui/eye/style-1/gaze-away.svg';
+import eyeIcon from '../../../assets/icons/ui/eye/style-1/eye.svg';
 
 type VariantKey = 'primary' | 'secondary';
 type SizeKey = 'default' | 'fullWidth';
@@ -456,7 +461,7 @@ export function Input({
                         // Пара из ОДНОЙ семьи и одной техники (обе заливные): разная техника
                         // дала бы разную толщину в одном и том же боксе. Смена картинки —
                         // `animate='swap'`, то есть морф, а не подмена кадром (§8.6).
-                        src={revealed ? '/icons/ui/eye/style-1/gaze-away.svg' : '/icons/ui/eye/style-1/eye.svg'}
+                        src={revealed ? assetUrl(gazeAwayIcon) : assetUrl(eyeIcon)}
                         animate='swap'
                         // Скаляром, а не `[24, null, null]`: ниже 1024 кортеж не печатает
                         // класса вовсе, и глаз схлопывался в точку. В макете окна входа он
@@ -484,7 +489,7 @@ export function Input({
                 )}
                 {isDate && (
                     <Icon
-                        src='/icons/ui/calendar/style-1/calendar.svg'
+                        src={assetUrl(calendarIcon)}
                         rootW={[48, null, null]}
                         rootH={[48, null, null]}
                         w={[24, null, null]}
@@ -505,7 +510,7 @@ export function Input({
                         className={styles.numberArrows}
                     >
                         <Icon
-                            src='/icons/ui/arrows/style-3/arrow.svg'
+                            src={assetUrl(chevronIcon)}
                             rootW={[12, null, null]}
                             rootH={[8, null, null]}
                             w={[16, null, null]}
@@ -516,7 +521,7 @@ export function Input({
                             onClick={() => handleNumberStep(1)}
                         />
                         <Icon
-                            src='/icons/ui/arrows/style-3/arrow.svg'
+                            src={assetUrl(chevronIcon)}
                             rootW={[12, null, null]}
                             rootH={[8, null, null]}
                             w={[16, null, null]}

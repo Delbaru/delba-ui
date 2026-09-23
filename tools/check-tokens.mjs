@@ -20,6 +20,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { reportLegacy } from './check-migration.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss', '_scale.scss']);
 // Генераты шкур несут токены ПРОЕКТА из его словарей — в договор кита они не входят.
@@ -147,7 +149,10 @@ if (isMain) {
 
   const typographyAt = args.indexOf('--typography');
   const variants = typographyAt < 0 ? [] : (args[typographyAt + 1] ?? '').split(',').filter(Boolean);
-  const files = args.filter((arg, i) => !arg.startsWith('--') && (typographyAt < 0 || i !== typographyAt + 1)).flatMap((target) => walk(path.resolve(target), /\.(scss|css)$/));
+  const targets = args.filter((arg, i) => !arg.startsWith('--') && (typographyAt < 0 || i !== typographyAt + 1));
+  // Стили по путям кита 1.x не соберутся вовсе — это важнее недостающего токена.
+  if (!reportLegacy(targets)) process.exit(1);
+  const files = targets.flatMap((target) => walk(path.resolve(target), /\.(scss|css)$/));
   if (args.includes('--with-defaults')) files.push(path.join(ROOT, 'theme', 'tokens.default.scss'));
   const styles = files.map((file) => stripComments(fs.readFileSync(file, 'utf8'))).join('\n');
   const declared = new Set([...styles.matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]));

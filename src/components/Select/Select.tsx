@@ -4,7 +4,7 @@ import styles from './Select.module.scss';
 
 import { type CSSProperties } from 'react';
 import type React from 'react';
-import { cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
+import { assetUrl, cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
 import { Icon } from '../Icon';
 import { Text } from '../Text';
 import { Skeleton } from '../Skeleton';
@@ -12,6 +12,9 @@ import { Flex } from '../Flex';
 import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { SelectItem } from './options';
 import { useSelect, type SelectRenderValuePayload } from './useSelect';
+
+import arrowIcon from '../../../assets/icons/ui/arrows/arrow-2/arrow.svg';
+import checkIcon from '../../../assets/icons/ui/check/succsess_check_black.svg';
 
 type VariantKey = 'primary' | 'primaryFill' | 'secondary';
 type SizeKey = 'default' | 'fullWidth';
@@ -346,7 +349,7 @@ export function Select({
 
                     <Icon
                         aria-hidden
-                        src="/icons/ui/arrows/arrow-2/arrow.svg"
+                        src={assetUrl(arrowIcon)}
                         fill="transparent"
                         w={[20, 20, 20]}
                         h={[20, 20, 20]}
@@ -447,7 +450,7 @@ export function Select({
                                                 >
                                                     <Icon
                                                         aria-hidden
-                                                        src="/icons/ui/check/succsess_check_black.svg"
+                                                        src={assetUrl(checkIcon)}
                                                         fill="var(--white-100)"
                                                         w={[16, 16, 16]}
                                                         h={[16, 16, 16]}

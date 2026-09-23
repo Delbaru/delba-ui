@@ -70,8 +70,7 @@ export async function generateSkins(root: string, skins: UiSkins): Promise<numbe
     if (!def) throw new Error(`${entry.name}/${skinFile}: нет экспорта defineSkin(...)`);
 
     const rules = Object.entries(def.presets).map(([name, preset]) => presetRule(name, preset)).filter(Boolean);
-    const engine = path.relative(folder, SKIN).split(path.sep).join('/');
-    write(path.join(folder, '_states.scss'), `${BANNER}@use '${engine}' as *;\n${rules.map((rule) => `\n${rule}\n`).join('')}`);
+    write(path.join(folder, '_states.scss'), `${BANNER}@use '@delba/ui/skin-states' as *;\n${rules.map((rule) => `\n${rule}\n`).join('')}`);
   }
   return changed;
 }

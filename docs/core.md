@@ -9,25 +9,25 @@
 
 | Что | Где | Зачем |
 |---|---|---|
-| `splitBoxLayout`, `boxLayout` | `core/layout/box.ts` | пропы коробки (отступы, размеры, радиусы, рамка, фон, `grow`) одинаково у любого корня |
-| `resolveResponsive`, `getBreakpointIndex`, `resolveResponsiveAtBreakpoint` | `core/base/responsive.ts` | кортеж `[desktop, mobile, tablet]` → значения; `null` — пропуск |
+| `splitBoxLayout`, `boxLayout` | `src/core/layout/box.ts` | пропы коробки (отступы, размеры, радиусы, рамка, фон, `grow`) одинаково у любого корня |
+| `resolveResponsive`, `getBreakpointIndex`, `resolveResponsiveAtBreakpoint` | `src/core/base/responsive.ts` | кортеж `[desktop, mobile, tablet]` → значения; `null` — пропуск |
 | `ResponsiveInput<T>`, `ResponsiveValue<T>` | там же | вход помощников против типа пропа; строгий режим включает проект через `UiRules` |
-| `createLayoutClasses`, `utilityClasses`, `MEDIA`, `UTILITIES` | `core/layout`, `core/utilities` | имя класса утилиты = имя пропа; реестр — единственный источник правды |
+| `createLayoutClasses`, `utilityClasses`, `MEDIA`, `UTILITIES` | `src/core/layout`, `src/core/utilities` | имя класса утилиты = имя пропа; реестр — единственный источник правды |
 
 ## Полосы и медиазапросы
 
-`core/base/breakpoints.ts` — `BREAKPOINT` (числа) и `MEDIA_QUERY` (строки запросов: `desktop`,
+`src/core/base/breakpoints.ts` — `BREAKPOINT` (числа) и `MEDIA_QUERY` (строки запросов: `desktop`,
 `below`, `mobile`, `tablet`, `reducedMotion`). **Единственный источник.** Раньше те же 767/1023/1024
-жили пятью копиями и расходились. В SCSS то же самое даёт `core/_mixins.scss`.
+жили пятью копиями и расходились. В SCSS то же самое даёт `src/core/_mixins.scss`.
 
-`core/base/scale.ts` — масштаб: `UiScale` (базы `mobile`/`tablet`/`desktop` и потолок `max`), `DEFAULT_SCALE`,
+`src/core/base/scale.ts` — масштаб: `UiScale` (базы `mobile`/`tablet`/`desktop` и потолок `max`), `DEFAULT_SCALE`,
 `scaleCss` (блок `--base-width`/`--rpx` по полосам) и `imageSizes` (атрибут `sizes` из ширин в rpx). Значения
-проекта — генерат `core/scale.ts` (`SCALE`); пока его нет, `import … from './scale'` берёт папку
-`core/scale/` с умолчаниями — файл резолвится раньше папки.
+проекта — генерат `src/core/scale.ts` (`SCALE`); пока его нет, `import … from './scale'` берёт папку
+`src/core/scale/` с умолчаниями — файл резолвится раньше папки.
 
 ## Движение
 
-`core/base/motion.ts`:
+`src/core/base/motion.ts`:
 
 - `prefersReducedMotion()` — одна проверка на всю библиотеку;
 - `readMotionMs(node, kind)` — длительность transition или animation из вычисленных стилей;
@@ -35,10 +35,10 @@
 
 ## Текст и числа
 
-`core/base/text-format.ts` — `pluralize(value, [one, few, many])` и `pad(value, length = 2)`.
-`core/utils.ts` — `clamp` и `clamp01`. `core/base/cn.ts` — `cx` (склейка КЛАССОВ; состояния,
+`src/core/base/text-format.ts` — `pluralize(value, [one, few, many])` и `pad(value, length = 2)`.
+`src/core/utils.ts` — `clamp` и `clamp01`. `src/core/base/cn.ts` — `cx` (склейка КЛАССОВ; состояния,
 идентификаторы для `aria-*` и значения `transform` ею не склеивают).
-`core/base/typography.ts` — варианты проекта (`UiTypography`, `TextVariantName`), служебные роли
+`src/core/base/typography.ts` — варианты проекта (`UiTypography`, `TextVariantName`), служебные роли
 `TEXT_ROLES` (`body`, `caption`, `micro`) и `textFont(name)`: шрифт роли — с фолбэком на прежний вариант.
 В компонентах кита — только роли, варианты проекта кит не называет.
 
@@ -56,10 +56,10 @@
 
 ## SCSS
 
-`core/_mixins.scss` — `role-font($role, $legacy?)` (шрифт служебной роли), `reduced-motion`, `truncate`, `line-clamp($n)`, `fill`, `hidden-control`,
+`src/core/_mixins.scss` — `role-font($role, $legacy?)` (шрифт служебной роли), `reduced-motion`, `truncate`, `line-clamp($n)`, `fill`, `hidden-control`,
 `thin-scrollbar-track`, `thin-scrollbar-hover`, `hide-scrollbar`.
-`core/tokens.global.scss` — классы примитивов `ui-*` и подключение генерата по слоям.
-`core/scss-utils.scss` — `withBreakpoints` (остальные миксины там вытеснены генератором утилит).
+`src/core/tokens.global.scss` — классы примитивов `ui-*` и подключение генерата по слоям.
+`src/core/scss-utils.scss` — `withBreakpoints` (остальные миксины там вытеснены генератором утилит).
 
 ## Договор темы
 
