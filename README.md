@@ -25,7 +25,7 @@ node <путь>/UI/tools/check-boundary.mjs
 ## Подключение
 
 ```bash
-git submodule add -b main https://github.com/Delbaru/components.git <путь>/UI
+git submodule add -b main https://github.com/Delbaru/delba-ui.git <путь>/UI
 ```
 
 Клонировать проект вместе с библиотекой: `git clone --recurse-submodules …`. Если проект уже
@@ -138,3 +138,11 @@ git add <путь>/UI && git commit -m "UI: обновить библиотек�
   помечай коммит `BREAKING:` и пиши в нём «как перейти».
 - **`null` в кортеже `[desktop, mobile, tablet]`** значит «пропустить брейкпоинт», а не
   «унаследовать desktop».
+
+## Отложено (решение владельца 2026-09-23)
+
+- **Раскладка по папкам и карта `exports`.** Примитивы — в `src/components`, ядро и хуки — в
+  `src/`, `public` → `assets`; проекты импортируют только объявленные входы (`@delba/ui`,
+  `/mixins`, `/next`, `/skin`), тогда внутренняя раскладка больше никого не ломает. Один
+  `BREAKING:` для socrat и D4Y — в одной серии с переименованием в `delba-ui`.
+- **Иконки кита — импортом**, чтобы проекту не нужно было копировать `public/` кита в свой.
