@@ -10,8 +10,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./skin": "./src/skin/index.ts",
+    "./rich-text": "./src/rich-text.ts",
     "./icons/*": "./assets/icons/ui/*",
-    "./next": "./tools/next.mjs",
+    "./next": {
+      "types": "./tools/next.d.mts",
+      "default": "./tools/next.mjs"
+    },
     "./config": "./tools/config.ts",
     "./package.json": "./package.json"
   },

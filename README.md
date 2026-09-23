@@ -27,7 +27,8 @@
 | `@delba/ui` | компоненты, хуки, типы (`src/index.ts`) | `import { Flex, Text } from '@delba/ui'` |
 | `@delba/ui/skin` | движок шкур для D-/Shared-компонентов | `import { defineSkin } from '@delba/ui/skin'` |
 | `@delba/ui/icons/*` | иконки кита (`assets/icons/ui/*`) | `import eye from '@delba/ui/icons/eye/style-1/eye.svg'` → `assetUrl(eye)` |
-| `@delba/ui/next` | плагин Next `withUi` и `UI_SASS` | `export default withUi(nextConfig)` |
+| `@delba/ui/next` | плагин Next `withUi` и `UI_SASS` (типы — `tools/next.d.mts`) | `export default withUi(nextConfig)` |
+| `@delba/ui/rich-text` | роли и санитайзер rich-text без React и SCSS — для node-скриптов и route handlers | `import { sanitizeRichTextHtml, RICH_ROLES } from '@delba/ui/rich-text'` |
 | `@delba/ui/config` | тип `UiConfig` для `ui.config.ts` | `import type { UiConfig } from '@delba/ui/config'` |
 | `delba-ui` | CLI (bin пакета) | `delba-ui build`, `watch`, `check` |
 
@@ -101,6 +102,11 @@ delba-ui check   # красные линии (--update опускает план
 
 ## Что должен дать проект
 
+- **Кит может лежать git-зависимостью** (`"@delba/ui": "git+https://…#<коммит>"`) — тогда он
+  настоящая папка `<проект>/node_modules/@delba/ui`, а не симлинк воркспейса. Генератор утилит
+  сканирует его и там: `node_modules`, `.next`, `dist`… пропускаются по пути от корня скана, а не по
+  абсолютному. Генераты пишутся внутрь этой папки и стираются переустановкой: `withUi` пишет их
+  заново на каждом `next dev`/`next build`, без плагина — `delba-ui build` после установки.
 - **Пакеты** — `peerDependencies` в [`package.json`](package.json). Там же `sideEffects`:
   благодаря ему сборка выкидывает со страницы то, что она не использует (Lexical, Swiper,
   видеоплеер), даже если импорт идёт через общий вход. Стенд, который ставит без devDependencies,
