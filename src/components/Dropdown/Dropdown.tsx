@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
+import { cloneElement, useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactElement, type ReactNode } from 'react';
 
 import styles from './Dropdown.module.scss';
 
@@ -14,8 +14,8 @@ export interface DropdownTriggerProps {
 }
 
 export interface DropdownProps {
-  /** Кнопка-триггер: пропсы раскрытия разложить на неё. */
-  trigger: (props: DropdownTriggerProps) => ReactNode;
+  /** Кнопка-триггер: `onClick` и aria раскрытия кит добавит ей сам. */
+  trigger: ReactElement<DropdownTriggerProps>;
   /** Содержимое панели — вёрстка целиком за вызывающим; функция получает `close`. */
   children: ReactNode | ((close: () => void) => ReactNode);
   /** Край триггера, к которому прижата панель. */
@@ -49,7 +49,7 @@ export function Dropdown({ trigger, children, side = 'start', offset = 8, classN
       className={styles.Dropdown}
       onBlur={(event) => event.relatedTarget && !event.currentTarget.contains(event.relatedTarget) && setOpen(false)}
     >
-      {trigger({ onClick: () => setOpen(!open), 'aria-expanded': open, 'aria-controls': id })}
+      {cloneElement(trigger, { onClick: () => setOpen(!open), 'aria-expanded': open, 'aria-controls': id })}
       <div
         id={id}
         className={cx(styles.panel, className)}

@@ -47,6 +47,8 @@ export interface FlexProps
   children?: React.ReactNode;
   style?: CSSProperties;
   state?: ComponentStateValue;
+  /** Тег узла без `href`: `header`, `nav`, `footer`… */
+  as?: 'div' | 'header' | 'nav' | 'footer' | 'main' | 'aside' | 'section' | 'ul' | 'li';
 
   gap?: ResponsiveValue<number>;
   rowGap?: ResponsiveValue<number>;
@@ -102,6 +104,7 @@ export interface FlexProps
 
 export function Flex({
   ref,
+  as = 'div',
   children,
   className = '',
   style,
@@ -122,7 +125,7 @@ export function Flex({
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
   const isLink = Boolean(href);
-  const Comp = (isLink ? (shouldUseNextLink(href, target, download) ? Link : 'a') : 'div') as React.ElementType;
+  const Comp = (isLink ? (shouldUseNextLink(href, target, download) ? Link : 'a') : as) as React.ElementType;
   const resolved = resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer });
   const anchorProps = isLink ? { ...rest, ...resolved } : rest;
   const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
