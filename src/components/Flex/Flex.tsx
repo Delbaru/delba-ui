@@ -167,12 +167,12 @@ export function Flex({
     return content;
   }
 
-  // Опт-ин сворачивание: оборачиваем во внешний grid (анимирует высоту + верхний отступ)
-  // и внутренний clip (overflow:hidden). Стили самого Flex (включая minH) остаются на нём
-  // внутри клипа, поэтому min-height блока не мешает схлопыванию до нуля.
+  // По высоте рамку держит сам Flex: он сжимается с треком и клипает своё содержимое. minH
+  // сжаться не даст — тогда клипает внутренний слой, как раньше.
   return (
     <CollapseWrap
       open={collapse}
+      clip={box.minH != null}
       axis={collapseAxis}
       collapseGap={collapseGap}
       fade={collapseFade}
@@ -192,19 +192,19 @@ interface CollapseWrapProps {
   fade?: boolean;
   overflowVisibleWhenOpen?: boolean;
   appear?: boolean;
+  clip?: boolean;
   onCollapseEnd?: (event: React.TransitionEvent<HTMLDivElement>) => void;
   children: React.ReactNode;
 }
 
 // Обёртка сворачивания на presence-движке (usePresence): контент монтируется при раскрытии и
 // УДАЛЯЕТСЯ из DOM по завершении сворачивания. Внешний grid анимирует grid-template-rows (0fr↔1fr) +
-// padding-top, внутренний div клипает (overflow:hidden, min-height:0). visualOpen — текущее визуальное
-// состояние (с учётом mount-закрытым→flip-в-open), settledOpen нужен только для overflowVisibleWhenOpen:
-// overflow снимаем лишь ПОСЛЕ окончания раскрытия (иначе во время анимации содержимое «вылезет» из клипа),
-// и возвращаем сразу при начале сворачивания.
-function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWhenOpen, appear, onCollapseEnd, children }: CollapseWrapProps) {
+// padding-top. settled — раскрытие доехало: только тогда снимаем клип (overflowVisibleWhenOpen) и
+// transition рамки. Считается в рендере, а не эффектом: иначе первый кадр сворачивания шёл бы без них.
+function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWhenOpen, appear, clip, onCollapseEnd, children }: CollapseWrapProps) {
   const { mounted, open: visualOpen, onTransitionEnd: onPresenceTransitionEnd, property, ref } = usePresence<HTMLDivElement>(open, axis, appear);
   const [settledOpen, setSettledOpen] = useState(open);
+  const settled = visualOpen && settledOpen;
 
   useEffect(() => {
     if (!visualOpen) setSettledOpen(false);
@@ -238,11 +238,12 @@ function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWh
       className={cx('ui-collapse', fade && 'ui-collapse-fade')}
       data-axis={axis}
       data-open={visualOpen || undefined}
+      data-settled={settled || undefined}
       inert={!visualOpen}
       onTransitionEnd={handleTransitionEnd}
       style={collapseStyle as CSSProperties}
     >
-      <div className={cx('ui-collapse-inner', overflowVisibleWhenOpen && settledOpen && 'ui-collapse-visible')}>
+      <div className={cx('ui-collapse-inner', clip && 'ui-collapse-clip', overflowVisibleWhenOpen && settled && 'ui-collapse-visible')}>
         {children}
       </div>
     </div>

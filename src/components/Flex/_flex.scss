@@ -14,8 +14,7 @@
 
 
 // Опт-ин сворачивание (проп collapse у Flex). grid-template 0fr↔1fr + отступ (--collapse-gap)
-// в одном transition → размер и отступ закрываются синхронно. Внешний .ui-collapse анимирует,
-// внутренний .ui-collapse-inner клипает (min-height/min-width:0). Ось задаёт data-axis (collapseAxis):
+// в одном transition → размер и отступ закрываются синхронно. Ось задаёт data-axis (collapseAxis):
 // row — по высоте (rows + padding-top), column — по ширине (columns + padding-left).
 //
 // --collapse-delay (по умолчанию 0s) отодвигает старт сворачивания. Нужен там, где по тому же
@@ -28,6 +27,8 @@
 // --collapse-duration (по умолчанию --t-d-fast) удлиняет само сворачивание. Нужна там, где на
 // collapse ездит КРУПНЫЙ блок: 0.3s хороши для строки списка, но подмена панели в полэкрана на
 // них читается как рывок. Берём токен подлиннее (--t-d-normal/--t-d-slow), а не сырые секунды.
+$collapse-motion: var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) var(--collapse-delay, 0s);
+
 .ui-collapse {
   display: grid;
 }
@@ -39,9 +40,7 @@
   // не задана (элемент row-between). Без этого auto-столбец сжимал бы растянутый ранее контент.
   grid-template-columns: minmax(0, 1fr);
   padding-top: 0;
-  transition:
-    grid-template-rows var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) var(--collapse-delay, 0s),
-    padding-top var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) var(--collapse-delay, 0s);
+  transition: grid-template-rows $collapse-motion, padding-top $collapse-motion;
 
   &[data-open] {
     grid-template-rows: 1fr;
@@ -56,9 +55,7 @@
   // При закрытии ширину до нуля ведёт grid-template-columns:0fr, а не flex-сжатие.
   flex-shrink: 0;
   padding-left: 0;
-  transition:
-    grid-template-columns var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) var(--collapse-delay, 0s),
-    padding-left var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) var(--collapse-delay, 0s);
+  transition: grid-template-columns $collapse-motion, padding-left $collapse-motion;
 
   &[data-open] {
     grid-template-columns: 1fr;
@@ -78,9 +75,42 @@
 }
 
 .ui-collapse-inner {
-  overflow: hidden;
   min-height: 0;
   min-width: 0;
+}
+
+// По высоте клип — сам Flex: он сжимается вместе с треком, поэтому его рамка, радиус и тень едут
+// целиком, а режется только содержимое. Внутренний слой не клипает — иначе срезал бы тень. Чтобы
+// Flex дошёл до нуля, к закрытию гаснут и вертикальные padding/border: без них остаток в их
+// высоту висел бы до размонтирования. !important — перебить утилиты и стили проекта.
+.ui-collapse[data-axis='row'] > .ui-collapse-inner {
+  display: flex;
+  flex-direction: column;
+
+  > .ui-flex {
+    min-height: 0;
+  }
+
+  &:not(.ui-collapse-visible) > .ui-flex {
+    overflow: hidden;
+  }
+}
+
+.ui-collapse[data-axis='row']:not([data-settled]) > .ui-collapse-inner > .ui-flex {
+  transition: padding-block $collapse-motion, border-block-width $collapse-motion;
+}
+
+.ui-collapse[data-axis='row']:not([data-open]) > .ui-collapse-inner > .ui-flex {
+  padding-block: 0 !important;
+  border-block-width: 0 !important;
+}
+
+// По ширине (и при minH, который не даёт Flex сжаться) клипает внутренний слой.
+.ui-collapse-inner:not(.ui-collapse-visible) {
+  &.ui-collapse-clip,
+  .ui-collapse[data-axis='column'] > & {
+    overflow: hidden;
+  }
 }
 
 // По ширине содержимое держит СВОЮ ширину, а трек его только клипает. Блочный ребёнок тянулся бы
@@ -99,7 +129,7 @@
 .ui-collapse-fade {
   .ui-collapse-inner {
     opacity: 0;
-    transition: opacity var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) var(--collapse-delay, 0s);
+    transition: opacity $collapse-motion;
   }
 
   &[data-open] .ui-collapse-inner {
@@ -107,16 +137,11 @@
   }
 }
 
-// Опт-ин снятие клипа после раскрытия (проп collapseOverflowVisible) — для выпадающих меню.
-// Класс навешивается из JS только когда блок полностью раскрыт (settledOpen).
-.ui-collapse-inner.ui-collapse-visible {
-  overflow: visible;
-}
-
 @include m.reduced-motion {
-  // Специфичность должна перебивать .ui-collapse[data-axis='...'] (0,2,0), поэтому целимся по осям.
+  // Специфичность должна перебивать правила выше, поэтому селекторы те же.
   .ui-collapse[data-axis='row'],
-  .ui-collapse[data-axis='column'] {
+  .ui-collapse[data-axis='column'],
+  .ui-collapse[data-axis='row']:not([data-settled]) > .ui-collapse-inner > .ui-flex {
     transition: none;
   }
 
