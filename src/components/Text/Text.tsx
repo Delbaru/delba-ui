@@ -158,6 +158,8 @@ export function Text({
         className
       );
 
+  if (children == null || children === '' || children === false) return null;
+
   return (
     <Comp
       ref={setRef}
