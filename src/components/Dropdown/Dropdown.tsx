@@ -6,7 +6,6 @@ import styles from './Dropdown.module.scss';
 
 import { cx } from '../../core';
 import { useOutsideDismiss } from '../../hooks/useOutsideDismiss';
-import { Flex, type FlexProps } from '../Flex';
 
 export interface DropdownTriggerProps {
   onClick: () => void;
@@ -14,18 +13,19 @@ export interface DropdownTriggerProps {
   'aria-controls': string;
 }
 
-export interface DropdownProps extends Omit<FlexProps, 'children'> {
+export interface DropdownProps {
   /** Кнопка-триггер: пропсы раскрытия разложить на неё. */
   trigger: (props: DropdownTriggerProps) => ReactNode;
-  /** Содержимое панели; функция получает `close`. Клик по ссылке внутри закрывает сам. */
+  /** Содержимое панели — вёрстка целиком за вызывающим; функция получает `close`. */
   children: ReactNode | ((close: () => void) => ReactNode);
   /** Край триггера, к которому прижата панель. */
   side?: 'start' | 'center' | 'end';
   /** Зазор от триггера, дизайн-единицы. */
   offset?: number;
+  className?: string;
 }
 
-export function Dropdown({ trigger, children, side = 'start', offset = 8, className, style, ...panel }: DropdownProps) {
+export function Dropdown({ trigger, children, side = 'start', offset = 8, className }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -50,18 +50,17 @@ export function Dropdown({ trigger, children, side = 'start', offset = 8, classN
       onBlur={(event) => event.relatedTarget && !event.currentTarget.contains(event.relatedTarget) && setOpen(false)}
     >
       {trigger({ onClick: () => setOpen(!open), 'aria-expanded': open, 'aria-controls': id })}
-      <Flex
+      <div
         id={id}
         className={cx(styles.panel, className)}
-        style={{ '--dropdown-offset': `calc(${offset} * var(--rpx))`, ...style } as CSSProperties}
+        style={{ '--dropdown-offset': `calc(${offset} * var(--rpx))` } as CSSProperties}
         data-side={side}
         data-open={open || undefined}
         inert={!open}
         onClick={onPanelClick}
-        {...panel}
       >
         {typeof children === 'function' ? children(close) : children}
-      </Flex>
+      </div>
     </div>
   );
 }
