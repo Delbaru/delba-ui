@@ -1,0 +1,48 @@
+@use '../../core/mixins' as m;
+
+@layer ui.components {
+  .Dropdown {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .panel {
+    position: absolute;
+    top: calc(100% + var(--dropdown-offset));
+    z-index: 10;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(calc(var(--rpx) * -8)) scale(0.96);
+    transform-origin: top left;
+    transition:
+      opacity var(--t-d-fast) var(--t-t-f-ease),
+      transform var(--t-d-normal) var(--t-t-f-spring),
+      visibility 0s var(--t-d-fast);
+
+    &[data-open] {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+      transition-delay: 0s;
+    }
+
+    &[data-side='start'] {
+      left: 0;
+    }
+
+    &[data-side='center'] {
+      left: 50%;
+      translate: -50% 0;
+      transform-origin: top center;
+    }
+
+    &[data-side='end'] {
+      right: 0;
+      transform-origin: top right;
+    }
+
+    @include m.reduced-motion {
+      transform: none;
+    }
+  }
+}
