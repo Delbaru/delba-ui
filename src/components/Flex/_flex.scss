@@ -28,13 +28,16 @@
 // collapse ездит КРУПНЫЙ блок: 0.3s хороши для строки списка, но подмена панели в полэкрана на
 // них читается как рывок. Берём токен подлиннее (--t-d-normal/--t-d-slow), а не сырые секунды.
 $collapse-motion: var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) var(--collapse-delay, 0s);
+$collapse-half: calc(var(--collapse-duration, var(--t-d-fast)) / 2);
 
 .ui-collapse {
   display: grid;
 }
 
 .ui-collapse[data-axis='row'] {
-  grid-template-rows: 0fr;
+  // Пустой auto-трек забирает место, которое при сумме fr < 1 остаётся под fr-треком: Chrome
+  // отдаёт такому треку f² высоты при обёртке в f. Слой через оба трека стоит ровно на высоте обёртки.
+  grid-template-rows: 0fr auto;
   // Ширину столбца тянем по родителю: minmax(0,1fr) даёт полную ширину, когда контейнер получает
   // определённую ширину (child в колоночном flex со stretch), и остаётся по контенту, когда ширина
   // не задана (элемент row-between). Без этого auto-столбец сжимал бы растянутый ранее контент.
@@ -43,7 +46,7 @@ $collapse-motion: var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) va
   transition: grid-template-rows $collapse-motion, padding-top $collapse-motion;
 
   &[data-open] {
-    grid-template-rows: 1fr;
+    grid-template-rows: 1fr auto;
     padding-top: var(--collapse-gap-d, 0);
   }
 }
@@ -79,11 +82,10 @@ $collapse-motion: var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) va
   min-width: 0;
 }
 
-// По высоте клип — сам Flex: он сжимается вместе с треком, поэтому его рамка, радиус и тень едут
-// целиком, а режется только содержимое. Внутренний слой не клипает — иначе срезал бы тень. Чтобы
-// Flex дошёл до нуля, к закрытию гаснут и вертикальные padding/border: без них остаток в их
-// высоту висел бы до размонтирования. !important — перебить утилиты и стили проекта.
+// По высоте клип — сам Flex: он сжимается вместе с обёрткой, поэтому его рамка, радиус и тень едут
+// целиком, а режется только содержимое. Внутренний слой не клипает — иначе срезал бы тень.
 .ui-collapse[data-axis='row'] > .ui-collapse-inner {
+  grid-row: 1 / -1;
   display: flex;
   flex-direction: column;
 
@@ -96,13 +98,20 @@ $collapse-motion: var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) va
   }
 }
 
-.ui-collapse[data-axis='row']:not([data-settled]) > .ui-collapse-inner > .ui-flex {
-  transition: padding-block $collapse-motion, border-block-width $collapse-motion;
-}
-
+// Flex не бывает ниже своих padding+border, а обёртка идёт в ноль — поэтому к закрытию гаснут и они.
+// Рамка едет в половине хода: закрывается в первой, открывается во второй. Тогда она всегда
+// меньше обёртки и не нахлёстывает соседа снизу; одним ходом с треком нахлёст был бы до 13px.
+// !important — закрытое состояние обязано перебить padding/border из утилит и стилей проекта.
 .ui-collapse[data-axis='row']:not([data-open]) > .ui-collapse-inner > .ui-flex {
   padding-block: 0 !important;
   border-block-width: 0 !important;
+  transition: padding-block $collapse-half var(--t-t-f-ease) var(--collapse-delay, 0s),
+    border-block-width $collapse-half var(--t-t-f-ease) var(--collapse-delay, 0s);
+}
+
+.ui-collapse[data-axis='row'][data-open]:not([data-settled]) > .ui-collapse-inner > .ui-flex {
+  $delay: calc(var(--collapse-delay, 0s) + #{$collapse-half});
+  transition: padding-block $collapse-half var(--t-t-f-ease) $delay, border-block-width $collapse-half var(--t-t-f-ease) $delay;
 }
 
 // По ширине (и при minH, который не даёт Flex сжаться) клипает внутренний слой.
@@ -141,7 +150,8 @@ $collapse-motion: var(--collapse-duration, var(--t-d-fast)) var(--t-t-f-ease) va
   // Специфичность должна перебивать правила выше, поэтому селекторы те же.
   .ui-collapse[data-axis='row'],
   .ui-collapse[data-axis='column'],
-  .ui-collapse[data-axis='row']:not([data-settled]) > .ui-collapse-inner > .ui-flex {
+  .ui-collapse[data-axis='row']:not([data-open]) > .ui-collapse-inner > .ui-flex,
+  .ui-collapse[data-axis='row'][data-open]:not([data-settled]) > .ui-collapse-inner > .ui-flex {
     transition: none;
   }
 
