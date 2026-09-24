@@ -15,7 +15,8 @@ export const RULES = {
   'raw-input': { ext: /\.tsx$/, test: (line) => /<input[\s/>]/.test(line), hint: 'SharedInput / SharedCheckbox / SharedRadio' },
   'raw-anchor': { ext: /\.tsx$/, test: (line) => /<a[\s>]/.test(line), hint: "Text as='a' или Button href" },
   'inline-svg': { ext: /\.tsx$/, test: (line) => /<svg[\s>]/.test(line), hint: 'файл в public/icons + Icon' },
-  'unanimated-conditional': { ext: /\.tsx$/, test: (line) => /(&&|\?)\s*\($/.test(line.trimEnd()), hint: 'collapse / transitionKey' },
+  // Появление по состоянию анимируется; в серверном файле условие — данные, а не состояние.
+  'unanimated-conditional': { ext: /\.tsx$/, client: true, test: (line) => /(&&|\?)\s*\($/.test(line.trimEnd()), hint: 'collapse / transitionKey' },
   'off-grid-number': {
     ext: /\.tsx$/,
     // Одно место — одно нарушение: полный кортеж `[6, 6, 6]` — это одно число, а не три.
@@ -56,8 +57,9 @@ export function countViolations(dirs) {
   for (const file of dirs.flatMap((dir) => walk(path.resolve(dir)))) {
     const rel = path.relative(process.cwd(), file).split(path.sep).join('/');
     const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+    const client = lines.some((line) => /^\s*['"]use client['"]/.test(line));
     for (const [rule, def] of Object.entries(RULES)) {
-      if (!def.ext.test(file)) continue;
+      if (!def.ext.test(file) || (def.client && !client)) continue;
       lines.forEach((line, index) => {
         if (isComment(line)) return;
         const n = def.count ? def.count(line) : def.test(line) ? 1 : 0;
