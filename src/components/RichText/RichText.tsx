@@ -276,6 +276,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
   
   // If Lexical JSON, render it directly without animation support
   if (isLexicalJSON) {
+    if (!content.root.children.length) return null;
     const previewText = extractLexicalPlainText(content).replace(/\s+/g, ' ').trim();
 
     if ((hasRows || hasSingleLineEllipsis) && previewText) {
