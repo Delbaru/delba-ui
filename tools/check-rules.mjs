@@ -30,6 +30,23 @@ export const RULES = {
     hint: 'var(--t-fast|--t-normal|--t-slow)',
   },
   'media-query': { ext: /\.scss$/, test: (line) => /@media\b/.test(line), hint: 'кортеж пропа или data-hide-*' },
+  // Проп раньше SCSS (docs/rules.md): то, что говорится пропом, в модуле — брак, который ревью ловило много раз.
+  'scss-zero-spacing': { ext: /\.scss$/, test: (line) => /^\s*(margin|padding)(-[a-z]+)?\s*:\s*0\s*;/.test(line), hint: 'проп m / p = [0, 0, 0]' },
+  'scss-flex-none': { ext: /\.scss$/, test: (line) => /^\s*flex\s*:\s*none\b/.test(line), hint: 'minW / minH у элемента' },
+  'scss-theme-rescope': {
+    ext: /\.module\.scss$/,
+    test: (line) => /^\s*--(text|text-muted|background|primary|secondary|tertiary)(-[a-z0-9]+)?\s*:/.test(line),
+    hint: 'цвет пропом color у текста, а не переопределением токена темы',
+  },
+  'margin-between': { ext: /\.tsx$/, test: (line) => /\s(mt|mb)=\{/.test(line), hint: 'gap у Flex-родителя' },
+  // Генератор утилит видит только литералы на месте вызова: константа даёт мёртвый класс.
+  'const-tuple': { ext: /\.tsx$/, test: (line) => /\s[a-zA-Z]+=\{\[?\s*[A-Z][A-Z0-9_]{2,}\s*[,\]}]/.test(line), hint: 'литерал на месте вызова' },
+  // Корневой класс модуля = имя компонента: виджет находится в DOM по имени.
+  'module-root-class': {
+    ext: /\.module\.scss$/,
+    file: (lines, file) => (lines.some((line) => line.startsWith(`.${path.basename(file, '.module.scss')} `)) ? 0 : 1),
+    hint: 'корневой класс = имя компонента',
+  },
 };
 
 function walk(dir, out = []) {
@@ -60,6 +77,14 @@ export function countViolations(dirs) {
     const client = lines.some((line) => /^\s*['"]use client['"]/.test(line));
     for (const [rule, def] of Object.entries(RULES)) {
       if (!def.ext.test(file) || (def.client && !client)) continue;
+      if (def.file) {
+        const n = def.file(lines, file);
+        if (n) {
+          counts[rule][rel] = n;
+          places[rule][rel] = [1];
+        }
+        continue;
+      }
       lines.forEach((line, index) => {
         if (isComment(line)) return;
         const n = def.count ? def.count(line) : def.test(line) ? 1 : 0;
@@ -95,6 +120,14 @@ if (isMain) {
   }
 
   const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
+  // Правило, которого нет в планке, пришло с обновлением кита: старые места проекта — его долг, а не
+  // поломка. Планка дописывается текущим числом, падать будет только рост.
+  const fresh = Object.keys(RULES).filter((rule) => !(rule in baseline));
+  if (fresh.length) {
+    for (const rule of fresh) baseline[rule] = counts[rule];
+    fs.writeFileSync(baselineFile, `${JSON.stringify(baseline, null, 2)}\n`);
+    console.log(`[ui:rules] новые правила в планке: ${fresh.map((rule) => `${rule} ${total(rule, counts)}`).join(', ')}`);
+  }
   let grew = 0;
   for (const [rule, def] of Object.entries(RULES)) {
     for (const [file, n] of Object.entries(counts[rule])) {
