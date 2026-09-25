@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 
 import { cx } from '../../core';
+import { bindShortWords } from '../Text/nonBreaking';
 
 import styles from './RichText.module.scss';
 import { isRichRole, roleClassKeys, textVariantClasses } from './roles';
@@ -173,7 +174,9 @@ function parseInlineStyle(styleText?: string): CSSProperties | undefined {
 }
 
 function renderTextNode(node: LexicalTextNode, key: string): ReactNode {
-  const { text, format = 0 } = node;
+  const { format = 0 } = node;
+  // Тот же перенос коротких слов, что у Text: текст из CMS иначе оставляет «и» висеть в конце строки.
+  const text = bindShortWords(node.text);
 
   // Lexical format flags: 1=bold, 2=italic, 4=strikethrough, 8=underline, etc.
   const isBold = (format & 1) !== 0;
