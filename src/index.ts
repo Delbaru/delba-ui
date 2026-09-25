@@ -40,6 +40,7 @@ export { pad, pluralize, type PluralForms } from './core/base/text-format';
 
 // Хуки и типы, которые нужны D-компонентам и страницам проекта.
 export { LenisScroll } from './components/LenisScroll';
+export * from './components/SmoothScroll';
 export { useOutsideDismiss, type DismissRef, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
 export { useMediaQuery } from './hooks/useMediaQuery';
 export { useInView, type UseInViewOptions } from './core/useInView';

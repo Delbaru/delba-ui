@@ -23,4 +23,6 @@ export const MEDIA_QUERY = {
   tablet: `(min-width: ${BREAKPOINT.tabletMin}px) and (max-width: ${BREAKPOINT.tabletMax}px)`,
   /** Не размер, но живёт рядом: его спрашивают там же, где и ширину. */
   reducedMotion: '(prefers-reduced-motion: reduce)',
+  /** Главный ввод без наведения — палец. Колесо тут не крутят, скролл отдают браузеру. */
+  touch: '(hover: none)',
 } as const;

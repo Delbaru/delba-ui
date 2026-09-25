@@ -33,6 +33,16 @@
 - `readMotionMs(node, kind)` — длительность transition или animation из вычисленных стилей;
 - `MOTION_END_BUFFER_MS` — единый запас страховочного таймера (раньше рядом стояли +40, +50, +60, +80).
 
+## Прокрутка окна
+
+`SmoothScroll` (`src/components/SmoothScroll`) — плавная прокрутка без зависимостей, замена `LenisScroll`
+(тот остаётся ради проектов на нём). Пишет в НАСТОЯЩИЙ скролл окна, поэтому sticky, поиск, фокус и
+клавиатура живы. Один конфиг — пропы провайдера (`lerp`, `wheelMultiplier`, `duration`, `easing`,
+`offset`, `mobile`, `anchors`, `updateHash`); API — `useSmoothScroll()` (`scrollTo`, `stop`, `scrollY`,
+`subscribe`). Колесо над прокручиваемым контейнером, открытой `aria-modal` или узлом с
+`data-smooth-scroll-ignore` (и `data-lenis-prevent`) — браузеру. Чистая математика хода, отступа и
+разбора якорей — `smooth-scroll.ts` с тестами; `MEDIA_QUERY.touch` — «главный ввод — палец».
+
 ## Сворачивание
 
 `Flex collapse` (обёртка `CollapseWrap` в `src/components/Flex/Flex.tsx`) — единственный движок
