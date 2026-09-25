@@ -6,7 +6,6 @@ export * from './components/Carousel/CarouselDots';
 export * from './components/Carousel/CarouselNav';
 export * from './components/Checkbox';
 export * from './components/ChoiceButtons';
-export * from './components/Crossfade';
 export * from './components/Dropdown';
 export * from './components/Flex';
 export * from './components/Grid';

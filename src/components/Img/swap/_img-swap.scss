@@ -1,0 +1,150 @@
+@use '../../../core/mixins' as m;
+
+// Смена картинки по смене src (проп `animate` у Img). Слои лежат друг на друге в корне Img:
+// прежний внизу, новый поверх, вуаль — выше всех. Ход — ключевыми кадрами: сторона (`--img-swap-dir`)
+// меняется от смены к смене, а переход стартовал бы с позиции прошлой стороны.
+.ui-img-swap {
+  --img-swap-d: var(--t-d-slow);
+  --img-swap-dir: 1;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.ui-img-swap-layer,
+.ui-img-swap-veil {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.ui-img-swap-veil {
+  z-index: 2;
+  display: grid;
+  pointer-events: none;
+}
+
+// Новая ещё грузится — не видна, прежняя стоит как была.
+.ui-img-swap-pending {
+  visibility: hidden;
+}
+
+$motion: var(--img-swap-d) var(--t-t-f-cubic-bezier) both;
+$twice: calc(var(--img-swap-d) * 2);
+
+// fade / zoom: новая проявляется, прежняя гаснет во второй половине — фон не проглядывает.
+.ui-img-swap:is([data-effect='fade'], [data-effect='zoom']) {
+  > .ui-img-swap-in {
+    animation: ui-img-swap-fade-in $motion;
+  }
+
+  > .ui-img-swap-out {
+    animation: ui-img-swap-fade-out calc(var(--img-swap-d) / 2) var(--t-t-f-cubic-bezier) calc(var(--img-swap-d) / 2) both;
+  }
+}
+
+.ui-img-swap[data-effect='zoom'] > .ui-img-swap-in .ui-img-image {
+  animation: ui-img-swap-settle $motion;
+}
+
+// reveal: клип снизу вверх поверх прежней, снимок оседает из увеличения.
+.ui-img-swap[data-effect='reveal'] > .ui-img-swap-in {
+  animation: ui-img-swap-reveal $motion;
+
+  .ui-img-image {
+    animation: ui-img-swap-settle $motion;
+  }
+}
+
+// parallax: новая въезжает сбоку, снимок в ней отстаёт; прежняя смещается навстречу и темнеет.
+.ui-img-swap[data-effect='parallax'] {
+  > .ui-img-swap-in {
+    animation: ui-img-swap-slide $motion;
+
+    .ui-img-image {
+      animation: ui-img-swap-lag $motion;
+    }
+  }
+
+  > .ui-img-swap-out .ui-img-image {
+    animation: ui-img-swap-recede $motion;
+  }
+}
+
+// veil: вуаль заходит до середины, пауза, уходит дальше; новая появляется под ней в паузе.
+.ui-img-swap[data-effect='veil'] {
+  > .ui-img-swap-veil {
+    animation: ui-img-swap-veil $twice var(--t-t-f-cubic-bezier) both;
+  }
+
+  > .ui-img-swap-in {
+    animation: ui-img-swap-show-late $twice linear both;
+
+    .ui-img-image {
+      animation: ui-img-swap-settle-side var(--img-swap-d) var(--t-t-f-cubic-bezier) var(--img-swap-d) both;
+    }
+  }
+}
+
+@include m.reduced-motion {
+  .ui-img-swap *,
+  .ui-img-swap > * {
+    animation: none !important;
+  }
+
+  .ui-img-swap-veil {
+    display: none;
+  }
+}
+
+@keyframes ui-img-swap-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ui-img-swap-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes ui-img-swap-settle {
+  from { transform: scale(1.06); }
+  to { transform: none; }
+}
+
+@keyframes ui-img-swap-reveal {
+  from { clip-path: inset(100% 0 0 0); }
+  to { clip-path: inset(0); }
+}
+
+@keyframes ui-img-swap-slide {
+  from { transform: translateX(calc(var(--img-swap-dir) * 100%)); }
+  to { transform: none; }
+}
+
+@keyframes ui-img-swap-lag {
+  from { transform: translateX(calc(var(--img-swap-dir) * -55%)) scale(1.12); }
+  to { transform: none; }
+}
+
+@keyframes ui-img-swap-recede {
+  from { transform: none; filter: brightness(1); }
+  to { transform: translateX(calc(var(--img-swap-dir) * -35%)); filter: brightness(0.3); }
+}
+
+// Сторона вуали — через знак: при dir = 1 вуаль растёт от левого края и уходит за правый, при -1 — наоборот.
+@keyframes ui-img-swap-veil {
+  0% { clip-path: inset(0 calc(50% + var(--img-swap-dir) * 50%) 0 calc(50% - var(--img-swap-dir) * 50%)); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  42%, 52% { clip-path: inset(0); }
+  100% { clip-path: inset(0 calc(50% - var(--img-swap-dir) * 50%) 0 calc(50% + var(--img-swap-dir) * 50%)); }
+}
+
+@keyframes ui-img-swap-show-late {
+  0%, 46% { opacity: 0; }
+  47%, 100% { opacity: 1; }
+}
+
+@keyframes ui-img-swap-settle-side {
+  from { transform: translateX(calc(var(--img-swap-dir) * 5%)) scale(1.12); }
+  to { transform: none; }
+}

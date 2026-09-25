@@ -9,6 +9,8 @@ import { imageSizes } from '../../core/base/scale';
 import { SCALE } from '../../core/scale';
 import { useFancybox } from '../../hooks/useFancybox';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { useImgSwap } from './swap/useImgSwap';
+import type { ImgAnimate } from './swap/types';
 
 const c = createLayoutClasses();
 
@@ -71,6 +73,13 @@ export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootS
    * меняет кадр при смене ширины окна. Размеры, `sizes`, `objectFit` — общие на все кадры.
    */
   src: ImgSource | ImgSrcTuple;
+
+  /**
+   * Анимация смены картинки при смене `src`: `'fade' | 'zoom' | 'reveal' | 'parallax' | 'veil'`,
+   * или `[ключ, { duration, direction, veil }]`. Прежняя картинка держится слоем, пока новая не
+   * загрузится и не доедет; первый показ — без хода, «меньше движения» — мгновенно. См. `ImgAnimate`.
+   */
+  animate?: ImgAnimate;
 
   objectFit?: ResponsiveValue<ObjectFitKey>;
   objectPosition?: ResponsiveValue<ObjectPositionKey>;
@@ -204,6 +213,7 @@ export function Img({
   'data-point-events': dataPointEvents,
   alt,
   src,
+  animate,
   w,
   minW,
   maxW,
@@ -301,6 +311,7 @@ export function Img({
     return buildSizes(widthForSizes, heightForSizes, aspectRatio);
   }, [aspectRatio, imageSizeProps.h, imageSizeProps.w, sizes, sizesHeight, sizesWidth]);
   const normalizedAlt = typeof alt === 'string' ? alt : '';
+  const swapIdentity = typeof sources.desktop === 'string' ? sources.desktop : resolveFancyboxHref(sources.desktop) ?? '';
   const fancyboxAriaLabel = normalizedAlt || 'Изображение';
 
   if (quality !== undefined && (quality < 1 || quality > 100)) {
@@ -310,7 +321,14 @@ export function Img({
 
   const handleLoad: React.ComponentPropsWithoutRef<'img'>['onLoad'] = (event) => {
     setIsLoaded(true);
+    swapLoaded();
     onLoad?.(event);
+  };
+
+  // Не загрузилась — смену всё равно доводим, иначе прежняя картинка висела бы вечно.
+  const handleError: React.ComponentPropsWithoutRef<'img'>['onError'] = (event) => {
+    swapLoaded();
+    onError?.(event);
   };
 
   const imageClassName = cx(
@@ -350,7 +368,7 @@ export function Img({
         draggable={false}
         className={imageClassName}
         onLoad={handleLoad}
-        onError={onError}
+        onError={handleError}
       />
     </picture>
   ) : (
@@ -363,9 +381,11 @@ export function Img({
       quality={normalizedQuality}
       className={imageClassName}
       onLoad={handleLoad}
-      onError={onError}
+      onError={handleError}
     />
   );
+
+  const { node: swapped, loaded: swapLoaded } = useImgSwap(animate, swapIdentity, mainImage);
 
   return (
     <span
@@ -407,7 +427,7 @@ export function Img({
               )}
             />
           )}
-          {mainImage}
+          {swapped}
         </a>
       ) : (
         <>
@@ -429,7 +449,7 @@ export function Img({
               )}
             />
           )}
-          {mainImage}
+          {swapped}
         </>
       )}
     </span>
