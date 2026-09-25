@@ -32,6 +32,17 @@
     min-width: 0;
     min-height: 0;
   }
+
+  // Вуаль — над пунктами, в той же ячейке; видна только на своём ходу.
+  .veil {
+    grid-area: 1 / 1;
+    z-index: 2;
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    pointer-events: none;
+    clip-path: inset(0 0 0 100%);
+  }
 }
 
 $motion: var(--crossfade-d) var(--t-t-f-cubic-bezier);
@@ -91,10 +102,122 @@ $half: calc(var(--crossfade-d) / 2);
     }
   }
 
+  // Параллакс: входящий въезжает сбоку, его содержимое отстаёт и оседает из лёгкого увеличения,
+  // уходящий смещается навстречу и темнеет. Ключевые кадры, а не переход: сторона меняется от
+  // смены к смене, а переход стартовал бы с позиции прошлой стороны. Первый кадр — без хода.
+  .Crossfade[data-effect='parallax'] {
+    --crossfade-dir: 1;
+    overflow: clip;
+
+    &[data-back] {
+      --crossfade-dir: -1;
+    }
+
+    > .item {
+      overflow: clip;
+
+      &:is([state~='active'], [state~='leaving']) {
+        opacity: 1;
+        transition: none;
+      }
+    }
+
+    &[data-turned] > .item[state~='active'] {
+      animation: crossfade-slide-in $motion both;
+
+      > .inner {
+        animation: crossfade-lag-in $motion both;
+      }
+    }
+
+    &[data-turned] > .item[state~='leaving'] > .inner {
+      animation: crossfade-recede $motion both;
+    }
+  }
+
+  // Вуаль: заход до середины хода, пауза, уход дальше в ту же сторону. Входящий появляется под ней
+  // в паузе и оседает из увеличения, уходящий виден до паузы.
+  .Crossfade[data-effect='veil'] {
+    --crossfade-dir: 1;
+
+    &[data-back] {
+      --crossfade-dir: -1;
+    }
+
+    > .veil {
+      animation: crossfade-veil calc(var(--crossfade-d) * 2) var(--t-t-f-cubic-bezier) both;
+    }
+
+    &[data-back] > .veil {
+      animation-name: crossfade-veil-back;
+    }
+
+    > .item {
+      overflow: clip;
+    }
+
+    &[data-turned] > .item[state~='active'] {
+      animation: crossfade-show-late calc(var(--crossfade-d) * 2) linear both;
+      transition: none;
+
+      > .inner {
+        animation: crossfade-settle var(--crossfade-d) var(--t-t-f-cubic-bezier) var(--crossfade-d) both;
+      }
+    }
+
+    &[data-turned] > .item[state~='leaving'] {
+      opacity: 1;
+      transition: none;
+    }
+  }
+
   @include m.reduced-motion {
     .Crossfade > .item,
     .Crossfade > .item > .inner {
       transition: none !important;
+      animation: none !important;
+    }
+
+    .Crossfade > .veil {
+      display: none;
     }
   }
+}
+
+@keyframes crossfade-slide-in {
+  from { transform: translateX(calc(var(--crossfade-dir) * 100%)); }
+  to { transform: none; }
+}
+
+@keyframes crossfade-lag-in {
+  from { transform: translateX(calc(var(--crossfade-dir) * -55%)) scale(1.12); }
+  to { transform: none; }
+}
+
+@keyframes crossfade-recede {
+  from { transform: none; filter: brightness(1); }
+  to { transform: translateX(calc(var(--crossfade-dir) * -35%)); filter: brightness(0.3); }
+}
+
+@keyframes crossfade-veil {
+  0% { clip-path: inset(0 100% 0 0); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  42%, 52% { clip-path: inset(0); }
+  100% { clip-path: inset(0 0 0 100%); }
+}
+
+@keyframes crossfade-veil-back {
+  0% { clip-path: inset(0 0 0 100%); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  42%, 52% { clip-path: inset(0); }
+  100% { clip-path: inset(0 100% 0 0); }
+}
+
+@keyframes crossfade-show-late {
+  0%, 46% { opacity: 0; }
+  47%, 100% { opacity: 1; }
+}
+
+@keyframes crossfade-settle {
+  from { transform: translateX(calc(var(--crossfade-dir) * 5%)) scale(1.12); }
+  to { transform: none; }
+}
 }

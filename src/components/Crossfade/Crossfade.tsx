@@ -1,14 +1,17 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react';
+import { Children, createContext, isValidElement, useContext, useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react';
 
 import styles from './Crossfade.module.scss';
 
 import { boxLayout, createLayoutClasses, cx, MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs, splitBoxLayout, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type WithRef } from '../../core';
 
 /** Как входящий сменяет прежний: `fade` — кроссфейд, `zoom` — проявление с лёгким масштабом,
- *  `reveal` — клип снизу вверх поверх прежнего с лёгким масштабом. */
-export type CrossfadeEffect = 'fade' | 'zoom' | 'reveal';
+ *  `reveal` — клип снизу вверх поверх прежнего с лёгким масштабом, `parallax` — входящий въезжает
+ *  сбоку, а его содержимое отстаёт (глубина), прежний уходит в тень; `veil` — вуаль (`veil`)
+ *  заходит на кадр, прячет смену и уходит дальше. У `parallax` и `veil` сторона — по порядку
+ *  пунктов: дальше по списку — справа, назад — слева. */
+export type CrossfadeEffect = 'fade' | 'zoom' | 'reveal' | 'parallax' | 'veil';
 
 /** Длительность смены — токен темы `--t-d-<имя>`. */
 export type CrossfadeDuration = 'fast' | 'normal' | 'slow';
@@ -30,8 +33,12 @@ export interface CrossfadeProps extends Omit<HTMLAttributes<HTMLDivElement>, 'ch
     children?: ReactNode;
     /** Эффект смены; по умолчанию `fade`. */
     effect?: CrossfadeEffect;
-    /** Длительность смены — токен `--t-d-fast|normal|slow`; по умолчанию `normal`. */
+    /** Длительность смены — токен `--t-d-fast|normal|slow`; по умолчанию `normal`. У `veil` ход
+     *  вдвое длиннее: заход и уход вуали. */
     duration?: CrossfadeDuration;
+    /** Содержимое вуали для `effect="veil"`: заливка, знак, узор — что задаст проект. Без него
+     *  вуали нет, и `veil` сменяет как `fade`. */
+    veil?: ReactNode;
     /** Состояния корня (`[state~='…']`), склеиваются как у остальных компонентов кита. */
     state?: ComponentStateValue;
 }
@@ -46,18 +53,24 @@ export interface CrossfadeProps extends Omit<HTMLAttributes<HTMLDivElement>, 'ch
  * Эффекты `zoom` и `reveal` масштабируют содержимое пункта и режут его по рамке пункта — тень и
  * кольцо фокуса ребёнка, выходящие за рамку, в них срежутся; им место на корне.
  */
-export function Crossfade({ ref, value, children, effect = 'fade', duration = 'normal', state, className, ...props }: WithRef<CrossfadeProps, HTMLDivElement>) {
+export function Crossfade({ ref, value, children, effect = 'fade', duration = 'normal', veil, state, className, ...props }: WithRef<CrossfadeProps, HTMLDivElement>) {
     const { box, rest } = splitBoxLayout(props);
     const rootRef = useRef<HTMLDivElement | null>(null);
     const setRefs = useMergedRefs(rootRef, ref);
     const [active, setActive] = useState(value);
     const [leaving, setLeaving] = useState<string | null>(null);
+    // Номер смены: у первого кадра 0 — анимаций нет; он же ключ вуали, чтобы её ход шёл заново.
+    const [turn, setTurn] = useState(0);
+    const [back, setBack] = useState(false);
 
     // Смена ключа — поправка состояния прямо в рендере: прежний пункт получает `leaving` в том же
     // коммите, где новый становится активным, и ни кадра не стоит спрятанным.
     if (value !== active) {
+        const order = Children.toArray(children).flatMap((child) => (isValidElement<{ value?: unknown }>(child) && typeof child.props.value === 'string' ? [child.props.value] : []));
+        setBack(active !== null && value !== null && order.indexOf(value) < order.indexOf(active));
         setLeaving(active);
         setActive(value);
+        setTurn(turn + 1);
     }
 
     // Уходящий прячем, когда входящий доехал: длительность — его переход, плюс общий запас.
@@ -65,7 +78,7 @@ export function Crossfade({ ref, value, children, effect = 'fade', duration = 'n
         if (leaving === null) return undefined;
         const root = rootRef.current;
         const node = root && active !== null ? root.querySelector<HTMLElement>(`:scope > [${ITEM}="${CSS.escape(active)}"]`) : null;
-        const ms = node && !prefersReducedMotion() ? readMotionMs(node) + MOTION_END_BUFFER_MS : 0;
+        const ms = node && !prefersReducedMotion() ? Math.max(readMotionMs(node), readMotionMs(node, 'animation')) + MOTION_END_BUFFER_MS : 0;
         const timer = window.setTimeout(() => setLeaving(null), ms);
         return () => window.clearTimeout(timer);
     }, [active, leaving]);
@@ -76,11 +89,18 @@ export function Crossfade({ ref, value, children, effect = 'fade', duration = 'n
                 ref={setRefs}
                 {...rest}
                 className={cx(styles.Crossfade, ...boxLayout(c, box), className)}
-                data-effect={effect}
+                data-effect={effect === 'veil' && !veil ? 'fade' : effect}
                 data-duration={duration}
+                data-back={back || undefined}
+                data-turned={turn > 0 || undefined}
                 {...stateProps(state)}
             >
                 {children}
+                {effect === 'veil' && veil && turn > 0 && (
+                    <div key={turn} className={styles.veil} aria-hidden>
+                        {veil}
+                    </div>
+                )}
             </div>
         </CrossfadeContext.Provider>
     );
