@@ -87,18 +87,18 @@
   .RichText {
     @media (max-width: 767px) {
       &.default {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-h4,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-20); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-h4,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
           font: var(--font-title,);
 
-          &:not(:last-child) { margin-bottom: var(--s-8); }
+          &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
         }
 
         ul, ol {
@@ -111,7 +111,7 @@
             &:not(:last-child) { margin-bottom: var(--s-4); }
           }
 
-          &:not(:last-child) { margin-bottom: var(--s-8); }
+          &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
         }
 
         blockquote {
@@ -122,24 +122,24 @@
           padding-left: var(--s-12);
           background: var(--white-10);
 
-          &:not(:first-child) { margin-top: var(--s-8); }
-          &:not(:last-child) { margin-bottom: var(--s-8); }
+          &:not(:first-child) { margin-top: var(--rich-text-gap, var(--s-8)); }
+          &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
         }
       }
 
       &.style-1 {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-h4,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-20); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-h4,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
           font: var(--font-p1,);
 
-          &:not(:last-child) { margin-bottom: var(--s-8); }
+          &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
         }
 
         ul, ol {
@@ -152,7 +152,7 @@
             &:not(:last-child) { margin-bottom: var(--s-4); }
           }
 
-          &:not(:last-child) { margin-bottom: var(--s-8); }
+          &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
         }
 
         blockquote {
@@ -163,18 +163,18 @@
           padding-left: var(--s-12);
           background: var(--white-10);
 
-          &:not(:first-child) { margin-top: var(--s-8); }
-          &:not(:last-child) { margin-bottom: var(--s-8); }
+          &:not(:first-child) { margin-top: var(--rich-text-gap, var(--s-8)); }
+          &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
         }
       }
 
       &.style-2 {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-p2,); font-size: var(--s-12); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-8); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-p2,); font-size: var(--s-12); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-8); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
@@ -210,12 +210,12 @@
       }
 
       &.style-3 {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-p2,); font-size: var(--s-12); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-8); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-p2,); font-size: var(--s-12); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-8); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
@@ -255,12 +255,12 @@
 
     @media (min-width: 768px) and (max-width: 1023px) {
       &.default {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-h4,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-20); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-h4,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
@@ -276,7 +276,7 @@
           li {
             font: var(--font-title,);
 
-            &:not(:last-child) { margin-bottom: var(--s-8); }
+            &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
           }
 
           &:not(:last-child) { margin-bottom: var(--s-12); }
@@ -296,12 +296,12 @@
       }
 
       &.style-1 {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-h4,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-20); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-h4,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
@@ -317,7 +317,7 @@
           li {
             font: var(--font-p1,);
 
-            &:not(:last-child) { margin-bottom: var(--s-8); }
+            &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
           }
 
           &:not(:last-child) { margin-bottom: var(--s-12); }
@@ -337,12 +337,12 @@
       }
 
       &.style-2 {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-p3,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-8); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-p3,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-8); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
@@ -358,7 +358,7 @@
           li {
             font: var(--font-p1,);
 
-            &:not(:last-child) { margin-bottom: var(--s-8); }
+            &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
           }
 
           &:not(:last-child) { margin-bottom: var(--s-16); }
@@ -378,12 +378,12 @@
       }
 
       &.style-3 {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-p2,); font-size: var(--s-12); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-8); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-p2,); font-size: var(--s-12); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-8); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
@@ -421,18 +421,18 @@
 
     @media (min-width: 1024px) {
       &.default {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-h4,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-20); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-h4,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
           font: var(--font-title,);
 
-          &:not(:last-child) { margin-bottom: var(--s-8); }
+          &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
         }
 
         ul, ol {
@@ -442,7 +442,7 @@
           li {
             font: var(--font-title,);
 
-            &:not(:last-child) { margin-bottom: var(--s-8); }
+            &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
           }
 
           &:not(:last-child) { margin-bottom: var(--s-16); }
@@ -462,12 +462,12 @@
       }
 
       &.style-1 {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-h4,); font-weight: 700; text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-20); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-h4,); font-weight: 700; text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
@@ -483,7 +483,7 @@
           li {
             font: var(--font-p1,);
 
-            &:not(:last-child) { margin-bottom: var(--s-8); }
+            &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
           }
 
           &:not(:last-child) { margin-bottom: var(--s-16); }
@@ -503,12 +503,12 @@
       }
 
       &.style-2 {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-p2,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-8); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-p2,); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-8); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
@@ -526,7 +526,7 @@
             font: var(--font-p2,);
             font-weight: 400;
 
-            &:not(:last-child) { margin-bottom: var(--s-8); }
+            &:not(:last-child) { margin-bottom: var(--rich-text-gap, var(--s-8)); }
           }
 
           &:not(:last-child) { margin-bottom: var(--s-16); }
@@ -547,12 +547,12 @@
       }
 
       &.style-3 {
-        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); margin-bottom: var(--s-20); }
-        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); margin-bottom: var(--s-20); }
-        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); margin-bottom: var(--s-20); }
-        h4 { font: var(--font-p2,); font-size: var(--s-12); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); margin-bottom: var(--s-8); }
-        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); margin-bottom: var(--s-20); }
-        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); margin-bottom: var(--s-20); }
+        h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h2 { font: var(--font-h2,); text-transform: var(--tt-h2,); letter-spacing: var(--ls-h2,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h3 { font: var(--font-h3,); text-transform: var(--tt-h3,); letter-spacing: var(--ls-h3,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h4 { font: var(--font-p2,); font-size: var(--s-12); text-transform: var(--tt-h4,); letter-spacing: var(--ls-h4,); &:not(:last-child) { margin-bottom: var(--s-8); } }
+        h5 { font: var(--font-h5,); text-transform: var(--tt-h5,); letter-spacing: var(--ls-h5,); &:not(:last-child) { margin-bottom: var(--s-20); } }
+        h6 { font: var(--font-h6,); text-transform: var(--tt-h6,); letter-spacing: var(--ls-h6,); &:not(:last-child) { margin-bottom: var(--s-20); } }
 
         p {
           margin: 0;
