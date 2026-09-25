@@ -220,4 +220,3 @@ $half: calc(var(--crossfade-d) / 2);
   from { transform: translateX(calc(var(--crossfade-dir) * 5%)) scale(1.12); }
   to { transform: none; }
 }
-}
