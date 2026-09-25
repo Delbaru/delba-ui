@@ -63,6 +63,39 @@
 обрывает: ждёт конца и едет сразу к последнему `src`, сторона берётся на старте хода. Сторону
 (`direction`) знает вызывающий — порядок списка у него. Первый показ без хода, «меньше движения» — мгновенно.
 
+## Появление по скроллу
+
+`reveal` у `Flex`, `Grid`, `Box` и `Img` (`src/core/reveal`, хук `useReveal` внутри `useSharedMotion`):
+
+```tsx
+<Flex reveal="up">…</Flex>                                   // сам блок целиком
+<Grid reveal={['up', { stagger: 0.08 }]}>{cards}</Grid>      // каскад по прямым детям
+<Img reveal={['blur', { delay: 0.1 }]} … />                  // у Img без каскада
+```
+
+Ключи: `fade`, `up` (снизу), `left` / `right` (слева / справа), `scale` (из 0.96), `blur`; все — с fade.
+Опции (`RevealOptions`, секунды): `stagger` (нет — ход у самого узла), `delay` (`0`), `duration`
+(токен `--t-d-slow`, кривая `--t-t-f-cubic-bezier`), `distance` (rpx, `32`), `once` (`true`; `false` —
+прячет снова, когда элемент уходит вниз), `threshold` (`0`), `rootMargin` (`'0px'`).
+
+- **Каскад — пачками.** Дети наблюдаются по одному; вошедшие в экран одним отчётом получают
+  `delay + порядок × stagger`. Высокая сетка раскрывается ряд за рядом, а не ждёт невидимый низ.
+  Состав детей сторожит `MutationObserver` (Suspense, дозагрузка). Ребёнок со своим `reveal` — сам по себе.
+- **Наблюдатель общий**: один `IntersectionObserver` на пару `threshold`/`rootMargin`, а не на узел.
+- **Без JS видно.** Серверный HTML несёт `data-reveal`, прячет только CSS под
+  `@media screen and (scripting: enabled)`. Класс на `<html>` не годится: его ставит скрипт в `<head>`,
+  которого у кита нет, а поставленный гидрацией — это «видно → пропало → видно». Упал или опоздал
+  бандл — страховочная анимация `ui-reveal-hold` держит элемент скрытым 3 с и отпускает; пришедший
+  позже JS не прячет то, что уже на экране. Печать не прячет ничего.
+- **Меньше движения** — ничего не прячется и не наблюдается (`m.reduced-motion`, `prefersReducedMotion()`).
+- **Прячет анимация, а не стили.** Состояние — атрибут `data-reveal-state` (`wait` → `in` → `done`),
+  ход — `@keyframes` без кадра `to`: конец берётся из стилей узла, стили проекта без слоя его не
+  перебивают. На `done` анимация и `will-change` сняты.
+- **С `parallax` и `perspective3d` на том же узле** складывается: ход — отдельные `translate`/`scale`/
+  `opacity`/`filter`, у тех — `transform`. `blur` на узле с `perspective3d` на время хода сплющивает 3D.
+- Не сочетать с `animation` у Flex на том же узле — обе пишут `animation`.
+- Элемент выше экрана (перезагрузка посреди страницы, якорь) встаёт на место без хода.
+
 ## Текст и числа
 
 `src/core/base/text-format.ts` — `pluralize(value, [one, few, many])` и `pad(value, length = 2)`.
@@ -91,7 +124,7 @@
 | `usePresence(show, axis, appear)` | монтирование и размонтирование с анимацией |
 | `useSwapTransition(key, children)` | подмена контента: exit старого, затем enter нового |
 | `useAnchoredFloating` | позиционирование панели относительно якоря |
-| `useSharedMotion`, `useParallaxMotion`, `usePerspective3dMotion` | параллакс и наклон |
+| `useSharedMotion`, `useParallaxMotion`, `usePerspective3dMotion`, `useReveal` | параллакс, наклон и появление по скроллу (`reveal`) |
 | `useTextOverflow`, `useTooltip`, `useFancybox`, `useInView`, `useMergedRefs` | по названию |
 
 ## SCSS

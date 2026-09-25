@@ -2,6 +2,7 @@
 
 import type React from 'react';
 import { boxLayout, containerClass, createLayoutClasses, cx, splitBoxLayout, stateLinkProps, useMergedRefs, type AspectRatioProps, type BoxLayoutProps, type ContainerProp, type GrowProps, type LayoutSpaceProps, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef } from '../../core';
+import type { RevealProps } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 
 type Track =
@@ -37,7 +38,7 @@ type AutoFlowKey = 'row' | 'column' | 'dense' | 'row_dense' | 'column_dense';
 
 const c = createLayoutClasses();
 
-export interface GridProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayoutProps, ContainerProp, SharedMotionProps {
+export interface GridProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayoutProps, ContainerProp, SharedMotionProps, RevealProps {
   children?: React.ReactNode;
 
   columns?: ResponsiveValue<Track>;
@@ -70,6 +71,7 @@ export function Grid({
   columnGap,
   perspective3d,
   parallax,
+  reveal,
   justifyItems,
   alignItems,
   alignContent,
@@ -85,7 +87,7 @@ export function Grid({
 }: WithRef<GridProps, HTMLDivElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal });
   const setRefs = useMergedRefs(setMotionNode, ref);
 
   return (
@@ -112,6 +114,7 @@ export function Grid({
       ...(motionStyle ?? null),
       ...style,
     }}
+    {...revealAttrs}
     {...rest}
   >
     {renderItem && items

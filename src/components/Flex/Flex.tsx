@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import type React from 'react';
 import { boxLayout, containerClass, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ContainerProp, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
+import type { RevealProps } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { usePresence } from '../../hooks/usePresence';
 import { useSwapTransition } from '../../hooks/useSwapTransition';
@@ -43,7 +44,8 @@ export interface FlexProps
     Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
     BoxLayoutProps,
     ContainerProp,
-    SharedMotionProps {
+    SharedMotionProps,
+    RevealProps {
   children?: React.ReactNode;
   style?: CSSProperties;
   state?: ComponentStateValue;
@@ -123,6 +125,7 @@ export function Flex({
   scrollFade,
   perspective3d,
   parallax,
+  reveal,
   container,
   state,
   onMouseEnter, onMouseLeave,
@@ -136,7 +139,7 @@ export function Flex({
   const Comp = (isLink ? (shouldUseNextLink(href, target, download) ? Link : 'a') : as) as React.ElementType;
   const resolved = resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer });
   const anchorProps = isLink ? { ...rest, ...resolved } : rest;
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal });
   // Своп контента по transitionKey (exit→enter на самом узле). Без transitionKey — passthrough.
   const { displayChildren, exiting, onAnimationEnd: onSwapAnimationEnd, ref: swapNodeRef } = useSwapTransition(transitionKey, children);
   const swapping = transitionKey !== undefined;
@@ -166,6 +169,7 @@ export function Flex({
         ...(motionStyle ?? null),
         ...style,
       }}
+      {...revealAttrs}
       {...stateProps(state)}
       {...anchorProps}
       {...(swapping ? { onAnimationEnd: onSwapAnimationEnd } : null)}

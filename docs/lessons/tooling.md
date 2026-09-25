@@ -145,3 +145,17 @@ Turbopack — по `exports`, через симлинк `node_modules/@delba/ui`
 по realpath `../delba-ui`. Лечение: `SKIP` — по пути от корня скана (`path.relative(root, file)`), так
 же в watch. Тест — `tools/utilities/generate.test.ts`: кит под `node_modules` сканируется, `node_modules`
 внутри скана пропускается.
+
+---
+
+### Анимацию в headless Playwright по времени не проверить — кадры стоят
+
+Проверял каскад `reveal`: состояние `in`, `playState: running`, а `currentTime` держится на 0 и узел
+прозрачен, пока не сработает страховочный таймер. Причина — headless-вкладка почти не рисует кадры
+(6 rAF за 500 мс, первый кадр после прокрутки — секунда), а CSS-анимация стартует только с кадром.
+Снимок экрана кадр даёт, но идёт 2 с.
+
+**Лечение: ход проверяется через Web Animations, а не секундомером.** `el.getAnimations()` →
+`effect.getComputedTiming()` (задержка, длительность), затем `pause()` и `currentTime = N` — и читать
+`getComputedStyle` в нужных точках. «Мигает ли при загрузке» — трасса состояния и `opacity` из
+`addInitScript` по rAF.

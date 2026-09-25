@@ -268,7 +268,7 @@ export function Textarea({
     return (
         <Flex
             ref={setWrapperRef}
-            dir={["column", null, null]}
+            dir={["column", "column", "column"]}
             gap={[8, 4, 8]}
             className={cx(styles.TextareaWrapper, ...c.value('grow', grow), className)}
             style={{ ...(motionStyle ?? null), ...style }}
@@ -278,7 +278,7 @@ export function Textarea({
             {label && (
                 // Звёздочка обязательного поля — как у Input: `required` уже принимался, но
                 // рисовался только в Input, из-за чего textarea-поле в той же форме теряло метку.
-                <Flex dir={['row', 'row', 'row']} gap={[4, null, null]}>
+                <Flex dir={['row', 'row', 'row']} gap={[4, 4, 4]}>
                     <Text className={styles.Label} color={labelColor}>{label}</Text>
                     {required && ( <Text className={styles.Label} color="var(--error)">*</Text> )}
                 </Flex>
@@ -298,7 +298,7 @@ export function Textarea({
                 <Flex
                     transitionKey={loading ? 'skeleton' : 'value'}
                     animation='fadeIn'
-                    w={['100%', null, null]}
+                    w={['100%', '100%', '100%']}
                 >
                 {loading ? (
                     // Сам `<textarea>` не рендерим: печатать в поле, значение которого ещё
@@ -308,7 +308,7 @@ export function Textarea({
                     // ровно то место, которое займёт контент (§4 «Геометрию задаёт сосед»).
                     // Зашитая тройка врала однострочному авторесайзу — «Краткое название»
                     // ждало тремя полосами в поле высотой в одну.
-                    <Skeleton rows={rows} h={[16, null, null]} />
+                    <Skeleton rows={rows} h={[16, 16, 16]} />
                 ) : (
                     <textarea
                         ref={innerRef}
@@ -331,8 +331,8 @@ export function Textarea({
                 )}
                 {showCounter && countPlacement === 'inside' && (
                     <Text
-                        variant={["caption", null, null]}
-                        fontSize={[8, null, null]}
+                        variant={["caption", "caption", "caption"]}
+                        fontSize={[8, 8, 8]}
                         className={styles.Counter}
                         color="var(--text-muted)"
                         aria-live="polite"
@@ -351,10 +351,10 @@ export function Textarea({
             {showCounter && countPlacement === 'below' && (
                 <Text
                     as='div'
-                    variant={['caption', null, null]}
+                    variant={['caption', 'caption', 'caption']}
                     color='var(--text-muted)'
-                    textAlign={['right', null, null]}
-                    w={['100%', null, null]}
+                    textAlign={['right', 'right', 'right']}
+                    w={['100%', '100%', '100%']}
                     aria-live='polite'
                 >
                     {counterLabel}

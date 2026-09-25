@@ -2,8 +2,10 @@
 
 import { useCallback, type CSSProperties } from 'react';
 
+import type { RevealProps } from '../core/reveal/reveal';
 import { useParallaxMotion, type ParallaxInput } from './useParallaxMotion';
 import { usePerspective3dMotion, type Perspective3dInput } from './usePerspective3dMotion';
+import { useReveal } from './useReveal';
 
 type MotionTarget = HTMLElement | SVGElement;
 
@@ -12,7 +14,9 @@ export interface SharedMotionProps {
   parallax?: ParallaxInput;
 }
 
-export function useSharedMotion({ perspective3d, parallax }: SharedMotionProps) {
+// `reveal` — не в SharedMotionProps: его принимают только примитивы раскладки и Img, остальные
+// компоненты молча проглотили бы проп из общего типа.
+export function useSharedMotion({ perspective3d, parallax, reveal }: SharedMotionProps & RevealProps) {
   const {
     isEnabled: hasPerspective3d,
     motionHandlers,
@@ -28,11 +32,16 @@ export function useSharedMotion({ perspective3d, parallax }: SharedMotionProps) 
     transformValue: parallaxTransform,
   } = useParallaxMotion(parallax);
 
+  const { revealAttrs, revealStyle, setRevealNode } = useReveal(reveal);
+
   const motionTransform = [parallaxTransform, perspectiveTransform].filter(Boolean).join(' ');
   const hasMotion = hasPerspective3d || hasParallax;
 
-  const motionStyle = hasMotion
+  // Ход появления — отдельными `translate`/`scale`/`opacity`/`filter`, поэтому складывается с
+  // `transform` параллакса и наклона на том же узле, а не затирает его.
+  const motionStyle = hasMotion || revealStyle
     ? ({
+        ...(revealStyle ?? null),
         ...(perspectiveStyle ?? null),
         ...(parallaxStyle ?? null),
         ...(motionTransform
@@ -50,12 +59,15 @@ export function useSharedMotion({ perspective3d, parallax }: SharedMotionProps) 
   const setMotionNode = useCallback((node: MotionTarget | null) => {
     setPerspectiveNode(node);
     setParallaxNode(node);
-  }, [setPerspectiveNode, setParallaxNode]);
+    setRevealNode(node);
+  }, [setPerspectiveNode, setParallaxNode, setRevealNode]);
 
   return {
     hasMotion,
     motionHandlers,
     motionStyle,
+    /** Атрибуты `data-reveal*` для корня: по ним CSS прячет элемент ещё в серверном HTML. */
+    revealAttrs,
     setMotionNode,
   };
 }

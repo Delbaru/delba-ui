@@ -1,0 +1,69 @@
+@use '../mixins' as m;
+
+// Появление по скроллу (проп `reveal`). Прячет и двигает только анимация, не статичные стили:
+// - анимация сильнее любого обычного правила — стили проекта без слоя не перебьют ни прозрачность, ни ход;
+// - у `ui-reveal` нет кадра `to` — конец хода берётся из собственных стилей узла (его `opacity: .6` доживёт);
+// - `translate`/`scale`/`filter` — отдельные свойства, поэтому `transform` параллакса и наклона на том
+//   же узле складывается с ходом, а не затирается им.
+// Скрывает только `scripting: enabled`: без JS контент виден сразу. JS упал или опоздал — страховка
+// `ui-reveal-hold` кончается через $hold, и элемент встаёт на место сам.
+
+$hold: 3s;
+$self: '[data-reveal]:not([data-reveal-stagger], [data-reveal-state])';
+$child: '[data-reveal-stagger] > :not([data-reveal], [data-reveal-state])';
+
+[data-reveal] {
+  --reveal-shift: calc(var(--rpx) * var(--reveal-distance, 32));
+  --reveal-t: none;
+  --reveal-s: none;
+  --reveal-f: none;
+}
+
+[data-reveal='up'] { --reveal-t: 0 var(--reveal-shift); }
+[data-reveal='left'] { --reveal-t: calc(var(--reveal-shift) * -1) 0; }
+[data-reveal='right'] { --reveal-t: var(--reveal-shift) 0; }
+[data-reveal='scale'] { --reveal-s: 0.96; }
+[data-reveal='blur'] { --reveal-f: blur(calc(var(--rpx) * 8)); }
+
+@mixin hidden {
+  opacity: 0;
+  translate: var(--reveal-t);
+  scale: var(--reveal-s);
+  filter: var(--reveal-f);
+}
+
+@keyframes ui-reveal {
+  from { @include hidden; }
+}
+
+@keyframes ui-reveal-hold {
+  from, to { @include hidden; }
+}
+
+@keyframes ui-reveal-wait {
+  from, to { @include hidden; }
+}
+
+@media screen and (scripting: enabled) {
+  #{$self},
+  #{$child} {
+    animation: ui-reveal-hold $hold linear;
+  }
+
+  [data-reveal-state='wait'] {
+    animation: ui-reveal-wait 1s linear both paused;
+  }
+
+  [data-reveal-state='in'] {
+    animation: ui-reveal var(--reveal-duration, var(--t-d-slow)) var(--t-t-f-cubic-bezier) var(--reveal-delay, 0s) both;
+    will-change: opacity, translate, scale, filter;
+  }
+
+  @include m.reduced-motion {
+    #{$self},
+    #{$child},
+    [data-reveal-state] {
+      animation: none;
+    }
+  }
+}

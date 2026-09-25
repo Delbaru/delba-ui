@@ -35,6 +35,11 @@
   @include meta.load-css('../components/Text/animations/textSlide/text-slide');
 }
 
+// Появление по скроллу (`reveal` у Flex, Grid, Box, Img) — состояние узла, его ставит наблюдатель.
+@layer ui.states {
+  @include meta.load-css('./reveal/reveal');
+}
+
 // ── Краевой fade скролл-контейнеров (mask + scroll-driven animations) ─────────────────────────
 // Утилита-класс .scrollFadeY (ось Y) / .scrollFadeX (ось X). Мягко гасит контент у краёв области
 // прокрутки CSS-маской — без псевдоэлементов и лишних слоёв, не ломает клики (маска рулит только

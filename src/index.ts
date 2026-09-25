@@ -46,3 +46,4 @@ export { useMediaQuery } from './hooks/useMediaQuery';
 export { useInView, type UseInViewOptions } from './core/useInView';
 export type { ComponentStateValue, GrowProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';
 export type { TextRole, TextVariantName } from './core/base/typography';
+export type { RevealInput, RevealKey, RevealOptions, RevealProps } from './core/reveal/reveal';

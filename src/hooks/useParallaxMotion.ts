@@ -148,6 +148,9 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
       }
 
       observerRef.current?.disconnect();
+      observerRef.current = null;
+      // StrictMode монтирует эффекты дважды: без сброса повторный syncObserver решит, что узел уже наблюдается.
+      observedRef.current = null;
       clearMotionStyles(nodeRef.current);
     };
   }, []);

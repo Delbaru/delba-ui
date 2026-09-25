@@ -8,6 +8,7 @@ import { MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveResponsive, siz
 import { imageSizes } from '../../core/base/scale';
 import { SCALE } from '../../core/scale';
 import { useFancybox } from '../../hooks/useFancybox';
+import { withoutStagger, type RevealInput, type RevealOptions } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useImgSwap } from './swap/useImgSwap';
 import type { ImgAnimate } from './swap/types';
@@ -80,6 +81,13 @@ export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootS
    * загрузится и не доедет; первый показ — без хода, «меньше движения» — мгновенно. См. `ImgAnimate`.
    */
   animate?: ImgAnimate;
+
+  /**
+   * Появление при прокрутке: `'fade' | 'up' | 'left' | 'right' | 'scale' | 'blur'` или
+   * `[ключ, { delay, duration, distance, once, threshold, rootMargin }]` — как у Flex, но без каскада:
+   * появляется сама картинка. Без JS и при «меньше движения» видна сразу.
+   */
+  reveal?: RevealInput<Omit<RevealOptions, 'stagger'>>;
 
   objectFit?: ResponsiveValue<ObjectFitKey>;
   objectPosition?: ResponsiveValue<ObjectPositionKey>;
@@ -249,13 +257,15 @@ export function Img({
   linkState,
   perspective3d,
   parallax,
+  reveal,
   fancybox,
   ...props
 }: WithRef<ImgProps, HTMLSpanElement>) {
   // Размеры обёртки — не из коробки: `rootW`/`rootH` перекрывают размеры картинки.
   const layout = boxLayout(c, { r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, bg, aspectRatio, grow });
   const [isLoaded, setIsLoaded] = useState(false);
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  // Каскад у картинки означал бы её внутренние слои — снимаем.
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal: withoutStagger(reveal) });
   const imageSizeProps = {
     w,
     minW,
@@ -290,7 +300,7 @@ export function Img({
     loading: priority ? 'eager' : loading,
     fetchPriority: priority ? 'high' : fetchPriority,
     src: sources.desktop,
-    unoptimized: isOwnApiSource(sources.desktop),
+    unoptimized: elementProps.unoptimized || isOwnApiSource(sources.desktop),
   } as const;
   const hasArtDirection = sources.mobile !== null || sources.tablet !== null;
 
@@ -347,7 +357,7 @@ export function Img({
     getImageProps({
       ...imageProps,
       src: source,
-      unoptimized: isOwnApiSource(source),
+      unoptimized: elementProps.unoptimized || isOwnApiSource(source),
       alt: normalizedAlt,
       fill: true,
       sizes: computedSizes,
@@ -394,6 +404,7 @@ export function Img({
       data-point-events={dataPointEvents}
       {...(rootProps as React.HTMLAttributes<HTMLSpanElement>)}
       {...stateLinkProps(linkState, motionHandlers)}
+      {...revealAttrs}
       className={cx('ui-img', ...sizeClasses(c, wrapperSizeProps), ...layout, className)}
       style={{
         ...(motionStyle ?? null),

@@ -71,6 +71,35 @@ const toList = (value: string | null | readonly string[] | undefined): readonly 
 
 const TRIGGER = 'data-accordion-trigger';
 
+// Открытый пункт выше схлопывается — нажатый триггер уезжает вверх. Пока в аккордеоне идут переходы,
+// не даём ему уйти под шапку (`scroll-padding-top`) и за верх экрана; в остальном окно не трогаем —
+// иначе страница прокручивается на каждый клик. Свой скролл пользователя удержание отменяет.
+const HOLD_MAX_MS = 2000;
+
+function holdPosition(el: HTMLElement, root: HTMLElement | null) {
+    const floor = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+    const until = performance.now() + HOLD_MAX_MS;
+    let frame = 0;
+    let settled = 0;
+    const stop = () => {
+        cancelAnimationFrame(frame);
+        window.removeEventListener('wheel', stop);
+        window.removeEventListener('touchstart', stop);
+    };
+    const tick = () => {
+        const shift = Math.min(el.getBoundingClientRect().top - floor, 0);
+        // `instant`: при `scroll-behavior: smooth` каждый кадр перезапускал бы плавный перелёт.
+        if (Math.abs(shift) >= 1) window.scrollBy({ top: shift, behavior: 'instant' });
+        const moving = (root?.getAnimations({ subtree: true }).length ?? 0) > 0;
+        settled = moving || Math.abs(shift) >= 1 ? 0 : settled + 1;
+        if (settled < 3 && performance.now() < until) frame = requestAnimationFrame(tick);
+        else stop();
+    };
+    window.addEventListener('wheel', stop, { passive: true });
+    window.addEventListener('touchstart', stop, { passive: true });
+    frame = requestAnimationFrame(tick);
+}
+
 /**
  * Аккордеон по WAI-ARIA: заголовок с кнопкой-триггером и панель-регион на пункт, ↑/↓/Home/End между
  * триггерами. Закрытые панели остаются в DOM под `hidden="until-found"` — текст видят поисковики и
@@ -130,7 +159,7 @@ export function Accordion(props: WithRef<AccordionProps, HTMLElement>) {
 
     return (
         <AccordionContext.Provider value={{ rootId, isOpen, toggle, reveal, indicator, headingAs }}>
-            <Flex ref={ref} {...rest} className={cx(styles.Accordion, className)} onKeyDown={onKeyDown} />
+            <Flex ref={ref} {...rest} className={cx(styles.Accordion, className)} data-accordion={rootId} onKeyDown={onKeyDown} />
         </AccordionContext.Provider>
     );
 }
@@ -194,7 +223,10 @@ export function AccordionItem({
                     disabled={disabled}
                     state={mergeComponentStates(state, triggerProps?.state)}
                     data-accordion-trigger={ctx.rootId}
-                    onClick={() => ctx.toggle(value)}
+                    onClick={(event) => {
+                        ctx.toggle(value);
+                        holdPosition(event.currentTarget, event.currentTarget.closest<HTMLElement>(`[data-accordion="${CSS.escape(ctx.rootId)}"]`));
+                    }}
                 >
                     <span className={styles.label}>{trigger}</span>
                     {icon != null && <span aria-hidden className={styles.indicator}>{icon}</span>}
