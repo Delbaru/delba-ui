@@ -11,37 +11,51 @@ const optionsOf = (animate: ImgAnimate | undefined): ImgSwapOptions | undefined 
 interface SwapState {
   /** Снимок прежней картинки, пока идёт смена; null — смены нет. */
   outgoing: ReactNode | null;
+  /** Снимок входящей картинки: во время хода держим его, даже если `src` уже сменился снова. */
+  incoming: ReactNode | null;
   /** Номер смены: ключ слоёв, чтобы ключевые кадры шли заново на каждой смене. */
   turn: number;
   /** Новая картинка ещё грузится: держим прежнюю, ход не начинаем. */
   pending: boolean;
+  /** Сторона этой смены — снимок опции на старте, чтобы клик посреди хода её не перевернул. */
+  dir: 1 | -1;
 }
 
 /**
  * Смена картинки по смене `src`: прежняя остаётся слоем под новой, пока идёт ход, и снимается по
  * таймеру. Ход начинается, когда новая загрузилась (`onLoad` Img зовёт `loaded`), — пустой кадр
- * не въезжает. Первый рендер без хода, «меньше движения» — мгновенная подмена. Без `animate`
- * отдаёт содержимое как есть.
+ * не въезжает. Смена посреди хода не обрывает его: ждёт конца и едет сразу к последнему `src`,
+ * промежуточные пропускаются. Первый рендер без хода, «меньше движения» — мгновенная подмена.
+ * Без `animate` отдаёт содержимое как есть.
  */
 export function useImgSwap(animate: ImgAnimate | undefined, identity: string, content: ReactNode): { node: ReactNode; loaded: () => void } {
   const kind = keyOf(animate);
   const options = optionsOf(animate);
   const effect = kind === 'veil' && options?.veil == null ? 'fade' : kind;
 
-  const [swap, setSwap] = useState<SwapState>({ outgoing: null, turn: 0, pending: false });
+  const [swap, setSwap] = useState<SwapState>({ outgoing: null, incoming: null, turn: 0, pending: false, dir: 1 });
   const committedRef = useRef(identity);
-  const stableRef = useRef<ReactNode>(content);
+  // Что сейчас на экране в покое: станет уходящим слоем на следующей смене.
+  const shownRef = useRef<ReactNode>(content);
+  const busy = swap.outgoing != null;
 
-  // Смена источника — поправка состояния в рендере: прежний кадр становится слоем в том же коммите.
-  if (kind != null && identity !== committedRef.current) {
-    const outgoing = stableRef.current;
+  // Смена источника в покое — поправка состояния в рендере: прежний кадр становится слоем в том же
+  // коммите. Посреди хода не трогаем: следующий рендер после его конца начнёт смену к последнему src.
+  if (kind != null && identity !== committedRef.current && !busy) {
+    const outgoing = shownRef.current;
     committedRef.current = identity;
-    setSwap((s) => (prefersReducedMotion() ? { outgoing: null, turn: s.turn + 1, pending: false } : { outgoing, turn: s.turn + 1, pending: true }));
+    setSwap((s) =>
+      prefersReducedMotion()
+        ? { ...s, outgoing: null, incoming: null, turn: s.turn + 1, pending: false }
+        : { outgoing, incoming: content, turn: s.turn + 1, pending: true, dir: options?.direction ?? 1 },
+    );
   }
-  if (!swap.pending) stableRef.current = content;
+
+  const current = busy && swap.incoming != null ? swap.incoming : content;
+  if (!busy && identity === committedRef.current) shownRef.current = content;
 
   const duration = options?.duration;
-  const running = swap.outgoing != null && !swap.pending;
+  const running = busy && !swap.pending;
 
   // Ход доехал — снимаем прежний слой. Длительность — из опций или токена, вдвое у вуали.
   useEffect(() => {
@@ -57,15 +71,14 @@ export function useImgSwap(animate: ImgAnimate | undefined, identity: string, co
 
   const style = {
     ...(duration != null ? { '--img-swap-d': `${duration}s` } : null),
-    '--img-swap-dir': String(options?.direction ?? 1),
+    '--img-swap-dir': String(swap.dir),
   } as CSSProperties;
 
   const node = createElement(
     'span',
     { className: 'ui-img-swap', 'data-effect': effect, style },
-    swap.outgoing != null &&
-      createElement('span', { key: `out-${swap.turn}`, className: cx('ui-img-swap-layer', running && 'ui-img-swap-out'), 'aria-hidden': true }, swap.outgoing),
-    createElement('span', { key: `in-${swap.turn}`, className: cx('ui-img-swap-layer', swap.pending && 'ui-img-swap-pending', running && 'ui-img-swap-in') }, content),
+    busy && createElement('span', { key: `out-${swap.turn}`, className: cx('ui-img-swap-layer', running && 'ui-img-swap-out'), 'aria-hidden': true }, swap.outgoing),
+    createElement('span', { key: `in-${swap.turn}`, className: cx('ui-img-swap-layer', swap.pending && 'ui-img-swap-pending', running && 'ui-img-swap-in') }, current),
     running && effect === 'veil' && createElement('span', { key: `veil-${swap.turn}`, className: 'ui-img-swap-veil', 'aria-hidden': true }, options?.veil),
   );
 
