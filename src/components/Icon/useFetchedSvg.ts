@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { parseSvg, type ParsedSvg } from './svg';
 
@@ -99,9 +99,15 @@ export interface FetchedSvgState {
   rootFill?: string;
 }
 
+// Кэш в первом рендере — только вне гидрации: сервер кэша не видит, и иконка, догруженная до гидрации
+// отложенной (Suspense) секции, дала бы расхождение, которое React не чинит, — пустой <svg> навсегда.
+// Гидрацию узнаём по снимку: пока она идёт, useSyncExternalStore отдаёт серверный (false).
+const noopSubscribe = () => () => {};
+
 export function useFetchedSvg(url: string | null, normalizeContent = false): FetchedSvgState {
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const [state, setState] = useState<FetchedSvgState>(
-    () => getResolvedSvg(url, normalizeContent) ?? { content: null, viewBox: undefined, rootFill: undefined }
+    () => (hydrated && getResolvedSvg(url, normalizeContent)) || { content: null, viewBox: undefined, rootFill: undefined }
   );
 
   useEffect(() => {
