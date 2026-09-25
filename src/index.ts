@@ -16,6 +16,7 @@ export * as phoneMask from './components/Input/lib/phone-mask';
 // Формат адреса нужен и снаружи — форме, которая гасит кнопку до полного ввода. Отдаём тот же,
 // которым проверяет само поле: две копии правила расходятся на первом же уточнении.
 export { EMAIL_REGEX } from './components/Input/lib/use-input-behavior';
+export * from './components/Marquee';
 export * from './components/MediaDropDown';
 export * from './components/Modal';
 export * from './components/Toast';

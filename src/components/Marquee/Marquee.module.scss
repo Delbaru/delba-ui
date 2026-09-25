@@ -1,0 +1,71 @@
+@use '../../core/mixins' as m;
+
+@layer ui.components {
+    // `pan-y`: вертикальную прокрутку страницы пальцем ведёт браузер, горизонтальный жест — лента.
+    // `contain: inline-size`: ширину окна задаёт раскладка, а не лента. Без него окно во flex-ряду
+    // растягивалось под копии, копий по его ширине становилось больше — и так по кругу.
+    .Marquee {
+        position: relative;
+        overflow: hidden;
+        contain: inline-size;
+        touch-action: pan-y;
+
+        &[data-draggable] {
+            cursor: grab;
+        }
+
+        &[data-fade] {
+            mask-image: linear-gradient(90deg, transparent, black calc(var(--rpx) * 24), black calc(100% - var(--rpx) * 24), transparent);
+        }
+
+        .track {
+            flex: none;
+            will-change: transform;
+        }
+
+        // Список `ul` — без маркеров: лента сама задаёт зазор.
+        .copy {
+            flex: none;
+            list-style: none;
+
+            > * {
+                flex: none;
+            }
+        }
+    }
+}
+
+// «Меньше движения» — в слое состояний: ширину дорожки задаёт проп, а утилиты бьют слой компонентов.
+@layer ui.states {
+    .Marquee[state~='dragging'] {
+        cursor: grabbing;
+        user-select: none;
+    }
+
+    @include m.reduced-motion {
+        .Marquee {
+            overflow: visible;
+            contain: none;
+            mask-image: none;
+            touch-action: auto;
+
+            &[data-draggable] {
+                cursor: auto;
+            }
+
+            .track {
+                width: 100%;
+                will-change: auto;
+            }
+
+            .copy {
+                flex: auto;
+                flex-wrap: wrap;
+
+                &[aria-hidden] {
+                    display: none;
+                }
+            }
+        }
+    }
+}
