@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import type React from 'react';
 import { boxLayout, containerClass, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ContainerProp, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
@@ -76,6 +76,14 @@ export interface FlexProps
   /** Ось сворачивания: 'row' — по высоте (grid-template-rows, по умолчанию), 'column' — по ширине
    *  (grid-template-columns). collapseGap при этом анимирует padding-left вместо padding-top. Работает с collapse. */
   collapseAxis?: 'row' | 'column';
+  /** Закрытый блок ОСТАЁТСЯ в DOM (опт-ин): после сворачивания обёртка получает `hidden="until-found"` —
+   *  текст видят поисковики и Ctrl+F, а браузер, найдя в нём совпадение, шлёт `beforematch`
+   *  (см. onCollapseFound). Где `until-found` нет — обычный `hidden` + `inert`. Работает с collapse. */
+  collapseKeepMounted?: boolean;
+  /** Браузер нашёл текст в закрытом блоке (поиск по странице, переход по `#:~:text=`): владелец
+   *  состояния ставит collapse={true}. Блок раскрывается сразу, без анимации, — иначе браузер
+   *  прокрутил бы к ещё нулевой высоте. Работает с collapse и collapseKeepMounted. */
+  onCollapseFound?: () => void;
 
   /** Enter-анимация. Без transitionKey — играет один раз при монтировании (появление контента).
    *  С transitionKey — служит enter'ом свопа (exit берётся зеркально). reduced-motion гасит. */
@@ -109,7 +117,7 @@ export function Flex({
   className = '',
   style,
   gap, rowGap, columnGap,
-  collapse, collapseGap, onCollapseEnd, collapseFade, collapseOverflowVisible, collapseAxis, collapseAppear,
+  collapse, collapseGap, onCollapseEnd, collapseFade, collapseOverflowVisible, collapseAxis, collapseAppear, collapseKeepMounted, onCollapseFound,
   animation, transitionKey,
   dir, justify, align, wrap,
   scrollFade,
@@ -181,6 +189,8 @@ export function Flex({
       fade={collapseFade}
       overflowVisibleWhenOpen={collapseOverflowVisible}
       appear={collapseAppear}
+      keepMounted={collapseKeepMounted}
+      onFound={onCollapseFound}
       onCollapseEnd={onCollapseEnd}
     >
       {content}
@@ -196,24 +206,70 @@ interface CollapseWrapProps {
   overflowVisibleWhenOpen?: boolean;
   appear?: boolean;
   clip?: boolean;
+  keepMounted?: boolean;
+  onFound?: () => void;
   onCollapseEnd?: (event: React.TransitionEvent<HTMLDivElement>) => void;
   children: React.ReactNode;
 }
+
+// `hidden="until-found"` React пишет как булев атрибут (`hidden=""`), поэтому значение ставит эффект.
+// На сервере поддержку не узнать: первый HTML — с запасным `hidden` + `inert`, текст в нём всё равно есть.
+const noSubscribe = () => () => {};
+const supportsUntilFound = () => 'onbeforematch' in HTMLElement.prototype;
 
 // Обёртка сворачивания на presence-движке (usePresence): контент монтируется при раскрытии и
 // УДАЛЯЕТСЯ из DOM по завершении сворачивания. Внешний grid анимирует grid-template-rows (0fr↔1fr) +
 // padding-top. settled — раскрытие доехало: только тогда снимаем клип (overflowVisibleWhenOpen) и
 // transition рамки. Считается в рендере, а не эффектом: иначе первый кадр сворачивания шёл бы без них.
-function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWhenOpen, appear, clip, onCollapseEnd, children }: CollapseWrapProps) {
+// keepMounted: «размонтирован» presence значит «спрятан атрибутом hidden», узел остаётся.
+function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWhenOpen, appear, clip, keepMounted, onFound, onCollapseEnd, children }: CollapseWrapProps) {
   const { mounted, open: visualOpen, onTransitionEnd: onPresenceTransitionEnd, property, ref } = usePresence<HTMLDivElement>(open, axis, appear);
   const [settledOpen, setSettledOpen] = useState(open);
   const settled = visualOpen && settledOpen;
+  const untilFound = useSyncExternalStore(noSubscribe, supportsUntilFound, () => false);
+  const onFoundRef = useRef(onFound);
+  const concealed = keepMounted && !mounted;
+
+  useEffect(() => {
+    onFoundRef.current = onFound;
+  });
 
   useEffect(() => {
     if (!visualOpen) setSettledOpen(false);
   }, [visualOpen]);
 
-  if (!mounted) return null;
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node || !keepMounted || !untilFound) return;
+    if (concealed) node.setAttribute('hidden', 'until-found');
+    else node.removeAttribute('hidden');
+  }, [ref, keepMounted, untilFound, concealed]);
+
+  // Браузер уже снял hidden и сразу после события прокрутит к совпадению — к этому моменту блок
+  // обязан стоять раскрытым. Состояние владельца дойдёт через рендер и два кадра presence, поэтому
+  // раскрытие ставим прямо в DOM без transition (data-instant); React потом пишет тот же data-open.
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || !keepMounted) return undefined;
+    const onBeforeMatch = () => {
+      node.setAttribute('data-instant', '');
+      node.setAttribute('data-open', '');
+      onFoundRef.current?.();
+    };
+    node.addEventListener('beforematch', onBeforeMatch);
+    return () => node.removeEventListener('beforematch', onBeforeMatch);
+  }, [ref, keepMounted]);
+
+  // Мгновенное раскрытие transitionend не пришлёт — «доехало» ставим сами и возвращаем анимацию.
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || !visualOpen || !node.hasAttribute('data-instant')) return undefined;
+    setSettledOpen(true);
+    const frame = requestAnimationFrame(() => node.removeAttribute('data-instant'));
+    return () => cancelAnimationFrame(frame);
+  }, [ref, visualOpen]);
+
+  if (!mounted && !keepMounted) return null;
 
   const handleTransitionEnd = (event: React.TransitionEvent<HTMLDivElement>) => {
     // Жизненный цикл presence (размонтирование по окончании сворачивания).
@@ -235,6 +291,9 @@ function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWh
     if (gapT != null) collapseStyle['--collapse-gap-t'] = `calc(${gapT} * var(--rpx))`;
   }
 
+  // inert прячет от Tab и чтения, но и от поиска по странице — спрятанному until-found он не нужен.
+  const searchable = concealed && untilFound;
+
   return (
     <div
       ref={ref}
@@ -242,7 +301,8 @@ function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWh
       data-axis={axis}
       data-open={visualOpen || undefined}
       data-settled={settled || undefined}
-      inert={!visualOpen}
+      hidden={(concealed && !untilFound) || undefined}
+      inert={!visualOpen && !searchable}
       onTransitionEnd={handleTransitionEnd}
       style={collapseStyle as CSSProperties}
     >
@@ -252,4 +312,3 @@ function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWh
     </div>
   );
 }
-

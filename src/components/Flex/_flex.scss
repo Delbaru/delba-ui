@@ -146,6 +146,23 @@ $collapse-half: calc(var(--collapse-duration, var(--t-d-fast)) / 2);
   }
 }
 
+// collapseKeepMounted: закрытый блок в DOM под `hidden`. `hidden="until-found"` прячет браузер сам
+// (content-visibility), а запасной булев `hidden` (браузер без until-found) перебит бы нашим
+// display: grid — стили автора сильнее UA, поэтому прячем явно.
+.ui-collapse[hidden]:not([hidden='until-found']) {
+  display: none;
+}
+
+// Раскрытие по находке поиска (beforematch): браузер прокручивает к совпадению сразу после события,
+// поэтому блок встаёт открытым без хода. !important — перебить переходы всех правил выше разом.
+.ui-collapse[data-instant] {
+  &,
+  > .ui-collapse-inner,
+  > .ui-collapse-inner > .ui-flex {
+    transition: none !important;
+  }
+}
+
 @include m.reduced-motion {
   // Специфичность должна перебивать правила выше, поэтому селекторы те же.
   .ui-collapse[data-axis='row'],

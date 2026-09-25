@@ -33,6 +33,18 @@
 - `readMotionMs(node, kind)` — длительность transition или animation из вычисленных стилей;
 - `MOTION_END_BUFFER_MS` — единый запас страховочного таймера (раньше рядом стояли +40, +50, +60, +80).
 
+## Сворачивание
+
+`Flex collapse` (обёртка `CollapseWrap` в `src/components/Flex/Flex.tsx`) — единственный движок
+раскрытия по высоте или ширине: `collapseGap`, `collapseFade`, `collapseAxis`, `collapseAppear`,
+`collapseOverflowVisible`, `onCollapseEnd`. По умолчанию закрытый блок **уходит из DOM**.
+
+`collapseKeepMounted` — опт-ин «держать в DOM»: после сворачивания обёртка получает
+`hidden="until-found"`, текст видят поисковики и Ctrl+F; браузер, найдя в нём совпадение, шлёт
+`beforematch` → `onCollapseFound`, владелец ставит `collapse={true}`, блок встаёт открытым без хода.
+Где `until-found` нет (и в серверном HTML) — `hidden` + `inert`, текст в разметке всё равно есть.
+На нём построен `Accordion`. Грабли — `lessons/authoring.md`, «`hidden="until-found"`».
+
 ## Текст и числа
 
 `src/core/base/text-format.ts` — `pluralize(value, [one, few, many])` и `pad(value, length = 2)`.

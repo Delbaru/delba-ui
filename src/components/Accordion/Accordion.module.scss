@@ -1,0 +1,31 @@
+// Только каркас: пункт, заголовок и панель — столбцом, триггер — во всю ширину с индикатором справа.
+// Линии, иконку, цвета и кольцо фокуса ставит проект (className и [state~='open']); у Button своё
+// кольцо кит гасит, поэтому здесь его нет.
+@layer ui.components {
+  .Accordion,
+  .item,
+  .panel {
+    flex-direction: column;
+  }
+
+  .heading {
+    margin: 0;
+    font: inherit;
+  }
+
+  .trigger {
+    width: 100%;
+    justify-content: space-between;
+    text-align: start;
+  }
+
+  .label {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .indicator {
+    display: inline-flex;
+    flex: none;
+  }
+}
