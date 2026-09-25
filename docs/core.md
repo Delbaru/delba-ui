@@ -45,6 +45,16 @@
 Где `until-found` нет (и в серверном HTML) — `hidden` + `inert`, текст в разметке всё равно есть.
 На нём построен `Accordion`. Грабли — `lessons/authoring.md`, «`hidden="until-found"`».
 
+## Смена содержимого на месте
+
+`Crossfade` + `CrossfadeItem` (`src/components/Crossfade`) — стопка пунктов в одной ячейке грида,
+видно один (`value`), смена — `effect`: `fade`, `zoom` (проявление с масштабом 1.06→1), `reveal`
+(клип снизу вверх поверх прежнего). `duration` — токен `--t-d-fast|normal|slow`. Ячейку задаёт самый
+крупный пункт; все пункты в DOM, неактивные — `aria-hidden` + `inert`; пункт несёт `state`
+`active` / `leaving`. Уходящий прячется после входящего — фон под стопкой не проглядывает. Первый кадр
+без анимации, «меньше движения» — мгновенно. `useSwapTransition` (exit → подмена → enter на одном
+узле) — для текста и блоков разной высоты; `Crossfade` — когда старое и новое должны перекрыться.
+
 ## Текст и числа
 
 `src/core/base/text-format.ts` — `pluralize(value, [one, few, many])` и `pad(value, length = 2)`.

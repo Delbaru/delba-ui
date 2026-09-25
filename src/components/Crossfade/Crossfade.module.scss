@@ -1,0 +1,100 @@
+@use '../../core/mixins' as m;
+
+// Все пункты в одной ячейке: ячейку задаёт самый крупный, смена не двигает раскладку. Пункт и его
+// обёртка — тоже гриды, чтобы содержимое тянулось на ячейку, когда корню задали высоту.
+@layer ui.components {
+  .Crossfade {
+    --crossfade-d: var(--t-d-normal);
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    isolation: isolate;
+
+    &[data-duration='fast'] {
+      --crossfade-d: var(--t-d-fast);
+    }
+
+    &[data-duration='slow'] {
+      --crossfade-d: var(--t-d-slow);
+    }
+  }
+
+  .item {
+    grid-area: 1 / 1;
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .inner {
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+  }
+}
+
+$motion: var(--crossfade-d) var(--t-t-f-cubic-bezier);
+$half: calc(var(--crossfade-d) / 2);
+
+// Переход висит только на входе в `active` (и на уходе в `leaving` у fade/zoom): спрятанный пункт
+// встаёт в исходное без хода, иначе уходящий «отъезжал» бы на глазах.
+@layer ui.states {
+  .item[state~='active'],
+  .item[state~='leaving'] {
+    visibility: visible;
+  }
+
+  // Входящий — поверх уходящего.
+  .item[state~='active'] {
+    z-index: 1;
+    opacity: 1;
+    transition: opacity $motion;
+  }
+
+  // Уходящий гаснет во второй половине хода: к её началу входящий почти непрозрачен, и фон под
+  // стопкой не проглядывает, как при встречном кроссфейде двух картинок.
+  .item[state~='leaving'] {
+    opacity: 0;
+    transition: opacity $half var(--t-t-f-cubic-bezier) $half;
+  }
+
+  .Crossfade:is([data-effect='zoom'], [data-effect='reveal']) > .item {
+    overflow: clip;
+
+    > .inner {
+      transform: scale(1.06);
+    }
+
+    &:is([state~='active'], [state~='leaving']) > .inner {
+      transform: none;
+    }
+
+    &[state~='active'] > .inner {
+      transition: transform $motion;
+    }
+  }
+
+  // Клип снизу вверх; уходящий стоит целиком под входящим и прячется, когда тот доехал.
+  .Crossfade[data-effect='reveal'] > .item {
+    clip-path: inset(100% 0 0 0);
+
+    &[state~='active'] {
+      clip-path: inset(0);
+      transition: clip-path $motion;
+    }
+
+    &[state~='leaving'] {
+      clip-path: inset(0);
+      opacity: 1;
+      transition: none;
+    }
+  }
+
+  @include m.reduced-motion {
+    .Crossfade > .item,
+    .Crossfade > .item > .inner {
+      transition: none !important;
+    }
+  }
+}
