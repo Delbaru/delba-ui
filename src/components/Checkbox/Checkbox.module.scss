@@ -6,6 +6,7 @@
       user-select: none;
       -webkit-tap-highlight-color: transparent;
       --transition-cb: var(--t-fast);
+      // Проект перекрашивает наведение и отметку переменными, не перебивая !important.
 
       .Input {
           position: absolute;
@@ -29,14 +30,14 @@
           &:hover,
           &[state~='hover'] {
               .Box {
-                  border-color: var(--black) !important;
+                  border-color: var(--checkbox-hover-border, var(--black)) !important;
               }
           }
 
           &[state~='active'] {
               .Box {
-                  background: var(--primary);
-                  border-color: var(--primary) !important;
+                  background: var(--checkbox-checked, var(--primary));
+                  border-color: var(--checkbox-checked, var(--primary)) !important;
 
                   .icon { opacity: 1; }
               }
@@ -61,8 +62,8 @@
 
           &[state~='active'] {
               .Box {
-                  background: var(--primary);
-                  border-color: var(--primary) !important;
+                  background: var(--checkbox-checked, var(--primary));
+                  border-color: var(--checkbox-checked, var(--primary)) !important;
 
                   .icon { opacity: 1; }
               }
@@ -72,7 +73,7 @@
       a {
           color: var(--text);
 
-          &:hover {color: var(--primary);}
+          &:hover {color: var(--checkbox-checked, var(--primary));}
       }
   }
 }
