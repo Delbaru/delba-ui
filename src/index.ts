@@ -39,9 +39,10 @@ export { clamp, clamp01 } from './core/utils';
 export { pad, pluralize, type PluralForms } from './core/base/text-format';
 
 // Хуки и типы, которые нужны D-компонентам и страницам проекта.
-export { LenisScroll } from './components/LenisScroll';
+export { LenisScroll, LenisScrollProvider, useLenisScroll, useLenisScrollOptional, type LenisScrollContextValue } from './components/LenisScroll';
 export * from './components/SmoothScroll';
-export { useOutsideDismiss, type DismissRef, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
+export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
+export { useAnchoredFloating, type FloatingAlign, type FloatingPlacement } from './hooks/useAnchoredFloating';
 export { useMediaQuery } from './hooks/useMediaQuery';
 export { useInView, type UseInViewOptions } from './core/useInView';
 export type { ComponentStateValue, GrowProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';

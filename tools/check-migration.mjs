@@ -11,7 +11,9 @@ const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'public', 'UI', 'del
 const DOC = 'README кита, «Переход на 2.0»';
 // Папка сабмодуля у проектов зовётся по-разному: `UI` (socrat, D4Y) или `delba-ui`.
 const DEEP = /(^|\/)(UI|delba-ui)(\/|$)|^@delba\/ui\/(?!(skin|next|config|rich-text|icons\/.+)$)/;
-const KIT_MODULE = /^@delba\/ui$|(^|\/)(UI|delba-ui)(\/|$)|\/ui\/container$/i;
+// Регистр значим: папка кита — `UI` или `delba-ui`, а `/ui/container` уже записан строчными.
+// С флагом `i` под правило попадал любой неймспейс проекта с сегментом `ui` (`@socrat/shared/ui/components`).
+const KIT_MODULE = /^@delba\/ui$|(^|\/)(UI|delba-ui)(\/|$)|\/ui\/container$/;
 const SCSS_SHORT = /^(mixins|scss-utils|UI\/core\/.+)$/;
 const SCSS_ENTRY = /^@delba\/ui\/(mixins|styles|theme|skin-classes|skin-states)$/;
 
