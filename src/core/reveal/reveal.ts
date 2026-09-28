@@ -7,6 +7,8 @@
  * - `left` / `right` — приход слева / справа + fade;
  * - `scale` — лёгкий зум из 0.96 + fade;
  * - `blur` — размытие + fade.
+ *
+ * `fade: false` снимает прозрачность, `start: 'load'` запускает ход чистым CSS с первой отрисовки.
  */
 export type RevealKey = 'fade' | 'up' | 'left' | 'right' | 'scale' | 'blur';
 
@@ -25,6 +27,16 @@ export interface RevealOptions {
   threshold?: number;
   /** Поля области наблюдения, как у `IntersectionObserver`. По умолчанию `'0px'`. */
   rootMargin?: string;
+  /**
+   * Проявление прозрачностью. `false` — элемент виден с первого кадра и только доезжает сдвигом, зумом
+   * или размытием: для первого экрана, где прозрачный узел не засчитывается в LCP. По умолчанию `true`.
+   */
+  fade?: boolean;
+  /**
+   * Когда стартует ход: `'view'` (по умолчанию) — при входе в экран, после гидрации; `'load'` — сразу при
+   * первой отрисовке, чистым CSS, без JS. Для первого экрана. `once`, `threshold`, `rootMargin` при `'load'` не действуют.
+   */
+  start?: 'view' | 'load';
 }
 
 /** Значение пропа `reveal`: ключ, [ключ] или [ключ, опции] — та же форма, что у `animate` Text и Img. */
@@ -33,7 +45,7 @@ export type RevealInput<O extends RevealOptions = RevealOptions> = RevealKey | [
 export interface RevealProps {
   /**
    * Появление при прокрутке: `'fade' | 'up' | 'left' | 'right' | 'scale' | 'blur'` или
-   * `[ключ, { stagger, delay, duration, distance, once, threshold, rootMargin }]`. С `stagger` —
+   * `[ключ, { stagger, delay, duration, distance, once, threshold, rootMargin, fade, start }]`. С `stagger` —
    * каскадом по прямым детям. Без JS и при «меньше движения» контент виден сразу. См. `RevealOptions`.
    */
   reveal?: RevealInput;
@@ -49,6 +61,8 @@ export interface ResolvedReveal {
   once: boolean;
   threshold: number;
   rootMargin: string;
+  fade: boolean;
+  start: 'view' | 'load';
 }
 
 const KEYS: readonly RevealKey[] = ['fade', 'up', 'left', 'right', 'scale', 'blur'];
@@ -72,6 +86,8 @@ export function resolveReveal(input: RevealInput | undefined | null): ResolvedRe
     once: options.once ?? true,
     threshold: Math.min(1, Math.max(0, options.threshold ?? 0)),
     rootMargin: options.rootMargin ?? '0px',
+    fade: options.fade ?? true,
+    start: options.start === 'load' ? 'load' : 'view',
   };
 }
 
@@ -83,7 +99,10 @@ export function withoutStagger(input: RevealInput | undefined): RevealInput | un
 /** Атрибуты для серверного HTML: по ним CSS прячет элемент (или детей) ещё до гидрации. */
 export function revealAttrs(r: ResolvedReveal | null): Record<string, string> | undefined {
   if (!r) return undefined;
-  return r.stagger > 0 ? { 'data-reveal': r.key, 'data-reveal-stagger': '' } : { 'data-reveal': r.key };
+  const attrs: Record<string, string> = { 'data-reveal': r.key };
+  if (r.stagger > 0) attrs['data-reveal-stagger'] = '';
+  if (r.start === 'load') attrs['data-reveal-start'] = 'load';
+  return attrs;
 }
 
 /** Переменные хода на узле: только заданные опции, остальное берёт тема. */
@@ -93,6 +112,9 @@ export function revealStyle(r: ResolvedReveal | null): Record<string, string> | 
   if (r.duration != null) style['--reveal-duration'] = `${r.duration}ms`;
   if (r.delay > 0) style['--reveal-delay'] = `${r.delay}ms`;
   if (r.distance != null) style['--reveal-distance'] = String(r.distance);
+  if (!r.fade) style['--reveal-o'] = '1';
+  // Каскад без JS: шаг — переменной, порядок ребёнка CSS берёт из :nth-child.
+  if (r.start === 'load' && r.stagger > 0) style['--reveal-step'] = `${r.stagger}ms`;
   return style;
 }
 
@@ -106,4 +128,4 @@ export const revealObserverKey = (r: Pick<ResolvedReveal, 'threshold' | 'rootMar
 
 /** Подпись опций для зависимостей эффекта: новый массив-литерал каждый рендер не должен перевешивать наблюдение. */
 export const revealSignature = (r: ResolvedReveal | null): string =>
-  r ? [r.key, r.stagger, r.delay, r.once, revealObserverKey(r)].join('|') : '';
+  r ? [r.key, r.stagger, r.delay, r.once, r.start, revealObserverKey(r)].join('|') : '';

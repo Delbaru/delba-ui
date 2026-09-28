@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
 import { prefersReducedMotion } from '../../../../core';
 
@@ -13,11 +13,28 @@ function easeOutQuart(t: number): number {
   return 1 - (1 - t) ** 4;
 }
 
+// Ход числа по кадрам. Очистка гасит ТЕКУЩИЙ кадр: id первого кадра к середине хода уже устарел,
+// и цепочка продолжалась бы после размонтирования.
+function runCount(to: number, start: number, duration: number, onFrame: (value: number) => void): () => void {
+  const startTime = performance.now();
+  const diff = to - start;
+  let id = 0;
+
+  const tick = (now: number) => {
+    const progress = Math.min((now - startTime) / duration, 1);
+    onFrame(Math.round(start + diff * easeOutQuart(progress)));
+    if (progress < 1) id = requestAnimationFrame(tick);
+  };
+
+  id = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(id);
+}
+
 export function useCountUp(
   to: number,
   options: UseCountUpOptions = {},
   enabled = true,
-  resetOnDisable = false // новый параметр
+  resetOnDisable = false
 ): number {
   const { duration = 2500, start = 0 } = options;
   const [value, setValue] = useState(start);
@@ -41,20 +58,51 @@ export function useCountUp(
       return;
     }
 
-    const startTime = performance.now();
-    const diff = to - start;
-
-    const tick = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = easeOutQuart(progress);
-      setValue(Math.round(start + diff * eased));
-      if (progress < 1) requestAnimationFrame(tick);
-    };
-
-    const id = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(id);
+    return runCount(to, start, duration, setValue);
   }, [enabled, to, start, duration, resetOnDisable]);
 
   return value;
+}
+
+/**
+ * Тот же ход, но число пишется прямо в текстовый узел: без рендера React на каждый кадр (четыре
+ * счётчика × 2,5 с на первом экране — это сотни рендеров во время гидрации). Узел — единственный
+ * текстовый ребёнок `ref`: React держит его же, и повторный рендер с тем же текстом его не трогает.
+ */
+export function useCountUpNode(
+  ref: RefObject<HTMLElement | null>,
+  to: number,
+  { duration = 2500, start = 0 }: UseCountUpOptions,
+  enabled: boolean,
+  resetOnDisable: boolean,
+  format: (value: number) => string
+): void {
+  const formatRef = useRef(format);
+
+  useLayoutEffect(() => {
+    formatRef.current = format;
+  });
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return undefined;
+
+    const write = (value: number) => {
+      const text = formatRef.current(value);
+      if (node.firstChild) node.firstChild.nodeValue = text;
+      else node.textContent = text;
+    };
+
+    if (!enabled) {
+      if (resetOnDisable) write(start);
+      return undefined;
+    }
+
+    if (to === start || prefersReducedMotion()) {
+      write(to);
+      return undefined;
+    }
+
+    return runCount(to, start, duration, write);
+  }, [ref, enabled, to, start, duration, resetOnDisable]);
 }

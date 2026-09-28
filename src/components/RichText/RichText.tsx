@@ -255,8 +255,12 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
   } satisfies CSSProperties;
   const resolvedVariant = resolveResponsiveAtBreakpoint(variant, 'default', breakpointIndex);
 
+  // Брейкпоинт в рантайме нужен, только если вариант или анимация меняются по ширине: иначе
+  // каждый экземпляр держал слушатель resize и рендерился на каждом его событии.
+  const responsive = animation !== undefined || (Array.isArray(variant) && new Set(variant).size > 1);
+
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
+    if (!responsive || typeof window === 'undefined') return undefined;
 
     const updateBreakpoint = () => {
       const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
@@ -269,7 +273,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
     return () => {
       window.removeEventListener('resize', updateBreakpoint);
     };
-  }, []);
+  }, [responsive]);
   
   // Detect if content is Lexical JSON (object with root.children) vs HTML string
   const isLexicalJSON = content && typeof content === 'object' && content.root?.children;

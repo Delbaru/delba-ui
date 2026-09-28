@@ -28,10 +28,6 @@ type MotionValues = {
   translateZ: number;
 };
 
-function isPointInsideRect(rect: DOMRect, clientX: number, clientY: number): boolean {
-  return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
-}
-
 export type Perspective3dConfig = {
   perspective: number | string;
   follow?: 'element' | 'viewport';
@@ -152,8 +148,12 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     configRef.current = config;
   }, [config]);
 
+  // Хук зовёт почти каждый примитив: подписки — только у включённого моушена, иначе страница
+  // держала по MediaQueryList на каждый Flex и Text (2400 на главной сайта фонда).
+  const enabled = config !== null;
+
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    if (!enabled || typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
       return undefined;
     }
 
@@ -168,10 +168,10 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     return () => {
       mediaQuery.removeEventListener?.('change', updatePreference);
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    if (!enabled || typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
       return undefined;
     }
 
@@ -183,7 +183,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     return () => {
       mq.removeEventListener?.('change', handler);
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     if (config) return undefined;
@@ -213,8 +213,12 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     };
   }, []);
 
+  // Окно слушает только `follow: 'viewport'`: карточку с `'element'` ведут её собственные обработчики
+  // (motionHandlers), а слушатель окна на каждую карточку звал getBoundingClientRect на каждое движение.
+  const followsViewport = config?.follow === 'viewport';
+
   useEffect(() => {
-    if (!config || typeof window === 'undefined') return undefined;
+    if (!followsViewport || typeof window === 'undefined') return undefined;
 
     const handlePointerMove = (event: PointerEvent) => {
       if (reducedMotionRef.current || isMobileRef.current || !isVisibleRef.current) return;
@@ -223,24 +227,8 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       const nextConfig = configRef.current;
       if (!node || !node.isConnected || !nextConfig) return;
 
-      if (nextConfig.follow === 'viewport') {
-        activeRef.current = true;
-        updateTargetFromPointer(node, event.clientX, event.clientY, nextConfig.follow);
-        scheduleAnimation();
-        return;
-      }
-
-      const rect = node.getBoundingClientRect();
-      const isInside = isPointInsideRect(rect, event.clientX, event.clientY);
-
-      activeRef.current = isInside;
-
-      if (isInside) {
-        updateTargetFromPointer(node, event.clientX, event.clientY, nextConfig.follow);
-      } else {
-        targetRef.current = { ...INITIAL_VALUES };
-      }
-
+      activeRef.current = true;
+      updateTargetFromPointer(node, event.clientX, event.clientY, 'viewport');
       scheduleAnimation();
     };
 
@@ -259,7 +247,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       window.removeEventListener('pointerleave', resetMotion);
       window.removeEventListener('blur', resetMotion);
     };
-  }, [config]);
+  }, [followsViewport]);
 
   // Стабильна по идентичности (deps: []) — работает только через ref'ы. От этого зависит
   // стабильность setMotionNode, см. комментарий там.
@@ -355,7 +343,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
   const motionHandlers = config && config.follow === 'element'
     ? {
         onMouseEnter: (event: React.MouseEvent<MotionTarget>) => {
-          if (reducedMotionRef.current) return;
+          if (reducedMotionRef.current || isMobileRef.current) return;
 
           nodeRef.current = event.currentTarget;
           activeRef.current = true;
@@ -363,7 +351,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
           scheduleAnimation();
         },
         onMouseMove: (event: React.MouseEvent<MotionTarget>) => {
-          if (reducedMotionRef.current) return;
+          if (reducedMotionRef.current || isMobileRef.current) return;
 
           nodeRef.current = event.currentTarget;
           updateTargetFromPointer(event.currentTarget, event.clientX, event.clientY, 'element');

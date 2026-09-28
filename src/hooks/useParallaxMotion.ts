@@ -108,8 +108,12 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
     configRef.current = config;
   }, [config]);
 
+  // Хук зовёт почти каждый примитив: подписки — только у включённого моушена, иначе страница
+  // держала по MediaQueryList на каждый Flex и Text (2400 на главной сайта фонда).
+  const enabled = config !== null;
+
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    if (!enabled || typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
       return undefined;
     }
 
@@ -124,7 +128,7 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
     return () => {
       mediaQuery.removeEventListener?.('change', updatePreference);
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     if (config) return undefined;

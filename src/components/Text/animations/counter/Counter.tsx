@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 
 import { useInView } from '../../../../core/useInView';
-import { useCountUp } from './useCountUp';
+import { useCountUpNode } from './useCountUp';
 import { parseCountContent } from './parseContent';
 import type { TextAnimationContext } from '../types';
 import type { CounterOptions } from './types';
@@ -23,6 +23,7 @@ import type { CounterOptions } from './types';
  */
 export function Counter({ options, content }: TextAnimationContext<CounterOptions>) {
   const ref = useRef<HTMLSpanElement | null>(null);
+  const valueRef = useRef<HTMLSpanElement | null>(null);
   const { isInView } = useInView(ref, { threshold: 0.1 });
 
   const parsed = options?.to == null ? parseCountContent(content) : null;
@@ -33,14 +34,11 @@ export function Counter({ options, content }: TextAnimationContext<CounterOption
   const trigger = options?.trigger ?? 'onView';
   const shouldStart = trigger === 'onLoad' || (trigger === 'onView' && isInView);
 
-  const count = useCountUp(
-    to,
-    { duration: options?.duration, start: options?.start },
-    shouldStart,
-    !isInView
-  );
-
+  const start = options?.start ?? 0;
   const format = (value: number) => (grouped ? value.toLocaleString('ru-RU') : String(value));
+  const text = (value: number) => `${prefix}${format(value)}${suffix}`;
+
+  useCountUpNode(valueRef, to, { duration: options?.duration, start }, shouldStart, !isInView, text);
 
   return (
     <span ref={ref} className={'ui-counter'}>
@@ -50,10 +48,8 @@ export function Counter({ options, content }: TextAnimationContext<CounterOption
         {suffix}
       </span>
 
-      <span className={'ui-counter-value'}>
-        {prefix}
-        {format(count)}
-        {suffix}
+      <span ref={valueRef} className={'ui-counter-value'}>
+        {text(start)}
       </span>
     </span>
   );

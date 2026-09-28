@@ -10,3 +10,6 @@ declare module '*.svg' {
   const content: string | { src: string; width: number; height: number };
   export default content;
 }
+
+// Стили сторонних пакетов, подгружаемые лениво (лайтбокс): импорт ради побочного эффекта.
+declare module '*.css';

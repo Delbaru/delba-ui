@@ -136,7 +136,8 @@ function syncChildren(host: HTMLElement, own: Set<Element>, config: ResolvedReve
  * а неподключённый ребёнок простоял бы спрятанным до конца страховки.
  */
 export function armReveal(host: HTMLElement, config: ResolvedReveal) {
-  if (typeof IntersectionObserver === 'undefined' || prefersReducedMotion() || hosts.has(host)) return;
+  // `start: 'load'` играет CSS с первой отрисовки — наблюдать нечего.
+  if (config.start === 'load' || typeof IntersectionObserver === 'undefined' || prefersReducedMotion() || hosts.has(host)) return;
   const own = new Set<Element>();
   hosts.set(host, { own, mutations: null });
 

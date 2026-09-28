@@ -7,12 +7,23 @@
 //   же узле складывается с ходом, а не затирается им.
 // Скрывает только `scripting: enabled`: без JS контент виден сразу. JS упал или опоздал — страховка
 // `ui-reveal-hold` кончается через $hold, и элемент встаёт на место сам.
+// `start: 'load'` (атрибут `data-reveal-start`) играет ход сразу при первой отрисовке, без JS и наблюдателя:
+// каскад — `:nth-child` × `--reveal-step`. Заливка `backwards`: после хода анимация не держит `translate`,
+// и собственные сдвиги узла (ховер стрелки) работают.
 
 $hold: 3s;
-$self: '[data-reveal]:not([data-reveal-stagger], [data-reveal-state])';
-$child: '[data-reveal-stagger] > :not([data-reveal], [data-reveal-state])';
+$self: '[data-reveal]:not([data-reveal-stagger], [data-reveal-state], [data-reveal-start])';
+$child: '[data-reveal-stagger]:not([data-reveal-start]) > :not([data-reveal], [data-reveal-state])';
+$load-self: "[data-reveal-start='load']:not([data-reveal-stagger])";
+$load-child: "[data-reveal-start='load'][data-reveal-stagger] > :not([data-reveal])";
+$load-max: 24;
 
+// Ход узла — только его опции: без сброса вложенный `reveal` наследовал бы задержку и длительность предка.
 [data-reveal] {
+  --reveal-delay: initial;
+  --reveal-duration: initial;
+  --reveal-step: 0s;
+  --reveal-o: 0;
   --reveal-shift: calc(var(--rpx) * var(--reveal-distance, 32));
   --reveal-t: none;
   --reveal-s: none;
@@ -26,7 +37,7 @@ $child: '[data-reveal-stagger] > :not([data-reveal], [data-reveal-state])';
 [data-reveal='blur'] { --reveal-f: blur(calc(var(--rpx) * 8)); }
 
 @mixin hidden {
-  opacity: 0;
+  opacity: var(--reveal-o);
   translate: var(--reveal-t);
   scale: var(--reveal-s);
   filter: var(--reveal-f);
@@ -42,6 +53,25 @@ $child: '[data-reveal-stagger] > :not([data-reveal], [data-reveal-state])';
 
 @keyframes ui-reveal-wait {
   from, to { @include hidden; }
+}
+
+@media screen {
+  #{$load-self},
+  #{$load-child} {
+    animation: ui-reveal var(--reveal-duration, var(--t-d-slow)) var(--t-t-f-cubic-bezier)
+      calc(var(--reveal-delay, 0s) + var(--reveal-i, 0) * var(--reveal-step)) backwards;
+  }
+
+  @for $i from 1 through $load-max {
+    [data-reveal-start='load'][data-reveal-stagger] > :nth-child(#{$i}) { --reveal-i: #{$i - 1}; }
+  }
+
+  @include m.reduced-motion {
+    #{$load-self},
+    #{$load-child} {
+      animation: none;
+    }
+  }
 }
 
 @media screen and (scripting: enabled) {

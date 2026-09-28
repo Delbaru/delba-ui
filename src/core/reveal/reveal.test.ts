@@ -5,11 +5,16 @@ import { resolveReveal, revealAttrs, revealDelays, revealObserverKey, revealSign
 
 test('resolveReveal: ключ — умолчания, опции — в мс', () => {
   assert.deepEqual(resolveReveal('up'), {
-    key: 'up', stagger: 0, delay: 0, duration: null, distance: null, once: true, threshold: 0, rootMargin: '0px',
+    key: 'up', stagger: 0, delay: 0, duration: null, distance: null, once: true, threshold: 0, rootMargin: '0px', fade: true, start: 'view',
   });
   assert.deepEqual(resolveReveal(['fade', { stagger: 0.08, delay: 0.1, duration: 0.6, distance: -48, once: false, threshold: 2, rootMargin: '0px 0px -10% 0px' }]), {
-    key: 'fade', stagger: 80, delay: 100, duration: 600, distance: 48, once: false, threshold: 1, rootMargin: '0px 0px -10% 0px',
+    key: 'fade', stagger: 80, delay: 100, duration: 600, distance: 48, once: false, threshold: 1, rootMargin: '0px 0px -10% 0px', fade: true, start: 'view',
   });
+  const load = resolveReveal(['up', { fade: false, start: 'load' }]);
+  assert.equal(load?.fade, false);
+  assert.equal(load?.start, 'load');
+  // Чужое значение `start` из JS без типов — обычный ход по экрану, а не вечное ожидание.
+  assert.equal(resolveReveal(['up', { start: 'now' as 'load' }])?.start, 'view');
   assert.equal(resolveReveal(['scale'])?.key, 'scale');
 });
 
@@ -28,6 +33,9 @@ test('revealAttrs: каскад помечается отдельным атри
   assert.deepEqual(revealAttrs(resolveReveal('blur')), { 'data-reveal': 'blur' });
   assert.deepEqual(revealAttrs(resolveReveal(['up', { stagger: 0.05 }])), { 'data-reveal': 'up', 'data-reveal-stagger': '' });
   assert.equal(revealAttrs(null), undefined);
+  assert.deepEqual(revealAttrs(resolveReveal(['up', { stagger: 0.1, start: 'load' }])), {
+    'data-reveal': 'up', 'data-reveal-stagger': '', 'data-reveal-start': 'load',
+  });
 });
 
 test('revealStyle: только заданное — остальное берёт тема', () => {
@@ -35,6 +43,10 @@ test('revealStyle: только заданное — остальное берё
   assert.deepEqual(revealStyle(resolveReveal(['left', { duration: 0.4, delay: 0.2, distance: 64 }])), {
     '--reveal-duration': '400ms', '--reveal-delay': '200ms', '--reveal-distance': '64',
   });
+  assert.deepEqual(revealStyle(resolveReveal(['up', { fade: false }])), { '--reveal-o': '1' });
+  // Шаг каскада нужен CSS только при старте с загрузки: по экрану задержки ставит наблюдатель.
+  assert.deepEqual(revealStyle(resolveReveal(['up', { stagger: 0.08 }])), {});
+  assert.deepEqual(revealStyle(resolveReveal(['up', { stagger: 0.08, start: 'load' }])), { '--reveal-step': '80ms' });
 });
 
 test('revealDelays: delay + порядок × stagger', () => {
@@ -50,6 +62,7 @@ test('ключ наблюдателя и подпись опций', () => {
   assert.equal(revealSignature(a), revealSignature(b));
   assert.equal(revealObserverKey(a), revealObserverKey(resolveReveal('fade') ?? a));
   assert.notEqual(revealObserverKey(a), revealObserverKey(resolveReveal(['up', { rootMargin: '-10%' }]) ?? a));
+  assert.notEqual(revealSignature(a), revealSignature(resolveReveal(['up', { stagger: 0.08, start: 'load' }])));
   assert.equal(revealSignature(null), '');
 });
 

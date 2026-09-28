@@ -1,10 +1,11 @@
 "use client";
 
+import Link from 'next/link';
 import Image, { getImageProps, type ImageProps } from 'next/image';
 import { useMemo, useState, type CSSProperties } from 'react';
 import type React from 'react';
 
-import { MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveResponsive, sizeClasses, splitRootDomProps, stateLinkProps, useMergedRefs, type GrowProps, type RadiusInput, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef } from '../../core';
+import { MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveLinkProps, resolveResponsive, shouldUseNextLink, sizeClasses, splitRootDomProps, stateLinkProps, useMergedRefs, type GrowProps, type RadiusInput, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef } from '../../core';
 import { imageSizes } from '../../core/base/scale';
 import { SCALE } from '../../core/scale';
 import { useFancybox } from '../../hooks/useFancybox';
@@ -116,6 +117,19 @@ export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootS
 
   linkState?: StateLinkInput;
   fancybox?: string;
+
+  /**
+   * Картинка САМА становится ссылкой: корень рисуется `<a>` (или `next/link`), обёртка не нужна —
+   * логотип в шапке, карточка-картинка. С `fancybox` не сочетается: там ссылку рисует лайтбокс, и
+   * ссылка в ссылке — сломанная разметка; заданный `href` в этом случае выигрывает, лайтбокс молчит.
+   */
+  href?: string;
+  target?: string;
+  rel?: string;
+  download?: boolean | string;
+  newTab?: boolean;
+  nofollow?: boolean;
+  noreferrer?: boolean;
 }
 
 const parseAspect = (value?: string | null): number | null => {
@@ -259,6 +273,13 @@ export function Img({
   parallax,
   reveal,
   fancybox,
+  href,
+  target,
+  rel,
+  download,
+  newTab,
+  nofollow,
+  noreferrer,
   ...props
 }: WithRef<ImgProps, HTMLSpanElement>) {
   // Размеры обёртки — не из коробки: `rootW`/`rootH` перекрывают размеры картинки.
@@ -304,7 +325,11 @@ export function Img({
   } as const;
   const hasArtDirection = sources.mobile !== null || sources.tablet !== null;
 
-  const fancyboxGroup = fancybox?.trim();
+  // Ссылка на самой картинке отменяет лайтбокс: два `<a>` друг в друге — сломанная разметка.
+  const isLink = Boolean(href);
+  const Root = (isLink ? (shouldUseNextLink(href, target, download) ? Link : 'a') : 'span') as React.ElementType;
+  const linkProps = isLink ? resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer }) : null;
+  const fancyboxGroup = isLink ? undefined : fancybox?.trim();
   const fancyboxHref = useMemo(() => resolveFancyboxHref(sources.desktop), [sources.desktop]);
   const hasFancybox = Boolean(fancyboxGroup && fancyboxHref);
 
@@ -398,11 +423,12 @@ export function Img({
   const { node: swapped, loaded: swapLoaded } = useImgSwap(animate, swapIdentity, mainImage);
 
   return (
-    <span
+    <Root
       ref={setRefs}
       id={id}
       data-point-events={dataPointEvents}
       {...(rootProps as React.HTMLAttributes<HTMLSpanElement>)}
+      {...linkProps}
       {...stateLinkProps(linkState, motionHandlers)}
       {...revealAttrs}
       className={cx('ui-img', ...sizeClasses(c, wrapperSizeProps), ...layout, className)}
@@ -463,6 +489,6 @@ export function Img({
           {swapped}
         </>
       )}
-    </span>
+    </Root>
   );
 }
