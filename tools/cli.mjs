@@ -95,7 +95,9 @@ async function work() {
   for (const dir of new Set([...graph].map((file) => path.dirname(file)))) {
     if (existsSync(dir)) watch(dir, (_event, file) => file && graph.has(path.join(dir, String(file))) && restart());
   }
-  const skinsDir = config.skins && path.resolve(root, config.skins.dir);
+  // `dir` необязателен (см. `UiSkins`): проект, который печатает состояния сам, берёт у кита
+  // только словари — и папки компонентов у него нет. Без проверки тут `path.resolve` ронял watch.
+  const skinsDir = config.skins?.dir === undefined ? undefined : path.resolve(root, config.skins.dir);
   if (skinsDir) watch(skinsDir, { recursive: true }, (_event, file) => file && String(file).endsWith('.skin.ts') && restart());
   utilities?.watch(restart);
 }
