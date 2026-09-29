@@ -1,5 +1,5 @@
 import { MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs } from '../base/motion';
-import { revealDelays, revealObserverKey, type ResolvedReveal } from './reveal';
+import { isRevealKey, revealDelays, revealObserverKey, type ResolvedReveal } from './reveal';
 
 // Состояние цели — атрибутом, а не классом React: его пишет наблюдатель, рендер о нём не знает.
 // нет → до гидрации (прячет страховочная анимация `ui-reveal-hold`), wait → ждёт экрана,
@@ -126,7 +126,8 @@ function syncChildren(host: HTMLElement, own: Set<Element>, config: ResolvedReve
   });
   // Ребёнок со своим `reveal` ведёт себя сам — иначе два хозяина спорили бы за его состояние.
   Array.from(host.children).forEach((child) => {
-    if (!own.has(child) && !child.hasAttribute('data-reveal')) arm(child, host, config);
+    // Именно СВОЙ: `data-reveal` с чужим значением — пометка проекта, хозяина она не отменяет.
+    if (!own.has(child) && !isRevealKey(child.getAttribute('data-reveal'))) arm(child, host, config);
   });
 }
 

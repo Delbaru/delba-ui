@@ -1,3 +1,4 @@
+@use 'sass:string';
 @use '../mixins' as m;
 
 // Появление по скроллу (проп `reveal`). Прячет и двигает только анимация, не статичные стили:
@@ -12,14 +13,29 @@
 // и собственные сдвиги узла (ховер стрелки) работают.
 
 $hold: 3s;
-$self: '[data-reveal]:not([data-reveal-stagger], [data-reveal-state], [data-reveal-start])';
-$child: '[data-reveal-stagger]:not([data-reveal-start]) > :not([data-reveal], [data-reveal-state])';
+// Узел, помеченный САМИМ китом: `revealAttrs` всегда пишет ОДИН ИЗ КЛЮЧЕЙ, поэтому сужение до
+// списка у кита ничего не отнимает. Нужно оно потому, что `data-reveal` — атрибут заманчивого
+// имени: проект вполне держит на нём свой рукописный каскад, и безусловный `[data-reveal]` прятал
+// бы ЧУЖУЮ разметку на $hold. Так и было в socrat: первый экран стоял пустым 3 с, хотя разметка
+// приезжала с сервера готовой.
+// Проверять «значение непустое» НЕДОСТАТОЧНО: бареный JSX-атрибут React печатает как `="true"`,
+// а не пустой строкой, — под `:not([data-reveal=''])` чужая пометка пролезает целиком.
+$keys: 'fade', 'up', 'left', 'right', 'scale', 'blur';
+$list: '';
+@each $key in $keys {
+  $list: $list + "[data-reveal='" + $key + "'], ";
+}
+// Запятая пишется всем, последняя срезается: ветвление в цикле пришлось бы делать через `if()`,
+// а он у Sass устаревший (sass-lang.com/d/if-function) и печатает предупреждение на каждый импорт.
+$own: ':is(' + string.slice($list, 1, -3) + ')';
+$self: '#{$own}:not([data-reveal-stagger], [data-reveal-state], [data-reveal-start])';
+$child: '[data-reveal-stagger]:not([data-reveal-start]) > :not(#{$own}, [data-reveal-state])';
 $load-self: "[data-reveal-start='load']:not([data-reveal-stagger])";
-$load-child: "[data-reveal-start='load'][data-reveal-stagger] > :not([data-reveal])";
+$load-child: "[data-reveal-start='load'][data-reveal-stagger] > :not(#{$own})";
 $load-max: 24;
 
 // Ход узла — только его опции: без сброса вложенный `reveal` наследовал бы задержку и длительность предка.
-[data-reveal] {
+#{$own} {
   --reveal-delay: initial;
   --reveal-duration: initial;
   --reveal-step: 0s;

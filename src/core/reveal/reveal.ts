@@ -67,6 +67,10 @@ export interface ResolvedReveal {
 
 const KEYS: readonly RevealKey[] = ['fade', 'up', 'left', 'right', 'scale', 'blur'];
 
+/** Пометка кита, а не проекта: `data-reveal` — имя заманчивое, на нём держат и свои каскады. */
+export const isRevealKey = (value: string | null | undefined): value is RevealKey =>
+  value != null && KEYS.includes(value as RevealKey);
+
 const toMs = (seconds: number | undefined): number =>
   seconds != null && Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1000) : 0;
 
