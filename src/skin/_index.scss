@@ -2,6 +2,10 @@
 @use 'sass:list';
 @use './tokens' as t;
 
+// Словари наружу: проект, который дописывает свои глаголы поверх движка, берёт карты отсюда,
+// а не заводит второй генерат.
+@forward './tokens';
+
 // Движок состояний шкур: то, что классом покоя не выразить (:hover, [state~=…]). Словари осей —
 // генерат _tokens.scss из конфига проекта; правила пресетов печатает генератор в `_states.scss`
 // компонента (tools/cli.mjs).
@@ -33,35 +37,36 @@ $opt-pseudo: (disabled, checked);
 }
 
 // Имена осей без кавычек (white) Sass читает как цвета — ключ ищем строкой.
-@function _get($map, $name, $axis) {
+@function get($map, $name, $axis) {
   @if not map.has-key($map, '#{$name}') {
     @error '#{$axis}: неизвестное значение «#{$name}». Есть: #{map.keys($map)}.';
   }
   @return map.get($map, '#{$name}');
 }
 
-@mixin _body($props) {
+/// Глаголы движка: оси цвета плюс opacity/filter/cursor/pointer-events.
+@mixin body($props) {
   $fill: map.get($props, fill);
   @if $fill != null {
-    background: _get(t.$fills, $fill, fill);
+    background: get(t.$fills, $fill, fill);
   }
 
   $border: map.get($props, border);
   @if $border == none {
     border-color: transparent;
   } @else if $border != null {
-    $spec: _get(t.$lines, $border, border);
+    $spec: get(t.$lines, $border, border);
     border: calc(#{list.nth($spec, 1)} * var(--rpx)) solid list.nth($spec, 2);
   }
 
   $border-color: map.get($props, borderColor);
   @if $border-color != null {
-    border-color: list.nth(_get(t.$lines, $border-color, borderColor), 2);
+    border-color: list.nth(get(t.$lines, $border-color, borderColor), 2);
   }
 
   $text: map.get($props, textColor);
   @if $text != null {
-    color: _get(t.$texts, $text, textColor);
+    color: get(t.$texts, $text, textColor);
   }
 
   @each $prop, $css in (opacity: opacity, filter: filter, cursor: cursor, pointerEvents: pointer-events) {
@@ -74,27 +79,39 @@ $opt-pseudo: (disabled, checked);
 
 /// Эффекты покоя пресета, которых нет в осях (cursor и т.п.).
 @mixin base($props) {
-  @include _body($props);
+  @include body($props);
+}
+
+/// Селектор одного состояния; тело — в `@content`. Отдельно от `states()`, чтобы проект мог
+/// напечатать в тот же селектор свои глаголы, не повторяя разбор `pseudo`, `guard` и `tone`.
+@mixin state-selector($state, $props) {
+  $guard: map.get($props, guard);
+  $tone: map.get($props, tone);
+  $prefix: '';
+  @if $guard != null {
+    $prefix: _guard($guard);
+  }
+  @if $tone != null {
+    $prefix: '#{$prefix}[data-tone=\'#{$tone}\']';
+  }
+
+  @if _binds-pseudo($state, $props) {
+    &#{$prefix}:#{$state},
+    &#{$prefix}[state~='#{$state}'] {
+      @content;
+    }
+  } @else {
+    &#{$prefix}[state~='#{$state}'] {
+      @content;
+    }
+  }
 }
 
 /// Карта состояний → правила: `(hover: (fill: primary-hover), disabled: (opacity: 0.45, pseudo: true))`.
 @mixin states($map) {
   @each $state, $props in $map {
-    $guard: map.get($props, guard);
-    $prefix: '';
-    @if $guard != null {
-      $prefix: _guard($guard);
-    }
-
-    @if _binds-pseudo($state, $props) {
-      &#{$prefix}:#{$state},
-      &#{$prefix}[state~='#{$state}'] {
-        @include _body($props);
-      }
-    } @else {
-      &#{$prefix}[state~='#{$state}'] {
-        @include _body($props);
-      }
+    @include state-selector($state, $props) {
+      @include body($props);
     }
   }
 }

@@ -10,15 +10,16 @@ import type { UiSkins } from './config';
 
 const SKIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'skin');
 const BANNER = '// Автогенерат шкур кита (tools/skin.ts) — не править руками.\n\n';
-const EFFECTS = new Set(['opacity', 'filter', 'cursor', 'pointerEvents', 'borderColor']);
+const EFFECTS = ['opacity', 'filter', 'cursor', 'pointerEvents', 'borderColor'];
+const STATES_MODULE = '@delba/ui/skin-states';
 
 type Props = Record<string, unknown>;
 
 const map = (name: string, entries: [string, string][]) => `$${name}: (\n${entries.map(([k, v]) => `  '${k}': ${v},\n`).join('')});\n`;
 const sassMap = (props: Props) => `(${Object.entries(props).map(([k, v]) => `${k}: ${String(v)}`).join(', ')})`;
 
-function presetRule(name: string, preset: Props): string | null {
-  const effects = Object.fromEntries(Object.entries(preset).filter(([k]) => EFFECTS.has(k)));
+function presetRule(name: string, preset: Props, effects_: ReadonlySet<string>): string | null {
+  const effects = Object.fromEntries(Object.entries(preset).filter(([k]) => effects_.has(k)));
   const states = (preset.states ?? {}) as Record<string, Props>;
   const body: string[] = [];
   if (Object.keys(effects).length > 0) body.push(`  @include base(${sassMap(effects)});`);
@@ -44,7 +45,12 @@ export async function generateSkins(root: string, skins: UiSkins): Promise<numbe
   write(
     path.join(SKIN, '_tokens.scss'),
     BANNER +
-      [map('fills', Object.entries(skins.fills)), map('lines', lines.map(([k, [w, c]]) => [k, `(${w}, ${c})`])), map('texts', Object.entries(skins.texts))].join('\n'),
+      [
+        map('fills', Object.entries(skins.fills)),
+        map('lines', lines.map(([k, [w, c]]) => [k, `(${w}, ${c})`])),
+        map('texts', Object.entries(skins.texts)),
+        ...Object.entries(skins.maps ?? {}).map(([name, values]) => map(name, Object.entries(values))),
+      ].join('\n'),
   );
   write(
     path.join(SKIN, '_classes.scss'),
@@ -57,6 +63,10 @@ export async function generateSkins(root: string, skins: UiSkins): Promise<numbe
       '\n',
   );
 
+  if (skins.dir === undefined) return changed;
+
+  const effects = new Set(skins.effects ?? EFFECTS);
+  const statesModule = skins.states ?? STATES_MODULE;
   const dir = path.resolve(root, skins.dir);
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
@@ -69,8 +79,8 @@ export async function generateSkins(root: string, skins: UiSkins): Promise<numbe
     const def = [...Object.values(mod), ...Object.values(mod.default ?? {})].find(isSkin);
     if (!def) throw new Error(`${entry.name}/${skinFile}: нет экспорта defineSkin(...)`);
 
-    const rules = Object.entries(def.presets).map(([name, preset]) => presetRule(name, preset)).filter(Boolean);
-    write(path.join(folder, '_states.scss'), `${BANNER}@use '@delba/ui/skin-states' as *;\n${rules.map((rule) => `\n${rule}\n`).join('')}`);
+    const rules = Object.entries(def.presets).map(([name, preset]) => presetRule(name, preset, effects)).filter(Boolean);
+    write(path.join(folder, '_states.scss'), `${BANNER}@use '${statesModule}' as *;\n${rules.map((rule) => `\n${rule}\n`).join('')}`);
   }
   return changed;
 }

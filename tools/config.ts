@@ -3,12 +3,26 @@ import type { ExtractOptions } from './utilities/extract';
 
 /** Словари осей шкур и папка компонентов проекта (см. `skin/`). */
 export interface UiSkins {
-  /** Папка компонентов: в её подпапках ищутся `*.skin.ts`, рядом пишется `_states.scss`. */
-  readonly dir: string;
+  /**
+   * Папка компонентов: в её подпапках ищутся `*.skin.ts`, рядом пишется `_states.scss`.
+   * Не задана — генерируются только словари (`_tokens.scss`, `_classes.scss`): проект,
+   * который печатает состояния сам, берёт у кита карты и движок, но не кодоген.
+   */
+  readonly dir?: string;
   readonly fills: Readonly<Record<string, string>>;
   /** Линия — [толщина в rpx, цвет]. */
   readonly lines: Readonly<Record<string, readonly [number, string]>>;
   readonly texts: Readonly<Record<string, string>>;
+  /**
+   * Свои словари проекта рядом с осями кита: имя карты → значения. Попадают в `_tokens.scss`
+   * как `$<имя>` и доступны через `@use '@delba/ui/skin-states'` — ими проект красит СВОИ
+   * глаголы (глиф, тень), которых в движке кита нет и быть не должно.
+   */
+  readonly maps?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** Модуль движка состояний в шапке `_states.scss`. По умолчанию `@delba/ui/skin-states`. */
+  readonly states?: string;
+  /** Ключи пресета, которые генератор печатает как эффекты покоя. По умолчанию глаголы кита. */
+  readonly effects?: readonly string[];
 }
 
 /** Конфиг проекта для CLI `delba-ui` и плагина `withUi` (default export `ui.config.ts`). Пути — от папки проекта. */

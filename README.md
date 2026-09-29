@@ -136,6 +136,14 @@ delba-ui check   # красные линии (--update опускает план
   `fills`/`lines`/`texts` и `dir` с компонентами, где лежат `*.skin.ts`. Генератор пишет
   `src/skin/_tokens.scss`, `src/skin/_classes.scss` (классы покоя `sk_*` — `@use '@delba/ui/skin-classes'`
   в глобальные стили) и `_states.scss` рядом с каждым компонентом (`@use './states'` в его модуле).
+
+  Проект со СВОИМ набором глаголов (покраска глифа, тень — то, что зависит от его разметки) берёт у
+  движка механику, а тело пишет сам: `@use '@delba/ui/skin-states' as kit` даёт `kit.body($props)`,
+  `kit.state-selector($state, $props)` (разбирает `pseudo`, `guard`, `tone`; тело — в `@content`),
+  `kit.get($map, $name, $axis)` и словари. Свои карты кладутся в `skins.maps` (`'icon-colors': …`)
+  и приезжают в `_tokens.scss` рядом с осями кита. `skins.dir` тогда можно не задавать вовсе —
+  печатаются только словари и классы покоя, а состояния проект генерит по-своему; шапку
+  сгенерированных `_states.scss` меняет `skins.states`, набор глаголов покоя — `skins.effects`.
 - **Тему.** Договор — это CSS-переменные, семейства типографики и атрибутные правила
   (`[data-hide-mobile]`…), которые библиотека берёт у проекта. Проверка — `delba-ui check`, без CLI:
 
