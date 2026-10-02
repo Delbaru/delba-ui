@@ -19,7 +19,13 @@ const inlineSvgRegistry = new Map<string, string>();
  */
 export function registerInlineIcons(icons: Record<string, string>): void {
   for (const [key, svg] of Object.entries(icons)) {
+    if (inlineSvgRegistry.get(key) === svg) continue;
+
     inlineSvgRegistry.set(key, svg);
+    // Модуль-реестр живёт дольше манифеста: dev-сервер перечитывает манифест горячо, и без сброса
+    // разобранная копия старого SVG отдавалась бы до перезапуска процесса.
+    svgResolvedCache.delete(svgCacheKey(key, true));
+    svgResolvedCache.delete(svgCacheKey(key, false));
   }
 }
 

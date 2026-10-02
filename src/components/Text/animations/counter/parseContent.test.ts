@@ -9,6 +9,7 @@ test('parseCountContent: число с суффиксом и разрядами'
     assert.deepEqual(parseCountContent('70%'), { to: 70, grouped: false, prefix: '', suffix: '%' });
     assert.deepEqual(parseCountContent('24/7'), { to: 24, grouped: false, prefix: '', suffix: '/7' });
     assert.deepEqual(parseCountContent('20'), { to: 20, grouped: false, prefix: '', suffix: '' });
+    assert.deepEqual(parseCountContent('1 год'), { to: 1, grouped: false, prefix: '', suffix: ' год' });
 });
 
 test('parseCountContent: префикс не теряется и приклеен к числу неразрывным пробелом', () => {
