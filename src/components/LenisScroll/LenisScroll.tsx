@@ -1,8 +1,9 @@
 'use client';
 
 import { Lenis as ReactLenis, useLenis } from 'lenis/react';
+import type { LenisOptions } from 'lenis';
 import { LenisScrollProvider, LenisScrollProviderNative } from './LenisScrollContext';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { BREAKPOINT, MEDIA_QUERY } from '../../core';
@@ -72,6 +73,11 @@ function NativeResetOnNavigate() {
 
 type LenisScrollProps = {
   children: ReactNode;
+  /**
+   * Темп пружины поверх общих настроек (`lerp`, `wheelMultiplier` и т. п.). Передавать константой
+   * модуля: новый объект на каждом рендере пересоздал бы экземпляр Lenis.
+   */
+  options?: Partial<LenisOptions>;
 };
 
 // Условия, при которых Lenis (а значит и фулпейдж поверх него) вообще уместен. Оба — МЕДИА-ЗАПРОСЫ,
@@ -98,7 +104,8 @@ function shouldUseLenis(): boolean {
   return window.matchMedia(DESKTOP_QUERY).matches && !window.matchMedia(REDUCED_MOTION_QUERY).matches;
 }
 
-export function LenisScroll({ children }: LenisScrollProps) {
+export function LenisScroll({ children, options }: LenisScrollProps) {
+  const lenisOptions = useMemo(() => ({ ...LENIS_OPTIONS, ...options }), [options]);
   // Default to native on SSR to avoid swapping Lenis → native on first paint (mobile jump)
   const [useLenis, setUseLenis] = useState<boolean>(shouldUseLenis);
 
@@ -145,7 +152,7 @@ export function LenisScroll({ children }: LenisScrollProps) {
   }
 
   return (
-    <ReactLenis root options={LENIS_OPTIONS} style={{ height: '100%' }}>
+    <ReactLenis root options={lenisOptions} style={{ height: '100%' }}>
       <LenisResetOnNavigate />
       <LenisScrollProvider>{children}</LenisScrollProvider>
     </ReactLenis>
