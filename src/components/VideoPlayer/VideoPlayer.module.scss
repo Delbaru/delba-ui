@@ -263,8 +263,8 @@
           transform: translateX(-50%);
       }
 
-      // Громкость: вертикальный поповер вплотную к кнопке (contiguous hover — не мигает),
-      // плавное появление со сдвигом. Скрыт через pointer-events (не блокирует клики), не через display.
+      // Громкость: вертикальный поповер над баром; зазор до кнопки перекрыт невидимым мостиком (::after),
+      // чтобы hover не рвался по пути. Скрыт через pointer-events (не блокирует клики), не через display.
       .volume {
           position: relative;
           display: inline-flex;
@@ -273,7 +273,7 @@
 
       .volumePopover {
           position: absolute;
-          bottom: 100%;
+          bottom: calc(100% + calc(20 * var(--rpx)));
           left: 50%;
           display: flex;
           justify-content: center;
@@ -284,10 +284,20 @@
           pointer-events: none;
           transform: translate(-50%, calc(6 * var(--rpx)));
           transition: opacity var(--t-d-fast) var(--t-t-f-ease), transform var(--t-d-fast) var(--t-t-f-ease);
+
+          &::after {
+              content: '';
+              position: absolute;
+              top: 100%;
+              right: 0;
+              left: 0;
+              height: calc(20 * var(--rpx));
+          }
       }
 
+      // Открыт наведением или фокусом с клавиатуры; фокус после клика мышью его не держит.
       .volume:hover .volumePopover,
-      .volume:focus-within .volumePopover {
+      .volume:has(:focus-visible) .volumePopover {
           opacity: 1;
           pointer-events: auto;
           transform: translate(-50%, 0);
