@@ -6,6 +6,13 @@ export type MediaSource = string | { src: string };
 
 export type VideoPlayerObjectFit = 'contain' | 'cover' | 'fill' | 'none' | 'scale_down';
 
+// Источник кадров для превью таймлайна и отрезок времени плеера (сек), который он покрывает.
+export interface VideoPlayerPreviewSource {
+    src: string;
+    from: number;
+    to: number;
+}
+
 // Какие контролы показывать в баре. Управляет только видимостью, не расположением (порядок фиксирован макетом).
 // 'rate' в набор по умолчанию не входит: включается явно через `controls`.
 export type VideoPlayerControlKey = 'play' | 'timeline' | 'time' | 'rate' | 'volume' | 'fullscreen';
@@ -97,6 +104,12 @@ export interface VideoPlayerProps extends SizeInput, RadiusInput, GrowProps {
 
     // Набор видимых контролов. По умолчанию — все, кроме 'rate'.
     controls?: VideoPlayerControlKey[];
+
+    /**
+     * Кадры превью над таймлайном, когда `src` плееру не передают (медиа подставляет внешний
+     * контроллер). Время превью — `t − from`; вне `[from, to]` показывается только время.
+     */
+    preview?: VideoPlayerPreviewSource;
 
     /** Скорости кнопки 'rate' по кругу, клик ставит следующую. По умолчанию `[1, 1.25, 1.5, 2]`. */
     rates?: number[];

@@ -9,6 +9,7 @@ export type {
     VideoPlayerApiRef,
     VideoPlayerController,
     VideoPlayerControlKey,
+    VideoPlayerPreviewSource,
     VideoPlayerObjectFit,
     VideoPlayerProps,
     VideoPlayerSnapshot,

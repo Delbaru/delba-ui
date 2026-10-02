@@ -243,6 +243,11 @@
           border-radius: calc(8 * var(--rpx));
           background: var(--black);
           object-fit: cover;
+          transition: opacity var(--t-d-fast) var(--t-t-f-ease);
+
+          &[data-framed='false'] {
+              opacity: 0;
+          }
       }
 
       // Каретка превью — треугольник, указывающий на курсор (left ставится императивно с офсетом).

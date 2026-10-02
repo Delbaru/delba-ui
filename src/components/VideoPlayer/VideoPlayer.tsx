@@ -21,7 +21,7 @@ import { Video } from '../Video';
 
 import { usePointerRatio } from './usePointerRatio';
 import { useVideoPlayer } from './useVideoPlayer';
-import type { MediaSource, VideoPlayerApi, VideoPlayerApiRef, VideoPlayerControlKey, VideoPlayerProps } from './types';
+import type { MediaSource, VideoPlayerApi, VideoPlayerApiRef, VideoPlayerControlKey, VideoPlayerPreviewSource, VideoPlayerProps } from './types';
 
 import playIcon from '../../../assets/icons/ui/play/style-2/play.svg';
 import pauseIcon from '../../../assets/icons/ui/pause/style-1/pause.svg';
@@ -125,7 +125,7 @@ export interface TimelinePreviewHandle {
 // Превью таймлайна: кадр (скрытое <video>, сикаем throttle-ом через rAF) + время (через Text — родная
 // типографика) + каретка, указывающая на курсор. Позиция бокса и каретки — императивно (без ре-рендера);
 // в state только видимость и целая секунда (ре-рендер лишь при смене секунды).
-function TimelinePreview({ ref, src }: WithRef<{ src?: string }, TimelinePreviewHandle>) {
+function TimelinePreview({ ref, source }: WithRef<{ source?: VideoPlayerPreviewSource }, TimelinePreviewHandle>) {
     const boxRef = useRef<HTMLDivElement | null>(null);
     const caretRef = useRef<HTMLSpanElement | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -134,6 +134,10 @@ function TimelinePreview({ ref, src }: WithRef<{ src?: string }, TimelinePreview
 
     const [visible, setVisible] = useState(false);
     const [sec, setSec] = useState(0);
+    const [framed, setFramed] = useState(true);
+    const sourceRef = useRef(source);
+
+    sourceRef.current = source;
 
     useImperativeHandle(ref, () => ({
         show(ratio, trackWidth, time) {
@@ -151,7 +155,11 @@ function TimelinePreview({ ref, src }: WithRef<{ src?: string }, TimelinePreview
                 }
             }
 
-            pendingRef.current = time;
+            const span = sourceRef.current;
+            const inSpan = !!span && time >= span.from && time <= span.to;
+
+            setFramed((prev) => (prev === inSpan ? prev : inSpan));
+            pendingRef.current = inSpan && span ? time - span.from : null;
 
             if (!rafRef.current && typeof requestAnimationFrame !== 'undefined') {
                 rafRef.current = requestAnimationFrame(() => {
@@ -182,7 +190,7 @@ function TimelinePreview({ ref, src }: WithRef<{ src?: string }, TimelinePreview
 
     return (
         <div ref={boxRef} className={styles.preview} data-visible={visible ? 'true' : 'false'} aria-hidden='true'>
-            {src ? <video ref={videoRef} className={styles.previewVideo} src={src} muted preload='metadata' playsInline /> : null}
+            {source ? <video ref={videoRef} className={styles.previewVideo} data-framed={framed ? 'true' : 'false'} src={source.src} muted preload='auto' playsInline /> : null}
 
             <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{formatClock(sec)}</Text>
 
@@ -206,6 +214,7 @@ export function VideoPlayer({
     objectFit,
     aspectRatio,
     controls,
+    preview,
     rates = DEFAULT_RATES,
     autoPlay,
     interactive = true,
@@ -252,6 +261,10 @@ export function VideoPlayer({
     const visibleControls = useMemo(() => new Set(controls ?? DEFAULT_CONTROLS), [controls]);
     const show = (key: VideoPlayerControlKey) => visibleControls.has(key);
     const resolvedSrc = resolveSrc(src);
+    const previewSource = useMemo(
+        () => preview ?? (resolvedSrc ? { src: resolvedSrc, from: 0, to: Number.POSITIVE_INFINITY } : undefined),
+        [preview, resolvedSrc],
+    );
 
     // --- Таймлайн: заливка + точка-playhead императивно, seek — на контроллер, таймкод — currentSec ---
     const scrub = useCallback((ratio: number) => {
@@ -479,7 +492,7 @@ export function VideoPlayer({
                             aria-valuenow={currentSec}
                             {...timeline.bind}
                         >
-                            <TimelinePreview ref={previewApiRef} src={resolvedSrc} />
+                            <TimelinePreview ref={previewApiRef} source={previewSource} />
 
                             <div className={styles.track}>
                                 {/* Hover-заливка до курсора (другой цвет) — куда перематываешь */}
