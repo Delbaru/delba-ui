@@ -129,10 +129,11 @@ function Layer({ text, mode, staticPrefix, staticSuffix }: LayerProps) {
  *
  * Размеры: в ПОКОЕ вьюпорт всегда `width/height: auto` — grid-стек сам сайзится по входящему слою (уходящий
  * абсолютен и в расчёт не идёт), перенос наследуется от host-Text. Это делает вёрстку нативной и устойчивой
- * к ресайзу/смене брейкпоинта/догрузке шрифта — без ResizeObserver и замеров-зеркал. Чтобы контейнер при
+ * к ресайзу/смене брейкпоинта/догрузке шрифта — без замеров-зеркал. Чтобы контейнер при
  * смене текста НЕ щёлкал, на время свопа делаем transient-FLIP: пиним старый размер → транзишеним к новому
  * (в такт волне) → по завершении РЕЛИЗИМ обратно в auto. Пин живёт только 0.37s, поэтому вне свопа (и при
  * любом ресайзе) размер честно нативный. Первый рендер и reduced-motion — без анимации размера.
+ * ResizeObserver здесь только ЗАПОМИНАЕТ размер покоя (`from` следующего свопа), размер он не задаёт.
  */
 export function TextReveal({ content, options }: TextAnimationContext<TextRevealOptions>) {
   const text = flattenAnimatableText(content) ?? '';
@@ -152,8 +153,32 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
   });
 
   const viewportRef = useRef<HTMLSpanElement | null>(null);
-  // Последний натуральный размер вьюпорта (для старта FLIP при следующем свопе). Обновляется на каждом коммите.
+  // Последний натуральный размер вьюпорта (для старта FLIP при следующем свопе). В покое его пишет
+  // ResizeObserver, во время свопа — сам своп (цель `to`).
   const lastSizeRef = useRef<{ w: number; h: number } | null>(null);
+  // Идёт своп: ResizeObserver молчит, иначе промежуточные кадры глайда затёрли бы `to`.
+  const swappingRef = useRef(false);
+  // На вьюпорте висит FLIP-пин, который ещё не отпустили: только тогда уборке есть что релизить.
+  const pinnedRef = useRef(false);
+
+  // Размер покоя снимаем ResizeObserver'ом, а НЕ синхронным замером в layout-эффекте монтирования: замер
+  // чередовался с записью стилей у каждого экземпляра и форсил пересчёт стилей и раскладки всего документа
+  // (31 экземпляр на главной = 31 принудительная раскладка в задаче гидрации). Наблюдатель отдаёт размеры
+  // пачкой после штатной раскладки кадра, ничего не форсируя. contentRect — вёрсточный размер (трансформы
+  // предков на него не влияют, дробность сохранена) — та же система координат, что getComputedStyle ниже;
+  // у скрытого узла он 0×0, как и `|| 0` в rect().
+  useLayoutEffect(() => {
+    const vp = viewportRef.current;
+    if (!vp) return undefined;
+    const ro = new ResizeObserver((entries) => {
+      if (swappingRef.current) return;
+      const entry = entries[entries.length - 1];
+      if (!entry) return;
+      lastSizeRef.current = { w: entry.contentRect.width, h: entry.contentRect.height };
+    });
+    ro.observe(vp);
+    return () => ro.disconnect();
+  }, []);
 
   // Размеры гоним столько же, сколько живёт волна (dur + капнутый разброс по самой длинной строке), иначе
   // контейнер садится раньше, чем догорают буквы, и уходящий текст торчит за краем.
@@ -165,10 +190,34 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
     const vp = viewportRef.current;
     if (!vp) return undefined;
 
-    // Снимаем возможный остаточный пин от прошлого свопа и меряем два натуральных размера БЕЗ анимации:
-    //   natural — как текст ляжет по родителю (наследуя white-space: перенос → высота растёт);
-    //   line    — принудительно в одну строку (nowrap).
-    // Многострочный, только если натуральная высота заметно выше однострочной (текст реально переносится).
+    // Свопа нет (первый рендер / уборка ушедшего слоя): анимации в дереве не осталось, `--t` не читает
+    // никто. На монтировании пина нет — стили не трогаем и НЕ меряем: размер покоя (`from` следующего
+    // свопа) снимет ResizeObserver выше (Frontend.md §12 «Скролл главной»). На уборке релизим пин,
+    // если таймер релиза не успел (его гасит смена `previous`), — с принудительной раскладкой между
+    // `transition: none` и возвратом транзишена: под унаследованным `interpolate-size: allow-keywords`
+    // переход px → auto иначе анимировался бы. Это раз на своп, не на монтирование.
+    if (previous === null) {
+      swappingRef.current = false;
+      if (pinnedRef.current) {
+        pinnedRef.current = false;
+        vp.style.transition = 'none';
+        vp.style.width = '';
+        vp.style.height = '';
+        vp.style.whiteSpace = '';
+        void vp.offsetWidth;
+        vp.style.transition = '';
+      }
+      return undefined;
+    }
+    swappingRef.current = true;
+
+    // Снимаем возможный остаточный пин от прошлого свопа и меряем натуральный размер БЕЗ анимации:
+    //   natural — как текст ляжет по родителю (наследуя white-space: перенос → высота растёт).
+    // Однострочный размер (nowrap) отдельно НЕ меряем: если входящий текст не переносится, inline-grid
+    // сайзится по max-content, и natural побайтово равен nowrap-замеру (одно слово шире родителя — тоже:
+    // min-content = max-content). Переносится ли текст, видно по тому, что первое и последнее слово
+    // входящего слоя легли на разные строки, — это чтение offsetTop на уже чистой после natural раскладке,
+    // второго пересчёта оно не стоит (D-199: был второй rect() с записью nowrap между ними).
     //
     // Меряем getComputedStyle, а НЕ getBoundingClientRect: замеренное мы пишем обратно как вёрсточные
     // пиксели (vp.style.width/height), а rect отдаёт бокс ПОСЛЕ трансформов предков. Под живым
@@ -190,29 +239,24 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
     vp.style.width = '';
     vp.style.height = '';
     vp.style.whiteSpace = '';
-
-    // Свопа нет (первый рендер / уборка ушедшего слоя): анимации в дереве не осталось, `--t` не
-    // читает никто, а замеры упираются в ранний возврат ниже. Оставляем один — он нужен как `from`
-    // следующему свопу (Frontend.md §12 «Скролл главной»).
-    if (previous === null) {
-        lastSizeRef.current = rect();
-        vp.style.transition = '';
-        return undefined;
-    }
+    pinnedRef.current = false;
 
     const natural = rect();
-    vp.style.whiteSpace = 'nowrap';
-    const line = rect();
-    vp.style.whiteSpace = '';
+    const words = vp.querySelectorAll<HTMLElement>('[data-reveal-mode="in"] .ui-reveal-word');
+    const firstWord = words[0];
+    const lastWord = words[words.length - 1];
+    const wraps = firstWord !== undefined && lastWord !== undefined && lastWord.offsetTop > firstWord.offsetTop;
     // Многострочный, если переносится ТЕКУЩИЙ текст ИЛИ переносился предыдущий (from выше одной строки). Второе
     // важно для схлопывания многострочный→короткий: цель однострочная, но пин-nowrap развернул бы уходящий
     // многострочный слой в одну строку (и обрезал по ширине). При многострочном ширину не трогаем (width: auto).
-    const wasMultiline = lastSizeRef.current !== null && lastSizeRef.current.h > line.h * 1.5;
-    const multiline = natural.h > line.h * 1.5 || wasMultiline;
+    // Высота одной строки = natural.h, когда текущий текст не переносится; когда переносится, multiline и так true.
+    const wasMultiline = lastSizeRef.current !== null && lastSizeRef.current.h > natural.h * 1.5;
+    const multiline = wraps || wasMultiline;
 
     // Однострочный лейбл: цель — ширина одной строки, height ≈ 1 строка. Многострочный: ширину не трогаем
-    // (течёт по родителю, width: auto), плавно ведём только высоту (смена числа строк).
-    const to = multiline ? natural : line;
+    // (течёт по родителю, width: auto), плавно ведём только высоту (смена числа строк). В обоих случаях цель —
+    // natural: у непереносящегося текста он и есть однострочный размер (см. выше).
+    const to = natural;
     const from = lastSizeRef.current;
     lastSizeRef.current = to;
 
@@ -266,6 +310,7 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
     if (animH) vp.style.height = `${from.h}px`;
     void vp.offsetWidth;
     vp.style.transition = '';
+    pinnedRef.current = true;
     if (animW) vp.style.width = `${to.w}px`;
     if (animH) vp.style.height = `${to.h}px`;
 
@@ -274,6 +319,7 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
     // collapsing): при схлопывании откладываем старт ресайза, чтобы уходящий текст успел погаснуть.
     const releaseMs = (Math.max(sizeDelay, duration * IN_DELAY_FACTOR) + duration + span) * 1000 + MOTION_END_BUFFER_MS;
     const timer = window.setTimeout(() => {
+      pinnedRef.current = false;
       vp.style.transition = 'none';
       vp.style.width = '';
       vp.style.height = '';
