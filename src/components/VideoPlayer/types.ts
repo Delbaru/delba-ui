@@ -7,7 +7,8 @@ export type MediaSource = string | { src: string };
 export type VideoPlayerObjectFit = 'contain' | 'cover' | 'fill' | 'none' | 'scale_down';
 
 // Какие контролы показывать в баре. Управляет только видимостью, не расположением (порядок фиксирован макетом).
-export type VideoPlayerControlKey = 'play' | 'timeline' | 'time' | 'volume' | 'fullscreen';
+// 'rate' в набор по умолчанию не входит: включается явно через `controls`.
+export type VideoPlayerControlKey = 'play' | 'timeline' | 'time' | 'rate' | 'volume' | 'fullscreen';
 
 // Дискретное состояние плеера — реактивная часть (ре-рендеры редкие). Тикающее currentTime сюда НЕ входит.
 export interface VideoPlayerSnapshot {
@@ -94,8 +95,11 @@ export interface VideoPlayerProps extends SizeInput, RadiusInput, GrowProps {
     objectFit?: ResponsiveValue<VideoPlayerObjectFit>;
     aspectRatio?: ResponsiveValue<string>;
 
-    // Набор видимых контролов. По умолчанию — все.
+    // Набор видимых контролов. По умолчанию — все, кроме 'rate'.
     controls?: VideoPlayerControlKey[];
+
+    /** Скорости кнопки 'rate' по кругу, клик ставит следующую. По умолчанию `[1, 1.25, 1.5, 2]`. */
+    rates?: number[];
     autoPlay?: boolean;
 
     // false — «ведомый» режим: без бара управления и кликов по видео (только медиа + лейбл). Такой

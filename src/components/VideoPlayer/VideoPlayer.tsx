@@ -34,6 +34,19 @@ const c = createLayoutClasses(styles);
 
 const DEFAULT_CONTROLS: VideoPlayerControlKey[] = ['play', 'timeline', 'time', 'volume', 'fullscreen'];
 
+const DEFAULT_RATES = [1, 1.25, 1.5, 2];
+
+// Следующая скорость по кругу; текущей нет в списке — первая.
+function nextRate(rates: number[], current: number): number {
+    const index = rates.indexOf(current);
+
+    return rates[(index + 1) % rates.length] ?? current;
+}
+
+function formatRate(rate: number): string {
+    return `${String(rate).replace('.', ',')}×`;
+}
+
 // Иконки бара — Solar bold, как в макете (node 3284:22814).
 const ICON = {
     play: assetUrl(playIcon),
@@ -193,6 +206,7 @@ export function VideoPlayer({
     objectFit,
     aspectRatio,
     controls,
+    rates = DEFAULT_RATES,
     autoPlay,
     interactive = true,
     className,
@@ -484,6 +498,12 @@ export function VideoPlayer({
                         <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>
                             {formatClock(currentSec)} / {formatClock(Math.floor(state.duration))}
                         </Text>
+                    ) : null}
+
+                    {show('rate') ? (
+                        <button type='button' className={cx(styles.button, styles.rate)} aria-label={`Скорость ${formatRate(state.rate)}`} onClick={() => player.setRate(nextRate(rates, state.rate))}>
+                            <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{formatRate(state.rate)}</Text>
+                        </button>
                     ) : null}
 
                     {show('volume') ? (
