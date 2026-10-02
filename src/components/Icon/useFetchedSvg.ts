@@ -50,6 +50,13 @@ function getResolvedSvg(url: string | null, normalizeContent: boolean): ParsedSv
   return null;
 }
 
+// Реестр впечён в бандл и регистрируется до рендера и на сервере, и на клиенте — расхождения нет.
+function getInlineSvg(url: string | null, normalizeContent: boolean): ParsedSvg | null {
+  if (!url || !inlineSvgRegistry.has(url)) return null;
+
+  return getResolvedSvg(url, normalizeContent);
+}
+
 function fetchSvgCached(url: string, normalizeContent = false): Promise<ParsedSvg> {
   const cacheKey = svgCacheKey(url, normalizeContent);
 
@@ -99,15 +106,18 @@ export interface FetchedSvgState {
   rootFill?: string;
 }
 
-// Кэш в первом рендере — только вне гидрации: сервер кэша не видит, и иконка, догруженная до гидрации
-// отложенной (Suspense) секции, дала бы расхождение, которое React не чинит, — пустой <svg> навсегда.
+// Кэш загруженных в первом рендере — только вне гидрации: сервер его не видит, и иконка, догруженная до
+// гидрации отложенной (Suspense) секции, дала бы расхождение, которое React не чинит, — пустой <svg>
+// навсегда. Инлайн-реестр этого ограничения не несёт: он одинаков на сервере и клиенте.
 // Гидрацию узнаём по снимку: пока она идёт, useSyncExternalStore отдаёт серверный (false).
 const noopSubscribe = () => () => {};
 
 export function useFetchedSvg(url: string | null, normalizeContent = false): FetchedSvgState {
   const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const [state, setState] = useState<FetchedSvgState>(
-    () => (hydrated && getResolvedSvg(url, normalizeContent)) || { content: null, viewBox: undefined, rootFill: undefined }
+    () =>
+      getInlineSvg(url, normalizeContent) ||
+      (hydrated && getResolvedSvg(url, normalizeContent)) || { content: null, viewBox: undefined, rootFill: undefined }
   );
 
   useEffect(() => {

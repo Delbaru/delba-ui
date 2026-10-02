@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
-import { prefersReducedMotion } from '../../../../core';
+import { clamp01, prefersReducedMotion } from '../../../../core';
 
 export interface UseCountUpOptions {
   duration?: number;
@@ -21,7 +21,8 @@ function runCount(to: number, start: number, duration: number, onFrame: (value: 
   let id = 0;
 
   const tick = (now: number) => {
-    const progress = Math.min((now - startTime) / duration, 1);
+    // Метка кадра rAF бывает раньше performance.now() из эффекта: без нижней границы (1-t)**4 > 1 и число уходит в минус.
+    const progress = clamp01((now - startTime) / duration);
     onFrame(Math.round(start + diff * easeOutQuart(progress)));
     if (progress < 1) id = requestAnimationFrame(tick);
   };

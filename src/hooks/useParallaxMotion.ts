@@ -300,17 +300,18 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
       return;
     }
 
-    if (typeof window !== 'undefined') {
+    // Без конфига кадр не нужен: включение пропом позже ставит смещение эффектом [config] через syncTargetFromViewport.
+    if (typeof window !== 'undefined' && configRef.current) {
       requestAnimationFrame(() => {
         const currentNode = nodeRef.current;
         if (!currentNode || currentNode !== node) return;
 
+        const nextConfig = configRef.current;
+        if (!nextConfig) return;
+
         const rect = currentNode.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
         if (!viewportHeight || !rect.height) return;
-
-        const nextConfig = configRef.current;
-        if (!nextConfig) return;
 
         const progress = clamp((viewportHeight - rect.top) / (viewportHeight + rect.height), 0, 1);
         const centeredProgress = progress * 2 - 1;
