@@ -10,6 +10,7 @@ import {
 import type React from 'react';
 import styles from './Textarea.module.scss';
 import { cx, createLayoutClasses, stateProps, stateLinkProps, useFieldControl, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
+import { resolveSeedField } from '../../core/base/seed';
 import { Text } from '../Text';
 import { Flex } from '../Flex';
 import { Skeleton } from '../Skeleton';
@@ -44,6 +45,14 @@ export interface TextareaProps
 
     placeholder?: string;
     placeholderColor?: string;
+    /**
+     * Значение по умолчанию, которое ведёт себя как подсказка: пока в поле стоит `seed`, оно
+     * рисуется цветом подсказки и исчезает по фокусу, уход из пустого поля возвращает `seed`.
+     *
+     * Нужен там, где модель уже держит значение по умолчанию: засеянное значение иначе неотличимо
+     * от ответа человека. Модель не меняется, и после blur получает валидное значение.
+     */
+    seed?: string;
     /**
      * Значение ещё грузится — вместо него скелетон (см. `Skeleton`, §4).
      *
@@ -134,6 +143,7 @@ export function Textarea({
     color,
     placeholder,
     placeholderColor,
+    seed,
     loading = false,
     label,
     labelColor,
@@ -182,6 +192,9 @@ export function Textarea({
     });
 
     const showCounter = showCount ?? (length?.max != null);
+    // Проп `seed` — тот же глагол, что у `Input`: пока в поле стоит значение по умолчанию, в DOM
+    // отдаётся ПУСТОЕ значение, а рисует его `::placeholder`, который браузер убирает по фокусу.
+    const seedField = resolveSeedField({ seed, value: currentValue, placeholder });
     // Подпись одна на оба места: разъехаться формату «сколько/из скольких» негде.
     const counterLabel = `${currentValue.length}/${length?.max ?? 1000}`;
     const [isFieldFocused, setIsFieldFocused] = useState(false);
@@ -190,21 +203,58 @@ export function Textarea({
     const textareaDescribedBy = [rest['aria-describedby'], helperTextId].filter(Boolean).join(' ') || undefined;
     const inlineError = displayError && !isFieldFocused ? displayError : undefined;
 
+    // Событие с новым значением: полю seed отдаёт модель значение, которого в DOM ещё нет
+    // (там пусто, пока рисуется подсказка), поэтому значение доезжает синтетическим событием.
+    const createSeedEvent = useCallback(
+        <T extends ChangeEvent<HTMLTextAreaElement> | FocusEvent<HTMLTextAreaElement>>(
+            value: string,
+            baseEvent?: T,
+        ): T => {
+            const node = innerRef.current;
+
+            return {
+                ...(baseEvent ?? {}),
+                target: { ...(node ?? {}), value },
+                currentTarget: { ...(node ?? {}), value },
+            } as T;
+        },
+        [innerRef]
+    );
+
+    const commitSeedValue = useCallback(
+        (value: string) => {
+            if (!isControlled) setUncontrolledValue(value);
+            onChange?.(createSeedEvent<ChangeEvent<HTMLTextAreaElement>>(value));
+        },
+        [createSeedEvent, isControlled, onChange, setUncontrolledValue]
+    );
+
     const handleFocus = useCallback(
         (e: FocusEvent<HTMLTextAreaElement>) => {
             setIsFieldFocused(true);
+            // Значение по умолчанию — подсказка, а не данные: по фокусу поле пустеет, и модель
+            // получает ''. Иначе дописывание к нему давало бы «01» вместо «1».
+            if (seedField.focusValue !== undefined) commitSeedValue(seedField.focusValue);
             onFocus?.(e);
         },
-        [onFocus]
+        [commitSeedValue, onFocus, seedField.focusValue]
     );
 
     const handleBlur = useCallback(
         (e: FocusEvent<HTMLTextAreaElement>) => {
             setIsFieldFocused(false);
+            // Уход из пустого поля возвращает значение по умолчанию: после blur модель обязана
+            // получить валидное значение, а не «нет значения».
+            if (seedField.blurValue !== undefined) {
+                commitSeedValue(seedField.blurValue);
+                setInternalError(validateValue(seedField.blurValue));
+                onBlur?.(createSeedEvent<FocusEvent<HTMLTextAreaElement>>(seedField.blurValue, e));
+                return;
+            }
             setInternalError(validateValue(e.target.value));
             onBlur?.(e);
         },
-        [validateValue, setInternalError, onBlur]
+        [commitSeedValue, createSeedEvent, onBlur, seedField.blurValue, setInternalError, validateValue]
     );
 
     const handleChange = useCallback(
@@ -230,7 +280,7 @@ export function Textarea({
         ...rest,
         id,
         required,
-        placeholder,
+        placeholder: seedField.placeholder,
         rows,
         // Отключаем автоподсказки/автозаполнение браузера по умолчанию; поле может вернуть его явным autoComplete.
         autoComplete: rest.autoComplete ?? 'off',
@@ -243,7 +293,7 @@ export function Textarea({
         onChange: handleChange,
         onFocus: handleFocus,
         onBlur: handleBlur,
-        ...(isControlled ? { value: _value } : {}),
+        ...(isControlled ? { value: seedField.displayValue } : {}),
     };
     const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
     const setWrapperRef = useCallback((node: HTMLElement | null) => {

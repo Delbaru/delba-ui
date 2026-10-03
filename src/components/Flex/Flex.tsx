@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { useEffect, useImperativeHandle, useRef, useSyncExternalStore, type CSSProperties } from 'react';
 import type React from 'react';
 import { boxLayout, containerClass, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ContainerProp, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
+import type { Transition } from '../../core';
 import type { RevealProps } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
-import { usePresence } from '../../hooks/usePresence';
+import { useCollapseMotion, type CollapseHandle } from '../../hooks/useCollapseMotion';
 import { useSwapTransition } from '../../hooks/useSwapTransition';
 import { resolveResponsive } from '../../core/base/responsive';
 
@@ -56,17 +57,17 @@ export interface FlexProps
   rowGap?: ResponsiveValue<number>;
   columnGap?: ResponsiveValue<number>;
 
-  /** Опт-ин сворачивание по высоте (grid-rows) с presence: true — контент монтируется и плавно
-   *  раскрывается, false — плавно сворачивается и УДАЛЯЕТСЯ из DOM по завершении анимации.
-   *  Состояние держите снаружи (Redux/вью-модель) — размонтирование его не теряет. */
+  /** Опт-ин сворачивание по высоте с presence: true — контент монтируется и плавно раскрывается,
+   *  false — плавно сворачивается и УДАЛЯЕТСЯ из DOM по завершении анимации. Ход ведёт WAAPI
+   *  (`animateCollapse`). Состояние держите снаружи (Redux/вью-модель) — размонтирование его не теряет. */
   collapse?: boolean;
   /** Верхний отступ сворачиваемого блока (дизайн-единицы, responsive — [d, m, t]).
    *  Анимируется вместе с высотой, поэтому заменяет родительский gap. Работает с collapse. */
   collapseGap?: ResponsiveValue<number>;
-  /** Колбэк по завершении анимации сворачивания/раскрытия (transitionend по grid-template-rows).
-   *  Нужен потребителям, которым важен момент «анимация завершилась» (доизмерение SVG-коннекторов,
-   *  скролл/фокус после раскрытия, размонтирование контента после сворачивания). Работает с collapse. */
-  onCollapseEnd?: (event: React.TransitionEvent<HTMLDivElement>) => void;
+  /** Колбэк по завершении анимации сворачивания/раскрытия. Нужен потребителям, которым важен момент
+   *  «анимация завершилась» (доизмерение SVG-коннекторов, скролл/фокус после раскрытия). Прерванный
+   *  ход его НЕ зовёт. Аргумента больше нет (ход идёт не на CSS-переходе). Работает с collapse. */
+  onCollapseEnd?: (event?: React.TransitionEvent<HTMLDivElement>) => void;
   /** Плавное затухание содержимого (opacity 0↔1) синхронно с высотой. Работает с collapse. */
   collapseFade?: boolean;
   /** После завершения раскрытия снять overflow:hidden с клипа (для выпадающих меню/дропдаунов
@@ -75,9 +76,15 @@ export interface FlexProps
   /** Узел, ПОЯВИВШИЙСЯ от действия (новая строка списка), выезжает вместо появления кадром.
    *  Опт-ин: иначе первый кадр списка стал бы парадом раскрытий. Читается при монтировании. */
   collapseAppear?: boolean;
-  /** Ось сворачивания: 'row' — по высоте (grid-template-rows, по умолчанию), 'column' — по ширине
-   *  (grid-template-columns). collapseGap при этом анимирует padding-left вместо padding-top. Работает с collapse. */
+  /** Ось сворачивания: 'row' — по высоте (по умолчанию), 'column' — по ширине. collapseGap при этом
+   *  анимирует padding-left вместо padding-top. Работает с collapse. */
   collapseAxis?: 'row' | 'column';
+  /** Ручка сворачивания: `ref.current.transition` — ход, который вызвала последняя смена collapse.
+   *  Нужна сценарию, которому важно дождаться хода (`await ref.current.transition`) или собрать его
+   *  с чужими через `motion.together`. Узлом ручка НЕ командует: открыто/закрыто решает состояние. */
+  collapseRef?: React.Ref<CollapseHandle>;
+  /** Тот же ход, но колбэком — когда ручку некуда положить. Зовётся в момент старта. */
+  onTransition?: (transition: Transition) => void;
   /** Закрытый блок ОСТАЁТСЯ в DOM (опт-ин): после сворачивания обёртка получает `hidden="until-found"` —
    *  текст видят поисковики и Ctrl+F, а браузер, найдя в нём совпадение, шлёт `beforematch`
    *  (см. onCollapseFound). Где `until-found` нет — обычный `hidden` + `inert`. Работает с collapse. */
@@ -120,6 +127,7 @@ export function Flex({
   style,
   gap, rowGap, columnGap,
   collapse, collapseGap, onCollapseEnd, collapseFade, collapseOverflowVisible, collapseAxis, collapseAppear, collapseKeepMounted, onCollapseFound,
+  collapseRef, onTransition,
   animation, transitionKey,
   dir, justify, align, wrap,
   scrollFade,
@@ -196,6 +204,8 @@ export function Flex({
       keepMounted={collapseKeepMounted}
       onFound={onCollapseFound}
       onCollapseEnd={onCollapseEnd}
+      onTransition={onTransition}
+      handleRef={collapseRef}
     >
       {content}
     </CollapseWrap>
@@ -212,7 +222,9 @@ interface CollapseWrapProps {
   clip?: boolean;
   keepMounted?: boolean;
   onFound?: () => void;
-  onCollapseEnd?: (event: React.TransitionEvent<HTMLDivElement>) => void;
+  onCollapseEnd?: (event?: React.TransitionEvent<HTMLDivElement>) => void;
+  onTransition?: (transition: Transition) => void;
+  handleRef?: React.Ref<CollapseHandle>;
   children: React.ReactNode;
 }
 
@@ -221,39 +233,45 @@ interface CollapseWrapProps {
 const noSubscribe = () => () => {};
 const supportsUntilFound = () => 'onbeforematch' in HTMLElement.prototype;
 
-// Обёртка сворачивания на presence-движке (usePresence): контент монтируется при раскрытии и
-// УДАЛЯЕТСЯ из DOM по завершении сворачивания. Внешний grid анимирует grid-template-rows (0fr↔1fr) +
-// padding-top. settled — раскрытие доехало: только тогда снимаем клип (overflowVisibleWhenOpen) и
-// transition рамки. Считается в рендере, а не эффектом: иначе первый кадр сворачивания шёл бы без них.
-// keepMounted: «размонтирован» presence значит «спрятан атрибутом hidden», узел остаётся.
-function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWhenOpen, appear, clip, keepMounted, onFound, onCollapseEnd, children }: CollapseWrapProps) {
-  const { mounted, open: visualOpen, onTransitionEnd: onPresenceTransitionEnd, property, ref } = usePresence<HTMLDivElement>(open, axis, appear);
-  const [settledOpen, setSettledOpen] = useState(open);
-  const settled = visualOpen && settledOpen;
+// Обёртка сворачивания: состояния покоя держит CSS (data-open), ход между ними ведёт WAAPI
+// (useCollapseMotion → animateCollapse). Контент монтируется при раскрытии и УДАЛЯЕТСЯ из DOM по
+// завершении сворачивания. settled — раскрытие доехало: только тогда снимаем клип
+// (overflowVisibleWhenOpen). keepMounted: «размонтирован» значит «спрятан атрибутом hidden».
+function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWhenOpen, appear, clip, keepMounted, onFound, onCollapseEnd, onTransition, handleRef, children }: CollapseWrapProps) {
+  const { mounted, visualOpen, settled, wrapRef, innerRef, handle } = useCollapseMotion<HTMLDivElement>({
+    open,
+    axis,
+    appear,
+    // По высоте в ноль идёт сам Flex (его рамка и радиус едут целиком); minH сжаться ему не даст,
+    // и по ширине тоже — тогда размер ведёт внутренний слой, он же и клипает.
+    sizeOnInner: clip === true || axis === 'column',
+    fade,
+    keepMounted,
+    onEnd: onCollapseEnd,
+    onTransition,
+  });
   const untilFound = useSyncExternalStore(noSubscribe, supportsUntilFound, () => false);
   const onFoundRef = useRef(onFound);
-  const concealed = keepMounted && !mounted;
+  const concealed = keepMounted === true && !mounted;
+
+  useImperativeHandle(handleRef, () => handle, [handle]);
 
   useEffect(() => {
     onFoundRef.current = onFound;
   });
 
   useEffect(() => {
-    if (!visualOpen) setSettledOpen(false);
-  }, [visualOpen]);
-
-  useLayoutEffect(() => {
-    const node = ref.current;
+    const node = wrapRef.current;
     if (!node || !keepMounted || !untilFound) return;
     if (concealed) node.setAttribute('hidden', 'until-found');
     else node.removeAttribute('hidden');
-  }, [ref, keepMounted, untilFound, concealed]);
+  }, [wrapRef, keepMounted, untilFound, concealed]);
 
   // Браузер уже снял hidden и сразу после события прокрутит к совпадению — к этому моменту блок
-  // обязан стоять раскрытым. Состояние владельца дойдёт через рендер и два кадра presence, поэтому
-  // раскрытие ставим прямо в DOM без transition (data-instant); React потом пишет тот же data-open.
+  // обязан стоять раскрытым. Состояние владельца дойдёт через рендер, поэтому раскрытие ставим
+  // прямо в DOM без хода (data-instant); React потом пишет тот же data-open.
   useEffect(() => {
-    const node = ref.current;
+    const node = wrapRef.current;
     if (!node || !keepMounted) return undefined;
     const onBeforeMatch = () => {
       node.setAttribute('data-instant', '');
@@ -262,31 +280,19 @@ function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWh
     };
     node.addEventListener('beforematch', onBeforeMatch);
     return () => node.removeEventListener('beforematch', onBeforeMatch);
-  }, [ref, keepMounted]);
+  }, [wrapRef, keepMounted]);
 
-  // Мгновенное раскрытие transitionend не пришлёт — «доехало» ставим сами и возвращаем анимацию.
+  // Мгновенное раскрытие хода не вызывало — метку снимаем, когда состояние React догнало DOM.
   useEffect(() => {
-    const node = ref.current;
-    if (!node || !visualOpen || !node.hasAttribute('data-instant')) return undefined;
-    setSettledOpen(true);
-    const frame = requestAnimationFrame(() => node.removeAttribute('data-instant'));
-    return () => cancelAnimationFrame(frame);
-  }, [ref, visualOpen]);
+    const node = wrapRef.current;
+    if (!node || !visualOpen || !node.hasAttribute('data-instant')) return;
+    node.removeAttribute('data-instant');
+  }, [wrapRef, visualOpen]);
 
   if (!mounted && !keepMounted) return null;
 
-  const handleTransitionEnd = (event: React.TransitionEvent<HTMLDivElement>) => {
-    // Жизненный цикл presence (размонтирование по окончании сворачивания).
-    onPresenceTransitionEnd(event);
-    // Игнорируем всплывшие transitionend дочерних узлов (напр. opacity-fade) и не-осевые свойства.
-    if (event.target !== event.currentTarget) return;
-    if (event.propertyName !== property) return;
-    if (visualOpen) setSettledOpen(true);
-    onCollapseEnd?.(event);
-  };
-
   // collapseGap → responsive CSS-переменные (--collapse-gap-d/-m/-t); null-брейкпоинты
-  // наследуют desktop в SCSS. Padding-top на обёртке анимируется вместе с высотой.
+  // наследуют desktop в SCSS. Зазор движок меряет у CSS — в JS значения не дублируются.
   const collapseStyle: Record<string, string> = {};
   if (collapseGap != null) {
     const [gapD, gapM, gapT] = resolveResponsive(collapseGap);
@@ -300,17 +306,19 @@ function CollapseWrap({ open, axis = 'row', collapseGap, fade, overflowVisibleWh
 
   return (
     <div
-      ref={ref}
+      ref={wrapRef}
       className={cx('ui-collapse', fade && 'ui-collapse-fade')}
       data-axis={axis}
       data-open={visualOpen || undefined}
       data-settled={settled || undefined}
       hidden={(concealed && !untilFound) || undefined}
       inert={!visualOpen && !searchable}
-      onTransitionEnd={handleTransitionEnd}
       style={collapseStyle as CSSProperties}
     >
-      <div className={cx('ui-collapse-inner', clip && 'ui-collapse-clip', overflowVisibleWhenOpen && settled && 'ui-collapse-visible')}>
+      <div
+        ref={innerRef}
+        className={cx('ui-collapse-inner', clip && 'ui-collapse-clip', overflowVisibleWhenOpen && settled && 'ui-collapse-visible')}
+      >
         {children}
       </div>
     </div>

@@ -107,13 +107,6 @@ const MEDIA_TYPES: [MediaTypeOption, ...MediaTypeOption[]] = [
     },
 ];
 
-/**
- * Внутренний отступ поповера — свой у каждого вида: у вкладок снизу воздуха больше (там кнопка
- * и подсказка), у дроп-зоны поплотнее, иначе панель уезжает под пилюлю двухэтажной коробкой.
- */
-const POPOVER_PAD_TABS: [number, number, number, number] = [8, 8, 24, 8];
-const POPOVER_PAD_DROPZONE: [number, number, number, number] = [12, 12, 16, 12];
-
 function readFileAsDataUrl(file: File) {
     return new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -397,7 +390,6 @@ export function MediaDropDown({
     const previewIsPlay = isPlayableMedia(selectedItem?.type);
 
     const setRefs = useMergedRefs(rootRef, ref);
-    const popoverPad = isDropzone ? POPOVER_PAD_DROPZONE : POPOVER_PAD_TABS;
     const fileAccept = isDropzone ? undefined : selectedMedia.accept;
 
     return (
@@ -504,7 +496,10 @@ export function MediaDropDown({
                         r={[16, 16, 16]}
                         tlr={[0, 0, 0]}
                         trr={[0, 0, 0]}
-                        p={popoverPad}
+                        // Внутренний отступ — свой у каждого вида: у вкладок снизу воздуха больше
+                        // (там кнопка и подсказка), у дроп-зоны поплотнее, иначе панель уезжает под
+                        // пилюлю двухэтажной коробкой.
+                        p={isDropzone ? [12, 12, 16, 12] : [8, 8, 24, 8]}
                     >
                         {isDropzone ? (
                             <Flex dir={['column', 'column', 'column']} gap={[12, 12, 12]} w={['100%', null, null]}>

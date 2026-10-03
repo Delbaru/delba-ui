@@ -53,6 +53,18 @@ export interface InputProps
 
     placeholder?: string;
     placeholderColor?: string;
+    /**
+     * Значение по умолчанию, которое ведёт себя как подсказка: пока в поле стоит `seed`, оно
+     * рисуется цветом подсказки и исчезает по фокусу, после чего уход из пустого поля возвращает
+     * `seed` назад.
+     *
+     * Нужен там, где модель уже держит значение по умолчанию (`value ?? '0'` у «Штрафа», `1` у
+     * баллов): засеянное значение иначе неотличимо от ответа человека — в поле с «0» ввод «1»
+     * даёт «01». Модель при этом не меняется, и после blur получает валидное значение.
+     * Проп `placeholderColor` тут ни при чём: подсказка всегда рисуется токеном
+     * `--field-placeholder-color`.
+     */
+    seed?: string;
     label?: string;
     labelColor?: string;
     comment?: string;
@@ -161,6 +173,7 @@ export function Input({
     color,
     placeholder,
     placeholderColor,
+    seed,
     label,
     labelColor,
     comment,
@@ -226,6 +239,7 @@ export function Input({
         validateProp,
         comment,
         placeholder,
+        seed,
         length,
         numberOptions,
         phoneFormat,

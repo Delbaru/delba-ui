@@ -316,7 +316,7 @@ export function Select({
                             color: showInlineError
                                 ? 'var(--error)'
                                 : !hasSelectedValue
-                                    ? placeholderColor ?? 'var(--text-muted)'
+                                    ? placeholderColor ?? 'var(--field-placeholder-color, var(--text-muted))'
                                     : undefined,
                         }}
                     >

@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState, type ChangeEvent, type FocusEve
 import type React from 'react';
 
 import { useFieldControl } from '../../../core';
+import { resolveSeedField } from '../../../core/base/seed';
 import * as phoneMask from './phone-mask';
 import * as datePicker from './date-picker';
 import * as timeMask from './time-mask';
@@ -129,6 +130,8 @@ interface UseInputBehaviorOptions {
   validateProp?: (value: string) => string | undefined;
   comment?: string;
   placeholder?: string;
+  /** Значение по умолчанию, которое ведёт себя как подсказка (см. `resolveSeedField`). */
+  seed?: string;
   length?: { min?: number; max?: number };
   numberOptions?: number[];
   phoneFormat?: phoneMask.PhoneFormat;
@@ -152,6 +155,7 @@ export function useInputBehavior({
   validateProp,
   comment,
   placeholder,
+  seed,
   length,
   numberOptions,
   phoneFormat = phoneMask.DEFAULT_PHONE_FORMAT,
@@ -247,6 +251,11 @@ export function useInputBehavior({
     isEmpty: isPhone ? (value: string) => phoneMask.isEmpty(value, phoneFormat) : undefined,
   });
 
+  // `seed` — значение по умолчанию, ведущее себя как подсказка. Пока оно стоит в поле, в DOM
+  // отдаётся ПУСТОЕ значение, а рисует его `::placeholder`, который браузер сам убирает по фокусу.
+  // У полей с маской (телефон/дата/время) подсказкой служит сама маска, поэтому seed там не участвует.
+  const seedField = resolveSeedField({ seed, value: currentValue, placeholder });
+
   const helperText = displayError ?? comment;
   const helperTextColor = displayError ? 'var(--error)' : 'var(--text-muted)';
 
@@ -297,6 +306,12 @@ export function useInputBehavior({
     } as T;
   };
 
+  // Значение в модель одним путём: локальный черновик неуправляемого поля и `onChange` управляемого.
+  const commitPlainValue = useCallback((nextValue: string) => {
+    if (valueProp === undefined) setUncontrolledValue(nextValue);
+    onChange?.(createSyntheticEvent<ChangeEvent<HTMLInputElement>>(nextValue));
+  }, [createSyntheticEvent, onChange, setUncontrolledValue, valueProp]);
+
   const commitDateValue = useCallback((nextValue: string) => {
     if (!isDateControlled) setDateUncontrolled(nextValue);
     setInternalError(validateValue(nextValue));
@@ -342,9 +357,12 @@ export function useInputBehavior({
         setIsAutofillLocked(false);
         event.currentTarget.removeAttribute('readonly');
       }
+      // Значение по умолчанию — подсказка, а не данные: по фокусу поле пустеет, и модель получает
+      // ''. Иначе ввод «1» в поле с «0» дал бы «01», и человек считал бы, что это его ответ.
+      if (seedField.focusValue !== undefined) commitPlainValue(seedField.focusValue);
       onFocus?.(event);
     },
-    [lockAutofill, isAutofillLocked, onFocus]
+    [commitPlainValue, lockAutofill, isAutofillLocked, onFocus, seedField.focusValue]
   );
 
   const handleBlur = useCallback(
@@ -385,10 +403,17 @@ export function useInputBehavior({
         return;
       }
 
+      if (seedField.blurValue !== undefined) {
+        commitPlainValue(seedField.blurValue);
+        setInternalError(validateValue(seedField.blurValue));
+        onBlur?.(createSyntheticEvent<FocusEvent<HTMLInputElement>>(seedField.blurValue, event));
+        return;
+      }
+
       setInternalError(validateValue(event.target.value));
       onBlur?.(event);
     },
-    [createSyntheticEvent, dateDisplayValue, deactivateDatePicker, isDate, isDatePickerActive, isPhone, isTime, isTimeControlled, lockAutofill, onBlur, phoneFormat, setInternalError, validateValue]
+    [commitPlainValue, createSyntheticEvent, dateDisplayValue, deactivateDatePicker, isDate, isDatePickerActive, isPhone, isTime, isTimeControlled, lockAutofill, onBlur, phoneFormat, seedField.blurValue, setInternalError, validateValue]
   );
 
   const handleChange = useCallback(
@@ -592,7 +617,7 @@ export function useInputBehavior({
       ? (placeholder ?? phoneMask.placeholderText(phoneFormat))
       : isTime
           ? (showTimeMask ? '' : (placeholder ?? timeMask.placeholder))
-          : placeholder,
+          : seedField.placeholder,
     'aria-invalid': restInputProps['aria-invalid'] ?? (displayError ? true : undefined),
     minLength: isTime ? 5 : length?.min,
     maxLength: isPhone ? (length?.max ?? phoneMask.maxLengthOf(phoneFormat)) : isTime ? timeMask.maxLength : isDate ? datePicker.maxLength : length?.max,
@@ -604,7 +629,9 @@ export function useInputBehavior({
           ? timeDisplayValue
           : isDate
               ? dateDisplayValue
-              : valueProp,
+              : valueProp === undefined
+                  ? valueProp
+                  : seedField.displayValue,
     onChange: handleChange,
     onFocus: handleFocus,
     onBlur: handleBlur,

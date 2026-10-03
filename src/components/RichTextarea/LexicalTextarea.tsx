@@ -117,7 +117,8 @@ export function LexicalTextarea({
   bg,
   color,
   placeholder,
-  placeholderColor = 'var(--text-muted)',
+  // Цвет подсказки — токен темы с фолбэком на прежний: библиотеку едят проекты, токен ещё не задавшие.
+placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
   label,
   labelColor,
   comment,
