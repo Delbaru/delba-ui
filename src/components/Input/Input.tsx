@@ -250,7 +250,10 @@ export function Input({
     const inlineErrorId = hasError ? `${id}-error` : undefined;
     const helperTextId = inlineErrorId ?? commentId;
     const inputDescribedBy = [inputProps['aria-describedby'], helperTextId].filter(Boolean).join(' ') || undefined;
-    const errorBelow = errorPlacement === 'below';
+    // У телефона место внутри поля уже занято префиксом «+7» и маской-образцом, и объяснение
+    // ошибки туда не влезает: оно обрезается многоточием на первом же слове. Поэтому у такого
+    // поля строка ошибки всегда ПОД ним, что бы ни просил вызов.
+    const errorBelow = errorPlacement === 'below' || isPhone;
     // Слой поверх значения — только у `inside`. Он же гасит себя на фокусе: значение под ним
     // не видно, и правки вслепую быть не должно. У `below` этой развилки нет вовсе — строка
     // стоит рядом со значением и на фокусе остаётся, потому что она и есть объяснение правки.
