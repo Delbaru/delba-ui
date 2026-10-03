@@ -34,7 +34,38 @@ export * from './components/Tooltip';
 export * from './core/treePath';
 export * from './components/Video';
 export * from './components/VideoPlayer';
-export { assetUrl, cx, mergeComponentStates, BREAKPOINT, MEDIA_QUERY, MOTION_END_BUFFER_MS, prefersReducedMotion } from './core';
+export {
+  assetUrl,
+  BREAKPOINT,
+  createHandles,
+  cx,
+  focusWhenReady,
+  MEDIA_QUERY,
+  motion,
+  Transition,
+  mergeComponentStates,
+  MOTION_END_BUFFER_MS,
+  prefersReducedMotion,
+  registerScrollProvider,
+  resolveSeedField,
+  scrollTo,
+  unregisterScrollProvider,
+  type EntityHandle,
+  type FocusTarget,
+  type FocusWhenReadyOptions,
+  type HandlesRegistry,
+  type HandlesShape,
+  type TransitionResult,
+  type TransitionStatus,
+  type TransitionStep,
+  type TransitionTime,
+  type ScrollProviderApi,
+  type ScrollResult,
+  type ScrollTarget,
+  type ScrollToOptions,
+  type SeedField,
+  type SeedFieldInput,
+} from './core';
 export { clamp, clamp01 } from './core/utils';
 export { pad, pluralize, type PluralForms } from './core/base/text-format';
 
@@ -44,6 +75,7 @@ export * from './components/SmoothScroll';
 export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
 export { useAnchoredFloating, type FloatingAlign, type FloatingPlacement } from './hooks/useAnchoredFloating';
 export { useMediaQuery } from './hooks/useMediaQuery';
+export type { CollapseHandle } from './hooks/useCollapseMotion';
 export { useInView, type UseInViewOptions } from './core/useInView';
 export type { ComponentStateValue, GrowProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';
 export type { TextRole, TextVariantName } from './core/base/typography';

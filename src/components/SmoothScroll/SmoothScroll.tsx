@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
+import { registerScrollProvider, unregisterScrollProvider } from '../../core/base/scroll';
 import { createSmoothScroll, type SmoothScrollConfig, type SmoothScrollController, type SmoothScrollTarget, type SmoothScrollToOptions } from './engine';
 import { easeOutExpo, type SmoothScrollEasing, type SmoothScrollOffset } from './smooth-scroll';
 
@@ -114,6 +115,13 @@ export function SmoothScroll({
       return () => window.removeEventListener('scroll', handle);
     },
   }), []);
+
+  // Дверь scrollTo ядра едет через этого провайдера, пока он жив, и падает в нативную прокрутку без него.
+  useEffect(() => {
+    registerScrollProvider(api);
+
+    return () => unregisterScrollProvider(api);
+  }, [api]);
 
   return <SmoothScrollContext.Provider value={api}>{children}</SmoothScrollContext.Provider>;
 }

@@ -5,6 +5,22 @@
 export { getBreakpointIndex, resolveResponsive, resolveResponsiveAtBreakpoint } from './base/responsive';
 export { BREAKPOINT, MEDIA_QUERY } from './base/breakpoints';
 export { MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs } from './base/motion';
+export { focusWhenReady, type FocusTarget, type FocusWhenReadyOptions } from './base/focus';
+export { resolveSeedField, type SeedField, type SeedFieldInput } from './base/seed';
+export { Transition, createTransition, motion, parseDurationMs, readMotionTiming } from './base/transition';
+export type { GroupTiming, MotionPart, TransitionResult, TransitionStatus, TransitionStep, TransitionTime } from './base/transition';
+export { animateCollapse } from './base/collapse';
+export type { CollapseAxis, CollapseFrame, CollapseNodes, CollapseRunOptions } from './base/collapse';
+export {
+  scrollTo,
+  registerScrollProvider,
+  unregisterScrollProvider,
+  type ScrollProviderApi,
+  type ScrollResult,
+  type ScrollTarget,
+  type ScrollToOptions,
+} from './base/scroll';
+export { createHandles, type EntityHandle, type HandlesRegistry, type HandlesShape } from './base/handles';
 export { clamp, clamp01 } from './utils';
 export { pad, pluralize } from './base/text-format';
 export type { PluralForms } from './base/text-format';
