@@ -166,10 +166,12 @@
           pointer-events: none;
           transform: translateY(calc(-10 * var(--rpx)));
           will-change: transform, opacity;
+          // `visibility` с задержкой в длительность хода: без неё панель пряталась кадром, и
+          // закрытие выглядело как обрыв — прозрачность гасла, а панель уже не рисовалась.
           transition:
-              opacity var(--t-d-fast),
-              visibility var(--t-d-fast),
-              transform var(--t-d-fast);
+              opacity var(--t-d-fast) var(--t-t-f-ease),
+              transform var(--t-d-fast) var(--t-t-f-ease),
+              visibility 0s var(--t-d-fast);
       }
 
       &[data-open='true'] .DropdownWrapper {
@@ -177,18 +179,34 @@
           visibility: visible;
           pointer-events: auto;
           transform: translateY(0);
+          transition-delay: 0s;
       }
 
       .DropdownInner {
           min-height: max-content;
       }
 
+      // Рамка поповера остаётся в модуле, а фон и скругления ушли пропами. Причина именно рамка:
+      // панель продолжает пилюлю (скругление сверху снято, верхняя линия не нужна), и это ШОРТКАТ
+      // `border` с лонгхендом `border-top` поверх него. Оба пришли бы классами утилит в одном слое,
+      // а кто из них позже в сгенерированном файле — не решает ни специфичность, ни порядок вызовов:
+      // «у кого последний, тот и победил» — ровно тот класс нестабильности, из-за которого порядок
+      // генерата нельзя полагаться. Четыре лонгхенда по сторонам работали бы, но это четыре
+      // зашитых значения рамки вместо двух строк.
       .Dropdown {
-          background: var(--white-100);
           border: calc(var(--rpx) * 1) solid var(--text-muted);
           border-top: 0;
-          border-radius: 0 0 var(--s-16) var(--s-16);
-          padding: var(--s-8) var(--s-8) var(--s-24);
+      }
+
+      .DropZone {
+          // Рамка зоны едет сама: с неё начинается подсветка «сюда можно положить файл».
+          transition: border-color var(--t-d-fast) var(--t-t-f-ease);
+      }
+
+      .DropZoneIcon {
+          flex-shrink: 0;
+          color: var(--text-muted);
+          transition: color var(--t-d-fast) var(--t-t-f-ease);
       }
 
       .TypeGrid {
@@ -318,11 +336,42 @@
       }
 
       .HiddenInput {
-          position: absolute;
-          opacity: 0;
-          pointer-events: none;
-          width: 0;
-          height: 0;
+          @include m.hidden-control;
+      }
+
+      // Поповер на пустой дорожке — и это не «выключенная анимация», а мгновенная: без хода и без
+      // его страховки. Явное `transition: none` сильнее, чем обнуление одной `transform`, потому
+      // что `visibility` с задержкой иначе продолжала бы ждать длительность, которой нет.
+      @include m.reduced-motion {
+          .DropdownWrapper {
+              transition: none;
+              transform: none;
+              will-change: auto;
+          }
+      }
+  }
+}
+
+@layer ui.states {
+  // Слой состояний, а не покой: правило из `ui.components` проиграло бы утилитам рамки и заливки
+  // (`border_…`, `bg_…` в `ui.utilities`), и подсветка зоны просто не появилась бы.
+  .MediaDropDown .DropZone {
+      &:hover,
+      &:focus-visible {
+          border-color: var(--primary);
+
+          .DropZoneIcon {
+              color: var(--primary);
+          }
+      }
+
+      &[state~='dragging'] {
+          border-color: var(--primary);
+          background: var(--primary-light);
+
+          .DropZoneIcon {
+              color: var(--primary);
+          }
       }
   }
 }
