@@ -399,6 +399,15 @@
   //
   // `-webkit-text-fill-color` — отдельно от `color` по той же причине, что и у inline-ошибки
   // выше: в WebKit красит текст именно он, и без него поехал бы только `color`, то есть ничего.
+  // Маска телефона и встроенная ошибка стоят в одной ячейке абсолютом, друг поверх друга. Пока
+  // показана ошибка, маска уходит: цифры образца и подпись ошибки читаются одна сквозь другую, и
+  // не разобрать ни ту, ни другую. Маска — та же подсказка, и уступает она по тому же правилу,
+  // что placeholder выше.
+  .input[data-inline-error='true'] .phoneMask {
+      opacity: 0;
+      transition: opacity var(--t-d-fast) var(--t-t-f-ease);
+  }
+
   .input .field:focus::placeholder {
       color: transparent;
       -webkit-text-fill-color: transparent;
