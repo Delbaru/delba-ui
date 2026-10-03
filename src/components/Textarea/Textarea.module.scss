@@ -157,7 +157,20 @@
 
   @include textarea-classes();
 
-  @include utils.withBreakpoints() using ($bp) {
-    @include textarea-classes($bp);
+@include utils.withBreakpoints() using ($bp) {
+      @include textarea-classes($bp);
+  }
+}
+
+@layer ui.states {
+  // Правило парное к Input.module.scss и по причине той же: подсказка гаснет на фокусе, чтобы
+  // пустое поле не читалось полным. Держим синхронно — на одном экране «Краткое название» это
+  // Textarea, а соседние поля Input, и разъехаться им нельзя.
+  //
+  // Слой `ui.states` — состояние, а не покой: он последний и перебивает `ui.utilities`, куда
+  // проект может положить цвет подсказки пропом (см. docs/lessons/styles.md).
+  .TextareaWrapper .Textarea .TextareaField:focus::placeholder {
+      color: transparent;
+      -webkit-text-fill-color: transparent;
   }
 }
