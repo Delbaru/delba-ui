@@ -236,7 +236,7 @@
               // разный размер читается как «поле подменили» (см. §12 «Поля и формы»).
               font: var(--field-font, #{m.role-font(body)});
               font-variant-numeric: lining-nums proportional-nums;
-              color: var(--black);
+              color: var(--field-placeholder-color);
           }
 
           // Внутри группы зазора нет: «(999)» — скобки вплотную к цифрам.
@@ -250,7 +250,7 @@
           // Но легче ровно на СТУПЕНЬ (500 против 600 у поля), а не вдвое: подсказка-образец набрана
           // цифрами, и рядом с набранным номером Regular читался бы как другой шрифт, а не как подсказка.
           .phoneMaskDim {
-              color: var(--text-muted);
+              color: var(--field-placeholder-color);
               font-weight: 500;
               letter-spacing: calc(1.8 * var(--rpx));
 
