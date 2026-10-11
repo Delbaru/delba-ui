@@ -4,6 +4,17 @@
   .Dropdown {
     position: relative;
     display: inline-flex;
+
+    &.PortalRoot {
+      pointer-events: none;
+    }
+
+    .gapProbe {
+      position: absolute;
+      height: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
   }
 
   .panel {
@@ -12,6 +23,7 @@
     z-index: 10;
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transform: translateY(calc(var(--rpx) * -8)) scale(0.96);
     transform-origin: top left;
     transition:
@@ -22,6 +34,7 @@
     &[data-open] {
       opacity: 1;
       visibility: visible;
+      pointer-events: auto;
       transform: none;
       transition-delay: 0s;
     }
@@ -39,6 +52,17 @@
     &[data-side='end'] {
       right: 0;
       transform-origin: top right;
+    }
+
+    &.portalPanel {
+      position: fixed;
+      z-index: var(--z-under-floating);
+      right: auto;
+      bottom: auto;
+    }
+
+    &.portalPanel[data-side='center'] {
+      translate: none;
     }
 
     @include m.reduced-motion {

@@ -27,6 +27,7 @@ import { VariableNode } from './lexical/VariableNode';
 import styles from './RichTextarea.module.scss';
 import type { LexicalTextareaChangePayload, LexicalTextareaContent, LexicalTextareaHandle, LexicalTextareaVariable } from './types';
 import { useLexicalTextarea } from './useLexicalTextarea';
+import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 
 export interface LexicalTextareaProps
   extends LayoutSpaceProps,
@@ -58,6 +59,8 @@ export interface LexicalTextareaProps
   maxLength?: number;
 
   error?: string;
+  /** Сворачивать редактор целиком, включая подпись, ошибку и комментарий. */
+  collapse?: CollapseOptions;
   state?: ComponentStateValue;
 
   required?: boolean;
@@ -130,6 +133,7 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
   minLength,
   maxLength,
   error,
+  collapse,
   state,
   required,
   emptyMessage = DEFAULT_EMPTY_MESSAGE,
@@ -155,7 +159,7 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
   } satisfies CSSProperties;
   const contentClassName = cx(styles.ContentEditable, richTextStyles.RichText, richTextStyles[variant]);
 
-  return (
+  const renderedContent = (
     <Box
       className={cx(styles.RichTextareaWrapper, className)}
       style={style}
@@ -166,7 +170,7 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
       linkState={linkState}
     >
       {label && (
-        <Text color={labelColor} mb={[8, 4, 8]}>
+        <Text id={`${id}-label`} color={labelColor} mb={[8, 4, 8]} required={required}>
           {label}
         </Text>
       )}
@@ -246,8 +250,10 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
                 <ContentEditable
                   id={id}
                   className={contentClassName}
+                  aria-labelledby={label ? `${id}-label` : undefined}
                   aria-describedby={helperTextId}
                   aria-invalid={Boolean(helperError)}
+                  aria-required={required || undefined}
                   onBlur={handleBlur}
                 />
               }
@@ -289,5 +295,13 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
         </Text>
       )}
     </Box>
+  );
+
+  if (!collapse) return renderedContent;
+
+  return (
+    <CollapseWrap {...collapse}>
+      {renderedContent}
+    </CollapseWrap>
   );
 }

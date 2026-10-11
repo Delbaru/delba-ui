@@ -1,11 +1,12 @@
-﻿'use client';
+'use client';
 
 import styles from './RichText.module.scss';
 
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { cx, createLayoutClasses, getBreakpointIndex, resolveResponsiveAtBreakpoint, buildClampStyle, decodeHtmlEntities, radiusClasses, sanitizeRichTextHtml, stripHtmlTags, sizeClasses, stateLinkProps, resolveRadiusInput, type GrowProps, type RadiusPropsShort, type StateLinkInput, type ResponsiveInput, type ResponsiveValue, type SizeValue } from '../../core';
+import { composeInteractionHandlers, cx, createLayoutClasses, getBreakpointIndex, prefersReducedMotion, resolveResponsiveAtBreakpoint, buildClampStyle, decodeHtmlEntities, radiusClasses, sanitizeRichTextHtml, stripHtmlTags, sizeClasses, stateLinkProps, resolveRadiusInput, type GrowProps, type RadiusPropsShort, type StateLinkInput, type ResponsiveInput, type ResponsiveValue, type SizeValue } from '../../core';
 import { renderLexicalContent } from './LexicalRenderer';
+import type { RevealProps } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 
 const c = createLayoutClasses(styles);
@@ -213,7 +214,7 @@ function extractLexicalPlainText(node: unknown): string {
 /** `plain` — без типографики варианта: блоки наследуют шрифт окружения, роль (`role-*`) по-прежнему красит блок. */
 export type LexicalTextVariant = 'default' | 'plain' | 'style-1' | 'style-2' | 'style-3' | 'style-4' | 'style-5';
 
-export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color'>, RadiusPropsShort, GrowProps, SharedMotionProps {
+export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color'>, RadiusPropsShort, GrowProps, SharedMotionProps, RevealProps {
   content?: string | any; // string for HTML, object for Lexical JSON
   variant?: ResponsiveValue<LexicalTextVariant>;
   w?: ResponsiveValue<SizeValue>;
@@ -229,13 +230,14 @@ export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, '
   linkState?: StateLinkInput;
 }
 
-export function LexicalText({ content, variant = ['default', 'default', 'default'], w, h, animation, rows, ellipsis, bg, color, r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, grow, perspective3d, parallax, className = '', style, linkState, onMouseEnter, onMouseLeave, ...props }: LexicalTextProps) {
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+export function LexicalText({ content, variant = ['default', 'default', 'default'], w, h, animation, rows, ellipsis, bg, color, r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, grow, perspective3d, parallax, reveal, className = '', style, linkState, onMouseEnter, onMouseLeave, ...props }: LexicalTextProps) {
+  // Пустой контент узла не рисует, поэтому и прятать нечего: атрибуты появления едут только с узлом.
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal });
   const radiusProps = resolveRadiusInput({ r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR });
   const setRootRef = useCallback((node: HTMLDivElement | null) => {
     setMotionNode(node);
   }, [setMotionNode]);
-  const linkedHandlers = stateLinkProps(linkState, { onMouseEnter, onMouseLeave, ...motionHandlers });
+  const linkedHandlers = stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { ...props, onMouseEnter, onMouseLeave }));
   const hasRows = rows !== undefined;
   const hasSingleLineEllipsis = Boolean(ellipsis) && !hasRows;
   const clampStyle = buildClampStyle(rows);
@@ -274,45 +276,8 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
       window.removeEventListener('resize', updateBreakpoint);
     };
   }, [responsive]);
-  
-  // Detect if content is Lexical JSON (object with root.children) vs HTML string
-  const isLexicalJSON = content && typeof content === 'object' && content.root?.children;
-  
-  // If Lexical JSON, render it directly without animation support
-  if (isLexicalJSON) {
-    if (!content.root.children.length) return null;
-    const previewText = extractLexicalPlainText(content).replace(/\s+/g, ' ').trim();
 
-    if ((hasRows || hasSingleLineEllipsis) && previewText) {
-      return (
-        <div
-          ref={setRootRef}
-          className={cx(rootClassName, styles[resolvedVariant])}
-          style={rootStyle}
-          {...linkedHandlers}
-          {...props}
-        >
-          <p className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)} style={clampStyle}>
-            {previewText}
-          </p>
-        </div>
-      );
-    }
-    
-    return (
-      <div
-        ref={setRootRef}
-        className={cx(rootClassName, styles[resolvedVariant])}
-        style={rootStyle}
-        {...linkedHandlers}
-        {...props}
-      >
-        {renderLexicalContent(content)}
-      </div>
-    );
-  }
-  
-  // Otherwise, treat as HTML string (legacy behavior)
+  // Хуки анимаций — до любых ранних выходов: ветка JSON/HTML меняется вместе с контентом.
   const htmlContent = typeof content === 'string' ? content : '';
 
   const parsed = parseAnimation(animation);
@@ -345,26 +310,76 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
     }
   }, [isTextSlide, isTextClip, resolvedTextSlideOpts?.steps, resolvedTextSlideOpts?.currentStep, resolvedTextClipOpts?.steps]);
 
-  useEffect(() => {
-    if (resolvedTextClipOpts && displayedStep !== resolvedTextClipOpts.currentStep) {
-      const duration = resolvedTextClipOpts.duration || 1;
-      const durationMs = duration * 1000;
-      const opts = resolvedTextClipOpts;
-      const t = setTimeout(() => {
-        setClipPath('inset(0 0 100% 0)');
-        setTimeout(() => {
-          setDisplayedStep(opts.currentStep);
-          setClipPath('inset(100% 0 0 0)');
-          setTimeout(() => {
-            setClipPath('inset(0 0 0 0)');
-          }, 0);
-        }, durationMs);
-      }, 0);
-      return () => clearTimeout(t);
-    }
-    return undefined;
-  }, [resolvedTextClipOpts?.currentStep, displayedStep, resolvedTextClipOpts]);
+  // Смена шага textClip: шторка закрывается, шаг меняется, шторка открывается. Все таймеры цепочки
+  // снимаются при новой смене и размонтировании; иначе запоздалый хвост старой цепочки ставил
+  // устаревший шаг. Шаг, на который вернулись до конца хода, просто открывается.
+  const clipStep = resolvedTextClipOpts?.currentStep;
+  const clipDurationMs = (resolvedTextClipOpts?.duration || 1) * 1000;
+  const displayedStepRef = useRef(displayedStep);
+  displayedStepRef.current = displayedStep;
 
+  useEffect(() => {
+    if (clipStep === undefined) return undefined;
+    if (clipStep === displayedStepRef.current || prefersReducedMotion()) {
+      setDisplayedStep(clipStep);
+      setClipPath('inset(0 0 0 0)');
+      return undefined;
+    }
+
+    const timers: number[] = [];
+    const later = (run: () => void, ms: number) => { timers.push(window.setTimeout(run, ms)); };
+    later(() => {
+      setClipPath('inset(0 0 100% 0)');
+      later(() => {
+        setDisplayedStep(clipStep);
+        setClipPath('inset(100% 0 0 0)');
+        later(() => setClipPath('inset(0 0 0 0)'), 0);
+      }, clipDurationMs);
+    }, 0);
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [clipStep, clipDurationMs]);
+
+  // Detect if content is Lexical JSON (object with root.children) vs HTML string
+  const isLexicalJSON = content && typeof content === 'object' && content.root?.children;
+
+  // If Lexical JSON, render it directly without animation support
+  if (isLexicalJSON) {
+    if (!content.root.children.length) return null;
+    const previewText = extractLexicalPlainText(content).replace(/\s+/g, ' ').trim();
+
+    if ((hasRows || hasSingleLineEllipsis) && previewText) {
+      return (
+        <div
+          ref={setRootRef}
+          className={cx(rootClassName, styles[resolvedVariant])}
+          style={rootStyle}
+          {...revealAttrs}
+          {...props}
+          {...linkedHandlers}
+        >
+          <p className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)} style={clampStyle}>
+            {previewText}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        ref={setRootRef}
+        className={cx(rootClassName, styles[resolvedVariant])}
+        style={rootStyle}
+        {...revealAttrs}
+        {...props}
+        {...linkedHandlers}
+      >
+        {renderLexicalContent(content)}
+      </div>
+    );
+  }
+
+  // HTML-строка (прежнее поведение).
   if (isTextSlide) {
     const translateY = cumHeights[(resolvedTextSlideOpts?.currentStep ?? 0) - 1] || 0;
     return (
@@ -372,6 +387,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
         ref={setRootRef}
         className={cx(rootClassName, styles[resolvedVariant], styles.animation_textSlide)}
         style={rootStyle}
+        {...revealAttrs}
         {...linkedHandlers}
       >
         <div
@@ -387,7 +403,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
             const blocks = parseRichText(decodeHtmlEntities(stepContent));
             return (
               <div
-                key={stepContent.slice(0, 50)}
+                key={`step-${index}`}
                 ref={(el) => { itemRefs.current[index] = el; }}
                 className={styles.textItem}
                 style={{
@@ -413,6 +429,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
         ref={setRootRef}
         className={cx(rootClassName, styles[resolvedVariant], styles.animation_textClip)}
         style={rootStyle}
+        {...revealAttrs}
         {...linkedHandlers}
       >
         <div
@@ -427,7 +444,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
             const blocks = parseRichText(decodeHtmlEntities(stepContent));
             return (
               <div
-                key={stepContent.slice(0, 50)}
+                key={`step-${index}`}
                 ref={(el) => { itemRefs.current[index] = el; }}
                 className={styles.clipItem}
                 style={{
@@ -458,8 +475,9 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
         ref={setRootRef}
         className={cx(rootClassName, styles[resolvedVariant])}
         style={rootStyle}
-        {...linkedHandlers}
+        {...revealAttrs}
         {...props}
+        {...linkedHandlers}
       >
         <p className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)} style={clampStyle}>
           {previewText}
@@ -473,8 +491,9 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
       ref={setRootRef}
       className={cx(rootClassName, styles[resolvedVariant])}
       style={rootStyle}
-      {...linkedHandlers}
-      {...props}
+      {...revealAttrs}
+        {...props}
+        {...linkedHandlers}
     >
       {renderBlocks(blocks)}
     </div>

@@ -33,7 +33,12 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-.ui-collapse[data-axis='row'] {
+.ui-collapse-inline {
+  display: inline-grid;
+  vertical-align: middle;
+}
+
+.ui-collapse[data-axis='row'][data-gap-side='start'] {
   padding-top: 0;
 
   &[data-open] {
@@ -41,7 +46,15 @@
   }
 }
 
-.ui-collapse[data-axis='column'] {
+.ui-collapse[data-axis='row'][data-gap-side='end'] {
+  padding-bottom: 0;
+
+  &[data-open] {
+    padding-bottom: var(--collapse-gap-d, 0);
+  }
+}
+
+.ui-collapse[data-axis='column'][data-gap-side='start'] {
   grid-template-columns: auto;
   // Не даём flex-родителю сжать обёртку уже содержимого: ширину до нуля ведёт внутренний слой,
   // а не flex-сжатие, иначе в тесном ряду обрезался бы край контента.
@@ -53,14 +66,30 @@
   }
 }
 
+.ui-collapse[data-axis='column'][data-gap-side='end'] {
+  padding-right: 0;
+
+  &[data-open] {
+    padding-right: var(--collapse-gap-d, 0);
+  }
+}
+
 // responsive collapseGap: mobile/tablet перекрывают, иначе наследуют desktop-значение
 @include utils.withBreakpoints() using ($bp) {
-  .ui-collapse[data-axis='row'][data-open] {
+  .ui-collapse[data-axis='row'][data-gap-side='start'][data-open] {
     padding-top: var(--collapse-gap-#{$bp}, var(--collapse-gap-d, 0));
   }
 
-  .ui-collapse[data-axis='column'][data-open] {
+  .ui-collapse[data-axis='row'][data-gap-side='end'][data-open] {
+    padding-bottom: var(--collapse-gap-#{$bp}, var(--collapse-gap-d, 0));
+  }
+
+  .ui-collapse[data-axis='column'][data-gap-side='start'][data-open] {
     padding-left: var(--collapse-gap-#{$bp}, var(--collapse-gap-d, 0));
+  }
+
+  .ui-collapse[data-axis='column'][data-gap-side='end'][data-open] {
+    padding-right: var(--collapse-gap-#{$bp}, var(--collapse-gap-d, 0));
   }
 }
 
@@ -146,72 +175,3 @@
 
 // «Меньше движения» гасит сам движок (нулевая длительность), события при этом срабатывают, —
 // поэтому отдельного блока reduced-motion здесь больше нет.
-
-// Enter-анимации при монтировании (проп animation у Flex). Keyframe играет один раз и перезапускается
-// на ремоунте (напр. при смене key) — нативная замена AnimatePresence/motion для свопов контента.
-// animation-fill-mode: backwards применяет from-кадр сразу до старта (без вспышки base-состояния).
-@keyframes ui-flex-fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes ui-flex-fadeInDown {
-  from { opacity: 0; transform: translateY(calc(-16 * var(--rpx))); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes ui-flex-fadeInUp {
-  from { opacity: 0; transform: translateY(calc(16 * var(--rpx))); }
-  to { opacity: 1; transform: none; }
-}
-
-// Въезд из чуть уменьшенного состояния — зеркало ui-flex-fadeOutScale (пара для свопа контента).
-@keyframes ui-flex-fadeInScale {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: none; }
-}
-
-.ui-anim-fadeIn { animation: ui-flex-fadeIn var(--t-d-fast) var(--t-t-f-ease-in-out) backwards; }
-.ui-anim-fadeInDown { animation: ui-flex-fadeInDown var(--t-d-fast) var(--t-t-f-ease-in-out) backwards; }
-.ui-anim-fadeInUp { animation: ui-flex-fadeInUp var(--t-d-fast) var(--t-t-f-ease-in-out) backwards; }
-.ui-anim-fadeInScale { animation: ui-flex-fadeInScale var(--t-d-fast) var(--t-t-f-ease-in-out) backwards; }
-
-// Exit-анимации (зеркало enter) — для свопов контента через <Transition>: старый уходит, затем меняется.
-// forwards держит конечный кадр (opacity 0 / смещение) до момента подмены контента.
-@keyframes ui-flex-fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-@keyframes ui-flex-fadeOutUp {
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateY(calc(-16 * var(--rpx))); }
-}
-
-@keyframes ui-flex-fadeOutDown {
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateY(calc(16 * var(--rpx))); }
-}
-
-@keyframes ui-flex-fadeOutScale {
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: scale(0.96); }
-}
-
-.ui-anim-fadeOut { animation: ui-flex-fadeOut var(--t-d-fast) var(--t-t-f-ease-in-out) forwards; }
-.ui-anim-fadeOutUp { animation: ui-flex-fadeOutUp var(--t-d-fast) var(--t-t-f-ease-in-out) forwards; }
-.ui-anim-fadeOutDown { animation: ui-flex-fadeOutDown var(--t-d-fast) var(--t-t-f-ease-in-out) forwards; }
-.ui-anim-fadeOutScale { animation: ui-flex-fadeOutScale var(--t-d-fast) var(--t-t-f-ease-in-out) forwards; }
-
-@include m.reduced-motion {
-  .ui-anim-fadeIn,
-  .ui-anim-fadeInDown,
-  .ui-anim-fadeInUp,
-  .ui-anim-fadeInScale,
-  .ui-anim-fadeOut,
-  .ui-anim-fadeOutUp,
-  .ui-anim-fadeOutDown,
-  .ui-anim-fadeOutScale {
-    animation: none;
-  }
-}

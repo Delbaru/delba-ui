@@ -2,7 +2,7 @@ import type React from 'react';
 
 // Данные списка Select без React: плоский список пунктов, сравнение значений, пункт в фокусе.
 
-export interface SelectOption<T = string> {
+export interface SelectOption<T extends string = string> {
     value: T;
 
     /**
@@ -24,14 +24,14 @@ export interface SelectOption<T = string> {
     selectedChildren?: React.ReactNode;
 }
 
-export interface SelectOptionGroup<T = string> {
+export interface SelectOptionGroup<T extends string = string> {
     label: string;
-    options: SelectOption<T>[];
+    options: readonly SelectOption<T>[];
 }
 
-export type SelectItem<T = string> = SelectOption<T> | SelectOptionGroup<T>;
+export type SelectItem<T extends string = string> = SelectOption<T> | SelectOptionGroup<T>;
 
-export type FlattenedSelectItem<T = string> =
+export type FlattenedSelectItem<T extends string = string> =
     | { type: 'group'; label: string; key: string }
     | { type: 'option'; option: SelectOption<T>; key: string };
 
@@ -45,11 +45,20 @@ export function isValueArray<T>(v: T | null | T[]): v is T[] {
     return Array.isArray(v);
 }
 
-function isSelectOptionGroup<T>(item: SelectItem<T>): item is SelectOptionGroup<T> {
+/** Values are emitted as repeated name entries for native FormData multi-select semantics. */
+export function selectFormValues<T>(value: T | null | T[], multiple: boolean): string[] {
+    if (multiple) {
+        return Array.isArray(value) ? value.map(String) : [];
+    }
+
+    return value == null || Array.isArray(value) ? [] : [String(value)];
+}
+
+function isSelectOptionGroup<T extends string>(item: SelectItem<T>): item is SelectOptionGroup<T> {
     return 'options' in item;
 }
 
-export function flattenSelectItems<T>(items: SelectItem<T>[]): FlattenedSelectItem<T>[] {
+export function flattenSelectItems<T extends string>(items: readonly SelectItem<T>[]): FlattenedSelectItem<T>[] {
     return items.flatMap((item, groupIndex) => {
         if (!isSelectOptionGroup(item)) {
             return [{ type: 'option', option: item, key: `option-${String(item.value)}` }];
@@ -67,7 +76,7 @@ export function flattenSelectItems<T>(items: SelectItem<T>[]): FlattenedSelectIt
 }
 
 /** Пункты раскрытого списка: только видимые опции и только те группы, где такие остались. */
-export function visibleDropdownItems<T>(
+export function visibleDropdownItems<T extends string>(
     flatItems: FlattenedSelectItem<T>[],
     dropdownOptions: SelectOption<T>[],
     showSelected: boolean
@@ -89,11 +98,11 @@ export function visibleDropdownItems<T>(
     });
 }
 
-export function getFocusedOptionIndex(
-    options: SelectOption<string>[],
+export function getFocusedOptionIndex<T extends string>(
+    options: SelectOption<T>[],
     multiple: boolean,
-    selectedOption: SelectOption<string> | null,
-    selectedOptions: SelectOption<string>[]
+    selectedOption: SelectOption<T> | null,
+    selectedOptions: SelectOption<T>[]
 ): number {
     if (options.length === 0) return -1;
 

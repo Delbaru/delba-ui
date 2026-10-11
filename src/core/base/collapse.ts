@@ -28,6 +28,7 @@ export interface CollapseNodes {
 
 export interface CollapseRunOptions {
   axis: CollapseAxis;
+  gapSide?: 'start' | 'end';
   /** Куда едем. Состояние покоя к этому моменту уже стоит в DOM — движок его и меряет. */
   open: boolean;
   /** Размер ведёт внутренний слой: блоку мешает `minH`, либо ось — ширина. */
@@ -66,8 +67,9 @@ export function sizeFrameStyle(frame: CollapseFrame, axis: CollapseAxis): Keyfra
 }
 
 /** Кадр зазора на обёртке: он закрывается синхронно с размером, иначе соседи дёргаются отдельно. */
-export function gapFrameStyle(frame: CollapseFrame, axis: CollapseAxis): Keyframe {
-  return axis === 'column' ? { paddingLeft: px(frame.gap) } : { paddingTop: px(frame.gap) };
+export function gapFrameStyle(frame: CollapseFrame, axis: CollapseAxis, gapSide: 'start' | 'end' = 'start'): Keyframe {
+  if (axis === 'column') return gapSide === 'end' ? { paddingRight: px(frame.gap) } : { paddingLeft: px(frame.gap) };
+  return gapSide === 'end' ? { paddingBottom: px(frame.gap) } : { paddingTop: px(frame.gap) };
 }
 
 /** Нечему ехать: обе стороны хода совпали (повторный клик, нулевой блок, уже открыто). */
@@ -75,7 +77,7 @@ export function framesEqual(from: CollapseFrame, to: CollapseFrame): boolean {
   return (Object.keys(from) as Array<keyof CollapseFrame>).every((key) => from[key] === to[key]);
 }
 
-function measureFrame(nodes: CollapseNodes, target: HTMLElement, axis: CollapseAxis): CollapseFrame {
+function measureFrame(nodes: CollapseNodes, target: HTMLElement, axis: CollapseAxis, gapSide: 'start' | 'end'): CollapseFrame {
   const style = getComputedStyle(target);
   const wrapStyle = getComputedStyle(nodes.wrap);
   const rect = target.getBoundingClientRect();
@@ -87,7 +89,7 @@ function measureFrame(nodes: CollapseNodes, target: HTMLElement, axis: CollapseA
     padEnd: num(row ? style.paddingBottom : style.paddingRight),
     borderStart: num(row ? style.borderTopWidth : style.borderLeftWidth),
     borderEnd: num(row ? style.borderBottomWidth : style.borderRightWidth),
-    gap: num(row ? wrapStyle.paddingTop : wrapStyle.paddingLeft),
+    gap: num(row ? (gapSide === 'end' ? wrapStyle.paddingBottom : wrapStyle.paddingTop) : (gapSide === 'end' ? wrapStyle.paddingRight : wrapStyle.paddingLeft)),
     opacity: num(getComputedStyle(nodes.inner).opacity),
   };
 }
@@ -110,7 +112,7 @@ function collapseAnimations(nodes: CollapseNodes): Animation[] {
  */
 export function animateCollapse(nodes: CollapseNodes, options: CollapseRunOptions): Transition {
   const { wrap, inner, content } = nodes;
-  const { axis, open, sizeOnInner, fade } = options;
+  const { axis, gapSide = 'start', open, sizeOnInner, fade } = options;
   const target = sizeOnInner || !content ? inner : content;
 
   // Радиус обрезки — у содержимого: клипает внутренний слой (clip-path в _flex.scss), а скругление
@@ -118,16 +120,16 @@ export function animateCollapse(nodes: CollapseNodes, options: CollapseRunOption
   if (content) wrap.style.setProperty('--collapse-radius', getComputedStyle(content).borderRadius);
 
   const previous = collapseAnimations(nodes);
-  const live = previous.some((animation) => animation.playState === 'running') ? measureFrame(nodes, target, axis) : null;
+  const live = previous.some((animation) => animation.playState === 'running') ? measureFrame(nodes, target, axis, gapSide) : null;
 
   previous.forEach((animation) => animation.cancel());
 
-  const to = measureFrame(nodes, target, axis);
+  const to = measureFrame(nodes, target, axis, gapSide);
 
   // Прошлое состояние покоя меряется им же: на один синхронный замер возвращаем атрибут назад.
   // Так движок берёт у CSS и респонсивный зазор, и любые размеры проекта, ничего не повторяя в JS.
   wrap.toggleAttribute('data-open', !open);
-  const resting = measureFrame(nodes, target, axis);
+  const resting = measureFrame(nodes, target, axis, gapSide);
   wrap.toggleAttribute('data-open', open);
 
   const from = live ?? resting;
@@ -150,7 +152,7 @@ export function animateCollapse(nodes: CollapseNodes, options: CollapseRunOption
 
   const animations = [target.animate([sizeFrameStyle(from, axis), sizeFrameStyle(to, axis)], keyframeOptions)];
 
-  if (from.gap !== to.gap) animations.push(wrap.animate([gapFrameStyle(from, axis), gapFrameStyle(to, axis)], keyframeOptions));
+  if (from.gap !== to.gap) animations.push(wrap.animate([gapFrameStyle(from, axis, gapSide), gapFrameStyle(to, axis, gapSide)], keyframeOptions));
   if (fade && from.opacity !== to.opacity) {
     animations.push(inner.animate([{ opacity: from.opacity }, { opacity: to.opacity }], keyframeOptions));
   }

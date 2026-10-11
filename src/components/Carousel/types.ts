@@ -49,6 +49,7 @@ export interface CarouselProps extends GrowProps, SharedMotionProps {
 
   orientation?: ResponsiveValue<OrientationKey>;
 
+  /** Смена слайда: сдвиг (`slide`), растворение (`fade`) или объёмные `cube`, `coverflow`, `flip`. Тени объёмных эффектов выключены. */
   effect?: ResponsiveValue<EffectKey>;
 
   navigation?: ResponsiveValue<NavigationKey>;
@@ -71,6 +72,7 @@ export interface CarouselProps extends GrowProps, SharedMotionProps {
   peekEnd?: ResponsiveValue<CarouselPeekValue>;
 
   speed?: ResponsiveValue<number>;
+  /** Инерция после броска: доля скорости, с которой лента докатывается, затем доводится к слайду. Не задано или 0 — листание по слайдам. */
   inertia?: number;
 
   padding?: ResponsiveValue<number>;
@@ -79,11 +81,15 @@ export interface CarouselProps extends GrowProps, SharedMotionProps {
 
   slideClassName?: string;
   wrapperClassName?: string;
+  /** Класс корня `CarouselDots`, привязанных к этой карусели. */
   paginationClassName?: string;
+  /** Класс корня `CarouselNav`, привязанной к этой карусели. */
   navigationClassName?: string;
   className?: string;
 
+  /** Ленту ведёт внешняя прокрутка, а не палец: перетаскивание выключено. */
   scrollBased?: boolean;
+  /** Положение ленты 0…1 при `scrollBased`. */
   scrollProgress?: number;
 
   style?: CSSProperties;

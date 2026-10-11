@@ -1,9 +1,10 @@
 'use client';
 
 import type React from 'react';
-import { boxLayout, containerClass, createLayoutClasses, cx, splitBoxLayout, stateLinkProps, useMergedRefs, type AspectRatioProps, type BoxLayoutProps, type ContainerProp, type GrowProps, type LayoutSpaceProps, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef } from '../../core';
+import { boxLayout, composeInteractionHandlers, containerClass, createLayoutClasses, cx, splitBoxLayout, stateLinkProps, useMergedRefs, type AspectRatioProps, type BoxLayoutProps, type ContainerProp, type GrowProps, type LayoutSpaceProps, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef } from '../../core';
 import type { RevealProps } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 
 type Track =
 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12|
@@ -40,6 +41,8 @@ const c = createLayoutClasses();
 
 export interface GridProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayoutProps, ContainerProp, SharedMotionProps, RevealProps {
   children?: React.ReactNode;
+  /** Сворачивает весь Grid по высоте; `open` управляется состоянием снаружи. */
+  collapse?: CollapseOptions;
 
   columns?: ResponsiveValue<Track>;
   rows?: ResponsiveValue<Track>;
@@ -62,6 +65,7 @@ export interface GridProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayo
 export function Grid({
   ref,
   children,
+  collapse,
   className = '',
   style,
   columns,
@@ -90,10 +94,9 @@ export function Grid({
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal });
   const setRefs = useMergedRefs(setMotionNode, ref);
 
-  return (
+  const content = (
   <div
     ref={setRefs}
-    {...stateLinkProps(linkState, { onMouseEnter, onMouseLeave, ...motionHandlers })}
     className={cx(
       'ui-grid',
       containerClass(container),
@@ -116,6 +119,7 @@ export function Grid({
     }}
     {...revealAttrs}
     {...rest}
+    {...stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }))}
   >
     {renderItem && items
       ? items.map((item, index) => (
@@ -141,6 +145,9 @@ export function Grid({
       : children}
   </div>
   );
+
+  if (!collapse) return content;
+  return <CollapseWrap {...collapse} clip={box.minH != null}>{content}</CollapseWrap>;
 }
 
 // 1..13 (13 is useful as "end line" for 12-column grid)
@@ -226,7 +233,6 @@ export function GridItem({
   return (
     <div
       ref={setRefs}
-      {...stateLinkProps(undefined, { onMouseEnter, onMouseLeave, ...motionHandlers })}
       className={cx(
         hasFlex && 'ui-grid-item-flex',
         ...c.value('colSpan', colSpan),
@@ -246,6 +252,7 @@ export function GridItem({
         ...style,
       }}
       {...rest}
+      {...stateLinkProps(undefined, composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }))}
     >
       {children}
     </div>

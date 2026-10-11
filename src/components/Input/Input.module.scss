@@ -3,6 +3,9 @@
 @use '../../core/field-sizes' as fields;
 
 @layer ui.components {
+    .addon {
+        flex: none;
+    }
   $sizes: fields.$height-values;
 
   .wrapper {

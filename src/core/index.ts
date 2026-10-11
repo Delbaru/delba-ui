@@ -26,6 +26,8 @@ export { pad, pluralize } from './base/text-format';
 export type { PluralForms } from './base/text-format';
 export type { WithRef } from './base/with-ref';
 export { assignRef, useMergedRefs } from './useMergedRefs';
+export { composeEventHandlers, composeInteractionHandlers } from './composeEventHandlers';
+export type { FieldValueChangeDetails, FieldValueChangeHandler, FieldValueChangeReason } from './base/field-value';
 export { boxLayout, containerClass, splitBoxLayout } from './layout/box';
 export type { BoxLayoutKey, BoxLayoutProps, ContainerProp } from './layout/box';
 export type { ResponsiveInput, ResponsiveValue } from './base/responsive';

@@ -9,6 +9,14 @@
       position: relative;
       transition: var(--t-fast);
 
+      &.DropdownPortal {
+          pointer-events: none;
+      }
+
+      .selectVariantScope {
+          display: contents;
+      }
+
       .Select {
           position: relative;
           transition: var(--t-fast);
@@ -47,11 +55,10 @@
           }
 
           .DropdownWrapper {
-              z-index: 10;
-              position: absolute;
-              top: calc(100% - var(--rpx));
-              left: calc(-1 * var(--rpx));
-              width: calc(100% + var(--rpx) * 2);
+              z-index: var(--z-under-floating);
+              position: fixed;
+              width: calc(var(--floating-anchor-width) + var(--rpx) * 2);
+              margin-left: calc(-1 * var(--rpx));
               display: grid;
               grid-template-rows: 0fr;
               overflow: hidden;
@@ -85,7 +92,10 @@
                   var(--select-dropdown-radius, var(--s-16)) var(--select-dropdown-radius, var(--s-16));
               overflow: hidden;
               width: 100%;
-              max-height: calc(var(--select-height) * var(--select-visible-options));
+              max-height: min(
+                  calc(var(--select-height) * var(--select-visible-options)),
+                  var(--floating-available, 100vh)
+              );
           }
 
           // Прокрутка и полоса под неё включаются, ТОЛЬКО когда строк больше, чем помещается в
@@ -93,13 +103,12 @@
           // место под полосу безусловно — у короткого списка это пустая колонка справа, которая
           // читается как «здесь что-то прокручивается», хотя прокручивать нечего.
           .DropdownScroll {
-              overflow: hidden;
+              overflow-x: hidden;
+              overflow-y: auto;
               width: 100%;
               max-height: inherit;
 
               &[data-scrolls] {
-                  overflow-x: hidden;
-                  overflow-y: auto;
                   overscroll-behavior: contain;
                   -webkit-overflow-scrolling: touch;
                   scrollbar-gutter: stable;

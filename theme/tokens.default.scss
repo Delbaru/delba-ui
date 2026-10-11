@@ -10,8 +10,8 @@
 // текст и disabled, `--field-placeholder-color` — подсказка поля светлее него, `--line` — линии и
 // рамки). Служебное ролей бренда не занимает.
 //
-// Не заданы намеренно: `--tertiary` (вариант базового Button), `--black-70` (CarouselNav).
-// Проект, которому они нужны, задаёт их сам.
+// Стартовые значения дополнительных ролей: tertiary — нейтральная кнопка, black-70 —
+// затемнение CarouselNav, font-secondary — основной шрифт до настройки второго проектом.
 //
 // НЕОБЯЗАТЕЛЬНЫЕ ручки — у них есть фолбэк, поэтому в договор они не входят и здесь не заданы:
 //   --on-fill        цвет текста на заливке Button (по умолчанию --black)
@@ -25,10 +25,12 @@
   --white-10: rgba(255, 255, 255, 0.1);
 
   --black: #2B2F33;
+  --black-70: color-mix(in srgb, var(--black) 70%, transparent);
   --primary: #29A5FB;
   --primary-light: #E9F4FF;
   --primary-hover: #F5F9FF;
   --primary-dark: #228BD3;
+  --tertiary: var(--black);
   --text-muted: #5D6677;
   // Подсказка поля (`placeholder` и значение по умолчанию у пропа `seed`) — СВЕТЛЕЕ приглушённого
   // текста: иначе подсказка читается как введённое значение, а это ровно то, что обещает поле
@@ -46,6 +48,7 @@
   --disable-filter-for-icon: brightness(0) saturate(100%) invert(51%) sepia(11%) saturate(17%) hue-rotate(24deg) brightness(87%) contrast(89%);
 
   --font-primary: 'Geologica', sans-serif;
+  --font-secondary: var(--font-primary);
 
   --t-p-all: all;
   --t-d-very-slow: 1s;

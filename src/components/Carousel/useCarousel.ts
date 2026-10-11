@@ -1,9 +1,9 @@
 import { Children, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Ref } from 'react';
 import type { Swiper as SwiperInstance } from 'swiper';
-import { A11y, Autoplay, Mousewheel } from 'swiper/modules';
+import { A11y, Autoplay, EffectCoverflow, EffectCube, EffectFade, EffectFlip, FreeMode, Mousewheel } from 'swiper/modules';
 
 import { publishCarouselControlsSnapshot, resetCarouselControlsSnapshot } from './controls';
-import { getBreakpointIndex, resolveResponsive, resolveResponsiveAtBreakpoint, useMergedRefs } from '../../core';
+import { clamp01, getBreakpointIndex, resolveResponsive, resolveResponsiveAtBreakpoint, useMergedRefs } from '../../core';
 import { useSharedMotion } from '../../hooks/useSharedMotion';
 import { DEFAULT_NAVIGATION_STATE, assignCarouselApiRef, buildLoopSlides, canEnableLoop, getLogicalSlideIndex, getPaginationState, getPeekOffsetPx, hasScrollableSlides } from './slides';
 import type { CarouselApi, CarouselNavigationState, CarouselProps, SlidesPerViewValue } from './types';
@@ -13,8 +13,11 @@ export type CarouselConfig = Pick<
   | 'children' | 'carouselId' | 'slidesPerView' | 'orientation' | 'effect' | 'navigation' | 'pagination'
   | 'autoplay' | 'mousewheel' | 'drag' | 'initialSlide' | 'loop' | 'centeredSlides' | 'offsetBefore'
   | 'offsetAfter' | 'peekStart' | 'peekEnd' | 'speed' | 'scrollBased' | 'perspective3d' | 'parallax'
-  | 'apiRef' | 'onNavigationStateChange'
+  | 'apiRef' | 'onNavigationStateChange' | 'inertia' | 'scrollProgress' | 'paginationClassName'
+  | 'navigationClassName'
 >;
+
+const EFFECT_MODULES = { fade: EffectFade, cube: EffectCube, coverflow: EffectCoverflow, flip: EffectFlip } as const;
 
 /** Поведение Carousel: замер брейкпоинта и зазора, петля, навигация, API. Вид — в Carousel.tsx. */
 export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: CarouselConfig) {
@@ -23,7 +26,8 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
   const {
     children, carouselId: explicitCarouselId, slidesPerView, orientation, effect, navigation, pagination,
     autoplay, mousewheel, drag, initialSlide, loop, centeredSlides, offsetBefore, offsetAfter, peekStart,
-    peekEnd, speed, scrollBased, perspective3d, parallax, apiRef, onNavigationStateChange,
+    peekEnd, speed, scrollBased, perspective3d, parallax, apiRef, onNavigationStateChange, inertia,
+    scrollProgress, paginationClassName, navigationClassName,
   } = config;
 
   const slides = useMemo(() => Children.toArray(children), [children]);
@@ -127,7 +131,10 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
   const currentPagination = resolveResponsiveAtBreakpoint(pagination, false, breakpointIndex);
   const currentOffsetBeforePx = currentOffsetBefore + getPeekOffsetPx(currentContainerWidthPx, currentSlidesPerView, currentGapPx, currentPeekStart);
   const currentOffsetAfterPx = currentOffsetAfter + getPeekOffsetPx(currentContainerWidthPx, currentSlidesPerView, currentGapPx, currentPeekEnd);
-  const swiperEffect = requestedEffect === 'slide' ? 'slide' : 'slide';
+  const swiperEffect = requestedEffect;
+  const freeMode = useMemo(() => (
+    inertia && inertia > 0 ? { enabled: true, momentum: true, momentumRatio: inertia, sticky: true } : false
+  ), [inertia]);
   const { renderedSlides, initialSlideOffset, middleCycleIndex, usesPaddedLoop } = useMemo(() => {
     if (!requestedLoop) {
       return {
@@ -178,9 +185,11 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
 
     if (autoplayConfig) activeModules.push(Autoplay);
     if (currentMousewheel) activeModules.push(Mousewheel);
+    if (freeMode) activeModules.push(FreeMode);
+    if (swiperEffect !== 'slide') activeModules.push(EFFECT_MODULES[swiperEffect]);
 
     return activeModules;
-  }, [autoplayConfig, currentMousewheel]);
+  }, [autoplayConfig, currentMousewheel, freeMode, swiperEffect]);
 
   const getNavigationState = useCallback((swiper: SwiperInstance | null): CarouselNavigationState => {
     if (!swiper || !hasScrollableSlides(slides.length, currentSlidesPerView)) {
@@ -292,9 +301,13 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
       pageCount: paginationState.pageCount,
       showNavigation,
       showDots,
+      paginationClassName,
+      navigationClassName,
     });
   }, [
     activeIndex,
+    navigationClassName,
+    paginationClassName,
     currentSlidesPerView,
     loopEnabled,
     navigationState,
@@ -312,11 +325,25 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     };
   }, []);
 
+  // Положение ленты при scrollBased задаёт вызывающий: прогресс 0…1 без анимации.
+  const scrollProgressRef = useRef(scrollProgress);
+  scrollProgressRef.current = scrollBased ? scrollProgress : undefined;
+
+  const applyScrollProgress = useCallback((swiper: SwiperInstance | null) => {
+    const progress = scrollProgressRef.current;
+    if (swiper && progress !== undefined) swiper.setProgress(clamp01(progress), 0);
+  }, []);
+
+  useEffect(() => {
+    applyScrollProgress(swiperRef.current);
+  }, [applyScrollProgress, scrollBased, scrollProgress]);
+
   const handleSwiper = useCallback((instance: SwiperInstance) => {
     swiperRef.current = instance;
+    applyScrollProgress(instance);
     publishActiveIndex(instance, true);
     publishNavigationState(instance, true);
-  }, [publishActiveIndex, publishNavigationState]);
+  }, [applyScrollProgress, publishActiveIndex, publishNavigationState]);
 
   const handleSwiperUpdate = useCallback((instance: SwiperInstance) => {
     swiperRef.current = instance;
@@ -369,7 +396,7 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     };
   }, [apiRef]);
 
-  const swiperKey = `${currentOrientation}-${swiperEffect}-${loopEnabled}-${usesPaddedLoop}-${String(currentSlidesPerView)}-${currentInitialSlide}-${renderedSlides.length}-${currentCenteredSlides}`;
+  const swiperKey = `${currentOrientation}-${swiperEffect}-${Boolean(freeMode)}-${loopEnabled}-${usesPaddedLoop}-${String(currentSlidesPerView)}-${currentInitialSlide}-${renderedSlides.length}-${currentCenteredSlides}`;
 
   const setRootRefs = useMergedRefs(rootRef, setMotionNode, ref);
 
@@ -378,6 +405,6 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     handleSwiper, handleSwiperUpdate, handleSwiperTransitionEnd, autoplayConfig, renderedSlides,
     currentDrag, currentOrientation, currentCenteredSlides, currentInitialSlide, loopEnabled,
     currentMousewheel, currentSlidesPerView, currentOffsetAfterPx, currentOffsetBeforePx,
-    currentGapPx, currentSpeed,
+    currentGapPx, currentSpeed, swiperEffect, freeMode,
   };
 }

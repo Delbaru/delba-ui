@@ -1,74 +1,64 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import { useCallback, useId } from 'react';
 import type React from 'react';
 
 import { stateProps as buildStateProps } from '../../core';
-import { useAnchoredFloating } from '../../hooks/useAnchoredFloating';
+import { useTooltip } from '../../hooks/useTooltip';
 
 export type IconTooltipDirection = 'right' | 'left' | 'top' | 'bottom';
 
-type IconTooltipWithPortalProps = {
-  children: React.ReactElement;
-  tooltip: React.ReactNode;
-  direction: IconTooltipDirection;
-  gap: number;
-};
-
-export function IconTooltipWithPortal({ children, tooltip, direction, gap }: IconTooltipWithPortalProps) {
-  const anchorRef = useRef<HTMLSpanElement | null>(null);
-  const floatingRef = useRef<HTMLElement | null>(null);
-  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
-  const [isActive, setIsActive] = useState(false);
-  const { placement, isPositioned, style: floatingStyle } = useAnchoredFloating({
+/** Якорит подсказку на реальном DOM-элементе Icon, в том числе на inline SVG. */
+export function useIconTooltip(tooltip: React.ReactNode, direction: IconTooltipDirection, gap: number) {
+  const hasTooltip = Boolean(tooltip);
+  const id = useId();
+  const {
     anchorRef,
-    floatingRef,
-    isActive,
-    placement: direction,
+    tooltipRef,
+    anchorHandlers,
+    bubbleProps,
+  } = useTooltip<Element, HTMLSpanElement>({
+    enabled: hasTooltip,
+    direction,
     align: 'center',
     gap,
     viewportPadding: 8,
-    // Без этого всплывашка на mouseleave мгновенно уезжает за экран, и уход не виден вовсе.
     keepPositionWhenInactive: true,
+    lazyPortal: true,
   });
 
-  useEffect(() => {
-    setPortalNode(document.body);
-  }, []);
+  // Cleanup is conditional because swap may temporarily mount old and new anchors together.
+  const setAnchor = useCallback((node: Element | null) => {
+    anchorRef.current = node;
+    if (!node) return;
 
-  const handleBlur = (event: React.FocusEvent<HTMLSpanElement>) => {
-    const nextFocusedNode = event.relatedTarget as Node | null;
-    if (!nextFocusedNode || !event.currentTarget.contains(nextFocusedNode)) {
-      setIsActive(false);
-    }
-  };
+    return () => {
+      if (anchorRef.current === node) anchorRef.current = null;
+    };
+  }, [anchorRef]);
 
-  return (
-    <>
-      <span
-        ref={anchorRef}
-        className={'ui-icon-tooltip-wrapper'}
-        style={{ '--tooltip-gap': `${gap}px` } as CSSProperties}
-        onMouseEnter={() => setIsActive(true)}
-        onMouseLeave={() => setIsActive(false)}
-        onFocus={() => setIsActive(true)}
-        onBlur={handleBlur}
-      >
-        {children}
-      </span>
-      {portalNode && createPortal(
+  const bubble = hasTooltip && bubbleProps.portalNode
+    ? createPortal(
         <span
-          ref={floatingRef}
-          className={'ui-icon-tooltip'}
-          style={floatingStyle}
-          data-placement={placement}
-          {...buildStateProps(isActive && isPositioned && 'active')}
+          ref={tooltipRef}
+          id={id}
+          className="ui-icon-tooltip"
+          style={bubbleProps.style}
+          data-placement={bubbleProps.placement}
+          role="tooltip"
+          {...buildStateProps(bubbleProps.active && 'active')}
         >
           {tooltip}
         </span>,
-        portalNode
-      )}
-    </>
-  );
+        bubbleProps.portalNode,
+      )
+    : null;
+
+  return {
+    setAnchor,
+    handlers: anchorHandlers,
+    bubble,
+    describedBy: hasTooltip ? id : undefined,
+  };
 }

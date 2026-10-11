@@ -29,7 +29,11 @@ export function useReveal(input: RevealInput | undefined) {
   }, [signature]);
 
   const setRevealNode = useCallback((node: Element | null) => {
-    nodeRef.current = node instanceof HTMLElement ? node : null;
+    const next = node instanceof HTMLElement ? node : null;
+    if (nodeRef.current === next) return;
+    if (nodeRef.current) releaseReveal(nodeRef.current);
+    nodeRef.current = next;
+    if (next && configRef.current) armReveal(next, configRef.current);
   }, []);
 
   return { revealAttrs: revealAttrs(config), revealStyle: revealStyle(config), setRevealNode };

@@ -22,6 +22,8 @@ export type CarouselControlsSnapshot = {
   pageCount: number;
   showNavigation: boolean;
   showDots: boolean;
+  paginationClassName?: string;
+  navigationClassName?: string;
 };
 
 export const DEFAULT_CAROUSEL_CONTROLS_SNAPSHOT: CarouselControlsSnapshot = {

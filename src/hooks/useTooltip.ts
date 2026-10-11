@@ -15,6 +15,10 @@ export interface UseTooltipOptions {
   gap?: number;
   /** Минимальный отступ от краёв вьюпорта, px. */
   viewportPadding?: number;
+  /** Создавать портал только после первого показа; для небольших тултипов вроде Icon. */
+  lazyPortal?: boolean;
+  /** Оставлять последнюю позицию на время fade-out. */
+  keepPositionWhenInactive?: boolean;
 }
 
 /** Пропы для presentational-компонента `<Tooltip>` — разворачиваются спредом. */
@@ -25,7 +29,7 @@ export interface TooltipBubbleProps {
   active: boolean;
 }
 
-export interface UseTooltipResult<A extends HTMLElement = HTMLElement, F extends HTMLElement = HTMLElement> {
+export interface UseTooltipResult<A extends Element = HTMLElement, F extends HTMLElement = HTMLElement> {
   /** Ref на якорь (элемент, относительно которого позиционируется тултип). Writable — можно мёржить с другими ref'ами. */
   anchorRef: MutableRefObject<A | null>;
   /** Ref на саму всплывашку (нужен для измерения её размера). */
@@ -49,19 +53,23 @@ export interface UseTooltipResult<A extends HTMLElement = HTMLElement, F extends
  * + портал в `document.body`. Вынесено из Button/Icon, чтобы не дублировать логику в каждом компоненте.
  * Рендер всплывашки — в общем компоненте `<Tooltip>` (см. UI/Tooltip).
  */
-export function useTooltip<A extends HTMLElement = HTMLElement, F extends HTMLElement = HTMLElement>({
+export function useTooltip<A extends Element = HTMLElement, F extends HTMLElement = HTMLElement>({
   enabled = true,
   direction = 'bottom',
   align = 'center',
   gap = 8,
   viewportPadding = 8,
+  lazyPortal = false,
+  keepPositionWhenInactive = true,
 }: UseTooltipOptions = {}): UseTooltipResult<A, F> {
   const anchorRef = useRef<A | null>(null);
   const tooltipRef = useRef<F | null>(null);
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [hasShown, setHasShown] = useState(false);
 
-  const isActive = enabled && isHovered;
+  const isActive = enabled && (isHovered || isFocused);
 
   const { placement, isPositioned, style } = useAnchoredFloating({
     anchorRef,
@@ -72,21 +80,32 @@ export function useTooltip<A extends HTMLElement = HTMLElement, F extends HTMLEl
     gap,
     viewportPadding,
     // Тултипы должны плавно исчезать — оставляем позицию на время fade-out.
-    keepPositionWhenInactive: true,
+    keepPositionWhenInactive,
   });
 
   useEffect(() => {
+    if (lazyPortal && !hasShown) return;
     setPortalNode(document.body);
-  }, []);
+  }, [hasShown, lazyPortal]);
 
-  const show = useCallback(() => setIsHovered(true), []);
+  const show = useCallback(() => {
+    if (!enabled) return;
+    setIsHovered(true);
+    if (lazyPortal) setHasShown(true);
+  }, [enabled, lazyPortal]);
   const hide = useCallback(() => setIsHovered(false), []);
+  const focus = useCallback(() => {
+    if (!enabled) return;
+    setIsFocused(true);
+    if (lazyPortal) setHasShown(true);
+  }, [enabled, lazyPortal]);
+  const blur = useCallback(() => setIsFocused(false), []);
 
   const anchorHandlers = {
     onMouseEnter: show,
     onMouseLeave: hide,
-    onFocus: show,
-    onBlur: hide,
+    onFocus: focus,
+    onBlur: blur,
   };
 
   return {

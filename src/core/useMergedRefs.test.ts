@@ -23,3 +23,16 @@ test('assignRef: пустой ref ничего не ломает', () => {
     assert.doesNotThrow(() => assignRef(undefined, 'node'));
     assert.doesNotThrow(() => assignRef(null, 'node'));
 });
+
+test('assignRef: сохраняет функцию очистки callback-ref React 19', () => {
+    const calls: string[] = [];
+    const cleanup = assignRef((node: string | null) => {
+        calls.push(`attached:${node}`);
+        return () => { calls.push('cleanup'); };
+    }, 'node');
+
+    assert.deepEqual(calls, ['attached:node']);
+    assert.equal(typeof cleanup, 'function');
+    cleanup?.();
+    assert.deepEqual(calls, ['attached:node', 'cleanup']);
+});

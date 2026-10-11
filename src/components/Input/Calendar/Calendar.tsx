@@ -27,6 +27,7 @@ interface CalendarProps {
   calendarDays: Date[];
   isDateDisabled: (day: Date) => boolean;
   onDateSelect: (day: Date) => void;
+  onFocusLeave: () => void;
 }
 
 export function Calendar({
@@ -40,6 +41,7 @@ export function Calendar({
   calendarDays,
   isDateDisabled,
   onDateSelect,
+  onFocusLeave,
 }: CalendarProps) {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [isMonthPickerActive, setIsMonthPickerActive] = useState(false);
@@ -60,8 +62,10 @@ export function Calendar({
   const visibleYear = visibleMonth.getFullYear();
 
   useEffect(() => {
-    setPortalNode(document.body);
-  }, []);
+    const modal = anchorRef.current?.closest<HTMLElement>('[role="dialog"][aria-modal="true"]');
+    // Keep the calendar in the active modal's focus scope and stacking layer.
+    setPortalNode(modal?.parentElement ?? document.body);
+  }, [anchorRef]);
 
   useEffect(() => {
     if (!isActive) setIsMonthPickerActive(false);
@@ -93,6 +97,22 @@ export function Calendar({
       className={styles.Calendar}
       style={floatingStyle}
       onMouseDownCapture={(event) => event.preventDefault()}
+      onBlurCapture={(event) => {
+        const nextTarget = event.relatedTarget;
+        if (
+          nextTarget instanceof Node
+          && (floatingRef.current?.contains(nextTarget) || anchorRef.current?.contains(nextTarget))
+        ) return;
+
+        onFocusLeave();
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        onFocusLeave();
+        anchorRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+      }}
       {...stateProps(isActive && isPositioned && 'active')}
       data-placement={placement}
     >
@@ -102,23 +122,26 @@ export function Calendar({
         justify={['space_between', 'space_between', 'space_between']}
         gap={[8, null, null]}
       >
-        <Icon
-          src={assetUrl(arrowIcon)}
-          rootW={[40, null, null]}
-          rootH={[40, null, null]}
-          w={[18, null, null]}
-          h={[18, null, null]}
-          rootR={[8, null, null]}
-          rootBg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
+        <Button
+          type='button'
+          aria-label='Previous month'
+          w={[40, null, null]}
+          h={[40, null, null]}
+          r={[8, null, null]}
+          bg='var(--white-100)'
           border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
           onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, -1))}
-          rootClassName={cx(styles.btn, styles.prev)}
-        />
+          className={cx(styles.btn, styles.prev)}
+        >
+          <Icon src={assetUrl(arrowIcon)} w={[18, null, null]} h={[18, null, null]} aria-hidden='true' />
+        </Button>
 
         <Flex dir={['row', 'row', 'row']} align={['center', 'center', 'center']} gap={[16, null, null]}>
-          <Flex
-            dir={['row', 'row', 'row']}
-            align={['center', 'center', 'center']}
+          <Button
+            type='button'
+            aria-label='Choose month'
+            aria-expanded={isMonthPickerActive}
+            aria-controls={`${id}-calendar-grid`}
             gap={[4, null, null]}
             className={styles.monthPick}
             onClick={toggleMonthPickerActive}
@@ -131,8 +154,9 @@ export function Calendar({
               w={[20, null, null]}
               h={[20, null, null]}
               rootClassName={cx(styles.btn, styles.prev)}
+              aria-hidden='true'
             />
-          </Flex>
+          </Button>
 
           <Flex dir={['row', 'row', 'row']} align={['center', 'center', 'center']} gap={[4, null, null]} className={styles.yearPick}>
             <Text variant={['inherit', null, null]}>{visibleYear}</Text>
@@ -140,41 +164,44 @@ export function Calendar({
             {/* Глиф прежний, растёт только зона попадания: при корне 12×8 в стрелку года целились
                 мишенью 10×7 пикселей. Зазор между ними теперь внутри корней. */}
             <Flex dir={['column', 'column', 'column']} align={['center', 'center', 'center']}>
-              <Icon
-                src={assetUrl(chevronIcon)}
-                rootW={[20, null, null]}
-                rootH={[16, null, null]}
-                w={[16, null, null]}
-                h={['auto', null, null]}
-                rootClassName={cx(styles.btn, styles.prev)}
+              <Button
+                type='button'
+                aria-label='Next year'
+                w={[20, null, null]}
+                h={[16, null, null]}
+                className={cx(styles.btn, styles.prev)}
                 onClick={() => changeVisibleYear(1)}
-              />
+              >
+                <Icon src={assetUrl(chevronIcon)} w={[16, null, null]} h={['auto', null, null]} aria-hidden='true' />
+              </Button>
 
-              <Icon
-                src={assetUrl(chevronIcon)}
-                rootW={[20, null, null]}
-                rootH={[16, null, null]}
-                w={[16, null, null]}
-                h={['auto', null, null]}
-                rootClassName={cx(styles.btn, styles.next)}
+              <Button
+                type='button'
+                aria-label='Previous year'
+                w={[20, null, null]}
+                h={[16, null, null]}
+                className={cx(styles.btn, styles.next)}
                 onClick={() => changeVisibleYear(-1)}
-              />
+              >
+                <Icon src={assetUrl(chevronIcon)} w={[16, null, null]} h={['auto', null, null]} aria-hidden='true' />
+              </Button>
             </Flex>
           </Flex>
         </Flex>
 
-        <Icon
-          src={assetUrl(arrowIcon)}
-          rootW={[40, null, null]}
-          rootH={[40, null, null]}
-          w={[18, null, null]}
-          h={[18, null, null]}
-          rootR={[8, null, null]}
-          rootBg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
+        <Button
+          type='button'
+          aria-label='Next month'
+          w={[40, null, null]}
+          h={[40, null, null]}
+          r={[8, null, null]}
+          bg='var(--white-100)'
           border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
           onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, 1))}
-          rootClassName={cx(styles.btn, styles.next)}
-        />
+          className={cx(styles.btn, styles.next)}
+        >
+          <Icon src={assetUrl(arrowIcon)} w={[18, null, null]} h={[18, null, null]} aria-hidden='true' />
+        </Button>
       </Flex>
 
       {/* Сетка месяцев и сетка дней — подмена на одном месте, поэтому своп, а не голое условие.
@@ -182,6 +209,7 @@ export function Calendar({
           иначе карточка прыгала бы на 124 при каждом входе в выбор месяца, а месяцы растягиваются
           на ту же высоту и становятся крупными плитками. */}
       <Flex
+        id={`${id}-calendar-grid`}
         transitionKey={isMonthPickerActive ? 'months' : 'days'}
         animation='fadeIn'
         dir={['column', 'column', 'column']}

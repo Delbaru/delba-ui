@@ -2,15 +2,18 @@
 
 import styles from './Select.module.scss';
 
-import { type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import type React from 'react';
-import { assetUrl, cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
+import { assetUrl, composeEventHandlers, cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
 import { Icon } from '../Icon';
 import { Text } from '../Text';
 import { Skeleton } from '../Skeleton';
 import { Flex } from '../Flex';
+import type { CollapseOptions } from '../Collapse/CollapseWrap';
 import type { SharedMotionProps } from '../../hooks/useSharedMotion';
-import type { SelectItem } from './options';
+import { useAnchoredFloating } from '../../hooks/useAnchoredFloating';
+import { isValueArray, selectFormValues, type SelectItem } from './options';
 import { useSelect, type SelectRenderValuePayload } from './useSelect';
 
 import arrowIcon from '../../../assets/icons/ui/arrows/arrow-2/arrow.svg';
@@ -25,7 +28,8 @@ const DEFAULT_PLACEHOLDER = 'Выберите значение';
 const DEFAULT_EMPTY_MESSAGE = 'Выберите значение';
 const DEFAULT_VISIBLE_OPTIONS = 4;
 
-export interface SelectProps<T = string>
+/** Пропсы Select без значения. Обёртке: `SelectBaseProps<T> & SelectValueProps<T>`, а не `extends SelectProps`. */
+export interface SelectBaseProps<T extends string = string>
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue' | 'onChange' | 'dir' | 'rel'>,
         LayoutSpaceProps,
         RadiusPropsShort,
@@ -35,6 +39,9 @@ export interface SelectProps<T = string>
         SizePropsShort {
     className?: string;
 
+    /** Сворачивает всё поле вместе с подписью и ошибкой; не управляет списком вариантов. */
+    collapse?: CollapseOptions;
+
     /** Класс на САМ триггер (внутренний .Select — тот, что несёт фон/рамку), а не на обёртку
      *  с label/comment, куда садится className. Нужен скин-обёрткам (SharedSelect), которые
      *  красят поле осями из components/system/_axes.scss: без этого класс-ось приземлился бы
@@ -43,11 +50,11 @@ export interface SelectProps<T = string>
 
     style?: CSSProperties;
 
-    options: SelectItem<T>[];
-    value?: T | null | T[];
-    defaultValue?: T | null | T[];
-    onChange?: (value: T | null | T[]) => void;
-    multiple?: boolean;
+    options: readonly SelectItem<T>[];
+    /** Имя поля в FormData. При multiple каждое выбранное значение отправляется отдельной записью. */
+    name?: string;
+    /** ID формы, когда Select расположен вне её DOM-поддерева. */
+    form?: string;
 
     /**
      * Закрывать список сразу после выбора. У ОДИНОЧНОГО селекта так и так: выбор там один, и
@@ -94,7 +101,6 @@ export interface SelectProps<T = string>
     required?: boolean;
     emptyMessage?: string;
     visibleOptions?: number;
-    validate?: (value: T | null | T[]) => string | undefined;
 
     state?: ComponentStateValue;
 
@@ -104,6 +110,28 @@ export interface SelectProps<T = string>
     'aria-label'?: string;
     'data-point-events'?: string;
 }
+
+/**
+ * Значение по ветке `multiple`: одиночный выбор — `T | null`, множественный — `T[]`.
+ * `defaultValue` не участвует в выводе `T`: литерал `['ru']` иначе сузил бы тип опций до `'ru'`.
+ */
+export type SelectValueProps<T extends string = string> =
+    | {
+          multiple?: false;
+          value?: T | null;
+          defaultValue?: NoInfer<T> | null;
+          onChange?: (value: T | null) => void;
+          validate?: (value: T | null) => string | undefined;
+      }
+    | {
+          multiple: true;
+          value?: T[];
+          defaultValue?: NoInfer<T>[];
+          onChange?: (value: T[]) => void;
+          validate?: (value: T[]) => string | undefined;
+      };
+
+export type SelectProps<T extends string = string> = SelectBaseProps<T> & SelectValueProps<T>;
 
 function isPrimitiveNode(node: React.ReactNode): node is string | number {
     return typeof node === 'string' || typeof node === 'number';
@@ -121,16 +149,19 @@ function renderSelectNode(node: React.ReactNode, textClassName: string | undefin
     return node;
 }
 
-export function Select({
+export function Select<T extends string = string>({
     ref,
     className = '',
+    collapse,
     fieldClassName,
     style,
     options,
+    name,
+    form,
     value: valueProp,
-    defaultValue = null,
+    defaultValue,
     onChange,
-    multiple = false,
+    multiple,
     closeOnSelect = false,
     showSelected = true,
     renderValue,
@@ -189,22 +220,91 @@ export function Select({
     id: idProp,
     state,
     linkState,
+    onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp,
+    onClick, onFocus, onBlur,
     'aria-label': ariaLabel,
     'data-point-events': dataPointEvents,
     ...restProps
-}: WithRef<SelectProps<string>, HTMLDivElement>) {
+}: WithRef<SelectProps<T>, HTMLDivElement>) {
+    // Хук хранит общий `T | null | T[]`; наружу значение уходит типом своей ветки `multiple`.
+    const emitChange = (next: T | null | T[]) => {
+        if (multiple) {
+            if (isValueArray(next)) onChange?.(next);
+        } else if (!isValueArray(next)) {
+            onChange?.(next);
+        }
+    };
+
+    const validateValue = (next: T | null | T[]) => {
+        if (multiple) return isValueArray(next) ? validateProp?.(next) : undefined;
+        return isValueArray(next) ? undefined : validateProp?.(next);
+    };
+
     const {
-        id, innerRef, errorId, displayError, commentId, listboxId, open, focusedIndex, setFocusedIndex,
+        id, fieldRef, triggerAnchorRef, dropdownPanelRef, dropdownDismissProps,
+        errorId, displayError, commentId, listboxId, open, focusedIndex, setFocusedIndex,
         showInlineError, hasSelectedValue, displayContent, dropdownItems, dropdownOptions,
         dropdownScrolls, normalizedVisibleOptions, triggerAccessibilityProps, dropdownRef,
         setWrapperRef, setOptionRef, motionHandlers, motionStyle, handleContainerClick, handleKeyDown,
         handleSelect, handleDropdownWheelCapture, handleDropdownTouchMoveCapture, optionIndexOf,
-        isOptionSelected,
+        closeDropdown,
+        isOptionSelected, formValue,
     } = useSelect(ref, {
-        options, value: valueProp, defaultValue, onChange, multiple, closeOnSelect, showSelected, renderValue,
-        placeholder, loading, disabled, required, emptyMessage, visibleOptions, validate: validateProp,
+        options, value: valueProp, defaultValue, onChange: emitChange, multiple: multiple === true, closeOnSelect,
+        showSelected, renderValue, placeholder, loading, disabled, required, emptyMessage, visibleOptions,
+        validate: validateValue,
         id: idProp, error: errorProp, label, comment, ariaLabel, perspective3d, parallax,
     });
+
+    const { style: dropdownFloatingStyle } = useAnchoredFloating({
+        anchorRef: triggerAnchorRef,
+        floatingRef: dropdownPanelRef,
+        isActive: open,
+        placement: 'bottom',
+        align: 'start',
+        gap: -1,
+        viewportPadding: 8,
+        keepPositionWhenInactive: true,
+    });
+    const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
+    const portalSelectRef = useRef<HTMLDivElement>(null);
+    const isCollapsed = typeof collapse === 'boolean' ? !collapse : collapse?.open === false;
+
+    useEffect(() => {
+        const modal = triggerAnchorRef.current?.closest<HTMLElement>('[role="dialog"][aria-modal="true"]');
+        // Keep a modal's list in that modal's stacking context so a later dialog covers it.
+        // A regular page Select has no such ancestor and uses the body-level floating layer.
+        setPortalNode(modal?.parentElement ?? document.body);
+    }, []);
+
+    useLayoutEffect(() => {
+        const anchor = triggerAnchorRef.current;
+        const portalSelect = portalSelectRef.current;
+        if (!anchor || !portalSelect) return;
+
+        const syncSelectVariables = () => {
+            const computed = window.getComputedStyle(anchor);
+            for (const variable of ['--select-height', '--select-dropdown-radius', '--select-dropdown-radius-top']) {
+                const value = computed.getPropertyValue(variable).trim();
+                if (value) portalSelect.style.setProperty(variable, value);
+                else portalSelect.style.removeProperty(variable);
+            }
+        };
+
+        syncSelectVariables();
+        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(syncSelectVariables) : null;
+        observer?.observe(anchor);
+        window.addEventListener('resize', syncSelectVariables);
+
+        return () => {
+            observer?.disconnect();
+            window.removeEventListener('resize', syncSelectVariables);
+        };
+    });
+
+    useEffect(() => {
+        if (isCollapsed) closeDropdown(false);
+    }, [closeDropdown, isCollapsed]);
 
     const hasExplicitSize =
         w !== undefined ||
@@ -260,8 +360,140 @@ export function Select({
 
     const fieldClasses = fieldLayoutClasses(c, layoutProps);
 
+    const dropdownPortal = (
+        <div
+            className={cx(styles.SelectWrapper, styles.DropdownPortal)}
+            role="presentation"
+            aria-hidden={!open}
+        >
+            <Flex
+                ref={portalSelectRef}
+                dir={['column', 'column', 'column']}
+                className={cx(styles.Select, ...c.value('size', resolvedSize), ...c.value('h', h))}
+                style={
+                    {
+                        ['--select-visible-options' as string]: String(normalizedVisibleOptions),
+                    } as CSSProperties
+                }
+                {...stateProps(state, displayError && 'error', disabled && 'disabled', open && 'open')}
+            >
+                <div className={cx(styles.selectVariantScope, ...c.value('variant', resolvedVariant))}>
+                    <div
+                        ref={dropdownPanelRef}
+                        className={styles.DropdownWrapper}
+                        style={dropdownFloatingStyle}
+                        role="presentation"
+                        aria-hidden={!open}
+                        inert={!open}
+                        onKeyDown={handleKeyDown}
+                        {...dropdownDismissProps}
+                    >
+                        <div className={styles.DropdownInner} role="presentation">
+                            <div className={styles.Dropdown}>
+                                <Flex
+                                    ref={dropdownRef}
+                                    dir={['column', 'column', 'column']}
+                                    id={listboxId}
+                                    role="listbox"
+                                    scrollFade
+                                    className={styles.DropdownScroll}
+                                    data-scrolls={dropdownScrolls || undefined}
+                                    aria-hidden={!open}
+                                    aria-multiselectable={multiple || undefined}
+                                    aria-activedescendant={
+                                        open && focusedIndex >= 0 && dropdownOptions[focusedIndex]
+                                            ? `${id}-option-${focusedIndex}`
+                                            : undefined
+                                    }
+                                    data-lenis-prevent
+                                    data-lenis-prevent-wheel
+                                    data-lenis-prevent-touch
+                                    onWheelCapture={handleDropdownWheelCapture}
+                                    onTouchMoveCapture={handleDropdownTouchMoveCapture}
+                                >
+                                    {dropdownItems.map((item) => {
+                                        if (item.type === 'group') {
+                                            return (
+                                                <Text
+                                                    key={item.key}
+                                                    as="div"
+                                                    variant={['caption', 'caption', 'caption']}
+                                                    className={styles.GroupLabel}
+                                                    color="var(--text-muted)"
+                                                >
+                                                    {item.label}
+                                                </Text>
+                                            );
+                                        }
+
+                                        const opt = item.option;
+                                        const optionIndex = optionIndexOf(opt);
+                                        const isSelected = isOptionSelected(opt);
+                                        const isFocused = optionIndex === focusedIndex;
+                                        const optionContent = opt.children ?? opt.label;
+
+                                        return (
+                                            // Короткий зазор оставляет больше места переносимой подписи.
+                                            <Flex
+                                                key={item.key}
+                                                ref={setOptionRef(optionIndex)}
+                                                align={['center', 'center', 'center']}
+                                                justify={['space_between', 'space_between', 'space_between']}
+                                                gap={[8, 8, 8]}
+                                                id={`${id}-option-${optionIndex}`}
+                                                role="option"
+                                                aria-label={opt.label}
+                                                aria-selected={isSelected}
+                                                className={styles.Option}
+                                                {...stateProps(isSelected && 'selected', isFocused && 'focused')}
+                                                onMouseDown={(event) => event.preventDefault()}
+                                                onClick={() => handleSelect(opt)}
+                                                onMouseEnter={() => setFocusedIndex(optionIndex)}
+                                            >
+                                                {/* Строка — сам option; галочка только помечает его состояние. */}
+                                                {multiple && (
+                                                    <Flex
+                                                        aria-hidden
+                                                        className={styles.OptionCheck}
+                                                        align={['center', 'center', 'center']}
+                                                        justify={['center', 'center', 'center']}
+                                                        w={[24, 24, 24]}
+                                                        h={[24, 24, 24]}
+                                                        r={[8, 8, 8]}
+                                                    >
+                                                        <Icon
+                                                            aria-hidden
+                                                            src={assetUrl(checkIcon)}
+                                                            fill="var(--white-100)"
+                                                            w={[16, 16, 16]}
+                                                            h={[16, 16, 16]}
+                                                            className={styles.OptionCheckIcon}
+                                                        />
+                                                    </Flex>
+                                                )}
+
+                                                <div className={styles.OptionContent}>
+                                                    {renderSelectNode(optionContent, styles.OptionLabel)}
+                                                </div>
+                                            </Flex>
+                                        );
+                                    })}
+                                </Flex>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Flex>
+        </div>
+    );
+
+    const dropdownContent = portalNode
+        ? createPortal(dropdownPortal, portalNode)
+        : dropdownPortal;
+
     return (
         <Flex
+            collapse={collapse}
             href={undefined}
             dir={['column', 'column', 'column']}
             gap={[8, 8, 8]}
@@ -269,8 +501,17 @@ export function Select({
             style={{ ...(motionStyle ?? null), ...style }}
             ref={setWrapperRef}
             data-point-events={dataPointEvents}
-            {...stateLinkProps(linkState, { ...motionHandlers })}
             {...restProps}
+            {...stateLinkProps(linkState, {
+                onMouseEnter: composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter),
+                onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),
+                onMouseLeave: composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave),
+                onMouseDown,
+                onMouseUp,
+                onClick,
+                onFocus,
+                onBlur,
+            })}
         >
             {label && (
                 <Flex dir={['row', 'row', 'row']} gap={required ? [4, 4, 4] : [0, 0, 0]}>
@@ -298,7 +539,7 @@ export function Select({
                 onClick={handleContainerClick}
             >
                 <Flex
-                    ref={innerRef}
+                    ref={fieldRef}
                     align={['center', 'center', 'center']}
                     justify={['space_between', 'space_between', 'space_between']}
                     gap={[8, 8, 8]}
@@ -357,119 +598,13 @@ export function Select({
                     />
                 </Flex>
 
-                <div className={styles.DropdownWrapper} role="presentation" aria-hidden={!open}>
-                    <div className={styles.DropdownInner} role="presentation">
-                        <div className={styles.Dropdown}>
-                            <Flex
-                                ref={dropdownRef}
-                                dir={['column', 'column', 'column']}
-                                id={listboxId}
-                                role="listbox"
-                                scrollFade
-                                className={styles.DropdownScroll}
-                                data-scrolls={dropdownScrolls || undefined}
-                                aria-hidden={!open}
-                                aria-multiselectable={multiple || undefined}
-                                aria-activedescendant={
-                                    open && focusedIndex >= 0 && dropdownOptions[focusedIndex]
-                                        ? `${id}-option-${focusedIndex}`
-                                        : undefined
-                                }
-                                data-lenis-prevent
-                                data-lenis-prevent-wheel
-                                data-lenis-prevent-touch
-                                onWheelCapture={handleDropdownWheelCapture}
-                                onTouchMoveCapture={handleDropdownTouchMoveCapture}
-                            >
-                                {dropdownItems.map((item) => {
-                                    if (item.type === 'group') {
-                                        return (
-                                            <Text
-                                                key={item.key}
-                                                as="div"
-                                                variant={['caption', 'caption', 'caption']}
-                                                className={styles.GroupLabel}
-                                                color="var(--text-muted)"
-                                            >
-                                                {item.label}
-                                            </Text>
-                                        );
-                                    }
-
-                                    const opt = item.option;
-                                    const optionIndex = optionIndexOf(opt);
-                                    const isSelected = isOptionSelected(opt);
-                                    const isFocused = optionIndex === focusedIndex;
-                                    const optionContent = opt.children ?? opt.label;
-
-                                    return (
-                                        <Flex
-                                            key={item.key}
-                                            ref={setOptionRef(optionIndex)}
-                                            align={['center', 'center', 'center']}
-                                            justify={['space_between', 'space_between', 'space_between']}
-                                            // Зазор маркер↔подпись. 8, а не 16: подпись опции
-                                            // переносится по словам, и каждый лишний пиксель
-                                            // отступа — это слово, уехавшее на вторую строку.
-                                            // У одиночного селекта ребёнок один и зазор мёртв.
-                                            gap={[8, 8, 8]}
-                                            id={`${id}-option-${optionIndex}`}
-                                            role="option"
-                                            aria-label={opt.label}
-                                            aria-selected={isSelected}
-                                            className={styles.Option}
-                                            {...stateProps(isSelected && 'selected', isFocused && 'focused')}
-                                            onMouseDown={(event) => event.preventDefault()}
-                                            onClick={() => handleSelect(opt)}
-                                            onMouseEnter={() => setFocusedIndex(optionIndex)}
-                                        >
-                                            {/* Множественный выбор помечается КВАДРАТОМ-галочкой, а не одной
-                                                подложкой строки: подложка у отмеченной и у наведённой опции
-                                                одна и та же, и без маркера «отметил два» читается как
-                                                «навёл на два». Слева — как у галочек колоночного фильтра,
-                                                единственного другого места, где в кабинете выбирают несколько.
-
-                                                Это РИСУНОК (`aria-hidden`), а не атом `Checkbox`: контрол здесь
-                                                сама строка (`role='option'` + `aria-selected`), и вложенный в неё
-                                                настоящий <input> стал бы вторым контролом в дереве доступности.
-                                                Цвета — в модуле на дочернем классе, а не пропом: проп даёт инлайн,
-                                                который состояние потом не перебьёт без `!important` (§9.3).
-
-                                                Условие тут НЕ требует анимации (§8.4): `multiple` — настройка поля,
-                                                а не состояние. Маркер либо есть у списка всегда, либо нет никогда;
-                                                едет по нажатию сама галочка внутри него, а не он. */}
-                                            {multiple && (
-                                                <Flex
-                                                    aria-hidden
-                                                    className={styles.OptionCheck}
-                                                    align={['center', 'center', 'center']}
-                                                    justify={['center', 'center', 'center']}
-                                                    w={[24, 24, 24]}
-                                                    h={[24, 24, 24]}
-                                                    r={[8, 8, 8]}
-                                                >
-                                                    <Icon
-                                                        aria-hidden
-                                                        src={assetUrl(checkIcon)}
-                                                        fill="var(--white-100)"
-                                                        w={[16, 16, 16]}
-                                                        h={[16, 16, 16]}
-                                                        className={styles.OptionCheckIcon}
-                                                    />
-                                                </Flex>
-                                            )}
-
-                                            <div className={styles.OptionContent}>
-                                                {renderSelectNode(optionContent, styles.OptionLabel)}
-                                            </div>
-                                        </Flex>
-                                    );
-                                })}
-                            </Flex>
-                        </div>
-                    </div>
-                </div>
             </Flex>
+
+            {dropdownContent}
+
+            {name && !disabled && selectFormValues(formValue, multiple === true).map((itemValue, index) => (
+                <input key={`${itemValue}-${index}`} type="hidden" name={name} form={form} value={itemValue} />
+            ))}
 
             {!displayError && comment && (
                 <Text

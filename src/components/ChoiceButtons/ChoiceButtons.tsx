@@ -91,18 +91,30 @@ function ChoiceInfoTooltip({
     );
 }
 
-export interface ChoiceButtonsItem {
-    value: string;
+export interface ChoiceButtonsItem<T extends string = string> {
+    value: T;
     label: string;
     description?: string;
-    onSelect?: (value: string) => void;
+    onSelect?: (value: T) => void;
 }
 
-export interface ChoiceButtonsProps {
-    items: ChoiceButtonsItem[];
-    value?: string | null;
-    defaultValue?: string | null;
-    onChange?: (value: string, item: ChoiceButtonsItem) => void;
+export interface ChoiceButtonsProps<T extends string = string> {
+    /** Варианты; `as const` сужает `T` до литералов значений. */
+    items: readonly ChoiceButtonsItem<T>[];
+    /** Имя выбранного значения в FormData. */
+    name?: string;
+    /** ID формы для выбора, расположенного вне её DOM-поддерева. */
+    form?: string;
+    /** Выбранное значение. `NoInfer`: `T` выводится только из items, значение мимо вариантов — ошибка типов. */
+    value?: NoInfer<T> | null;
+    /** Начальный выбор неуправляемого режима; проверяется по items так же, как `value`. */
+    defaultValue?: NoInfer<T> | null;
+    /** Отключает выбор и исключает значение из FormData. */
+    disabled?: boolean;
+    /** Обозначает обязательный выбор для доступности и проверки состояния внутри Select. */
+    required?: boolean;
+    /** Зовётся только с выбранным пунктом — значение здесь всегда есть. */
+    onChange?: (value: T, item: ChoiceButtonsItem<T>) => void;
     className?: string;
     itemClassName?: string;
     buttonClassName?: string;
@@ -111,10 +123,14 @@ export interface ChoiceButtonsProps {
     tooltipClassName?: string;
 }
 
-export function ChoiceButtons({
+export function ChoiceButtons<T extends string = string>({
     items,
+    name,
+    form,
     value,
     defaultValue = null,
+    disabled = false,
+    required = false,
     onChange,
     className = '',
     itemClassName = '',
@@ -122,35 +138,31 @@ export function ChoiceButtons({
     textClassName = '',
     infoClassName = '',
     tooltipClassName = '',
-}: ChoiceButtonsProps) {
+}: ChoiceButtonsProps<T>) {
     const isControlled = value !== undefined;
-    const [internalValue, setInternalValue] = useState<string | null>(defaultValue);
-    const [hoveredValue, setHoveredValue] = useState<string | null>(null);
+    const [internalValue, setInternalValue] = useState<T | null>(defaultValue);
+    const [hoveredValue, setHoveredValue] = useState<T | null>(null);
     const baseId = useId().replace(/:/g, '');
 
     const selectedValue = isControlled ? value ?? null : internalValue;
 
-    const handleSelectValue = (nextValue: string | null) => {
+    const selectItem = (item: ChoiceButtonsItem<T>) => {
         if (!isControlled) {
-            setInternalValue(nextValue);
+            setInternalValue(item.value);
         }
 
+        item.onSelect?.(item.value);
+        onChange?.(item.value, item);
+    };
+
+    const handleMobileTabletSelectChange = (nextValue: T | null) => {
         if (nextValue == null) {
+            if (!isControlled) setInternalValue(null);
             return;
         }
 
         const selectedItem = items.find((item) => item.value === nextValue);
-
-        if (!selectedItem) {
-            return;
-        }
-
-        selectedItem.onSelect?.(nextValue);
-        onChange?.(nextValue, selectedItem);
-    };
-
-    const handleMobileTabletSelectChange = (nextValue: string | null | string[]) => {
-        handleSelectValue(Array.isArray(nextValue) ? nextValue[0] ?? null : nextValue);
+        if (selectedItem) selectItem(selectedItem);
     };
 
     return (
@@ -166,8 +178,9 @@ export function ChoiceButtons({
                 className={cx(styles.ChoiceButtons, className)}
                 data-hide-mobile
                 data-hide-tablet
+                aria-required={required || undefined}
             >
-                {items.map((item) => {
+                {items.map((item, index) => {
                     const description = item.description;
                     const isSelected = item.value === selectedValue;
                     const isHovered = item.value === hoveredValue;
@@ -179,7 +192,10 @@ export function ChoiceButtons({
                         onMouseLeave: () => setHoveredValue((currentValue) => currentValue === item.value ? null : currentValue),
                     };
 
-                    const tooltipId = `${baseId}-${item.value}-tooltip`;
+                    // Индекс, а не значение: `aria-describedby` — список id через пробел, и значение
+                    // «Без опыта» стало бы двумя ссылками. Пара кнопка↔подсказка берёт индекс из
+                    // одного рендера, поэтому перестановка items её не разводит.
+                    const tooltipId = `${baseId}-tooltip-${index}`;
 
                     return (
                         <Flex
@@ -192,11 +208,12 @@ export function ChoiceButtons({
                                 w={['100%', null, null]}
                                 r={[12, null, null]}
                                 type='button'
+                                disabled={disabled}
                                 state={buttonState}
                                 aria-pressed={isSelected}
                                 aria-describedby={description ? tooltipId : undefined}
                                 {...hoverHandlers}
-                                onClick={() => handleSelectValue(item.value)}
+                                onClick={() => selectItem(item)}
                                 className={cx(styles.button, buttonClassName)}
                             >
                                 <Flex dir={['row', null, null]} align={['center', null, null]} gap={[8, null, null]}>
@@ -219,12 +236,16 @@ export function ChoiceButtons({
                 })}
             </TabTrack>
 
-            <Select
+            <Select<T>
+                name={name}
+                form={form}
                 multiple={false}
                 options={items.map(({ value: itemValue, label }) => ({ value: itemValue, label }))}
                 value={selectedValue}
                 onChange={handleMobileTabletSelectChange}
                 visibleOptions={Math.min(items.length, 3)}
+                disabled={disabled}
+                required={required}
                 data-hide-pc
             />
         </>

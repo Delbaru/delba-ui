@@ -107,7 +107,8 @@ export function useDatePicker({
     onCommit(nextValue);
     setVisibleMonth(datePicker.getMonthStart(nextDate));
     setIsActive(false);
-  }, [isDateDisabled, onCommit]);
+    focusField();
+  }, [focusField, isDateDisabled, onCommit]);
 
   return {
     isDatePickerActive: isActive,

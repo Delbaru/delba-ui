@@ -1,4 +1,5 @@
 import type { EventHandler as ReactEventHandler, SyntheticEvent } from 'react';
+import { composeEventHandlers } from './composeEventHandlers';
 
 const STATE_ATTRIBUTE = 'state';
 
@@ -141,13 +142,6 @@ export function useLinkedHoverState(state: ComponentStateValue, isHovered: boole
 
 type EventHandler = ReactEventHandler<SyntheticEvent> | undefined;
 
-function mergeHandlers(...fns: EventHandler[]): EventHandler {
-  const defined = fns.filter((fn): fn is ReactEventHandler<SyntheticEvent> => Boolean(fn));
-  if (defined.length === 0) return undefined;
-  if (defined.length === 1) return defined[0];
-  return (event) => { for (const fn of defined) fn(event); };
-}
-
 function normalizeLinks(input: StateLinkInput): StateLink[] {
   if (typeof input === 'string') return [{ target: input, on: 'hover', set: 'hover' }];
   if (Array.isArray(input)) return input;
@@ -159,8 +153,11 @@ function normalizeLinks(input: StateLinkInput): StateLink[] {
  *
  * @example
  * ```tsx
- * const { linkState, onMouseEnter, onMouseLeave, ...rest } = props;
- * <div {...stateLinkProps(linkState, { onMouseEnter, onMouseLeave })} {...rest} />
+ * const { linkState, onClick, onMouseEnter, onMouseLeave, onMouseDown, onMouseUp, onFocus, onBlur, ...rest } = props;
+ * <div
+ *   {...rest}
+ *   {...stateLinkProps(linkState, { onClick, onMouseEnter, onMouseLeave, onMouseDown, onMouseUp, onFocus, onBlur })}
+ * />
  * ```
  */
 export function stateLinkProps(
@@ -204,7 +201,7 @@ export function stateLinkProps(
     lh.onMouseDown = () => { for (const l of activeLinks) applyLinkedComponentState([l.target, l.set], true); };
     lh.onMouseUp = () => { for (const l of activeLinks) applyLinkedComponentState([l.target, l.set], false); };
     // also clean active state on mouse leave (safety — mouseup may fire outside)
-    lh.onMouseLeave = mergeHandlers(lh.onMouseLeave, () => {
+    lh.onMouseLeave = composeEventHandlers(lh.onMouseLeave, () => {
       for (const l of activeLinks) applyLinkedComponentState([l.target, l.set], false);
     });
   }
@@ -221,7 +218,7 @@ export function stateLinkProps(
   // --- merge link handlers with user handlers ---
   const allKeys = new Set([...Object.keys(lh), ...Object.keys(uh)]);
   for (const key of allKeys) {
-    const merged = mergeHandlers(lh[key], uh[key]);
+    const merged = composeEventHandlers(lh[key], uh[key]);
     if (merged) result[key] = merged;
   }
 

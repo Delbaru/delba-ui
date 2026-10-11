@@ -1,14 +1,13 @@
 #!/usr/bin/env node
-// CLI кита (`delba-ui` из bin пакета), запуск из папки проекта: build | watch | check [--update] [--config ui.config.ts].
+// CLI кита (`delba-ui` из bin пакета), запуск из папки проекта: build | watch | check | test [--config ui.config.ts].
 //   build — шкуры и утилиты; watch — то же и следит за правками;
 //   check — красные линии (с планкой проекта), договор темы и старые пути к киту.
-import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, watch } from 'node:fs';
+//   test — полная проверка кита и его подключения к проекту.
+import { spawn } from 'node:child_process';
+import { existsSync, watch } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-
-import { reportLegacy } from './check-migration.mjs';
 
 const TOOLS = path.dirname(fileURLToPath(import.meta.url));
 const KIT = path.dirname(TOOLS);
@@ -102,27 +101,28 @@ async function work() {
   utilities?.watch(restart);
 }
 
-function check() {
-  return loadConfig().then(() => {
-    const run = (script, args) => spawnSync(process.execPath, [path.join(TOOLS, script), ...args], { cwd: root, stdio: 'inherit' }).status === 0;
-    const update = argv.includes('--update') ? ['--update'] : [];
-    const rules = run('check-rules.mjs', ['--baseline', config.baseline ?? '.rules-baseline.json', ...update, ...(config.rules ?? ['src'])]);
-    const typography = config.typography ? ['--typography', config.typography.join(',')] : [];
-    const tokens = run('check-tokens.mjs', [...[config.theme ?? 'theme'].flat(), ...typography]);
-    const configs = readdirSync(root).filter((file) => /^(next|ui).config./.test(file));
-    const legacy = reportLegacy([...(config.rules ?? ['src']), ...configs]);
-    return rules && tokens && legacy;
-  });
+async function check() {
+  await loadConfig();
+  const { projectSteps } = await import('./check/index.mjs');
+  const { runSteps } = await import('./check/run.mjs');
+  return runSteps(projectSteps(root, config, { update: argv.includes('--update') }));
+}
+
+async function test() {
+  await loadConfig();
+  const { runUiChecks } = await import('./check/index.mjs');
+  return runUiChecks({ project: root, config, configArg });
 }
 
 const commands = {
   build: () => load().then((utilities) => utilities.build()),
   watch: () => (argv.includes('--worker') ? work() : supervise()),
   check,
+  test,
 };
 
 if (!commands[command]) {
-  console.error('Usage: delba-ui <build|watch|check> [--update] [--config ui.config.ts]');
+  console.error('Usage: delba-ui <build|watch|check|test> [--update] [--config ui.config.ts]');
   process.exit(1);
 }
 try {

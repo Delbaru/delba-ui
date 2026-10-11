@@ -62,6 +62,41 @@
           position: relative;
           transition-property: transform;
       }
+
+      // Эффекты Swiper: перспектива объёмных и клики только по видимому слайду. Тени выключены
+      // в компоненте, поэтому их правил здесь нет.
+      :global(.swiper-3d) {
+          perspective: calc(1200 * var(--rpx));
+      }
+
+      :global(.swiper-3d .swiper-wrapper),
+      :global(.swiper-3d .swiper-slide) {
+          transform-style: preserve-3d;
+      }
+
+      :global(.swiper-fade .swiper-slide) {
+          pointer-events: none;
+          transition-property: opacity;
+      }
+
+      :global(:is(.swiper-cube, .swiper-flip) .swiper-slide) {
+          z-index: 1;
+          pointer-events: none;
+          backface-visibility: hidden;
+      }
+
+      :global(.swiper-cube .swiper-slide) {
+          visibility: hidden;
+          transform-origin: 0 0;
+      }
+
+      :global(.swiper-cube :is(.swiper-slide-active, .swiper-slide-next, .swiper-slide-prev)) {
+          visibility: visible;
+      }
+
+      :global(:is(.swiper-fade, .swiper-cube, .swiper-flip) .swiper-slide-active) {
+          pointer-events: auto;
+      }
   }
 
   .Root[data-scroll-based='true'] {

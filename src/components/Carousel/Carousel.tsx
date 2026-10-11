@@ -3,7 +3,7 @@
 import { Swiper as SwiperRoot, SwiperSlide } from 'swiper/react';
 
 import styles from './Carousel.module.scss';
-import { createLayoutClasses, cx, stateLinkProps, type ResponsiveValue, type WithRef } from '../../core';
+import { composeInteractionHandlers, createLayoutClasses, cx, stateLinkProps, type ResponsiveValue, type WithRef } from '../../core';
 import type { CarouselProps } from './types';
 import { useCarousel } from './useCarousel';
 
@@ -75,17 +75,13 @@ export function Carousel({
     handleSwiper, handleSwiperUpdate, handleSwiperTransitionEnd, autoplayConfig, renderedSlides,
     currentDrag, currentOrientation, currentCenteredSlides, currentInitialSlide, loopEnabled,
     currentMousewheel, currentSlidesPerView, currentOffsetAfterPx, currentOffsetBeforePx,
-    currentGapPx, currentSpeed,
+    currentGapPx, currentSpeed, swiperEffect, freeMode,
   } = useCarousel(ref, {
     children, carouselId: explicitCarouselId, slidesPerView, orientation, effect, navigation, pagination,
     autoplay, mousewheel, drag, initialSlide, loop, centeredSlides, offsetBefore, offsetAfter, peekStart,
-    peekEnd, speed, scrollBased, perspective3d, parallax, apiRef, onNavigationStateChange,
+    peekEnd, speed, scrollBased, perspective3d, parallax, apiRef, onNavigationStateChange, inertia,
+    scrollProgress, paginationClassName, navigationClassName,
   });
-
-  void scrollProgress;
-  void inertia;
-  void paginationClassName;
-  void navigationClassName;
 
   const slidesPerViewClasses = c.key('slides-per-view', slidesPerViewKey as ResponsiveValue<string>, (key) => key);
 
@@ -95,7 +91,7 @@ export function Carousel({
       data-carousel-root
       data-carousel-id={carouselId}
       data-scroll-based={scrollBased ? 'true' : 'false'}
-      {...stateLinkProps(linkState, { onMouseEnter, onMouseLeave, ...motionHandlers })}
+      {...stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { onMouseEnter, onMouseLeave }))}
       className={cx(
         styles.Root,
         ...c.value('gap', gap),
@@ -139,6 +135,12 @@ export function Carousel({
         allowTouchMove={currentDrag}
         autoplay={autoplayConfig}
         direction={currentOrientation}
+        effect={swiperEffect}
+        fadeEffect={{ crossFade: true }}
+        cubeEffect={{ shadow: false, slideShadows: false }}
+        coverflowEffect={{ slideShadows: false }}
+        flipEffect={{ slideShadows: false }}
+        freeMode={freeMode}
         grabCursor={false}
         centeredSlides={currentCenteredSlides}
         initialSlide={currentInitialSlide}

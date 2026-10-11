@@ -9,6 +9,8 @@ import {
     useState,
     useSyncExternalStore,
     type CSSProperties,
+    type FocusEvent,
+    type KeyboardEvent,
 } from 'react';
 
 import styles from './VideoPlayer.module.scss';
@@ -63,6 +65,10 @@ const AUTO_HIDE_MS = 2000;
 const DOUBLE_CLICK_MS = 220;
 // Шаг громкости колесом мыши.
 const WHEEL_VOLUME_STEP = 0.05;
+
+// Перемотка с клавиатуры: стрелки — шаг в секундах, PageUp/PageDown — доля длительности.
+const TIMELINE_STEP_SEC = 5;
+const TIMELINE_PAGE_RATIO = 0.1;
 
 // Часы записи HH:MM:SS с ведущими нулями (нижний бар: «00:32:12 / 01:32:23»).
 function formatClock(totalSeconds: number): string {
@@ -256,6 +262,8 @@ export function VideoPlayer({
     const [controlsVisible, setControlsVisible] = useState(true);
     const lastActivityRef = useRef(0);
     const hoveringControlsRef = useRef(false);
+    // Фокус клавиатуры внутри панели держит её открытой, как наведение мыши.
+    const focusInControlsRef = useRef(false);
     const clickTimerRef = useRef<number | null>(null);
 
     const visibleControls = useMemo(() => new Set(controls ?? DEFAULT_CONTROLS), [controls]);
@@ -380,7 +388,7 @@ export function VideoPlayer({
 
     // Уход мыши — прячем (и на паузе тоже), но не во время перетаскивания трека/громкости.
     const handleRootLeave = useCallback(() => {
-        if (timeline.isDragging.current || volume.isDragging.current) return;
+        if (timeline.isDragging.current || volume.isDragging.current || focusInControlsRef.current) return;
 
         setControlsVisible(false);
     }, [timeline.isDragging, volume.isDragging]);
@@ -393,7 +401,7 @@ export function VideoPlayer({
         lastActivityRef.current = nowMs();
 
         const intervalId = window.setInterval(() => {
-            if (!hoveringControlsRef.current && nowMs() - lastActivityRef.current >= AUTO_HIDE_MS) {
+            if (!hoveringControlsRef.current && !focusInControlsRef.current && nowMs() - lastActivityRef.current >= AUTO_HIDE_MS) {
                 setControlsVisible(false);
             }
         }, 300);
@@ -429,7 +437,63 @@ export function VideoPlayer({
         }
     }, []);
 
+    const handleControlsFocus = useCallback(() => {
+        focusInControlsRef.current = true;
+        revealControls();
+    }, [revealControls]);
+
+    const handleControlsBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
+        const next = event.relatedTarget;
+        if (!(next instanceof Node && event.currentTarget.contains(next))) focusInControlsRef.current = false;
+    }, []);
+
+    // Таймлайн с клавиатуры: стрелки ±5 с, PageUp/PageDown ±10 %, Home/End — края. Тот же scrub,
+    // что у мыши, поэтому заливка, точка и таймкод двигаются одинаково.
+    const handleTimelineKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+        const duration = player.duration;
+        if (!(duration > 0)) return;
+
+        const time = player.getTime();
+        const page = duration * TIMELINE_PAGE_RATIO;
+        const targets: Record<string, number> = {
+            ArrowRight: time + TIMELINE_STEP_SEC,
+            ArrowUp: time + TIMELINE_STEP_SEC,
+            ArrowLeft: time - TIMELINE_STEP_SEC,
+            ArrowDown: time - TIMELINE_STEP_SEC,
+            PageUp: time + page,
+            PageDown: time - page,
+            Home: 0,
+            End: duration,
+        };
+        const target = targets[event.key];
+        if (target === undefined) return;
+
+        event.preventDefault();
+        revealControls();
+        scrub(clamp01(target / duration));
+    }, [player, revealControls, scrub]);
+
+    // Громкость — второй слайдер плеера: те же стрелки и края диапазона, что у таймлайна.
+    // applyVolume обновляет визуальную заливку и контроллер; при первом шаге вверх он также снимает mute.
+    const handleVolumeKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+        const targets: Record<string, number> = {
+            ArrowRight: volumeLevel + WHEEL_VOLUME_STEP,
+            ArrowUp: volumeLevel + WHEEL_VOLUME_STEP,
+            ArrowLeft: volumeLevel - WHEEL_VOLUME_STEP,
+            ArrowDown: volumeLevel - WHEEL_VOLUME_STEP,
+            Home: 0,
+            End: 1,
+        };
+        const target = targets[event.key];
+        if (target === undefined) return;
+
+        event.preventDefault();
+        revealControls();
+        applyVolume(target);
+    }, [applyVolume, revealControls, volumeLevel]);
+
     const isMuted = state.muted || state.volume === 0;
+    const durationSec = Math.floor(state.duration);
 
     const rootClassName = cx(
         styles.Root,
@@ -474,6 +538,8 @@ export function VideoPlayer({
                     className={cx(styles.overlay, styles.controlBar)}
                     onMouseEnter={() => { hoveringControlsRef.current = true; revealControls(); }}
                     onMouseLeave={() => { hoveringControlsRef.current = false; }}
+                    onFocus={handleControlsFocus}
+                    onBlur={handleControlsBlur}
                 >
                     {show('play') ? (
                         <button type='button' className={styles.button} aria-label={state.playing ? 'Пауза' : 'Воспроизвести'} onClick={() => player.toggle()}>
@@ -486,10 +552,14 @@ export function VideoPlayer({
                             ref={timelineElRef}
                             className={styles.timeline}
                             role='slider'
+                            tabIndex={0}
                             aria-label='Перемотка'
                             aria-valuemin={0}
-                            aria-valuemax={Math.floor(state.duration)}
-                            aria-valuenow={currentSec}
+                            aria-valuemax={durationSec}
+                            aria-valuenow={Math.min(currentSec, durationSec)}
+                            aria-valuetext={`${formatClock(currentSec)} из ${formatClock(durationSec)}`}
+                            aria-disabled={durationSec > 0 ? undefined : true}
+                            onKeyDown={handleTimelineKeyDown}
                             {...timeline.bind}
                         >
                             <TimelinePreview ref={previewApiRef} source={previewSource} />
@@ -509,7 +579,7 @@ export function VideoPlayer({
 
                     {show('time') ? (
                         <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>
-                            {formatClock(currentSec)} / {formatClock(Math.floor(state.duration))}
+                            {formatClock(currentSec)} / {formatClock(durationSec)}
                         </Text>
                     ) : null}
 
@@ -522,7 +592,19 @@ export function VideoPlayer({
                     {show('volume') ? (
                         <div ref={volumeRef} className={styles.volume}>
                             <div className={styles.volumePopover}>
-                                <div className={styles.volumeTrack} {...volume.bind}>
+                                <div
+                                    className={styles.volumeTrack}
+                                    role='slider'
+                                    tabIndex={0}
+                                    aria-label='Громкость'
+                                    aria-orientation='vertical'
+                                    aria-valuemin={0}
+                                    aria-valuemax={100}
+                                    aria-valuenow={Math.round(volumeLevel * 100)}
+                                    aria-valuetext={`${Math.round(volumeLevel * 100)}%`}
+                                    onKeyDown={handleVolumeKeyDown}
+                                    {...volume.bind}
+                                >
                                     <div ref={volumeFillRef} className={styles.volumeFill} />
                                 </div>
                             </div>

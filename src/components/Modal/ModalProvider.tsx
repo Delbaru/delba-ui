@@ -7,6 +7,7 @@ import {
   useId,
   useRef,
   useState,
+  useEffect,
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
@@ -30,33 +31,47 @@ type ModalContextValue = {
 
 const ModalContext = createContext<ModalContextValue | null>(null);
 
-const ModalRuntimeContext = createContext<{ open: boolean; dismiss: () => void } | null>(null);
+const ModalRuntimeContext = createContext<{ open: boolean; active: boolean; dismiss: () => void } | null>(null);
 
 const CLOSE_DELAY_MS = 500;
 
 export function ModalProvider({ children }: { children: ReactNode }) {
   const [stack, setStack] = useState<StackItem[]>([]);
+  const stackRef = useRef<StackItem[]>([]);
+  const closingRef = useRef(new Set<string>());
+  const timersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const idRef = useRef(0);
   const baseId = useId();
 
-  const dismissById = useCallback((id: string) => {
-    setStack((prev) => {
-      const index = prev.findIndex((item) => item.id === id);
-      if (index === -1) return prev;
-      const item = prev[index];
-      if (!item) return prev;
-      item.options.onClose?.();
-      setTimeout(() => {
-        setStack((p) => p.filter((x) => x.id !== id));
-      }, CLOSE_DELAY_MS);
-      return prev.map((x) => (x.id === id ? { ...x, open: false } : x));
-    });
+  const updateStack = useCallback((update: (current: StackItem[]) => StackItem[]) => {
+    const next = update(stackRef.current);
+    stackRef.current = next;
+    setStack(next);
   }, []);
+
+  useEffect(() => () => {
+    for (const timer of timersRef.current.values()) clearTimeout(timer);
+    timersRef.current.clear();
+  }, []);
+
+  const dismissById = useCallback((id: string) => {
+    const item = stackRef.current.find((entry) => entry.id === id);
+    if (!item || closingRef.current.has(id)) return;
+    closingRef.current.add(id);
+    updateStack((current) => current.map((entry) => entry.id === id ? { ...entry, open: false } : entry));
+    const timer = setTimeout(() => {
+      updateStack((current) => current.filter((entry) => entry.id !== id));
+      closingRef.current.delete(id);
+      timersRef.current.delete(id);
+    }, CLOSE_DELAY_MS);
+    timersRef.current.set(id, timer);
+    item.options.onClose?.();
+  }, [updateStack]);
 
   const present = useCallback(
     (node: ReactNode, options: PresentModalOptions = {}) => {
       const id = `${baseId}-${(idRef.current += 1)}`;
-      setStack((prev) => {
+      updateStack((prev) => {
         if (options.stackBehavior === 'replace') {
           return [{ id, node, options, open: false }];
         }
@@ -65,32 +80,21 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          setStack((prev) =>
-            prev.map((item) => (item.id === id ? { ...item, open: true } : item))
+          updateStack((prev) =>
+            prev.map((item) => (item.id === id && !closingRef.current.has(id) ? { ...item, open: true } : item))
           );
         });
       });
 
       return () => dismissById(id);
     },
-    [baseId, dismissById]
+    [baseId, dismissById, updateStack]
   );
 
   const dismiss = useCallback(() => {
-    setStack((prev) => {
-      if (prev.length === 0) return prev;
-      const top = prev[prev.length - 1];
-      if (!top) return prev;
-      top.options.onClose?.();
-      const idToRemove = top.id;
-      setTimeout(() => {
-        setStack((p) => p.filter((x) => x.id !== idToRemove));
-      }, CLOSE_DELAY_MS);
-      return prev.map((item, i) =>
-        i === prev.length - 1 ? { ...item, open: false } : item
-      );
-    });
-  }, []);
+    const top = stackRef.current.at(-1);
+    if (top) dismissById(top.id);
+  }, [dismissById]);
 
   const value: ModalContextValue = { present, dismiss };
 
@@ -102,7 +106,11 @@ export function ModalProvider({ children }: { children: ReactNode }) {
             {stack.map((item) => (
               <ModalRuntimeContext.Provider
                 key={item.id}
-                value={{ open: item.open, dismiss: () => dismissById(item.id) }}
+                value={{
+                  open: item.open,
+                  active: stack.filter((entry) => entry.open).at(-1)?.id === item.id,
+                  dismiss: () => dismissById(item.id),
+                }}
               >
                 {item.node}
               </ModalRuntimeContext.Provider>
@@ -133,7 +141,7 @@ export function useModalAction(): { dismiss: () => void } {
   return { dismiss: ctx.dismiss };
 }
 
-export function useModalRuntime(): { open: boolean; dismiss: () => void } {
+export function useModalRuntime(): { open: boolean; active: boolean; dismiss: () => void } {
   const ctx = useContext(ModalRuntimeContext);
   if (!ctx)
     throw new Error('Modal must be rendered within presented modal content');

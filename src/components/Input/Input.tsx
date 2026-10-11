@@ -4,7 +4,7 @@ import { useCallback, useRef, useState, type CSSProperties } from 'react';
 import type React from 'react';
 import styles from './Input.module.scss';
 import { Skeleton } from '../Skeleton';
-import { assetUrl, cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
+import { assetUrl, cx, createLayoutClasses, stateProps, stateLinkProps, useMergedRefs, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
 import { textFont, type TextRole, type TextVariantName } from '../../core/base/typography';
 import { Icon } from '../Icon';
 import { Text } from '../Text';
@@ -12,11 +12,13 @@ import { Flex } from '../Flex';
 import { Calendar } from './Calendar/Calendar';
 import { TimeField } from './TimeField/TimeField';
 import { useInputBehavior } from './lib/use-input-behavior';
+import type { FieldValueChangeHandler } from '../../core';
 import { DEFAULT_PHONE_FORMAT, maskGroups, type PhoneFormat } from './lib/phone-mask';
 import { Tooltip } from '../Tooltip';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useTextOverflow } from '../../hooks/useTextOverflow';
 import { useTooltip } from '../../hooks/useTooltip';
+import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 
 import calendarIcon from '../../../assets/icons/ui/calendar/style-1/calendar.svg';
 import chevronIcon from '../../../assets/icons/ui/arrows/style-3/arrow.svg';
@@ -42,6 +44,10 @@ export interface InputProps
     SharedMotionProps,
     SizePropsShort {
     style?: CSSProperties;
+    /** Настоящее событие ввода; target.value содержит текст нативного поля, до форматирования. */
+    onChange?: React.ChangeEventHandler<HTMLInputElement>;
+    /** Значение модели после маски, seed, шага числа или выбора даты. */
+    onValueChange?: FieldValueChangeHandler<HTMLInputElement>;
 
     variant?: ResponsiveValue<VariantKey>;
     size?: ResponsiveValue<SizeKey>;
@@ -94,9 +100,14 @@ export interface InputProps
      * какой бы флаг ни выбрали. Не задан — российский формат, как было.
      */
     phone?: PhoneFormat;
+    /** Содержимое по краям строки поля; ref и события остаются у самого input. */
+    slots?: { start?: React.ReactNode; end?: React.ReactNode };
     type?: React.HTMLInputTypeAttribute;
 
     error?: string;
+
+    /** Сворачивать поле целиком, включая подпись, ошибку и комментарий. */
+    collapse?: CollapseOptions;
 
     state?: ComponentStateValue;
 
@@ -183,13 +194,16 @@ export function Input({
     numberOptions,
     length,
     phone: phoneFormat = DEFAULT_PHONE_FORMAT,
+    slots,
     type: typeProp,
     value: valueProp,
     defaultValue: defaultValueProp,
     error,
+    collapse,
     id: idProp,
     disabled,
     onChange,
+    onValueChange,
     onFocus,
     onBlur,
     onKeyDown: onInputKeyDown,
@@ -206,6 +220,7 @@ export function Input({
     const {
         id,
         innerRef,
+        fieldRef,
         inputType,
         isPhone,
         isTime,
@@ -231,6 +246,7 @@ export function Input({
         idProp,
         disabled,
         onChange,
+        onValueChange,
         onFocus,
         onBlur,
         onInputKeyDown,
@@ -292,17 +308,15 @@ export function Input({
         dateAnchorRef.current = node;
         overflowTooltip.anchorRef.current = node;
     }, [overflowTooltip.anchorRef]);
-    const setFieldRef = useCallback((node: HTMLInputElement | null) => {
-        // innerRef из useFieldControl типизирован как RefObject (readonly current); React сам пишет в .current,
-        // здесь мёржим вручную — каст к мутабельному ref'у безопасен.
-        (innerRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
-        overflow.ref.current = node;
-    }, [innerRef, overflow.ref]);
+    const setFieldRef = useMergedRefs(fieldRef, overflow.ref);
     // Нажатие по «обёртке» поля (паддинги, префикс «+7»), а не по самому инпуту, не должно
     // забирать у него фокус: иначе на mousedown происходит blur → валидация помечает поле
     // ошибкой и на миг показывается оверлей ошибки, который исчезает на mouseup. Фокус ставим
     // сами в onClick (handleFieldClick), поэтому здесь просто гасим нативное снятие фокуса.
     const handleFieldMouseDown = useCallback((event: React.MouseEvent<HTMLElement>) => {
+        // Портал части поля всплывает по React-дереву, но не относится к клику по строке ввода.
+        if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;
+        if (event.target instanceof Element && event.target.closest('[data-input-action="true"]')) return;
         if (event.target !== innerRef.current) {
             event.preventDefault();
         }
@@ -329,7 +343,7 @@ export function Input({
     const fontClassName = font ? styles.font : undefined;
     const fontStyle = font ? ({ ['--field-font-variant' as string]: textFont(font) } satisfies CSSProperties) : undefined;
 
-    return (
+    const content = (
         <Flex
             ref={setWrapperRef}
             dir={['column', 'column', 'column']}
@@ -342,8 +356,10 @@ export function Input({
         >
             {label && (
                 <Flex dir={['row', 'row', 'row']} gap={[4, null, null]}>
-                    <Text variant={['caption', 'caption', 'caption']} color={labelColor}>{label}</Text>
-                    {required && ( <Text variant={['caption', 'caption', 'caption']} color="var(--error)">*</Text> )}
+                    <label htmlFor={id}>
+                        <Text as="span" variant={['caption', 'caption', 'caption']} color={labelColor}>{label}</Text>
+                    </label>
+                    {required && ( <Text as="span" aria-hidden="true" variant={['caption', 'caption', 'caption']} color="var(--error)">*</Text> )}
                 </Flex>
             )}
             <Flex
@@ -359,7 +375,9 @@ export function Input({
                 onClick={handleFieldClick}
                 onMouseEnter={overflowTooltip.show}
                 onMouseLeave={overflowTooltip.hide}
+                gap={slots ? [8, 8, 8] : undefined}
             >
+                {slots?.start != null && <div data-input-action="true" className={styles.addon}>{slots.start}</div>}
                 {isPhone && (
                     // Префикс стоит В ПОТОКЕ ряда, а не абсолютом: так он центрируется тем же
                     // `align-items: center`, что и всё остальное, а поле начинается сразу за
@@ -427,7 +445,7 @@ export function Input({
                     )}
                     {isTime ? (
                         <TimeField
-                            inputRef={innerRef}
+                            inputRef={setFieldRef}
                             inputProps={{ ...inputProps, 'aria-describedby': inputDescribedBy }}
                             fieldClassName={fieldClassName}
                             showMask={inlineError ? false : timeField.showMask}
@@ -473,6 +491,7 @@ export function Input({
                         </Flex>
                     )}
                 </div>
+                {slots?.end != null && <div data-input-action="true" className={styles.addon}>{slots.end}</div>}
                 {showReveal && (
                     <Icon
                         // Пара из ОДНОЙ семьи и одной техники (обе заливные): разная техника
@@ -519,7 +538,7 @@ export function Input({
                         onClick={datePicker.onToggle}
                     />
                 )}
-                {isNumber && showNumberControls && (
+                {isNumber && showNumberControls && !isReadOnly && !disabled && (rest.step !== 'any' || (numberOptions?.length ?? 0) > 0) && (
                     <Flex
                         dir={['column', 'column', 'column']}
                         align={['center', 'center', 'center']}
@@ -588,8 +607,9 @@ export function Input({
                     setVisibleMonth={datePicker.setVisibleMonth}
                     selectedDate={datePicker.selectedDate}
                     calendarDays={datePicker.calendarDays}
-                        isDateDisabled={datePicker.isDateDisabled}
+                    isDateDisabled={datePicker.isDateDisabled}
                     onDateSelect={datePicker.onDateSelect}
+                    onFocusLeave={datePicker.onDismiss}
                 />
             )}
             {commentText && (
@@ -604,6 +624,13 @@ export function Input({
                 </Text>
             )}
         </Flex>
+    );
 
+    if (!collapse) return content;
+
+    return (
+        <CollapseWrap {...collapse}>
+            {content}
+        </CollapseWrap>
     );
 }

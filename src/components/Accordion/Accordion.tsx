@@ -16,7 +16,7 @@ type ShellOmit =
   | 'children' | 'defaultValue'
   | 'collapse' | 'collapseGap' | 'collapseFade' | 'collapseAxis' | 'collapseAppear' | 'collapseOverflowVisible'
   | 'collapseKeepMounted' | 'onCollapseEnd' | 'onCollapseFound'
-  | 'href' | 'target' | 'rel' | 'download' | 'newTab' | 'nofollow' | 'noreferrer' | 'linkState' | 'transitionKey';
+  | 'href' | 'target' | 'rel' | 'download' | 'newTab' | 'nofollow' | 'noreferrer' | 'linkState' | 'transitionKey' | 'animate';
 
 type AccordionShellProps = Omit<FlexProps, ShellOmit> & {
     children?: ReactNode;
@@ -239,10 +239,12 @@ export function AccordionItem({
                 role='region'
                 aria-labelledby={triggerId}
                 state={mergeComponentStates(state, panelProps?.state)}
-                collapse={open}
-                collapseFade
-                collapseKeepMounted
-                onCollapseFound={() => ctx.reveal(value)}
+                collapse={{
+                    open,
+                    fade: true,
+                    keepMounted: true,
+                    onFound: () => ctx.reveal(value),
+                }}
             >
                 {children}
             </Flex>

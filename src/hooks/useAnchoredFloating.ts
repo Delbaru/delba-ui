@@ -13,7 +13,7 @@ type FloatingStyle = CSSProperties & {
 };
 
 type UseAnchoredFloatingOptions = {
-  anchorRef: RefObject<HTMLElement | null>;
+  anchorRef: RefObject<Element | null>;
   floatingRef: RefObject<HTMLElement | null>;
   isActive: boolean;
   placement?: FloatingPlacement;

@@ -16,6 +16,11 @@
       height: 0;
       opacity: 0;
       pointer-events: none;
+
+      &:focus-visible + .Track {
+        outline: calc(2 * var(--rpx)) solid var(--primary);
+        outline-offset: calc(2 * var(--rpx));
+      }
     }
 
     .Track {

@@ -1,89 +1,54 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type AnimationEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useReducer, useRef, type AnimationEvent, type ReactNode } from 'react';
 
 import { MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs } from '../core';
+import { stepSwap, type ContentKey, type SwapState } from './contentMotion';
 
-type TransitionKey = string | number | undefined;
-type Slot = { key: TransitionKey; children: ReactNode };
+type SwapAction = { signal: 'sync' | 'end'; latest: ContentKey | undefined; reduced: boolean };
+
+const reduce = (state: SwapState, { signal, latest, reduced }: SwapAction) => stepSwap(state, latest, signal, reduced);
 
 /**
  * Своп контента в стиле AnimatePresence mode='wait': при смене `key` старый контент проигрывает
- * exit и только потом подменяется новым (enter). Пока key не меняется — показываем «живой» контент.
- *
- * Анти-рывок при быстрых переключениях: идущую анимацию НЕ перебиваем (резкий обрыв убран). Быстрые
- * смены «склеиваются» — exit всегда коммитит ПОСЛЕДНИЙ ключ, а если ключ ушёл вперёд во время enter,
- * по его завершении догоняем (новый exit→enter к актуальному). reduced-motion свопает мгновенно;
- * таймер-страховка подменяет, если animationend не прилетит.
+ * exit и только потом подменяется новым (enter). Шаги — `stepSwap`. Конец хода — `animationend`
+ * самого узла или страховка `readMotionMs + MOTION_END_BUFFER_MS` у ОБЕИХ фаз: без страховки входа
+ * узел без анимации навсегда оставался во «входе» и следующие смены ключа не применялись.
+ * reduced-motion свопает мгновенно.
  */
-export function useSwapTransition(key: TransitionKey, children: ReactNode) {
-  const [committedKey, setCommittedKey] = useState<TransitionKey>(key);
-  const [exiting, setExiting] = useState(false);
-
-  const lastShown = useRef<Slot>({ key, children });
-  const exitingRef = useRef(false);
-  const enteringRef = useRef(false);
+export function useSwapTransition(key: ContentKey | undefined, children: ReactNode) {
+  const [state, dispatch] = useReducer(reduce, { shown: key, phase: 'idle' });
+  const lastShown = useRef<ReactNode>(children);
   const latestKey = useRef(key);
-  const committedKeyRef = useRef(committedKey);
   const nodeRef = useRef<HTMLElement | null>(null);
 
-  exitingRef.current = exiting;
   latestKey.current = key;
-  committedKeyRef.current = committedKey;
+  const live = state.shown === key && state.phase !== 'exit';
+  // Снимок для ухода: пока контент синхронен, запоминаем последний показанный.
+  if (live) lastShown.current = children;
 
-  const synced = key === committedKey;
-  // Пока контент синхронен и не уходит — запоминаем его как «последний показанный» (снимок для exit).
-  if (synced && !exiting) lastShown.current = { key, children };
-
-  const commit = useCallback(() => {
-    setCommittedKey(latestKey.current);
-  }, []);
-
-  const finishExit = useCallback(() => {
-    commit();
-    setExiting(false);
-    enteringRef.current = true; // дальше проигрывается enter нового контента
-  }, [commit]);
-
-  // key сменился → запускаем exit. НО не перебиваем идущий enter (enteringRef) — иначе резкий обрыв.
   useEffect(() => {
-    if (synced || exiting || enteringRef.current) return;
-    if (prefersReducedMotion()) {
-      commit();
-      return;
-    }
-    setExiting(true);
-  }, [synced, exiting, commit]);
+    dispatch({ signal: 'sync', latest: key, reduced: prefersReducedMotion() });
+  }, [key, state]);
 
-  // Страховка на случай, когда animationend не сработает (пропущен / нет анимации).
   useEffect(() => {
-    if (!exiting) return undefined;
+    if (state.phase === 'idle') return undefined;
     const ms = nodeRef.current ? readMotionMs(nodeRef.current, 'animation') : 0;
-    const timer = window.setTimeout(finishExit, ms + MOTION_END_BUFFER_MS);
+    const timer = window.setTimeout(() => dispatch({ signal: 'end', latest: latestKey.current, reduced: prefersReducedMotion() }), ms + MOTION_END_BUFFER_MS);
 
-    return () => clearTimeout(timer);
-  }, [exiting, finishExit]);
+    return () => window.clearTimeout(timer);
+  }, [state]);
 
+  const phase = state.phase;
   const onAnimationEnd = useCallback((event: AnimationEvent<HTMLElement>) => {
-    if (event.target !== event.currentTarget) return;
-
-    if (exitingRef.current) {
-      finishExit(); // exit завершён → коммитим последний ключ и запускаем enter
-      return;
-    }
-
-    // enter завершён: если за время анимации ключ ушёл вперёд — догоняем (exit к актуальному).
-    if (enteringRef.current) {
-      enteringRef.current = false;
-      if (latestKey.current !== committedKeyRef.current) setExiting(true);
-    }
-  }, [finishExit]);
+    // Ход вложенного узла всплывает сюда же — свой отличаем по цели.
+    if (event.target !== event.currentTarget || phase === 'idle') return;
+    dispatch({ signal: 'end', latest: latestKey.current, reduced: prefersReducedMotion() });
+  }, [phase]);
 
   return {
-    // Показываем committed-идентификатор: ремоунт/смена контента случается только при подмене.
-    displayKey: committedKey,
-    displayChildren: synced && !exiting ? children : lastShown.current.children,
-    exiting,
+    displayChildren: live ? children : lastShown.current,
+    exiting: phase === 'exit',
     onAnimationEnd,
     ref: nodeRef,
   };

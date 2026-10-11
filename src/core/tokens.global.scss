@@ -3,6 +3,7 @@
 // `core/utilities/registry.ts` и значений, которые встречаются в коде. Файл @use'ится в
 // глобальные стили проекта, поэтому имена не хешируются: в DOM видно ровно имя класса.
 @use 'sass:meta';
+@use './content-motion' as motion;
 
 // Слои библиотеки: покой компонента < проп (утилита) < состояние компонента; стили проекта без слоя сильнее всех.
 @layer ui.scale, ui.components, ui.utilities, ui.states;
@@ -18,6 +19,7 @@
 }
 
 @layer ui.components {
+  @include motion.styles;
   @include meta.load-css('../components/Box/box');
   @include meta.load-css('../components/Button/button');
   @include meta.load-css('./layout/container');

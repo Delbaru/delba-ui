@@ -18,6 +18,8 @@
 
 Навигатор по справочнику — [`docs/Library.md`](docs/Library.md). Целиком он не читается:
 скилл говорит, какой кусок нужен под конкретную задачу.
+Перед изменением API — единый договор в [`docs/authoring.md`](docs/authoring.md) §3.1:
+настройки, части, состояние, ref, обработчики, SSR и доступность.
 
 Интеграция, договор темы и подключение к проекту — [`README.md`](README.md). Он для тех, кто
 библиотеку ПОДКЛЮЧАЕТ; этот файл — для тех, кто её ПРАВИТ.
@@ -88,7 +90,8 @@ tools/               cli.mjs (bin `delba-ui`: build | watch | check), next.mjs (
 ```
 
 **Кит — пакет воркспейса проекта** (`@delba/ui`), своей сборки у него нет. Проверки самого кита —
-`pnpm --filter @delba/ui typecheck | test | boundary`, остальные — из проекта: [`README.md`](README.md) и
+`pnpm --filter @delba/ui check`; полный запуск вместе с договором проекта — `delba-ui test`
+из папки приложения. Отдельные `typecheck | test | boundary` остаются для диагностики: [`README.md`](README.md) и
 `Skill(ui-verify)`. Новый публичный вход — строка в `exports` и `src/index.ts`; импорт снаружи в обход
 них — не вход, а ошибка.
 

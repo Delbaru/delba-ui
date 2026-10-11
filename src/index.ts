@@ -26,6 +26,7 @@ export * from './components/RichTextarea';
 export * from './components/Section';
 export * from './components/Skeleton';
 export * from './components/Select';
+export type { FieldValueChangeDetails, FieldValueChangeHandler, FieldValueChangeReason } from './core/base/field-value';
 export * from './components/SwitchButton';
 export * from './components/TabTrack';
 export * from './components/Text';
@@ -76,7 +77,9 @@ export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, typ
 export { useAnchoredFloating, type FloatingAlign, type FloatingPlacement } from './hooks/useAnchoredFloating';
 export { useMediaQuery } from './hooks/useMediaQuery';
 export type { CollapseHandle } from './hooks/useCollapseMotion';
+export type { CollapseOptions } from './components/Collapse/CollapseWrap';
 export { useInView, type UseInViewOptions } from './core/useInView';
 export type { ComponentStateValue, GrowProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';
 export type { TextRole, TextVariantName } from './core/base/typography';
 export type { RevealInput, RevealKey, RevealOptions, RevealProps } from './core/reveal/reveal';
+export * from './components/PhoneField';

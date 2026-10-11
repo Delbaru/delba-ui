@@ -3,11 +3,12 @@
 
 import Link from 'next/link';
 import type React from 'react';
-import { useRef, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 
-import { boxLayout, buildClampStyle, createLayoutClasses, cx, normalizeComponentState, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveInput, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
+import { boxLayout, buildClampStyle, composeInteractionHandlers, createLayoutClasses, cx, normalizeComponentState, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveInput, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
 import type { TextRole, TextVariantName } from '../../core/base/typography';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { resolveAnimation } from './animations/resolveAnimation';
 import type { AnimationInput } from './animations/types';
 import type { LineHeightValue } from './typography';
@@ -43,6 +44,8 @@ export interface TextProps
   as?: keyof React.JSX.IntrinsicElements;
   variant?: ResponsiveValue<VariantKey>;
   animation?: ResponsiveInput<AnimationInput>;
+  /** Сворачивание текста с сохранением содержимого до конца анимации закрытия. Для блочного текста. */
+  collapse?: CollapseOptions;
 
   fontSize?: ResponsiveValue<number>;
   fontWeight?: ResponsiveValue<number>;
@@ -68,6 +71,7 @@ export function Text({
   variant = ['body', 'body', 'body'],
   animation,
   animate,
+  collapse,
   fontSize,
   fontWeight,
   lineHeight,
@@ -108,6 +112,8 @@ export function Text({
   const internalRef = useRef<HTMLElement | null>(null);
   const setRef = useMergedRefs(internalRef, setMotionNode, ref);
 
+  const hasChildren = children != null && children !== '' && children !== false;
+
   // Контент и анимация: формат строки → плагин анимации из реестра (или контент как есть).
   const content = resolveTextContent(children, format);
   const anim = resolveAnimation(animation ?? animate, content);
@@ -124,7 +130,7 @@ export function Text({
   };
 
   const normalizedState = normalizeComponentState(state);
-  const sharedHandlerProps = stateLinkProps(linkState, { onMouseEnter, onMouseLeave, ...motionHandlers });
+  const sharedHandlerProps = stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }));
 
   const effectiveAs = href ? 'a' : as;
   const isAnchor = effectiveAs === 'a';
@@ -158,18 +164,46 @@ export function Text({
         className
       );
 
-  if (children == null || children === '' || children === false) return null;
+  if (!hasChildren && !collapse) return null;
 
-  return (
+  const textNode = (
     <Comp
       ref={setRef}
-      {...sharedHandlerProps}
       {...(normalizedState ? { state: normalizedState } : undefined)}
       className={classNames}
       style={{ ...inline, ...style }}
       {...anchorProps}
+      {...sharedHandlerProps}
     >
       {anim.active && anim.Inner ? <anim.Inner content={content} options={anim.options} /> : bindTextContent(content)}
     </Comp>
+  );
+
+  if (!collapse) return textNode;
+
+  return (
+    <CollapsibleText collapse={collapse} hasChildren={hasChildren}>
+      {textNode}
+    </CollapsibleText>
+  );
+}
+
+function CollapsibleText({ collapse, hasChildren, children }: {
+  collapse: NonNullable<TextProps['collapse']>;
+  hasChildren: boolean;
+  children: React.ReactNode;
+}) {
+  // Ошибка может очиститься в тот же рендер, который закрывает блок. Держим прежний текст,
+  // чтобы он уходил вместе с высотой, а не исчезал до начала анимации.
+  const [lastChildren, setLastChildren] = useState<React.ReactNode>(hasChildren ? children : null);
+
+  useLayoutEffect(() => {
+    if (collapse.open && hasChildren) setLastChildren(children);
+  }, [collapse.open, hasChildren, children]);
+
+  return (
+    <CollapseWrap {...collapse} clip>
+      {hasChildren ? children : lastChildren}
+    </CollapseWrap>
   );
 }

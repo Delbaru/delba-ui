@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { defaultEqual, flattenSelectItems, getFocusedOptionIndex, visibleDropdownItems, type FlattenedSelectItem, type SelectItem, type SelectOption } from './options';
+import { defaultEqual, flattenSelectItems, getFocusedOptionIndex, selectFormValues, visibleDropdownItems, type FlattenedSelectItem, type SelectItem, type SelectOption } from './options';
 
 const items: SelectItem[] = [
     { value: 'a', label: 'A' },
@@ -21,6 +21,18 @@ test('defaultEqual: сравнение по строке, null равен тол
     assert.equal(defaultEqual<string | number>(1, '1'), true);
     assert.equal(defaultEqual<string>('a', null), false);
     assert.equal(defaultEqual<string>(null, null), true);
+});
+
+test('selectFormValues: сериализует одиночное значение, пустой выбор не добавляет запись', () => {
+    assert.deepEqual(selectFormValues('blue', false), ['blue']);
+    assert.deepEqual(selectFormValues(null, false), []);
+    assert.deepEqual(selectFormValues(['blue'], false), []);
+});
+
+test('selectFormValues: multiple отправляет каждое значение отдельной записью', () => {
+    assert.deepEqual(selectFormValues(['blue', 'green'], true), ['blue', 'green']);
+    assert.deepEqual(selectFormValues(null, true), []);
+    assert.deepEqual(selectFormValues('blue', true), []);
 });
 
 test('visibleDropdownItems: группа без видимых пунктов прячется вместе с заголовком', () => {

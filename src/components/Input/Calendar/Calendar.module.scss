@@ -60,6 +60,11 @@
       .btn {
           cursor: pointer;
 
+          &:focus-visible {
+              outline: calc(2 * var(--rpx)) solid var(--primary);
+              outline-offset: calc(2 * var(--rpx));
+          }
+
           &[state~='disabled'] {
               pointer-events: none;
 
@@ -84,6 +89,11 @@
       // У года кликабельны только стрелки: «рука» над самой цифрой обещала действие, которого нет.
       .monthPick {
           cursor: pointer;
+
+          &:focus-visible {
+              outline: calc(2 * var(--rpx)) solid var(--primary);
+              outline-offset: calc(2 * var(--rpx));
+          }
       }
 
       .yearPick {

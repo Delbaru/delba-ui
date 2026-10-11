@@ -9,6 +9,11 @@
 
           &.prev {transform: scaleX(-1);}
 
+          &:focus-visible {
+              outline: calc(2 * var(--rpx)) solid var(--primary);
+              outline-offset: calc(3 * var(--rpx));
+          }
+
           &[state~='disabled'] {
               pointer-events: none;
 

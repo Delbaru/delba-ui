@@ -13,16 +13,13 @@
     text-decoration: none;
   }
 
-  .ui-img-image {
-    pointer-events: none;
-  }
-
   .ui-img-blur {
     filter: blur(16px);
     transform: scale(1.05);
     transition: opacity var(--t-d-fast) var(--t-t-f-ease);
     opacity: 1;
     z-index: 1;
+    pointer-events: none;
   }
 
   .ui-img-blur-hidden {

@@ -159,6 +159,8 @@ export function MediaDropDown({
     const [link, setLink] = useState(linkValue);
     const rootRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const disabledRef = useRef(Boolean(disabled));
+    disabledRef.current = Boolean(disabled);
     // Счётчик вложенности dragenter/dragleave: события прилетают на КАЖДОГО потомка, и по одному
     // флагу зона мигала бы, пока указатель идёт по иконке и подписям внутри.
     const dragDepthRef = useRef(0);
@@ -196,12 +198,23 @@ export function MediaDropDown({
         setOpen((prev) => !prev);
     }, [disabled]);
 
+    useEffect(() => {
+        if (disabled) {
+            setOpen(false);
+            setIsDragging(false);
+            dragDepthRef.current = 0;
+        }
+    }, [disabled]);
+
+    const panelOpen = open && !disabled;
+
     const handleClose = useCallback(() => {
         setOpen(false);
     }, []);
 
     const handleSelect = useCallback(
         (type: MediaType) => {
+            if (disabled) return;
             if (valueProp === undefined) setUncontrolledValue(type);
 
             if (selectedItem?.type !== undefined && selectedItem.type !== type) {
@@ -212,15 +225,17 @@ export function MediaDropDown({
 
             onChange?.(type);
         },
-        [onChange, onLinkChange, selectedItem, updateSelectedItem, valueProp]
+        [disabled, onChange, onLinkChange, selectedItem, updateSelectedItem, valueProp]
     );
 
     const handleFileClick = useCallback(() => {
+        if (disabled) return;
         fileInputRef.current?.click();
-    }, []);
+    }, [disabled]);
 
     const acceptFile = useCallback(
         async (files: FileList | null, file: File) => {
+            if (disabledRef.current) return;
             onFileSelect?.(files);
 
             let src: string | undefined;
@@ -230,6 +245,9 @@ export function MediaDropDown({
             } catch {
                 src = undefined;
             }
+
+            // A file read can finish after its owner has become disabled.
+            if (disabledRef.current) return;
 
             const type = isDropzone ? resolveMediaTypeFromFile(file) : value;
 
@@ -254,27 +272,28 @@ export function MediaDropDown({
             const nextFiles = e.target.files;
             const nextFile = nextFiles?.[0];
 
-            if (nextFile) {
+            if (!disabled && nextFile) {
                 await acceptFile(nextFiles, nextFile);
             }
 
             if (e.target) e.target.value = '';
         },
-        [acceptFile]
+        [acceptFile, disabled]
     );
 
     const handleLinkChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
+            if (disabled) return;
             setLink(e.target.value);
             onLinkChange?.(e.target.value);
         },
-        [onLinkChange]
+        [disabled, onLinkChange]
     );
 
     const submitLink = useCallback(() => {
         const normalizedLink = link.trim();
 
-        if (!normalizedLink) {
+        if (disabled || !normalizedLink) {
             return;
         }
 
@@ -292,16 +311,17 @@ export function MediaDropDown({
         });
         onLinkSubmit?.(normalizedLink);
         setOpen(false);
-    }, [applyType, isDropzone, link, onLinkSubmit, updateSelectedItem, value]);
+    }, [applyType, disabled, isDropzone, link, onLinkSubmit, updateSelectedItem, value]);
 
     const handleLinkKeyDown = useCallback(
         (e: KeyboardEvent<HTMLInputElement>) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
+                if (disabled) return;
                 submitLink();
             }
         },
-        [submitLink]
+        [disabled, submitLink]
     );
 
     const handleDragEnter = useCallback(
@@ -353,6 +373,7 @@ export function MediaDropDown({
     const handleClearSelection = useCallback(
         (e: ReactMouseEvent<HTMLButtonElement>) => {
             e.stopPropagation();
+            if (disabled) return;
             updateSelectedItem(null);
             setLink('');
             onLinkChange?.('');
@@ -361,20 +382,20 @@ export function MediaDropDown({
                 fileInputRef.current.value = '';
             }
         },
-        [onLinkChange, updateSelectedItem]
+        [disabled, onLinkChange, updateSelectedItem]
     );
 
     const handlePreviewSelection = useCallback(
         (e: ReactMouseEvent<HTMLButtonElement>) => {
             e.stopPropagation();
 
-            if (!selectedItem) {
+            if (disabled || !selectedItem) {
                 return;
             }
 
             onPreview?.(selectedItem);
         },
-        [onPreview, selectedItem]
+        [disabled, onPreview, selectedItem]
     );
 
     useEffect(() => {
@@ -382,7 +403,7 @@ export function MediaDropDown({
     }, [linkValue]);
 
     // Escape не слушаем: до этой правки его здесь не было, и добавлять поведение молча нельзя.
-    useOutsideDismiss(rootRef, handleClose, { enabled: open, escape: false });
+    useOutsideDismiss(rootRef, handleClose, { enabled: panelOpen, escape: false });
 
     const selectedMedia = MEDIA_TYPES.find((m) => m.type === value) ?? MEDIA_TYPES[0];
     const triggerLabel = selectedItem?.label ?? 'Добавить медиа';
@@ -397,7 +418,7 @@ export function MediaDropDown({
             ref={setRefs}
             className={cx(styles.MediaDropDown, className)}
             style={style}
-            data-open={open}
+            data-open={panelOpen}
             {...stateProps(disabled && 'disabled')}
         >
             <Flex
@@ -440,6 +461,7 @@ export function MediaDropDown({
                             type="button"
                             className={styles.PreviewButton}
                             aria-label={previewIsPlay ? 'Воспроизвести медиа' : 'Предпросмотр медиа'}
+                            disabled={disabled}
                             onClick={handlePreviewSelection}
                         >
                             {previewIsPlay ? (
@@ -466,6 +488,7 @@ export function MediaDropDown({
                             type="button"
                             className={styles.ClearButton}
                             aria-label="Удалить медиа"
+                            disabled={disabled}
                             onClick={handleClearSelection}
                         >
                             <Icon
@@ -486,7 +509,7 @@ export function MediaDropDown({
                 </Flex>
             </Flex>
 
-            <div className={styles.DropdownWrapper} aria-hidden={!open} inert={!open}>
+            <div className={styles.DropdownWrapper} aria-hidden={!panelOpen} inert={!panelOpen}>
                 <div className={styles.DropdownInner}>
                     <Flex
                         dir={['column', 'column', 'column']}
@@ -516,6 +539,7 @@ export function MediaDropDown({
                                     border={['calc(1 * var(--rpx)) dashed var(--line)', null, null]}
                                     className={styles.DropZone}
                                     state={isDragging ? 'dragging' : undefined}
+                                    disabled={disabled}
                                     onClick={handleFileClick}
                                     onDragEnter={handleDragEnter}
                                     onDragOver={handleDragOver}
@@ -553,6 +577,7 @@ export function MediaDropDown({
                                         value={link}
                                         onChange={handleLinkChange}
                                         onKeyDown={handleLinkKeyDown}
+                                        disabled={disabled}
                                         placeholder={linkPlaceholder}
                                         aria-label={linkPlaceholder}
                                         grow={[1, 1, 1]}
@@ -573,7 +598,7 @@ export function MediaDropDown({
                                         h={[40, 40, 40]}
                                         r={[12, 12, 12]}
                                         p={[0, 16, 0, 16]}
-                                        disabled={!link.trim()}
+                                        disabled={disabled || !link.trim()}
                                         onClick={submitLink}
                                     >
                                         <Text variant={['micro', 'micro', 'micro']}>{linkSubmitLabel}</Text>
@@ -586,11 +611,14 @@ export function MediaDropDown({
                                     {MEDIA_TYPES.map((media) => {
                                         const isActive = value === media.type;
                                         return (
-                                            <Flex
+                                            <Button
                                                 key={media.type}
-                                                align={['center', 'center', 'center']}
-                                                justify={['center', 'center', 'center']}
+                                                type="button"
+                                                alignItems={['center', 'center', 'center']}
+                                                justifyContent={['center', 'center', 'center']}
                                                 gap={[6, 6, 6]}
+                                                disabled={disabled}
+                                                aria-pressed={isActive}
                                                 className={cx(styles.TypeButton, isActive && styles.TypeButtonActive)}
                                                 onClick={() => handleSelect(media.type)}
                                             >
@@ -603,13 +631,13 @@ export function MediaDropDown({
                                                 <Text variant={['micro', 'micro', 'micro']} className={styles.TypeLabel}>
                                                     {media.label}
                                                 </Text>
-                                            </Flex>
+                                            </Button>
                                         );
                                     })}
                                 </div>
 
                                 <Flex dir={['column', 'column', 'column']} gap={[12, 12, 12]} className={styles.UploadSection}>
-                                    <button type="button" className={styles.FileButton} onClick={handleFileClick}>
+                                    <button type="button" className={styles.FileButton} disabled={disabled} onClick={handleFileClick}>
                                         <Icon
                                             name="ui/upload/style-2/upload"
                                             w={[16, 16, 16]}
@@ -640,6 +668,7 @@ export function MediaDropDown({
                                             value={link}
                                             onChange={handleLinkChange}
                                             onKeyDown={handleLinkKeyDown}
+                                            disabled={disabled}
                                             placeholder="Вставьте ссылку"
                                             className={styles.LinkInput}
                                         />
@@ -658,6 +687,7 @@ export function MediaDropDown({
                 ref={fileInputRef}
                 type="file"
                 accept={fileAccept}
+                disabled={disabled}
                 className={styles.HiddenInput}
                 onChange={handleFileChange}
             />

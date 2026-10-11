@@ -11,10 +11,12 @@ import type React from 'react';
 import styles from './Textarea.module.scss';
 import { cx, createLayoutClasses, stateProps, stateLinkProps, useFieldControl, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
 import { resolveSeedField } from '../../core/base/seed';
+import type { FieldValueChangeHandler } from '../../core';
 import { Text } from '../Text';
 import { Flex } from '../Flex';
 import { Skeleton } from '../Skeleton';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 
 type VariantKey = 'primary' | 'secondary';
 type SizeKey = 'default' | 'fullWidth';
@@ -36,6 +38,10 @@ export interface TextareaProps
     SharedMotionProps,
     SizePropsShort {
     style?: CSSProperties;
+    /** Настоящее событие ввода нативного textarea. */
+    onChange?: React.ChangeEventHandler<HTMLTextAreaElement>;
+    /** Значение модели после ввода или восстановления seed. */
+    onValueChange?: FieldValueChangeHandler<HTMLTextAreaElement>;
 
     variant?: ResponsiveValue<VariantKey>;
     size?: ResponsiveValue<SizeKey>;
@@ -80,6 +86,9 @@ export interface TextareaProps
     countPlacement?: 'inside' | 'below';
 
     error?: string;
+
+    /** Сворачивать поле целиком, включая подпись, ошибку и комментарий. */
+    collapse?: CollapseOptions;
 
     state?: ComponentStateValue;
 
@@ -153,8 +162,10 @@ export function Textarea({
     showCount,
     countPlacement = 'inside',
     error,
+    collapse,
     id: idProp,
     onChange,
+    onValueChange,
     onFocus,
     onBlur,
     required,
@@ -179,12 +190,13 @@ export function Textarea({
     );
 
     const {
-        id, innerRef, currentValue, isControlled, displayError, errorId,
+        id, innerRef, fieldRef, currentValue, isControlled, displayError, errorId,
         validateValue, setInternalError, setUncontrolledValue, focusField,
         hasValue,
     } = useFieldControl<HTMLTextAreaElement>(ref, {
         id: idProp,
         value: _value,
+        defaultValue: rest.defaultValue,
         required,
         emptyMessage,
         error,
@@ -203,30 +215,15 @@ export function Textarea({
     const textareaDescribedBy = [rest['aria-describedby'], helperTextId].filter(Boolean).join(' ') || undefined;
     const inlineError = displayError && !isFieldFocused ? displayError : undefined;
 
-    // Событие с новым значением: полю seed отдаёт модель значение, которого в DOM ещё нет
-    // (там пусто, пока рисуется подсказка), поэтому значение доезжает синтетическим событием.
-    const createSeedEvent = useCallback(
-        <T extends ChangeEvent<HTMLTextAreaElement> | FocusEvent<HTMLTextAreaElement>>(
-            value: string,
-            baseEvent?: T,
-        ): T => {
-            const node = innerRef.current;
-
-            return {
-                ...(baseEvent ?? {}),
-                target: { ...(node ?? {}), value },
-                currentTarget: { ...(node ?? {}), value },
-            } as T;
-        },
-        [innerRef]
-    );
-
     const commitSeedValue = useCallback(
-        (value: string) => {
-            if (!isControlled) setUncontrolledValue(value);
-            onChange?.(createSeedEvent<ChangeEvent<HTMLTextAreaElement>>(value));
+        (value: string, event: FocusEvent<HTMLTextAreaElement>) => {
+            if (!isControlled) {
+                setUncontrolledValue(value);
+                if (innerRef.current) innerRef.current.value = resolveSeedField({ seed, value }).displayValue;
+            }
+            onValueChange?.(value, { reason: 'seed', event });
         },
-        [createSeedEvent, isControlled, onChange, setUncontrolledValue]
+        [innerRef, isControlled, onValueChange, seed, setUncontrolledValue]
     );
 
     const handleFocus = useCallback(
@@ -234,7 +231,7 @@ export function Textarea({
             setIsFieldFocused(true);
             // Значение по умолчанию — подсказка, а не данные: по фокусу поле пустеет, и модель
             // получает ''. Иначе дописывание к нему давало бы «01» вместо «1».
-            if (seedField.focusValue !== undefined) commitSeedValue(seedField.focusValue);
+            if (seedField.focusValue !== undefined) commitSeedValue(seedField.focusValue, e);
             onFocus?.(e);
         },
         [commitSeedValue, onFocus, seedField.focusValue]
@@ -246,24 +243,26 @@ export function Textarea({
             // Уход из пустого поля возвращает значение по умолчанию: после blur модель обязана
             // получить валидное значение, а не «нет значения».
             if (seedField.blurValue !== undefined) {
-                commitSeedValue(seedField.blurValue);
+                commitSeedValue(seedField.blurValue, e);
                 setInternalError(validateValue(seedField.blurValue));
-                onBlur?.(createSeedEvent<FocusEvent<HTMLTextAreaElement>>(seedField.blurValue, e));
+                onBlur?.(e);
                 return;
             }
             setInternalError(validateValue(e.target.value));
             onBlur?.(e);
         },
-        [commitSeedValue, createSeedEvent, onBlur, seedField.blurValue, setInternalError, validateValue]
+        [commitSeedValue, onBlur, seedField.blurValue, setInternalError, validateValue]
     );
 
     const handleChange = useCallback(
         (e: ChangeEvent<HTMLTextAreaElement>) => {
-            if (!isControlled) setUncontrolledValue(e.target.value);
-            setInternalError(validateValue(e.target.value));
+            const value = e.target.value;
+            if (!isControlled) setUncontrolledValue(value);
+            setInternalError(validateValue(value));
             onChange?.(e);
+            onValueChange?.(value, { reason: 'input', event: e });
         },
-        [onChange, validateValue, setInternalError, setUncontrolledValue, isControlled]
+        [onChange, onValueChange, validateValue, setInternalError, setUncontrolledValue, isControlled]
     );
 
     const handleInvalid = useCallback(
@@ -315,7 +314,7 @@ export function Textarea({
     };
     const fieldClasses = fieldLayoutClasses(c, layoutProps);
 
-    return (
+    const content = (
         <Flex
             ref={setWrapperRef}
             dir={["column", "column", "column"]}
@@ -329,8 +328,10 @@ export function Textarea({
                 // Звёздочка обязательного поля — как у Input: `required` уже принимался, но
                 // рисовался только в Input, из-за чего textarea-поле в той же форме теряло метку.
                 <Flex dir={['row', 'row', 'row']} gap={[4, 4, 4]}>
-                    <Text className={styles.Label} color={labelColor}>{label}</Text>
-                    {required && ( <Text className={styles.Label} color="var(--error)">*</Text> )}
+                    <label htmlFor={id}>
+                        <Text as="span" className={styles.Label} color={labelColor}>{label}</Text>
+                    </label>
+                    {required && ( <Text as="span" aria-hidden="true" className={styles.Label} color="var(--error)">*</Text> )}
                 </Flex>
             )}
             <div
@@ -361,7 +362,7 @@ export function Textarea({
                     <Skeleton rows={rows} h={[16, 16, 16]} />
                 ) : (
                     <textarea
-                        ref={innerRef}
+                        ref={fieldRef}
                         className={styles.TextareaField}
                         {...textareaProps}
                     />
@@ -422,5 +423,13 @@ export function Textarea({
                 </Text>
             )}
         </Flex>
+    );
+
+    if (!collapse) return content;
+
+    return (
+        <CollapseWrap {...collapse}>
+            {content}
+        </CollapseWrap>
     );
 }

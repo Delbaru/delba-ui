@@ -1,0 +1,32 @@
+@use '../../theme/tokens.default.scss' as *;
+@use '../../src/core/tokens.global.scss' as *;
+@use '../../src/components/Flex/_flex.scss';
+@use '../../src/core/reveal/_reveal.scss';
+
+:root {
+  font-family: var(--font-primary);
+  color: var(--text);
+  background: var(--background);
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+}
+
+.fixture {
+  display: grid;
+  gap: 24px;
+  max-width: 720px;
+}
+
+.fixture form {
+  display: grid;
+  gap: 16px;
+}
+
+.log {
+  display: block;
+  white-space: pre-wrap;
+  font: 12px/1.4 monospace;
+}

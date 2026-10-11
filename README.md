@@ -25,12 +25,13 @@
 | Вход | Что | Пример |
 |---|---|---|
 | `@delba/ui` | компоненты, хуки, типы (`src/index.ts`) | `import { Flex, Text } from '@delba/ui'` |
+| `@delba/ui/phone-field` | отдельный вход международного телефона для загрузки по необходимости; основной вход сохранён | `import('@delba/ui/phone-field').then(({ PhoneField }) => PhoneField)` |
 | `@delba/ui/skin` | движок шкур для D-/Shared-компонентов | `import { defineSkin } from '@delba/ui/skin'` |
 | `@delba/ui/icons/*` | иконки кита (`assets/icons/ui/*`) | `import eye from '@delba/ui/icons/eye/style-1/eye.svg'` → `assetUrl(eye)` |
 | `@delba/ui/next` | плагин Next `withUi` и `UI_SASS` (типы — `tools/next.d.mts`) | `export default withUi(nextConfig)` |
 | `@delba/ui/rich-text` | роли и санитайзер rich-text без React и SCSS — для node-скриптов и route handlers; роль-вариант проекта → классы `textVariantClasses` | `import { sanitizeRichTextHtml, textVariantClasses } from '@delba/ui/rich-text'` |
 | `@delba/ui/config` | тип `UiConfig` для `ui.config.ts` | `import type { UiConfig } from '@delba/ui/config'` |
-| `delba-ui` | CLI (bin пакета) | `delba-ui build`, `watch`, `check` |
+| `delba-ui` | CLI (bin пакета) | `delba-ui build`, `watch`, `check`, `test` |
 
 SCSS-входы — под теми же именами, но их даёт `loadPaths` плагина (`UI_SASS` = `tools/sass`), а не `exports`:
 
@@ -93,12 +94,33 @@ serdcaBezGranic):
 delba-ui build   # шкуры, утилиты, масштаб
 delba-ui watch   # то же и следит; правка конфига или пресета — перезапуск
 delba-ui check   # красные линии (--update опускает планку), договор темы, старые пути к киту
+delba-ui test    # типы, архитектура, границы, тесты, браузер/SSR и договор проекта
 ```
 
 Конфиг ([`tools/config.ts`](tools/config.ts)) — всё необязательно: `scan` (`['src']`, кит
 сканируется всегда), `seeds`, `theme` (`theme`), `rules` (`['src']`), `baseline`
 (`.rules-baseline.json`), `skins`, `scale` (базы масштаба, см. ниже), `typography` (варианты
 типографики, см. «Тему»). `tsx` для CLI кит несёт сам; `typescript` и `sass` — peer.
+
+`delba-ui test` запускает Playwright-браузерные сценарии, включая серверный HTML и гидратацию.
+При первой установке поставьте Chromium для Playwright из корня кита:
+
+```bash
+pnpm --filter @delba/ui exec playwright install chromium
+```
+
+На Windows вне CI, если bundled Chromium не установлен, конфигурация использует установленный
+Google Chrome. На других системах установите Chromium командой выше.
+
+Зависимости кита разделены по назначению: `libphonenumber-js` и `tsx` находятся в `dependencies`
+(номер телефона и запуск CLI); `@playwright/test` и Vite — в `devDependencies` для проверок;
+React, Next, Sass и остальные интеграции — `peerDependencies`, их приложение добавляет в свои
+`dependencies`.
+
+Полная проверка из одного места: в корневом `package.json` проекта задайте
+`"ui:test": "pnpm --filter <приложение> --silent exec delba-ui test"` и запускайте `npm run ui:test --silent`.
+Успешные шаги занимают по строке; ошибка показывает подробности и возвращает код 1.
+В `test` отсутствующий токен темы — ошибка; production-сборка приложения проверяется проектом.
 
 ## Что должен дать проект
 

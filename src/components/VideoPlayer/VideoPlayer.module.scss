@@ -206,7 +206,8 @@
           transition: transform var(--t-d-fast) var(--t-t-f-ease);
       }
 
-      .timeline:hover .timelineDot {
+      // Фокус с клавиатуры подсвечивает точку так же, как наведение: кольцо рисует проект (UI-9).
+      .timeline:is(:hover, :focus-visible) .timelineDot {
           transform: translate(-50%, -50%) scale(1.25);
       }
 
@@ -321,6 +322,13 @@
           height: 0;
           border-radius: inherit;
           background: var(--white-100);
+      }
+  }
+
+  @layer ui.states {
+      .Root .volumeTrack:focus-visible {
+          outline: calc(2 * var(--rpx)) solid var(--white-100);
+          outline-offset: calc(4 * var(--rpx));
       }
   }
 

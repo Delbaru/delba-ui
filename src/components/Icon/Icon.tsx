@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useMemo, type CSSProperties, type SVGProps } from 'react';
 import type React from 'react';
-import { boxLayout, cx, createLayoutClasses, resolveRadiusInput, resolveResponsive, shouldUseNextLink, splitRootDomProps, stateProps as buildStateProps, stateLinkProps, type BorderStyleProps, type ComponentStateValue, type GrowProps, type RadiusInput, type ResponsiveSpaceValue, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef, useMergedRefs } from '../../core';
+import { boxLayout, cx, createLayoutClasses, resolveRadiusInput, resolveResponsive, shouldUseNextLink, splitRootDomProps, stateProps as buildStateProps, stateLinkProps, type BorderStyleProps, type ComponentStateValue, type GrowProps, type RadiusInput, type ResponsiveSpaceValue, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef, composeEventHandlers, useMergedRefs } from '../../core';
 import { Flex } from '../Flex';
+import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
-import { IconTooltipWithPortal, type IconTooltipDirection } from './IconTooltip';
+import { useIconTooltip, type IconTooltipDirection } from './IconTooltip';
 import { hasIconSource, parseAspectRatio, resolveIconSource, type IconComponent, type IconSource, type ResolvedIconSource } from './svg';
 import { useIconSwap, componentSwapKey, type IconAnimate } from './swap';
 import { useFetchedSvg, type FetchedSvgState } from './useFetchedSvg';
@@ -14,7 +15,7 @@ import { useFetchedSvg, type FetchedSvgState } from './useFetchedSvg';
 const c = createLayoutClasses();
 
 // `r` у SVG — радиус окружности; у Icon это радиус коробки (кортежем), поэтому родной убран.
-type IconBaseSvgProps = Omit<SVGProps<SVGSVGElement>, 'width' | 'height' | 'color' | 'rotate' | 'strokeWidth' | 'r'>;
+type IconBaseSvgProps = Omit<SVGProps<SVGSVGElement>, 'width' | 'height' | 'color' | 'rotate' | 'strokeWidth' | 'r' | 'onFocus' | 'onBlur'>;
 type IconElementProps = IconBaseSvgProps & Record<string, unknown>;
 
 type IconRootSizeProps = {
@@ -37,6 +38,11 @@ type IconRootStyleProps = {
 };
 
 export interface IconProps extends IconBaseSvgProps, SizeInput, RadiusInput, IconRootSizeProps, IconRootStyleProps, BorderStyleProps, GrowProps, SharedMotionProps {
+  /** Focus callbacks receive the actual focusable Icon element, which may be its anchor. */
+  onFocus?: React.FocusEventHandler<Element>;
+  onBlur?: React.FocusEventHandler<Element>;
+  /** Сворачивает слот иконки; по умолчанию — по ширине для кнопок и строк. */
+  collapse?: CollapseOptions;
   'data-point-events'?: string;
   // URL иконки или импортированный SVG-компонент
   // Пример: src="https://example.com/icon.svg"
@@ -130,6 +136,7 @@ export function Icon({
   rel,
   id,
   'aria-label': ariaLabel,
+  'aria-describedby': ariaDescribedBy,
   'aria-disabled': ariaDisabled,
   'data-point-events': dataPointEvents,
   className = '',
@@ -137,6 +144,7 @@ export function Icon({
   onClick,
   onMouseEnter,
   onMouseLeave,
+  onMouseMove,
   onMouseDown,
   onMouseUp,
   onFocus,
@@ -200,13 +208,40 @@ export function Icon({
   perspective3d,
   parallax,
   animate,
+  collapse,
   ...props
 }: WithRef<IconProps, SVGSVGElement>) {
   const linkRel = rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined);
   const useNextLink = shouldUseNextLink(href, target);
+  // Подсказка якорится к ВНЕШНЕМУ узлу иконки: ссылке, если она есть, иначе к корню контента.
+  const {
+    setAnchor: setTooltipAnchor,
+    handlers: tooltipHandlers,
+    bubble: tooltipBubble,
+    describedBy: tooltipDescription,
+  } = useIconTooltip(tooltip, tooltipDirection, tooltipGap);
+  const hasTooltip = Boolean(tooltip);
+  const describedBy = [ariaDescribedBy, tooltipDescription].filter(Boolean).join(' ') || undefined;
   const linkProps = href
-    ? { href, target, rel: linkRel, className: 'ui-icon-link', 'data-point-events': dataPointEvents }
+    ? {
+        href,
+        target,
+        rel: linkRel,
+        className: cx('ui-icon-link', hasTooltip && 'ui-icon-tooltip-anchor'),
+        id,
+        role,
+        tabIndex,
+        'aria-label': ariaLabel,
+        'aria-disabled': ariaDisabled,
+        'data-point-events': dataPointEvents,
+        'aria-describedby': describedBy,
+        ref: setTooltipAnchor,
+        ...tooltipHandlers,
+        onFocus: composeEventHandlers(onFocus, tooltipHandlers.onFocus),
+        onBlur: composeEventHandlers(onBlur, tooltipHandlers.onBlur),
+      }
     : null;
+  const rootTooltipHandlers = linkProps ? undefined : tooltipHandlers;
   const wrapLink = (content: React.ReactNode) =>
     linkProps ? (useNextLink ? <Link {...linkProps}>{content}</Link> : <a {...linkProps}>{content}</a>) : content;
 
@@ -291,15 +326,17 @@ export function Icon({
   const hoverSvgHtml = useMemo(() => ({ __html: hoverSvgContent ?? '' }), [hoverSvgContent]);
   const rootStateProps = buildStateProps(state);
   const { hasMotion, motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  // Пользовательский обработчик первым, внутренние (моушен, подсказка) — следом и без отмены:
+  // preventDefault снаружи не должен оставить подсказку висеть или моушен недоигранным.
   const linkedHandlers = stateLinkProps(linkState, {
-    ...motionHandlers,
     onClick,
-    onMouseEnter,
-    onMouseLeave,
+    onMouseEnter: composeEventHandlers(composeEventHandlers(onMouseEnter, motionHandlers?.onMouseEnter), rootTooltipHandlers?.onMouseEnter),
+    onMouseLeave: composeEventHandlers(composeEventHandlers(onMouseLeave, motionHandlers?.onMouseLeave), rootTooltipHandlers?.onMouseLeave),
+    onMouseMove: composeEventHandlers(onMouseMove, motionHandlers?.onMouseMove),
     onMouseDown,
     onMouseUp,
-    onFocus,
-    onBlur,
+    onFocus: href ? undefined : composeEventHandlers(onFocus, rootTooltipHandlers?.onFocus),
+    onBlur: href ? undefined : composeEventHandlers(onBlur, rootTooltipHandlers?.onBlur),
     onKeyDown,
     onKeyUp,
   });
@@ -332,21 +369,23 @@ export function Icon({
   const contentMotionStyle = needsRootWrapper ? undefined : motionStyle;
   const contentRootProps = needsRootWrapper ? undefined : rootProps;
   const wrapperRootProps = needsRootWrapper ? rootProps : undefined;
-  const contentInteractiveProps = !needsRootWrapper
+  const contentInteractiveProps = !needsRootWrapper && !href
     ? {
         id,
         role,
         tabIndex,
         'aria-label': ariaLabel,
+        'aria-describedby': describedBy,
         'aria-disabled': ariaDisabled,
       }
     : undefined;
-  const rootInteractiveProps = needsRootWrapper
+  const rootInteractiveProps = needsRootWrapper && !href
     ? {
         id,
         role,
         tabIndex,
         'aria-label': ariaLabel,
+        'aria-describedby': describedBy,
         'aria-disabled': ariaDisabled,
       }
     : undefined;
@@ -371,9 +410,13 @@ export function Icon({
 
   const stackAspectRatio = parseAspectRatio(svgViewBox || elementProps.viewBox || hoverSvgViewBox);
 
-  // useCallback обязателен: ref-колбэк со скачущей идентичностью React отцепляет и цепляет
-  // заново каждый рендер, а это сбрасывает накопленный моушен в setMotionNode(null).
-  const setSvgRefs = useMergedRefs(setMotionNode, ref);
+  // Каждый служебный ref — ровно на одном узле: моушен и якорь подсказки — на внешнем узле
+  // контента, `ref` снаружи — на глифе. Колбэки стабильны (useMergedRefs): скачущая
+  // идентичность отцепляла бы узел каждый рендер и сбрасывала моушен в setMotionNode(null).
+  const motionOnGlyph = !needsRootWrapper && !hasHoverIcon;
+  const setSvgRefs = useMergedRefs(ref, motionOnGlyph ? setMotionNode : undefined, motionOnGlyph && !linkProps ? setTooltipAnchor : undefined);
+  const setStackRef = useMergedRefs(needsRootWrapper ? undefined : setMotionNode, needsRootWrapper || linkProps ? undefined : setTooltipAnchor);
+  const setRootRef = useMergedRefs<HTMLDivElement>(setMotionNode, linkProps ? undefined : setTooltipAnchor);
 
   const renderStackLayer = (
     source: ResolvedIconSource,
@@ -451,7 +494,7 @@ export function Icon({
     };
 
     content = (
-      <span ref={setMotionNode} {...wrapperProps} {...contentHandlers} data-icon-root="true" data-icon-stack="true">
+      <span ref={setStackRef} {...wrapperProps} {...contentHandlers} data-icon-root="true" data-icon-stack="true">
         {renderStackLayer(baseSource, { content: svgContent, viewBox: svgViewBox, rootFill: svgRootFill }, svgHtml, 'default')}
         {renderStackLayer(hoverSource, { content: hoverSvgContent, viewBox: hoverSvgViewBox, rootFill: hoverSvgRootFill }, hoverSvgHtml, 'hover')}
       </span>
@@ -492,13 +535,14 @@ export function Icon({
   if (needsRootWrapper) {
     content = (
       <Flex
-        ref={setMotionNode as React.Ref<HTMLDivElement>}
+        ref={setRootRef}
         {...(rootInteractiveProps ?? null)}
         {...(wrapperRootProps as Record<string, unknown> ?? null)}
         data-point-events={dataPointEvents}
         data-icon-root="true"
         className={cx(
           'ui-icon-root',
+          hasTooltip && 'ui-icon-tooltip-anchor',
           resolvedRootClassName,
           ...c.value('bg', resolvedRootBg),
         )}
@@ -538,19 +582,15 @@ export function Icon({
 
   if (!hasIconSource(baseSource) || !content) return null;
 
-  let result = wrapLink(content) as React.ReactElement;
+  // Форма дерева не зависит от `tooltip`: портал — второй ребёнок того же фрагмента, поэтому
+  // появление и уход подсказки не пересоздают узел иконки.
+  const result = (
+    <>
+      {wrapLink(content)}
+      {tooltipBubble}
+    </>
+  );
 
-  if (tooltip) {
-    result = (
-      <IconTooltipWithPortal
-        tooltip={tooltip}
-        direction={tooltipDirection}
-        gap={tooltipGap}
-      >
-        {result}
-      </IconTooltipWithPortal>
-    );
-  }
-
-  return result;
+  if (!collapse) return result;
+  return <CollapseWrap {...collapse} as="span" inline axis={collapse.axis ?? 'column'}>{result}</CollapseWrap>;
 }

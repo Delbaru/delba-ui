@@ -8,3 +8,8 @@ src/core/scale.ts
 
 # Ссылки pnpm на peer-зависимости: кит — пакет воркспейса проекта
 node_modules
+
+# Артефакты браузерной проверки
+tools/browser/.test-results/
+test-results/
+playwright-report/

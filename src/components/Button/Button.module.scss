@@ -1,6 +1,11 @@
 @use '../../core/scss-utils' as utils;
 
 @layer ui.components {
+  .ui-button[aria-disabled='true'] {
+      cursor: default;
+      pointer-events: none;
+  }
+
   // Две необязательные ручки темы, обе с фолбэком на прежнее поведение — договор они не
   // расширяют (`check-tokens` не требует токен, у которого есть запасное значение), поэтому
   // проект, который их не знает, выглядит ровно как раньше.

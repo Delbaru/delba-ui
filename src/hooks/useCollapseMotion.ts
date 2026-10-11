@@ -13,6 +13,7 @@ export interface CollapseHandle {
 export interface UseCollapseMotionOptions {
   open: boolean;
   axis: CollapseAxis;
+  gapSide?: 'start' | 'end';
   /** Блок, показанный с первого кадра, выезжает, а не стоит открытым. Читается ОДИН раз. */
   appear?: boolean;
   /** Размер ведёт внутренний слой: блоку мешает `minH`, либо ось — ширина. */
@@ -32,7 +33,7 @@ export interface CollapseMotion<T extends HTMLElement> {
   /** Раскрытие доехало: только тогда снимают клип и показывают выпадающее наружу. */
   settled: boolean;
   wrapRef: RefObject<T | null>;
-  innerRef: RefObject<HTMLDivElement | null>;
+  innerRef: RefObject<HTMLElement | null>;
   handle: CollapseHandle;
 }
 
@@ -45,12 +46,12 @@ export interface CollapseMotion<T extends HTMLElement> {
  * доезжает layout-эффектами до первой отрисовки, а стартовый кадр хода держит `fill: 'backwards'`.
  */
 export function useCollapseMotion<T extends HTMLElement = HTMLElement>(options: UseCollapseMotionOptions): CollapseMotion<T> {
-  const { open, axis, appear = false, sizeOnInner = false, fade = false } = options;
+  const { open, axis, gapSide = 'start', appear = false, sizeOnInner = false, fade = false } = options;
   const [mounted, setMounted] = useState(open);
   const [visualOpen, setVisualOpen] = useState(open && !appear);
   const [settled, setSettled] = useState(open && !appear);
   const wrapRef = useRef<T | null>(null);
-  const innerRef = useRef<HTMLDivElement | null>(null);
+  const innerRef = useRef<HTMLElement | null>(null);
   const previousOpen = useRef(visualOpen);
   // Ручка стабильна: наружу уезжает один объект, в нём меняется только текущий ход.
   const handle = useRef<{ transition: Transition }>({ transition: Transition.done() });
@@ -87,7 +88,7 @@ export function useCollapseMotion<T extends HTMLElement = HTMLElement>(options: 
     const content = inner.firstElementChild;
     const transition = animateCollapse(
       { wrap, inner, content: content instanceof HTMLElement ? content : null },
-      { axis, open: visualOpen, sizeOnInner, fade }
+      { axis, gapSide, open: visualOpen, sizeOnInner, fade }
     );
 
     handle.current.transition = transition;
@@ -102,7 +103,7 @@ export function useCollapseMotion<T extends HTMLElement = HTMLElement>(options: 
 
       latest.current.onEnd?.();
     });
-  }, [visualOpen, axis, sizeOnInner, fade]);
+  }, [visualOpen, axis, gapSide, sizeOnInner, fade]);
 
   // Ход не должен пережить узел: иначе промис не разрешится и закрытие «зависнет» в середине.
   useEffect(() => () => handle.current.transition.cancel(), []);

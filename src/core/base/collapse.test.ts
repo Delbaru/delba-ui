@@ -41,6 +41,8 @@ test('sizeFrameStyle: ось column ведёт ширину и боковые о
 test('gapFrameStyle: зазор — отступ обёртки по той же оси', () => {
   assert.deepEqual(gapFrameStyle(frame({ gap: 12 }), 'row'), { paddingTop: '12px' });
   assert.deepEqual(gapFrameStyle(frame({ gap: 12 }), 'column'), { paddingLeft: '12px' });
+  assert.deepEqual(gapFrameStyle(frame({ gap: 12 }), 'column', 'end'), { paddingRight: '12px' });
+  assert.deepEqual(gapFrameStyle(frame({ gap: 12 }), 'row', 'end'), { paddingBottom: '12px' });
 });
 
 test('framesEqual: ехать некуда, если совпали ВСЕ поля, а не только размер', () => {

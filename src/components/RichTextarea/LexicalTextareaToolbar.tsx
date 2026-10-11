@@ -103,12 +103,12 @@ function ToolbarIconButton({
       type='button'
       className={styles.ToolbarIconButton}
       state={isActive ? 'active' : undefined}
-      p={[0, null, null]}
-      w={[size, null, null]}
-      h={[size, null, null]}
+      p={[0, 0, 0]}
+      w={[size, size, size]}
+      h={[size, size, size]}
       bg='transparent'
-      justifyContent={['center', null, null]}
-      alignItems={['center', null, null]}
+      justifyContent={['center', 'center', 'center']}
+      alignItems={['center', 'center', 'center']}
       tooltip={
         <Text
           variant={['micro', null, null]}
@@ -126,7 +126,7 @@ function ToolbarIconButton({
       aria-label={ariaLabel}
       aria-pressed={isActive}
     >
-      <Icon src={iconSrc} w={[size, null, null]} h={[size, null, null]} />
+      <Icon src={iconSrc} w={[size, size, size]} h={[size, size, size]} />
     </Button>
   );
 }

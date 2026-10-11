@@ -32,23 +32,23 @@
         transform var(--t-d-normal) var(--t-t-f-ease);
       outline: none;
 
-      // Опт-ин снятие клипа (проп overflowVisible): выпадашка Select абсолютом внутри поля, и
-      // клип панели резал бы её список по кромке диалога. Специфичность как у .Panel — правило
-      // ниже по коду, поэтому выигрывает оно.
+      // Опт-ин снимает клип для содержимого, которое должно выступать за границы панели.
+      // Специфичность как у .Panel — правило ниже по коду, поэтому выигрывает оно.
       &.overflowVisible {
         overflow: visible;
       }
 
+      // Содержимое выше панели прокручивается здесь: панель держит max-height пресета или пропа,
+      // а min-height: 0 даёт этой ячейке сжаться ниже своего содержимого.
       .inner {
         flex: 1 1 auto;
         min-height: 0;
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
 
         &.innerOverflowVisible {
           overflow: visible;
         }
-        // overflow-y: auto;
-        // overflow-x: hidden;
         overscroll-behavior-y: contain;
         -webkit-overflow-scrolling: touch;
         touch-action: pan-y;

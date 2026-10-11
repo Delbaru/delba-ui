@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
 import type React from 'react';
 
 import styles from './Button.module.scss';
 
-import { boxLayout, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
-import { useAnchoredFloating } from '../../hooks/useAnchoredFloating';
+import { boxLayout, composeEventHandlers, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
+import { useTooltip } from '../../hooks/useTooltip';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'secondaryFill' | 'tertiary';
 export type ButtonSize = 'small' | 'medium' | 'large';
@@ -26,6 +27,8 @@ export interface ButtonProps
     SharedMotionProps {
   children?: React.ReactNode;
   style?: CSSProperties;
+  /** Сворачивает кнопку целиком; для ширины укажите `axis: 'column'`. */
+  collapse?: CollapseOptions;
 
   newTab?: boolean;
   nofollow?: boolean;
@@ -43,7 +46,7 @@ export interface ButtonProps
 
   linkState?: StateLinkInput;
 
-  /** Tooltip content rendered next to the button on hover */
+  /** Подсказка при наведении или фокусе; изменение текста сохраняет DOM-узел кнопки. */
   tooltip?: React.ReactNode;
   /** Tooltip position relative to the button: right, left, top, bottom. Default: right */
   tooltipDirection?: 'right' | 'left' | 'top' | 'bottom';
@@ -56,6 +59,7 @@ export function Button({
   children,
   className = '',
   style,
+  collapse,
   variant,
   size,
   justifyContent,
@@ -65,6 +69,7 @@ export function Button({
   parallax,
   color,
   state,
+  disabled = false,
   type,
   href,
   target,
@@ -74,73 +79,62 @@ export function Button({
   nofollow,
   noreferrer,
   onMouseEnter,
+  onMouseMove,
   onMouseLeave,
+  onMouseDown,
+  onMouseUp,
+  onClick,
   onFocus,
   onBlur,
   linkState,
   tooltip,
   tooltipDirection = 'right',
   tooltipGap = 8,
+  'aria-describedby': ariaDescribedBy,
   ...props
 }: WithRef<ButtonProps, HTMLElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
   const isLink = Boolean(href);
-  const Comp = (isLink ? (shouldUseNextLink(href, target, download) ? Link : 'a') : 'button') as React.ElementType;
+  const useNextLink = isLink && shouldUseNextLink(href, target, download);
+  const Comp = (useNextLink ? Link : isLink ? 'a' : 'button') as React.ElementType;
   const linkProps = resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer });
   const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
-  const anchorRef = useRef<HTMLElement | null>(null);
-  const tooltipRef = useRef<HTMLElement | null>(null);
-  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
-  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
-  const isTooltipActive = Boolean(tooltip) && isTooltipVisible;
-  const { placement: tooltipPlacement, isPositioned: isTooltipPositioned, style: tooltipStyle } = useAnchoredFloating({
-    anchorRef,
-    floatingRef: tooltipRef,
-    isActive: isTooltipActive,
-    placement: tooltipDirection,
-    align: 'center',
+  const tooltipId = useId();
+  const hasTooltip = Boolean(tooltip);
+  const describedBy = [ariaDescribedBy, hasTooltip ? tooltipId : undefined].filter(Boolean).join(' ') || undefined;
+  const { anchorRef, tooltipRef, anchorHandlers, bubbleProps } = useTooltip({
+    enabled: hasTooltip,
+    direction: tooltipDirection,
     gap: tooltipGap,
-    viewportPadding: 8,
   });
   const setRefs = useMergedRefs(anchorRef, setMotionNode, ref);
-  const handleMouseEnter = useCallback((event: React.MouseEvent<HTMLElement>) => {
-    setIsTooltipVisible(true);
-    motionHandlers?.onMouseEnter?.(event);
-    onMouseEnter?.(event as React.MouseEvent<HTMLButtonElement>);
-  }, [motionHandlers, onMouseEnter]);
-  const handleMouseLeave = useCallback((event: React.MouseEvent<HTMLElement>) => {
-    setIsTooltipVisible(false);
-    motionHandlers?.onMouseLeave?.(event);
-    onMouseLeave?.(event as React.MouseEvent<HTMLButtonElement>);
-  }, [motionHandlers, onMouseLeave]);
-  const handleFocus = useCallback((event: React.FocusEvent<HTMLElement>) => {
-    setIsTooltipVisible(true);
-    onFocus?.(event as React.FocusEvent<HTMLButtonElement>);
-  }, [onFocus]);
-  const handleBlur = useCallback((event: React.FocusEvent<HTMLElement>) => {
-    setIsTooltipVisible(false);
-    onBlur?.(event as React.FocusEvent<HTMLButtonElement>);
-  }, [onBlur]);
 
-  useEffect(() => {
-    setPortalNode(document.body);
-  }, []);
-
+  // Native anchors can be disabled without changing their host node by removing href. Next Link
+  // requires a valid href prop, so that branch keeps its source href and blocks activation below.
   const anchorProps = isLink
-    ? { ...rest, ...linkProps }
-    : { ...rest, type: type ?? 'button' };
+    ? {
+        ...rest,
+        ...linkProps,
+        ...(!useNextLink && disabled ? { href: undefined } : null),
+        tabIndex: disabled ? -1 : rest.tabIndex,
+        'aria-disabled': disabled ? true : rest['aria-disabled'],
+      }
+    : { ...rest, type: type ?? 'button', disabled };
 
-  let result = (
+  const handleClick: React.MouseEventHandler<HTMLElement> = (event) => {
+    if (disabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    onClick?.(event as React.MouseEvent<HTMLButtonElement>);
+  };
+
+  const button = (
     <Comp
       ref={setRefs}
-      {...stateLinkProps(linkState, {
-        onMouseEnter: handleMouseEnter,
-        onMouseMove: motionHandlers?.onMouseMove,
-        onMouseLeave: handleMouseLeave,
-        onFocus: handleFocus,
-        onBlur: handleBlur,
-      })}
       className={cx(
         'ui-button',
         ...c.value('variant', variant),
@@ -156,38 +150,43 @@ export function Button({
         ...(motionStyle ?? null),
         ...style,
       }}
-      {...stateProps(state)}
+      {...stateProps(state, disabled && 'disabled')}
       {...anchorProps}
+      aria-describedby={describedBy}
+      {...stateLinkProps(disabled ? undefined : linkState, {
+        onMouseEnter: composeEventHandlers(composeEventHandlers(anchorHandlers.onMouseEnter, motionHandlers?.onMouseEnter), onMouseEnter),
+        onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),
+        onMouseLeave: composeEventHandlers(composeEventHandlers(anchorHandlers.onMouseLeave, motionHandlers?.onMouseLeave), onMouseLeave),
+        onMouseDown,
+        onMouseUp,
+        onClick: handleClick,
+        onFocus: composeEventHandlers(anchorHandlers.onFocus, onFocus),
+        onBlur: composeEventHandlers(anchorHandlers.onBlur, onBlur),
+      })}
     >
       {children}
     </Comp>
   );
 
-  if (tooltip) {
-    const tooltipNode = portalNode ? createPortal(
-      <span
-        ref={tooltipRef}
-        className={'ui-button-tooltip'}
-        style={tooltipStyle}
-        role='tooltip'
-        aria-hidden={!isTooltipActive || !isTooltipPositioned}
-        data-placement={tooltipPlacement}
-        {...stateProps(isTooltipActive && isTooltipPositioned && 'active')}
-      >
-        {tooltip}
-      </span>,
-      portalNode
-    ) : null;
+  const tooltipNode = hasTooltip && bubbleProps.portalNode ? createPortal(
+    <span
+      ref={tooltipRef}
+      id={tooltipId}
+      className={'ui-button-tooltip'}
+      style={bubbleProps.style}
+      role='tooltip'
+      aria-hidden={!bubbleProps.active}
+      data-placement={bubbleProps.placement}
+      {...stateProps(bubbleProps.active && 'active')}
+    >
+      {tooltip}
+    </span>,
+    bubbleProps.portalNode
+  ) : null;
 
-    result = (
-      <span
-        className={'ui-button-tooltip-wrapper'}
-      >
-        {result}
-        {tooltipNode}
-      </span>
-    );
-  }
+  // Постоянная позиция кнопки в дереве сохраняет DOM и фокус при смене tooltip.
+  const result = <>{button}{tooltipNode}</>;
 
-  return result;
+  if (!collapse) return result;
+  return <CollapseWrap {...collapse} as="span" inline>{result}</CollapseWrap>;
 }

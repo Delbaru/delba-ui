@@ -1,10 +1,9 @@
 import { useCallback, type Ref, type RefCallback } from 'react';
 
 /** Присваивает узел ref'у любого вида: функции, объекту `{ current }` или пустоте. */
-export function assignRef<T>(ref: Ref<T> | undefined, node: T | null): void {
+export function assignRef<T>(ref: Ref<T> | undefined, node: T | null): void | (() => void) {
   if (typeof ref === 'function') {
-    ref(node);
-    return;
+    return ref(node);
   }
 
   if (ref) {
@@ -14,12 +13,21 @@ export function assignRef<T>(ref: Ref<T> | undefined, node: T | null): void {
 
 /**
  * Склеивает ref'ы в один колбэк: ref снаружи (проп `ref`), свой внутренний и сеттер анимации
- * получают один и тот же узел. Колбэк стабилен, пока не сменились сами ref'ы.
+ * получают один и тот же узел. Сохраняет очистку callback-ref в React 19; для остальных
+ * ref'ов при отсоединении передаёт null. Колбэк стабилен, пока не сменились сами ref'ы.
  */
 export function useMergedRefs<T>(a: Ref<T> | undefined, b: Ref<T> | undefined, c?: Ref<T>): RefCallback<T> {
   return useCallback((node: T | null) => {
-    assignRef(a, node);
-    assignRef(b, node);
-    assignRef(c, node);
+    const refs = [a, b, c];
+    const cleanups = refs.map((ref) => assignRef(ref, node));
+    if (node === null) return;
+
+    return () => {
+      refs.forEach((ref, index) => {
+        const cleanup = cleanups[index];
+        if (cleanup) cleanup();
+        else assignRef(ref, null);
+      });
+    };
   }, [a, b, c]);
 }

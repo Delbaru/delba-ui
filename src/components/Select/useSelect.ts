@@ -6,7 +6,7 @@ import { useOutsideDismiss } from '../../hooks/useOutsideDismiss';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { defaultEqual, flattenSelectItems, getFocusedOptionIndex, isValueArray, visibleDropdownItems, type SelectItem, type SelectOption } from './options';
 
-export interface SelectRenderValuePayload<T = string> {
+export interface SelectRenderValuePayload<T extends string = string> {
     selectedOption: SelectOption<T> | null;
     selectedOptions: SelectOption<T>[];
     multiple: boolean;
@@ -14,22 +14,23 @@ export interface SelectRenderValuePayload<T = string> {
     hasSelectedValue: boolean;
 }
 
-export interface SelectConfig extends SharedMotionProps {
-    options: SelectItem<string>[];
-    value?: string | null | string[];
-    defaultValue: string | null | string[];
-    onChange?: (value: string | null | string[]) => void;
+/** Значение внутри хука — общий `T | null | T[]`; тип своей ветки `multiple` наружу отдаёт Select. */
+export interface SelectConfig<T extends string> extends SharedMotionProps {
+    options: readonly SelectItem<T>[];
+    value?: T | null | T[];
+    defaultValue?: T | null | T[];
+    onChange: (value: T | null | T[]) => void;
     multiple: boolean;
     closeOnSelect: boolean;
     showSelected: boolean;
-    renderValue?: (payload: SelectRenderValuePayload<string>) => React.ReactNode;
+    renderValue?: (payload: SelectRenderValuePayload<T>) => React.ReactNode;
     placeholder: string;
     loading: boolean;
     disabled?: boolean;
     required?: boolean;
     emptyMessage: string;
     visibleOptions: number;
-    validate?: (value: string | null | string[]) => string | undefined;
+    validate: (value: T | null | T[]) => string | undefined;
     id?: string;
     error?: string;
     label?: string;
@@ -38,21 +39,21 @@ export interface SelectConfig extends SharedMotionProps {
 }
 
 /** Поведение Select: значение, раскрытие, пункт в фокусе, клавиатура, проверка. Вид — в Select.tsx. */
-export function useSelect(ref: Ref<HTMLDivElement> | undefined, config: SelectConfig) {
+export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined, config: SelectConfig<T>) {
     const {
         options, value: valueProp, defaultValue, onChange, multiple, closeOnSelect, showSelected, renderValue,
         placeholder, loading, disabled, required, emptyMessage, visibleOptions, validate: validateProp,
         id: idProp, error: errorProp, label, comment, ariaLabel, perspective3d, parallax,
     } = config;
 
-    const [uncontrolledValue, setUncontrolledValue] = useState<string | null | string[]>(
+    const [uncontrolledValue, setUncontrolledValue] = useState<T | null | T[]>(
         defaultValue ?? (multiple ? [] : null)
     );
 
     const value = valueProp !== undefined ? valueProp : uncontrolledValue;
 
     const valueArray = multiple ? (isValueArray(value) ? value : []) : null;
-    const valueSingle = !multiple && !isValueArray(value) ? (value as string | null) : null;
+    const valueSingle = !multiple && !isValueArray(value) ? value : null;
     const flatItems = useMemo(() => flattenSelectItems(options), [options]);
     const flatOptions = useMemo(
         () => flatItems.flatMap((item) => (item.type === 'option' ? [item.option] : [])),
@@ -103,7 +104,7 @@ export function useSelect(ref: Ref<HTMLDivElement> | undefined, config: SelectCo
 
     const {
         id,
-        innerRef,
+        fieldRef,
         displayError,
         errorId,
         setInternalError,
@@ -123,6 +124,8 @@ export function useSelect(ref: Ref<HTMLDivElement> | undefined, config: SelectCo
 
     const rootRef = useRef<HTMLElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const dropdownPanelRef = useRef<HTMLDivElement>(null);
+    const triggerAnchorRef = useRef<HTMLDivElement>(null);
     const optionRefs = useRef<Array<HTMLElement | null>>([]);
 
     const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
@@ -145,7 +148,7 @@ export function useSelect(ref: Ref<HTMLDivElement> | undefined, config: SelectCo
     };
 
     const validateValue = useCallback(
-        (v: string | null | string[]): string | undefined => {
+        (v: T | null | T[]): string | undefined => {
             if (required) {
                 if (multiple) {
                     if (!Array.isArray(v) || v.length === 0) return emptyMessage;
@@ -154,7 +157,7 @@ export function useSelect(ref: Ref<HTMLDivElement> | undefined, config: SelectCo
                 }
             }
 
-            return validateProp?.(v);
+            return validateProp(v);
         },
         [required, emptyMessage, validateProp, multiple]
     );
@@ -181,10 +184,10 @@ export function useSelect(ref: Ref<HTMLDivElement> | undefined, config: SelectCo
     );
 
     const commitValue = useCallback(
-        (nextValue: string | null | string[]) => {
+        (nextValue: T | null | T[]) => {
             if (valueProp === undefined) setUncontrolledValue(nextValue);
 
-            onChange?.(nextValue);
+            onChange(nextValue);
             setInternalError(validateValue(nextValue));
         },
         [onChange, setInternalError, validateValue, valueProp]
@@ -192,7 +195,11 @@ export function useSelect(ref: Ref<HTMLDivElement> | undefined, config: SelectCo
 
     // Escape выключен: у списка свой обработчик клавиш, и два закрытия подряд гасили бы заодно
     // модалку, в которой список открыт.
-    useOutsideDismiss(rootRef, closeDropdown, { enabled: open, escape: false });
+    const dropdownDismissProps = useOutsideDismiss(
+        [rootRef, dropdownPanelRef],
+        closeDropdown,
+        { enabled: open, escape: false },
+    );
 
     useEffect(() => {
         if (!open || focusedIndex < 0) return;
@@ -254,9 +261,10 @@ export function useSelect(ref: Ref<HTMLDivElement> | undefined, config: SelectCo
     }, []);
 
     const setWrapperRef = useMergedRefs(rootRef, setMotionNode);
+    const setTriggerRef = useMergedRefs(fieldRef, triggerAnchorRef);
 
     const handleSelect = useCallback(
-        (option: SelectOption<string>) => {
+        (option: SelectOption<T>) => {
             const optionIndex = dropdownOptions.findIndex((currentOption) => defaultEqual(currentOption.value, option.value));
 
             if (multiple) {
@@ -366,10 +374,10 @@ export function useSelect(ref: Ref<HTMLDivElement> | undefined, config: SelectCo
         [disabled, open, closeDropdown, dropdownOptions, focusedIndex, openDropdown, handleSelect]
     );
 
-    const optionIndexOf = (option: SelectOption<string>) =>
+    const optionIndexOf = (option: SelectOption<T>) =>
         dropdownOptions.findIndex((currentOption) => defaultEqual(currentOption.value, option.value));
 
-    const isOptionSelected = (option: SelectOption<string>) =>
+    const isOptionSelected = (option: SelectOption<T>) =>
         multiple ? valueArray?.includes(option.value) ?? false : defaultEqual(option.value, valueSingle);
 
     const setOptionRef = (index: number) => (element: HTMLElement | null) => {
@@ -377,11 +385,14 @@ export function useSelect(ref: Ref<HTMLDivElement> | undefined, config: SelectCo
     };
 
     return {
-        id, innerRef, errorId, displayError, commentId, listboxId, open, focusedIndex, setFocusedIndex,
+        id, fieldRef: setTriggerRef, triggerAnchorRef, dropdownPanelRef, dropdownDismissProps,
+        errorId, displayError, commentId, listboxId, open, focusedIndex, setFocusedIndex,
         showInlineError, hasSelectedValue, displayContent, dropdownItems, dropdownOptions,
+        selectedOption, selectedOptions,
+        formValue: value,
         dropdownScrolls, normalizedVisibleOptions, triggerAccessibilityProps, dropdownRef,
         setWrapperRef, setOptionRef, motionHandlers, motionStyle, handleContainerClick, handleKeyDown,
-        handleSelect, handleDropdownWheelCapture, handleDropdownTouchMoveCapture, optionIndexOf,
+        handleSelect, handleDropdownWheelCapture, handleDropdownTouchMoveCapture, optionIndexOf, closeDropdown,
         isOptionSelected,
     };
 }

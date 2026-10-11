@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState, type ChangeEvent, type FocusEve
 import type React from 'react';
 
 import { useFieldControl } from '../../../core';
+import type { FieldValueChangeDetails, FieldValueChangeHandler } from '../../../core';
 import { resolveSeedField } from '../../../core/base/seed';
 import * as phoneMask from './phone-mask';
 import * as datePicker from './date-picker';
@@ -122,6 +123,7 @@ interface UseInputBehaviorOptions {
   idProp?: string;
   disabled?: boolean;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
+  onValueChange?: FieldValueChangeHandler<HTMLInputElement>;
   onFocus?: React.FocusEventHandler<HTMLInputElement>;
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
   onInputKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
@@ -147,6 +149,7 @@ export function useInputBehavior({
   idProp,
   disabled,
   onChange,
+  onValueChange,
   onFocus,
   onBlur,
   onInputKeyDown,
@@ -232,6 +235,7 @@ export function useInputBehavior({
   const {
     id,
     innerRef,
+    fieldRef,
     currentValue,
     displayError,
     validateValue,
@@ -241,6 +245,7 @@ export function useInputBehavior({
   } = useFieldControl<HTMLInputElement>(ref, {
     id: idProp,
     value: isPhone || isTime || isDate ? undefined : valueProp,
+    defaultValue: defaultValueProp,
     // Обязательность у поля только для чтения не ПРОВЕРЯЕТСЯ (звёздочку она рисует по-прежнему):
     // значение туда кладёт кто-то другой, и «Поле обязательно» на blur обвиняло бы пользователя
     // в том, чего он в этом поле сделать не может.
@@ -249,6 +254,16 @@ export function useInputBehavior({
     error,
     validate: typeValidate,
     isEmpty: isPhone ? (value: string) => phoneMask.isEmpty(value, phoneFormat) : undefined,
+    onReset: () => {
+      if (isPhone && !isPhoneControlled) {
+        setPhoneUncontrolled(phoneMask.formatPhone(defaultValueString, phoneFormat) || phoneMask.emptyValue(phoneFormat));
+      }
+      if (isTime && !isTimeControlled) setTimeUncontrolled(timeMask.normalize(defaultValueString));
+      if (isDate && !isDateControlled) {
+        setDateUncontrolled(datePicker.normalizeDisplayValue(defaultValueString));
+        deactivateDatePicker(false);
+      }
+    },
   });
 
   // `seed` — значение по умолчанию, ведущее себя как подсказка. Пока оно стоит в поле, в DOM
@@ -294,29 +309,19 @@ export function useInputBehavior({
   const timeMaskValue = isTime ? (timeDisplayValue ?? '') : '';
   const timeMaskSuffix = showTimeMask ? timeMask.getMaskSuffix(timeMaskValue) : '';
 
-  const createSyntheticEvent = <T extends ChangeEvent<HTMLInputElement> | FocusEvent<HTMLInputElement>>(value: string, baseEvent?: T): T => {
-    const fallbackTarget = innerRef.current as HTMLInputElement | null;
-    const sourceTarget = (baseEvent?.target as HTMLInputElement | null) ?? fallbackTarget;
-    const sourceCurrentTarget = (baseEvent?.currentTarget as HTMLInputElement | null) ?? sourceTarget ?? fallbackTarget;
-
-    return {
-      ...(baseEvent ?? {}),
-      target: { ...(sourceTarget ?? {}), value },
-      currentTarget: { ...(sourceCurrentTarget ?? {}), value },
-    } as T;
-  };
-
-  // Значение в модель одним путём: локальный черновик неуправляемого поля и `onChange` управляемого.
-  const commitPlainValue = useCallback((nextValue: string) => {
-    if (valueProp === undefined) setUncontrolledValue(nextValue);
-    onChange?.(createSyntheticEvent<ChangeEvent<HTMLInputElement>>(nextValue));
-  }, [createSyntheticEvent, onChange, setUncontrolledValue, valueProp]);
+  const commitPlainValue = useCallback((nextValue: string, details: FieldValueChangeDetails<HTMLInputElement>) => {
+    if (valueProp === undefined) {
+      setUncontrolledValue(nextValue);
+      if (innerRef.current) innerRef.current.value = resolveSeedField({ seed, value: nextValue }).displayValue;
+    }
+    onValueChange?.(nextValue, details);
+  }, [innerRef, onValueChange, seed, setUncontrolledValue, valueProp]);
 
   const commitDateValue = useCallback((nextValue: string) => {
     if (!isDateControlled) setDateUncontrolled(nextValue);
     setInternalError(validateValue(nextValue));
-    onChange?.(createSyntheticEvent<ChangeEvent<HTMLInputElement>>(nextValue));
-  }, [isDateControlled, onChange, setInternalError, validateValue]);
+    onValueChange?.(nextValue, { reason: 'pick', event: null });
+  }, [isDateControlled, onValueChange, setInternalError, validateValue]);
 
   const {
     isDatePickerActive,
@@ -359,7 +364,7 @@ export function useInputBehavior({
       }
       // Значение по умолчанию — подсказка, а не данные: по фокусу поле пустеет, и модель получает
       // ''. Иначе ввод «1» в поле с «0» дал бы «01», и человек считал бы, что это его ответ.
-      if (seedField.focusValue !== undefined) commitPlainValue(seedField.focusValue);
+      if (seedField.focusValue !== undefined) commitPlainValue(seedField.focusValue, { reason: 'seed', event });
       onFocus?.(event);
     },
     [commitPlainValue, lockAutofill, isAutofillLocked, onFocus, seedField.focusValue]
@@ -368,7 +373,10 @@ export function useInputBehavior({
   const handleBlur = useCallback(
     (event: FocusEvent<HTMLInputElement>) => {
       const relatedTarget = event.relatedTarget as Node | null;
-      const isFocusInside = Boolean(relatedTarget && rootRef.current?.contains(relatedTarget));
+      const isFocusInside = Boolean(
+        relatedTarget
+        && (rootRef.current?.contains(relatedTarget) || floatingRef.current?.contains(relatedTarget))
+      );
 
       if (!isFocusInside) {
         setIsFieldFocused(false);
@@ -378,18 +386,17 @@ export function useInputBehavior({
 
       if (isPhone) {
         const formatted = phoneMask.formatPhone(event.target.value, phoneFormat);
-        const synthetic = createSyntheticEvent<FocusEvent<HTMLInputElement>>(formatted, event);
         setInternalError(validateValue(formatted));
-        onBlur?.(synthetic);
+        onBlur?.(event);
         return;
       }
 
       if (isTime) {
         const nextValue = timeMask.normalize(event.target.value);
         if (!isTimeControlled) setTimeUncontrolled(nextValue);
-        const synthetic = createSyntheticEvent<FocusEvent<HTMLInputElement>>(nextValue, event);
+        if (nextValue !== timeDisplayValue) onValueChange?.(nextValue, { reason: 'format', event });
         setInternalError(validateValue(nextValue));
-        onBlur?.(synthetic);
+        onBlur?.(event);
         return;
       }
 
@@ -399,30 +406,31 @@ export function useInputBehavior({
           else setInternalError(validateValue(dateDisplayValue ?? ''));
         }
 
-        onBlur?.(createSyntheticEvent<FocusEvent<HTMLInputElement>>(dateDisplayValue ?? '', event));
+        onBlur?.(event);
         return;
       }
 
       if (seedField.blurValue !== undefined) {
-        commitPlainValue(seedField.blurValue);
+        commitPlainValue(seedField.blurValue, { reason: 'seed', event });
         setInternalError(validateValue(seedField.blurValue));
-        onBlur?.(createSyntheticEvent<FocusEvent<HTMLInputElement>>(seedField.blurValue, event));
+        onBlur?.(event);
         return;
       }
 
       setInternalError(validateValue(event.target.value));
       onBlur?.(event);
     },
-    [commitPlainValue, createSyntheticEvent, dateDisplayValue, deactivateDatePicker, isDate, isDatePickerActive, isPhone, isTime, isTimeControlled, lockAutofill, onBlur, phoneFormat, seedField.blurValue, setInternalError, validateValue]
+    [commitPlainValue, dateDisplayValue, deactivateDatePicker, floatingRef, isDate, isDatePickerActive, isPhone, isTime, isTimeControlled, lockAutofill, onBlur, onValueChange, phoneFormat, rootRef, seedField.blurValue, setInternalError, timeDisplayValue, validateValue]
   );
 
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
+      const rawValue = event.target.value;
+      onChange?.(event);
       if (isPhone) {
-        const formatted = phoneMask.formatPhone(event.target.value, phoneFormat);
+        const formatted = phoneMask.formatPhone(rawValue, phoneFormat);
         if (!isPhoneControlled) setPhoneUncontrolled(formatted);
-        const synthetic = createSyntheticEvent<ChangeEvent<HTMLInputElement>>(formatted, event);
-        onChange?.(synthetic);
+        onValueChange?.(formatted, { reason: 'input', event });
         // Пока номер НАБИРАЮТ, ошибку только гасим, а не поднимаем: «Введите 11 цифр номера»
         // на третьей цифре — претензия к незаконченному действию. Полную проверку ведёт blur
         // (handleBlur ниже), а здесь уже показанная ошибка пересчитывается и уходит сама.
@@ -432,7 +440,6 @@ export function useInputBehavior({
       }
 
       if (isTime) {
-        const rawValue = event.target.value;
         const { normalizedValue, selectionStart, selectionEnd } = normalizeTimeValue(
           rawValue,
           event.target.selectionStart,
@@ -440,7 +447,7 @@ export function useInputBehavior({
         );
 
         if (!isTimeControlled) setTimeUncontrolled(normalizedValue);
-        onChange?.(createSyntheticEvent<ChangeEvent<HTMLInputElement>>(normalizedValue, event));
+        onValueChange?.(normalizedValue, { reason: 'input', event });
         setInternalError(validateValue(normalizedValue));
 
         if (innerRef.current && selectionStart !== null && selectionEnd !== null) {
@@ -458,8 +465,8 @@ export function useInputBehavior({
           const sanitizedValue = event.target.value.replace(/^-+/, '');
           const normalizedValue = sanitizedValue === '-' ? '' : sanitizedValue;
           if (valueProp === undefined) setUncontrolledValue(normalizedValue);
-          const synthetic = createSyntheticEvent<ChangeEvent<HTMLInputElement>>(normalizedValue, event);
-          onChange?.(synthetic);
+          event.target.value = normalizedValue;
+          onValueChange?.(normalizedValue, { reason: 'input', event });
           setInternalError(validateValue(normalizedValue));
           return;
         }
@@ -470,15 +477,15 @@ export function useInputBehavior({
         return;
       }
 
-      if (valueProp === undefined) setUncontrolledValue(event.target.value);
-      onChange?.(event);
+      if (valueProp === undefined) setUncontrolledValue(rawValue);
+      onValueChange?.(rawValue, { reason: 'input', event });
       // Пока НАБИРАЮТ, ошибку только гасим, а не поднимаем — то же правило, что у телефона выше.
       // Без этого «Введите корректный email» выскакивает на первой же букве, то есть претензией
       // к незаконченному действию; поднимает ошибку blur (`handleBlur`).
-      const nextError = validateValue(event.target.value);
+      const nextError = validateValue(rawValue);
       setInternalError((currentError) => (currentError ? nextError : undefined));
     },
-    [activateDatePicker, createSyntheticEvent, isDate, isPhone, isPhoneControlled, isTime, isTimeControlled, onChange, phoneFormat, setInternalError, setUncontrolledValue, validateValue, valueProp]
+    [activateDatePicker, isDate, isNumber, isPhone, isPhoneControlled, isTime, isTimeControlled, onChange, onValueChange, phoneFormat, restInputProps.min, setInternalError, setUncontrolledValue, validateValue, valueProp]
   );
 
   const handleInputKeyDown = useCallback(
@@ -508,6 +515,18 @@ export function useInputBehavior({
 
       if (!isDate) return;
 
+      // Calendar is portaled to body, so it is outside the input's native tab order. When it is
+      // open, the first Tab from the date field enters its controls instead of skipping to the
+      // next page-level control. Focus leaving the calendar closes it in Calendar.
+      if (isDatePickerActive && event.key === 'Tab' && !event.shiftKey) {
+        const firstControl = floatingRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
+        if (firstControl) {
+          event.preventDefault();
+          firstControl.focus();
+          return;
+        }
+      }
+
       if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
         event.preventDefault();
         activateDatePicker();
@@ -521,12 +540,12 @@ export function useInputBehavior({
         deactivateDatePicker(false);
       }
     },
-    [activateDatePicker, deactivateDatePicker, disabled, isDate, isDatePickerActive, isNumber, onInputKeyDown, restInputProps.min]
+    [activateDatePicker, deactivateDatePicker, disabled, floatingRef, isDate, isDatePickerActive, isNumber, onInputKeyDown, restInputProps.min]
   );
 
   const handleNumberStep = useCallback(
     (delta: number) => {
-      if (!isNumber || disabled) return;
+      if (!isNumber || disabled || isReadOnly) return;
 
       const min = restInputProps.min !== undefined ? Number(restInputProps.min) : undefined;
       const max = restInputProps.max !== undefined ? Number(restInputProps.max) : undefined;
@@ -559,21 +578,22 @@ export function useInputBehavior({
           }
         }
       } else {
-        const step = Number((restInputProps.step as string | number | undefined) ?? 1);
-        let numValue = Number.isFinite(numericValue) ? numericValue : 0;
-
-        nextValue = numValue + delta * step;
-
-        if (min !== undefined) nextValue = Math.max(nextValue, min);
-        if (max !== undefined) nextValue = Math.min(nextValue, max);
-
-        const stepDecimals = step.toString().split('.')[1]?.length ?? 0;
-        nextValue = Number(nextValue.toFixed(stepDecimals));
+        const nativeField = innerRef.current?.cloneNode(false);
+        if (!(nativeField instanceof HTMLInputElement)) return;
+        nativeField.value = rawValue;
+        try {
+          nativeField.stepUp(delta);
+        } catch {
+          return; // step="any" не определяет дискретного шага.
+        }
+        if (!nativeField.value) return;
+        nextValue = Number(nativeField.value);
       }
 
       const nextValueStr = String(nextValue);
+      if (nextValueStr === rawValue) return;
 
-      if (innerRef.current) {
+      if (innerRef.current && valueProp === undefined) {
         innerRef.current.value = nextValueStr;
       }
 
@@ -581,11 +601,10 @@ export function useInputBehavior({
         setUncontrolledValue(nextValueStr);
       }
 
-      const synthetic = createSyntheticEvent<ChangeEvent<HTMLInputElement>>(nextValueStr);
-      onChange?.(synthetic);
+      onValueChange?.(nextValueStr, { reason: 'step', event: null });
       setInternalError(validateValue(nextValueStr));
     },
-    [isNumber, disabled, restInputProps.step, restInputProps.min, restInputProps.max, innerRef, currentValue, resolvedNumberOptions, valueProp, setUncontrolledValue, createSyntheticEvent, onChange, setInternalError, validateValue]
+    [isNumber, isReadOnly, disabled, restInputProps.min, restInputProps.max, innerRef, currentValue, resolvedNumberOptions, valueProp, setUncontrolledValue, onValueChange, setInternalError, validateValue]
   );
 
   const handleInvalid = useCallback(
@@ -641,6 +660,7 @@ export function useInputBehavior({
 
   const handleFieldClick = useCallback((event: MouseEvent<HTMLElement>) => {
     if (disabled) return;
+    if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;
 
     const target = event.target as HTMLElement;
     if (target.closest('[data-input-action="true"]')) return;
@@ -668,6 +688,7 @@ export function useInputBehavior({
   return {
     id,
     innerRef,
+    fieldRef,
     inputType,
     isPhone,
     isTime,
@@ -698,6 +719,7 @@ export function useInputBehavior({
       maxDate,
       calendarDays,
       onToggle: toggleDatePickerActive,
+      onDismiss: deactivateDatePicker,
       isDateDisabled,
       onDateSelect: handleDateSelect,
     },
