@@ -14,6 +14,7 @@ import type { AnimationInput } from './animations/types';
 import type { LineHeightValue } from './typography';
 import { resolveTextContent, type TextFormat } from './formatContent';
 import { bindTextContent } from './nonBreaking';
+import { isAppearanceAnimate, type AppearanceAnimate } from '../../core/reveal/reveal';
 
 /**
  * Вариант проекта (`UiTypography`), служебная роль кита или 'inherit' — не навязывать типографику:
@@ -30,11 +31,11 @@ export interface TextProps
   extends Omit<React.HTMLAttributes<HTMLElement>, 'color'>,
     Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
     Omit<BoxLayoutProps, 'aspectRatio'>,
-    SharedMotionProps {
+    SharedMotionProps<ResponsiveInput<AnimationInput>> {
   children?: React.ReactNode;
   style?: CSSProperties;
   format?: ResponsiveValue<TextFormat>;
-  animate?: ResponsiveInput<AnimationInput>;
+  animate?: AppearanceAnimate | ResponsiveInput<AnimationInput>;
   required?: boolean;
 
   newTab?: boolean;
@@ -107,7 +108,7 @@ export function Text({
   };
   const { href, target, rel, download, newTab, nofollow, noreferrer, ...anchorRestProps } = aProps;
 
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
 
   const internalRef = useRef<HTMLElement | null>(null);
   const setRef = useMergedRefs(internalRef, setMotionNode, ref);
@@ -116,7 +117,8 @@ export function Text({
 
   // Контент и анимация: формат строки → плагин анимации из реестра (или контент как есть).
   const content = resolveTextContent(children, format);
-  const anim = resolveAnimation(animation ?? animate, content);
+  const contentAnimate = isAppearanceAnimate(animate) ? undefined : animate;
+  const anim = resolveAnimation(animation ?? contentAnimate, content);
 
   // Классы и inline-стиль host'а — коробка из ядра (boxLayout), типографика здесь. Алгоритмика (letter-spacing,
   // формат, разбор анимации) вынесена в ./typography, ./formatContent, ./animations.
@@ -172,6 +174,7 @@ export function Text({
       {...(normalizedState ? { state: normalizedState } : undefined)}
       className={classNames}
       style={{ ...inline, ...style }}
+      {...revealAttrs}
       {...anchorProps}
       {...sharedHandlerProps}
     >

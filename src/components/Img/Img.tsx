@@ -9,7 +9,7 @@ import { MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveLinkProps, reso
 import { imageSizes } from '../../core/base/scale';
 import { SCALE } from '../../core/scale';
 import { useFancybox } from '../../hooks/useFancybox';
-import { withoutStagger, type RevealInput, type RevealOptions } from '../../core/reveal/reveal';
+import { isAppearanceAnimate, withoutStagger, type AppearanceAnimate, type RevealInput, type RevealOptions } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useImgSwap } from './swap/useImgSwap';
 import type { ImgAnimate } from './swap/types';
@@ -62,7 +62,7 @@ type ImgRootSizeProps = {
 
 type ImgElementProps = ImgBaseProps & Record<string, unknown>;
 
-export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootSizeProps, GrowProps, SharedMotionProps {
+export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootSizeProps, GrowProps, SharedMotionProps<ImgAnimate> {
   className?: string;
   style?: CSSProperties;
   'data-point-events'?: string;
@@ -81,12 +81,12 @@ export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootS
    * или `[ключ, { duration, direction, veil }]`. Прежняя картинка держится слоем, пока новая не
    * загрузится и не доедет; первый показ — без хода, «меньше движения» — мгновенно. См. `ImgAnimate`.
    */
-  animate?: ImgAnimate;
+  animate?: AppearanceAnimate | ImgAnimate;
 
   /**
-   * Появление при прокрутке: `'fade' | 'up' | 'left' | 'right' | 'scale' | 'blur'` или
-   * `[ключ, { delay, duration, distance, once, threshold, rootMargin }]` — как у Flex, но без каскада:
-   * появляется сама картинка. Без JS и при «меньше движения» видна сразу.
+   * Появление при прокрутке: `{ effect: 'blur', delay: 0.1 }` — как у Flex, но без каскада:
+   * появляется сама картинка. Ключи и tuple `[key, options]` сохранены для совместимости.
+   * Без JS и при «меньше движения» видна сразу.
    */
   reveal?: RevealInput<Omit<RevealOptions, 'stagger'>>;
 
@@ -286,7 +286,9 @@ export function Img({
   const layout = boxLayout(c, { r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, bg, aspectRatio, grow });
   const [isLoaded, setIsLoaded] = useState(false);
   // Каскад у картинки означал бы её внутренние слои — снимаем.
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal: withoutStagger(reveal) });
+  const appearanceAnimate = isAppearanceAnimate(animate) ? { ...animate, stagger: 0 } : undefined;
+  const contentAnimate = isAppearanceAnimate(animate) ? undefined : animate;
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal: withoutStagger(reveal), animate: appearanceAnimate });
   const imageSizeProps = {
     w,
     minW,
@@ -420,7 +422,7 @@ export function Img({
     />
   );
 
-  const { node: swapped, loaded: swapLoaded } = useImgSwap(animate, swapIdentity, mainImage);
+  const { node: swapped, loaded: swapLoaded } = useImgSwap(contentAnimate, swapIdentity, mainImage);
 
   return (
     <Root

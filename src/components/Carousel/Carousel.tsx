@@ -62,6 +62,7 @@ export function Carousel({
   linkState,
   perspective3d,
   parallax,
+  animate,
   apiRef,
   onNavigationStateChange,
   onMouseEnter,
@@ -71,7 +72,7 @@ export function Carousel({
   'use no memo';
 
   const {
-    carouselId, setRootRefs, motionHandlers, motionStyle, slidesPerViewKey, swiperKey, modules,
+    carouselId, setRootRefs, motionHandlers, motionStyle, revealAttrs, slidesPerViewKey, swiperKey, modules,
     handleSwiper, handleSwiperUpdate, handleSwiperTransitionEnd, autoplayConfig, renderedSlides,
     currentDrag, currentOrientation, currentCenteredSlides, currentInitialSlide, loopEnabled,
     currentMousewheel, currentSlidesPerView, currentOffsetAfterPx, currentOffsetBeforePx,
@@ -80,7 +81,7 @@ export function Carousel({
     children, carouselId: explicitCarouselId, slidesPerView, orientation, effect, navigation, pagination,
     autoplay, mousewheel, drag, initialSlide, loop, centeredSlides, offsetBefore, offsetAfter, peekStart,
     peekEnd, speed, scrollBased, perspective3d, parallax, apiRef, onNavigationStateChange, inertia,
-    scrollProgress, paginationClassName, navigationClassName,
+    scrollProgress, paginationClassName, navigationClassName, animate,
   });
 
   const slidesPerViewClasses = c.key('slides-per-view', slidesPerViewKey as ResponsiveValue<string>, (key) => key);
@@ -111,6 +112,7 @@ export function Carousel({
         ...(motionStyle ?? null),
         ...style,
       }}
+      {...revealAttrs}
       {...props}
     >
       <SwiperRoot

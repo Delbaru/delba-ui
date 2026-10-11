@@ -21,12 +21,13 @@ export function SsrFixture() {
   return (
     <main className="fixture">
       <h1>SSR and hydration</h1>
+      <Text animate={{ effect: 'up', when: 'load', fade: false, duration: 'slow', delay: 'veryFast' }}>Первый кадр</Text>
       <Button
         data-testid="ssr-button"
         tooltip="Открыть"
         onClick={() => setOpen((current) => !current)}
       >Открыть</Button>
-      <Box animate="fadeInUp" data-testid="ssr-box" reveal="up">
+      <Box animate={{ effect: 'up', when: 'inView', delay: 0.02 }} data-testid="ssr-box">
         <Text>Содержимое</Text>
       </Box>
       <Flex collapse={{ open, keepMounted: true }} data-testid="ssr-collapse">

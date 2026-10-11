@@ -14,6 +14,9 @@
   @include meta.load-css('./scale');
 }
 
+// Config owns these durations; outside layers they override the kit's starter theme.
+@include meta.load-css('./motion');
+
 @layer ui.utilities {
   @include meta.load-css('./utilities');
 }

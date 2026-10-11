@@ -18,10 +18,10 @@ export interface SectionProps extends React.HTMLAttributes<HTMLElement>, Pick<Bo
   linkState?: StateLinkInput;
 }
 
-export function Section({ ref, children, className = '', style, perspective3d, parallax, linkState, onMouseEnter, onMouseLeave, ...props }: WithRef<SectionProps, HTMLElement>) {
+export function Section({ ref, children, className = '', style, perspective3d, parallax, animate, linkState, onMouseEnter, onMouseLeave, ...props }: WithRef<SectionProps, HTMLElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
   const setRefs = useMergedRefs(setMotionNode, ref);
 
   return (
@@ -31,6 +31,7 @@ export function Section({ ref, children, className = '', style, perspective3d, p
       className={cx('ui-section', ...layout, className)}
       style={{ ...(motionStyle ?? null), ...style }}
       {...rest}
+      {...revealAttrs}
     >
       {children}
     </section>

@@ -52,6 +52,7 @@ export function Radio({
     grow,
     perspective3d,
     parallax,
+    animate,
     id: idProp,
     state,
     tone,
@@ -64,7 +65,7 @@ export function Radio({
     const generatedId = useId();
     const id = idProp ?? generatedId;
     const isDisabled = Boolean(props.disabled);
-    const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+    const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
     const setRootRef = useCallback((node: HTMLLabelElement | null) => {
         setMotionNode(node);
     }, [setMotionNode]);
@@ -75,6 +76,7 @@ export function Radio({
             htmlFor={id}
             data-point-events={dataPointEvents}
             data-tone={tone}
+            {...revealAttrs}
             {...(!isDisabled ? stateLinkProps(linkState, { ...motionHandlers }) : {})}
             className={cx(
                 styles.Radio,

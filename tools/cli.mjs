@@ -28,10 +28,17 @@ async function loadConfig() {
   // .ts проекта без "type": "module" грузится как CommonJS — нужны оба хука tsx.
   (await import('tsx/cjs/api')).register();
   (await import('tsx/esm/api')).register({ onImport: (url) => url.startsWith('file:') && track(fileURLToPath(url)) });
-  if (!existsSync(configFile)) return config;
-  const { default: loaded } = await import(pathToFileURL(configFile).href);
-  // CommonJS отдаёт module.exports целиком: default-экспорт лежит ещё на уровень глубже.
-  config = loaded?.default ?? loaded;
+  if (existsSync(configFile)) {
+    const { default: loaded } = await import(pathToFileURL(configFile).href);
+    // CommonJS отдаёт module.exports целиком: default-экспорт лежит ещё на уровень глубже.
+    config = loaded?.default ?? loaded;
+  }
+  const { validateMotion } = await import('./motion.ts');
+  try {
+    validateMotion(config.motion);
+  } catch (error) {
+    throw new Error(`${path.relative(root, configFile)}: ${error instanceof Error ? error.message : error}`);
+  }
   return config;
 }
 
@@ -40,6 +47,8 @@ const trackRequired = () => Object.keys(createRequire(import.meta.url).cache).fo
 
 async function load() {
   await loadConfig();
+  const { generateMotion } = await import('./motion.ts');
+  generateMotion(config.motion);
   const { createUtilities } = await import('./utilities/generate.ts');
   const { generateSkins } = await import('./skin.ts');
   const utilities = createUtilities(root, { scan: [...(config.scan ?? ['src']), path.relative(root, KIT)], seeds: config.seeds, typography: config.typography, scale: config.scale });
@@ -103,6 +112,8 @@ async function work() {
 
 async function check() {
   await loadConfig();
+  const { generateMotion } = await import('./motion.ts');
+  generateMotion(config.motion);
   const { projectSteps } = await import('./check/index.mjs');
   const { runSteps } = await import('./check/run.mjs');
   return runSteps(projectSteps(root, config, { update: argv.includes('--update') }));

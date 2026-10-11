@@ -43,7 +43,7 @@ export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined
     const {
         options, value: valueProp, defaultValue, onChange, multiple, closeOnSelect, showSelected, renderValue,
         placeholder, loading, disabled, required, emptyMessage, visibleOptions, validate: validateProp,
-        id: idProp, error: errorProp, label, comment, ariaLabel, perspective3d, parallax,
+        id: idProp, error: errorProp, label, comment, ariaLabel, perspective3d, parallax, animate,
     } = config;
 
     const [uncontrolledValue, setUncontrolledValue] = useState<T | null | T[]>(
@@ -128,7 +128,7 @@ export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined
     const triggerAnchorRef = useRef<HTMLDivElement>(null);
     const optionRefs = useRef<Array<HTMLElement | null>>([]);
 
-    const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+    const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
 
     const normalizedVisibleOptions = Math.max(1, Math.floor(visibleOptions));
     // Прокрутка нужна, только если строк БОЛЬШЕ, чем помещается в окно списка. Без этого
@@ -391,7 +391,7 @@ export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined
         selectedOption, selectedOptions,
         formValue: value,
         dropdownScrolls, normalizedVisibleOptions, triggerAccessibilityProps, dropdownRef,
-        setWrapperRef, setOptionRef, motionHandlers, motionStyle, handleContainerClick, handleKeyDown,
+        setWrapperRef, setOptionRef, motionHandlers, motionStyle, revealAttrs, handleContainerClick, handleKeyDown,
         handleSelect, handleDropdownWheelCapture, handleDropdownTouchMoveCapture, optionIndexOf, closeDropdown,
         isOptionSelected,
     };

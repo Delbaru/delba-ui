@@ -2,21 +2,24 @@
 
 import { useCallback, type CSSProperties } from 'react';
 
-import type { RevealProps } from '../core/reveal/reveal';
+import { resolveRevealInput, type AppearanceAnimate, type RevealProps } from '../core/reveal/reveal';
 import { useParallaxMotion, type ParallaxInput } from './useParallaxMotion';
 import { usePerspective3dMotion, type Perspective3dInput } from './usePerspective3dMotion';
 import { useReveal } from './useReveal';
 
 type MotionTarget = HTMLElement | SVGElement;
 
-export interface SharedMotionProps {
+export interface SharedMotionProps<LegacyAnimate = never> {
   perspective3d?: Perspective3dInput;
   parallax?: ParallaxInput;
+  /** Общий эффект появления: `{ effect: 'up', when: 'inView', delay: 0.16 }`.
+   * `when: 'load'` запускает CSS-эффект с первого кадра; прежние эффекты компонента сохраняются. */
+  animate?: AppearanceAnimate | LegacyAnimate;
 }
 
 // `reveal` — не в SharedMotionProps: его принимают только примитивы раскладки и Img, остальные
 // компоненты молча проглотили бы проп из общего типа.
-export function useSharedMotion({ perspective3d, parallax, reveal }: SharedMotionProps & RevealProps) {
+export function useSharedMotion<LegacyAnimate>({ perspective3d, parallax, reveal, animate }: SharedMotionProps<LegacyAnimate> & RevealProps) {
   const {
     isEnabled: hasPerspective3d,
     motionHandlers,
@@ -32,7 +35,7 @@ export function useSharedMotion({ perspective3d, parallax, reveal }: SharedMotio
     transformValue: parallaxTransform,
   } = useParallaxMotion(parallax);
 
-  const { revealAttrs, revealStyle, setRevealNode } = useReveal(reveal);
+  const { revealAttrs, revealStyle, setRevealNode } = useReveal(resolveRevealInput(animate, reveal));
 
   const motionTransform = [parallaxTransform, perspectiveTransform].filter(Boolean).join(' ');
   const hasMotion = hasPerspective3d || hasParallax;

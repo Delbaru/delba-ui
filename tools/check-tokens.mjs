@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { reportLegacy } from './check-migration.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss', '_scale.scss']);
+const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss', '_scale.scss', '_motion.scss']);
 // Генераты шкур несут токены ПРОЕКТА из его словарей — в договор кита они не входят.
 const GENERATED_SKIN = new Set(['_tokens.scss', '_classes.scss'].map((name) => path.join(ROOT, 'src', 'skin', name)));
 // Заглушки в тестах — не потребители темы: их значения в договор токенов не идут.
@@ -63,6 +63,13 @@ function walk(target, ext, out = []) {
 
 function stripComments(code) {
   return code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1');
+}
+
+/** При config.motion шкала редактируется только в конфиге; тема не подменяет генерат. */
+export function motionTokenDuplicates(styles, generated) {
+  const declarations = (text) => [...stripComments(text).matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)].map((match) => match[1]);
+  const configured = new Set(declarations(generated));
+  return [...new Set(declarations(styles).filter((name) => configured.has(name)))];
 }
 
 function add(map, key, user) {
@@ -111,8 +118,13 @@ export function readContract() {
       else if (!m[3] && !fallbacks.has(m[1])) add(required, m[1], user);
     }
     for (const m of code.matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)) internal.add(m[1]);
-    for (const m of code.matchAll(/['"`](--[A-Za-z0-9_-]+)['"`]/g)) internal.add(m[1]);
-    for (const m of code.matchAll(/['"`](--[A-Za-z0-9_-]+?)\$\{/g)) internalPrefixes.add(m[1]);
+    for (const m of code.matchAll(/['"`](--[A-Za-z0-9_-]+)['"`]/g)) {
+      if (!m[1].startsWith('--t-d-')) internal.add(m[1]);
+    }
+    for (const m of code.matchAll(/['"`](--[A-Za-z0-9_-]+?)\$\{/g)) {
+      // Общая шкала читается по имени из темы; она не является внутренней переменной компонента.
+      if (m[1] !== '--t-d-') internalPrefixes.add(m[1]);
+    }
     if (!PROP_PREFIX_LIST.test(code)) {
       for (const m of code.matchAll(/\b(data-(?:hide|order)-(?:mobile|tablet|pc))\b/g)) add(attributes, m[1], user);
     }
@@ -148,11 +160,27 @@ if (isMain) {
   }
 
   const typographyAt = args.indexOf('--typography');
+  const motionAt = args.indexOf('--generated-motion');
   const variants = typographyAt < 0 ? [] : (args[typographyAt + 1] ?? '').split(',').filter(Boolean);
-  const targets = args.filter((arg, i) => !arg.startsWith('--') && (typographyAt < 0 || i !== typographyAt + 1));
+  const targets = args.filter((arg, i) => !arg.startsWith('--') && (typographyAt < 0 || i !== typographyAt + 1) && (motionAt < 0 || i !== motionAt + 1));
   // Стили по путям кита 1.x не соберутся вовсе — это важнее недостающего токена.
   if (!reportLegacy(targets)) process.exit(1);
   const files = targets.flatMap((target) => walk(path.resolve(target), /\.(scss|css)$/));
+  if (motionAt >= 0) {
+    const generatedFile = args[motionAt + 1];
+    if (!generatedFile || !fs.existsSync(generatedFile)) {
+      console.error('[ui:tokens] ✗ нет шкалы motion — выполни delba-ui build');
+      process.exit(1);
+    }
+    const generated = fs.readFileSync(generatedFile, 'utf8');
+    const duplicates = files.flatMap((file) => motionTokenDuplicates(fs.readFileSync(file, 'utf8'), generated).map((name) => `${name} ← ${path.relative(process.cwd(), file)}`));
+    if (duplicates.length) {
+      console.error('[ui:tokens] ✗ время задано дважды; редактируй motion.timing в ui.config.ts');
+      duplicates.forEach((message) => console.error(`  ${message}`));
+      process.exit(1);
+    }
+    files.push(generatedFile);
+  }
   if (args.includes('--with-defaults')) files.push(path.join(ROOT, 'theme', 'tokens.default.scss'));
   const styles = files.map((file) => stripComments(fs.readFileSync(file, 'utf8'))).join('\n');
   const declared = new Set([...styles.matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]));

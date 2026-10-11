@@ -38,7 +38,10 @@ function onScreen(el: Element): boolean {
 function play(batch: Element[], config: ResolvedReveal, stagger: boolean) {
   const delays = revealDelays(batch.length, config);
   batch.forEach((el, index) => {
-    if (stagger && el instanceof HTMLElement) el.style.setProperty('--reveal-delay', `${delays[index] ?? 0}ms`);
+    if (stagger && el instanceof HTMLElement) {
+      const delay = delays[index] ?? 0;
+      el.style.setProperty('--reveal-delay', typeof delay === 'number' ? `${delay}ms` : delay);
+    }
     clearTimer(el);
     setState(el, 'in');
   });
@@ -79,7 +82,7 @@ function onEntries(entries: IntersectionObserverEntry[], observer: IntersectionO
 
   batches.forEach(({ config, items }) => {
     items.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
-    play(items, config, config.stagger > 0);
+    play(items, config, config.stagger !== 0);
   });
 }
 

@@ -7,11 +7,17 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   expect(html).toContain('Иван');
   expect(html).toContain('Текст из CMS');
   expect(html).toContain('aria-hidden="true"');
+  expect(html).toContain('data-reveal="up"');
+  expect(html).toContain('--reveal-delay:20ms');
+  expect(html).toContain('data-reveal-start="load"');
+  expect(html).toContain('--reveal-duration:var(--t-d-slow)');
+  expect(html).toContain('--reveal-delay:var(--t-d-very-fast)');
+  expect(html).not.toContain('animate="[object Object]"');
 
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
+    if (message.type() === 'error') errors.push(`${message.text()} (${message.location().url})`);
   });
   await page.goto('/ssr');
   await expect(page.getByRole('heading', { name: 'SSR and hydration' })).toBeVisible();

@@ -67,6 +67,7 @@ export function Button({
   gap,
   perspective3d,
   parallax,
+  animate,
   color,
   state,
   disabled = false,
@@ -99,7 +100,7 @@ export function Button({
   const useNextLink = isLink && shouldUseNextLink(href, target, download);
   const Comp = (useNextLink ? Link : isLink ? 'a' : 'button') as React.ElementType;
   const linkProps = resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer });
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
   const tooltipId = useId();
   const hasTooltip = Boolean(tooltip);
   const describedBy = [ariaDescribedBy, hasTooltip ? tooltipId : undefined].filter(Boolean).join(' ') || undefined;
@@ -152,6 +153,7 @@ export function Button({
       }}
       {...stateProps(state, disabled && 'disabled')}
       {...anchorProps}
+      {...revealAttrs}
       aria-describedby={describedBy}
       {...stateLinkProps(disabled ? undefined : linkState, {
         onMouseEnter: composeEventHandlers(composeEventHandlers(anchorHandlers.onMouseEnter, motionHandlers?.onMouseEnter), onMouseEnter),

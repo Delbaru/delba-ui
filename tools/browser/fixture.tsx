@@ -1,6 +1,7 @@
 import { Profiler, useRef, useState, type AnimationEvent as ReactAnimationEvent, type ChangeEvent, type FocusEvent, type MouseEvent as ReactMouseEvent, type SVGProps } from 'react';
 
 import { Button } from '../../src/components/Button/Button';
+import { Accordion, AccordionItem } from '../../src/components/Accordion';
 import { Box } from '../../src/components/Box/Box';
 import { ChoiceButtons } from '../../src/components/ChoiceButtons/ChoiceButtons';
 import { CollapseWrap } from '../../src/components/Collapse/CollapseWrap';
@@ -19,6 +20,7 @@ import { LexicalText } from '../../src/components/RichText/RichText';
 import { PhoneField } from '../../src/components/PhoneField/PhoneField';
 import { Select } from '../../src/components/Select/Select';
 import { Text } from '../../src/components/Text/Text';
+import { Section } from '../../src/components/Section';
 import { Textarea } from '../../src/components/Textarea/Textarea';
 import { VideoPlayer } from '../../src/components/VideoPlayer/VideoPlayer';
 import { Checkbox } from '../../src/components/Checkbox/Checkbox';
@@ -759,6 +761,110 @@ function MotionFixtures() {
   );
 }
 
+function InViewContracts() {
+  const animate = { effect: 'up', when: 'inView', delay: 0.02, duration: 0.04 } as const;
+
+  return (
+    <section aria-label="Unified viewport animation" className="fixture">
+      <div data-testid="legacy-icon-host"><Icon component={InlineFixtureIcon} /></div>
+      <div data-inview-case="box"><Box animate={animate}>View box</Box></div>
+      <div data-inview-case="flex"><Flex animate={animate}>View flex</Flex></div>
+      <div data-inview-case="grid"><Grid animate={animate}>View grid</Grid></div>
+      <div data-inview-case="grid-item"><GridItem animate={animate}>View grid item</GridItem></div>
+      <div data-inview-case="text"><Text animate={animate}>View text</Text></div>
+      <div data-inview-case="lexical"><LexicalText content="<p>View lexical</p>" animate={animate} /></div>
+      <div data-inview-case="input"><Input aria-label="View input" animate={animate} /></div>
+      <div data-inview-case="textarea"><Textarea aria-label="View textarea" animate={animate} /></div>
+      <div data-inview-case="button"><Button animate={animate}>View button</Button></div>
+      <div data-inview-case="checkbox"><Checkbox animate={animate}>View checkbox</Checkbox></div>
+      <div data-inview-case="radio"><Radio name="view-radio" value="one" animate={animate}>View radio</Radio></div>
+      <div data-inview-case="switch"><SwitchButton animate={animate} aria-label="View switch" /></div>
+      <div data-inview-case="section"><Section animate={animate}>View section</Section></div>
+      <div data-inview-case="icon"><Icon component={InlineFixtureIcon} animate={animate} /></div>
+      <div data-inview-case="hover-icon"><Icon component={InlineFixtureIcon} hover={InlineFixtureIcon} animate={animate} /></div>
+      <div data-inview-case="image">
+        <Img
+          src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+          alt="View image"
+          w={[64, 64, 64]}
+          h={[64, 64, 64]}
+          animate={animate}
+        />
+      </div>
+      <div data-inview-case="select">
+        <Select options={[{ value: 'one', label: 'View option' }]} animate={animate} />
+      </div>
+      <div data-inview-case="phone">
+        <PhoneField country={{ countries: ['RU'], default: 'RU' }} value="" aria-label="View phone" animate={animate} />
+      </div>
+    </section>
+  );
+}
+
+function InputPartsField() {
+  const [error, setError] = useState<string | undefined>('Исправьте значение');
+
+  return (
+    <section aria-label="Modular Input contracts" className="fixture">
+      <form data-testid="modular-input-form">
+        <Input
+          name="password"
+          label="Modular password"
+          type="password"
+          revealable
+          defaultValue="secret"
+          error={error}
+          errorPlacement="below"
+          comment="Подсказка поля"
+          data-testid="modular-password"
+        />
+        <button type="button" onClick={() => setError(undefined)}>Clear modular error</button>
+      </form>
+    </section>
+  );
+}
+
+function AccordionContracts() {
+  return (
+    <section aria-label="Accordion trigger contracts" className="fixture">
+      <Accordion>
+        <AccordionItem
+          value="object"
+          trigger={{
+            content: <span>Object trigger</span>,
+            p: [12, 12, 12],
+            gap: [16, 16, 16],
+            className: 'object-trigger',
+          }}
+          triggerProps={{ p: [4, 4, 4], className: 'legacy-trigger' }}
+        >Object panel</AccordionItem>
+        <AccordionItem value="legacy" trigger={<><span>Legacy</span> trigger</>}>
+          Legacy panel
+        </AccordionItem>
+      </Accordion>
+    </section>
+  );
+}
+
+function NamedTimingContracts() {
+  return (
+    <section
+      aria-label="Named motion timing"
+      className="fixture"
+      style={{ '--t-d-very-fast': '0.02s', '--t-d-fast': '0.05s', '--t-d-very-slow': '0.8s' } as React.CSSProperties}
+    >
+      <Box data-testid="named-view" animate={{ when: 'inView', effect: 'up', duration: 'verySlow', delay: 'fast', stagger: 'veryFast' }}>
+        <div>Named view first</div>
+        <div>Named view second</div>
+      </Box>
+      <Box data-testid="named-load" animate={{ when: 'load', effect: 'up', duration: 'verySlow', delay: 'fast', stagger: 'veryFast' }}>
+        <div>Named load first</div>
+        <div>Named load second</div>
+      </Box>
+    </section>
+  );
+}
+
 export function BrowserFixture() {
   if (typeof window !== 'undefined' && !window.__fieldLogs) initWindowState();
 
@@ -767,6 +873,9 @@ export function BrowserFixture() {
       <h1>Delba UI browser regression fixture</h1>
       <output data-testid="react-profile" />
       <ContractFields />
+      <InViewContracts />
+      <InputPartsField />
+      <AccordionContracts />
       <PhoneFieldProfile />
       <MotionProfileField />
       <FormDataFields />
@@ -787,6 +896,7 @@ export function BrowserFixture() {
       <VideoTimelineField />
       <NativeFocusFields />
       <MotionFixtures />
+      <NamedTimingContracts />
     </main>
   );
 }

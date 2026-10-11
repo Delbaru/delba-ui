@@ -6,6 +6,7 @@ import type React from 'react';
 import { boxLayout, cx, createLayoutClasses, resolveRadiusInput, resolveResponsive, shouldUseNextLink, splitRootDomProps, stateProps as buildStateProps, stateLinkProps, type BorderStyleProps, type ComponentStateValue, type GrowProps, type RadiusInput, type ResponsiveSpaceValue, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef, composeEventHandlers, useMergedRefs } from '../../core';
 import { Flex } from '../Flex';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
+import { isAppearanceAnimate, type AppearanceAnimate } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useIconTooltip, type IconTooltipDirection } from './IconTooltip';
 import { hasIconSource, parseAspectRatio, resolveIconSource, type IconComponent, type IconSource, type ResolvedIconSource } from './svg';
@@ -37,7 +38,7 @@ type IconRootStyleProps = {
   rootClassName?: string;
 };
 
-export interface IconProps extends IconBaseSvgProps, SizeInput, RadiusInput, IconRootSizeProps, IconRootStyleProps, BorderStyleProps, GrowProps, SharedMotionProps {
+export interface IconProps extends IconBaseSvgProps, SizeInput, RadiusInput, IconRootSizeProps, IconRootStyleProps, BorderStyleProps, GrowProps, SharedMotionProps<IconAnimate> {
   /** Focus callbacks receive the actual focusable Icon element, which may be its anchor. */
   onFocus?: React.FocusEventHandler<Element>;
   onBlur?: React.FocusEventHandler<Element>;
@@ -101,7 +102,7 @@ export interface IconProps extends IconBaseSvgProps, SizeInput, RadiusInput, Ico
    * старая уходит (opacity+scale), затем въезжает новая из scale→1.
    * Опции: animate={['swap', { duration, scale }]}.
    */
-  animate?: IconAnimate;
+  animate?: AppearanceAnimate | IconAnimate;
 }
 
 /**
@@ -325,7 +326,8 @@ export function Icon({
   const svgHtml = useMemo(() => ({ __html: svgContent ?? '' }), [svgContent]);
   const hoverSvgHtml = useMemo(() => ({ __html: hoverSvgContent ?? '' }), [hoverSvgContent]);
   const rootStateProps = buildStateProps(state);
-  const { hasMotion, motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  const contentAnimate = isAppearanceAnimate(animate) ? undefined : animate;
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
   // Пользовательский обработчик первым, внутренние (моушен, подсказка) — следом и без отмены:
   // preventDefault снаружи не должен оставить подсказку висеть или моушен недоигранным.
   const linkedHandlers = stateLinkProps(linkState, {
@@ -362,7 +364,7 @@ export function Icon({
     resolvedRootRadius.blr,
     resolvedRootBg,
     resolvedRootClassName,
-  ].some((value) => value !== undefined);
+  ].some((value) => value !== undefined) || isAppearanceAnimate(animate);
   const contentHandlers = needsRootWrapper ? undefined : linkedHandlers;
   // motionStyle уже собран useSharedMotion (transform + preserve-3d + willChange) — когда есть
   // root-обёртка, моушен живёт на ней, иначе вешаем его прямо на контент.
@@ -433,6 +435,7 @@ export function Icon({
         <LayerComponent
           ref={layer === 'default' ? setSvgRefs : undefined}
           data-icon-layer={layer}
+          {...(layer === 'default' && !needsRootWrapper ? revealAttrs : null)}
           className={'ui-icon'}
           style={commonSvgStyle}
           {...layerProps}
@@ -446,6 +449,7 @@ export function Icon({
       <svg
         ref={layer === 'default' ? setSvgRefs : undefined}
         data-icon-layer={layer}
+        {...(layer === 'default' && !needsRootWrapper ? revealAttrs : null)}
         className={'ui-icon'}
         style={commonSvgStyle}
         fill={fill == null ? fetched.rootFill : undefined}
@@ -468,6 +472,7 @@ export function Icon({
         {...(contentRootProps as Record<string, unknown> ?? null)}
         data-point-events={dataPointEvents}
         data-icon-root="true"
+        {...(!needsRootWrapper ? revealAttrs : null)}
         className={cx('ui-icon', ...commonClasses)}
         style={{
           ...commonSvgStyle,
@@ -494,7 +499,7 @@ export function Icon({
     };
 
     content = (
-      <span ref={setStackRef} {...wrapperProps} {...contentHandlers} data-icon-root="true" data-icon-stack="true">
+      <span ref={setStackRef} {...wrapperProps} {...contentHandlers} {...(!needsRootWrapper ? revealAttrs : null)} data-icon-root="true" data-icon-stack="true">
         {renderStackLayer(baseSource, { content: svgContent, viewBox: svgViewBox, rootFill: svgRootFill }, svgHtml, 'default')}
         {renderStackLayer(hoverSource, { content: hoverSvgContent, viewBox: hoverSvgViewBox, rootFill: hoverSvgRootFill }, hoverSvgHtml, 'hover')}
       </span>
@@ -509,6 +514,7 @@ export function Icon({
         {...(contentRootProps as Record<string, unknown> ?? null)}
         data-point-events={dataPointEvents}
         data-icon-root="true"
+        {...(!needsRootWrapper ? revealAttrs : null)}
         data-icon-loading={svgContent ? undefined : 'true'}
         className={cx('ui-icon', ...commonClasses)}
         style={{
@@ -569,7 +575,8 @@ export function Icon({
         state={state}
         align={["center", "center", "center"]}
         justify={["center", "center", "center"]}
-        style={hasMotion ? (motionStyle as CSSProperties) : undefined}
+        {...revealAttrs}
+        style={motionStyle as CSSProperties | undefined}
         {...linkedHandlers}
       >
         {content}
@@ -578,7 +585,7 @@ export function Icon({
   }
 
   // Своп-анимация смены иконки (opt-in через animate="swap"): анимируем весь собранный Icon целиком.
-  content = useIconSwap(animate, iconIdentity, iconContentReady, content) as React.ReactElement | null;
+  content = useIconSwap(contentAnimate, iconIdentity, iconContentReady, content) as React.ReactElement | null;
 
   if (!hasIconSource(baseSource) || !content) return null;
 

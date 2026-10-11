@@ -4,6 +4,7 @@ src/core/_field-sizes.scss
 src/skin/_tokens.scss
 src/skin/_classes.scss
 src/core/_scale.scss
+src/core/_motion.scss
 src/core/scale.ts
 
 # Ссылки pnpm на peer-зависимости: кит — пакет воркспейса проекта

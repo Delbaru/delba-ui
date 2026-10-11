@@ -81,5 +81,7 @@ export type { CollapseOptions } from './components/Collapse/CollapseWrap';
 export { useInView, type UseInViewOptions } from './core/useInView';
 export type { ComponentStateValue, GrowProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';
 export type { TextRole, TextVariantName } from './core/base/typography';
-export type { RevealInput, RevealKey, RevealOptions, RevealProps } from './core/reveal/reveal';
+export { isAppearanceAnimate, isInViewAnimate, resolveRevealInput } from './core/reveal/reveal';
+export type { AppearanceAnimate, InViewAnimate, RevealConfig, RevealInput, RevealKey, RevealOptions, RevealProps } from './core/reveal/reveal';
+export type { MotionTime, MotionTimingName } from './core/base/timing';
 export * from './components/PhoneField';

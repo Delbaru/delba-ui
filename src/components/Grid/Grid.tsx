@@ -75,6 +75,7 @@ export function Grid({
   columnGap,
   perspective3d,
   parallax,
+  animate,
   reveal,
   justifyItems,
   alignItems,
@@ -91,7 +92,7 @@ export function Grid({
 }: WithRef<GridProps, HTMLDivElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate, reveal });
   const setRefs = useMergedRefs(setMotionNode, ref);
 
   const content = (
@@ -218,6 +219,7 @@ export function GridItem({
   rowEnd,
   perspective3d,
   parallax,
+  animate,
   justifyContent,
   alignItems,
   onMouseEnter,
@@ -227,7 +229,7 @@ export function GridItem({
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
   const hasFlex = justifyContent !== undefined || alignItems !== undefined;
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
   const setRefs = useMergedRefs(setMotionNode, ref);
 
   return (
@@ -251,6 +253,7 @@ export function GridItem({
         ...(motionStyle ?? null),
         ...style,
       }}
+      {...revealAttrs}
       {...rest}
       {...stateLinkProps(undefined, composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }))}
     >

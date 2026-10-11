@@ -5,6 +5,125 @@ async function openFixture(page: Page) {
   await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
 }
 
+test('unified inView animate observes one HTML host per primitive and never leaks configuration to DOM', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(`${message.text()} (${message.location().url})`);
+  });
+  await openFixture(page);
+  await expect(page.getByTestId('legacy-icon-host').locator(':scope > svg')).toHaveCount(1);
+  const cases = page.getByRole('region', { name: 'Unified viewport animation' }).locator('[data-inview-case]');
+  await expect(cases).toHaveCount(18);
+  for (const scope of await cases.all()) {
+    const name = await scope.getAttribute('data-inview-case');
+    const host = scope.locator('[data-reveal]');
+    await expect(host, `${name}: single motion host`).toHaveCount(1);
+    expect(await host.evaluate((node) => node instanceof HTMLElement), `${name}: observable HTML host`).toBe(true);
+    await expect(host).toHaveAttribute('data-reveal', 'up');
+    await expect(host).toHaveCSS('--reveal-delay', '20ms');
+    await expect(host).toHaveCSS('--reveal-duration', '40ms');
+    await host.evaluate((node) => node.scrollIntoView({ block: 'center' }));
+    await expect(host, `${name}: enters viewport`).toHaveAttribute('data-reveal-state', /^(in|done)$/);
+    await expect(scope.locator('[animate]')).toHaveCount(0);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('named timing resolves theme values for observer and CSS cascades', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Named motion timing' });
+  // Read current theme values on entry, rather than freezing defaults during render.
+  await scope.evaluate((node) => (node as HTMLElement).style.setProperty('--t-d-fast', '0.1s'));
+  const view = page.getByTestId('named-view');
+  await view.scrollIntoViewIfNeeded();
+  const children = view.locator(':scope > div');
+  await expect(children.first()).toHaveAttribute('data-reveal-state', 'in');
+  expect(await children.evaluateAll((nodes) => nodes.map((node) => ({
+    delay: getComputedStyle(node).animationDelay,
+    duration: getComputedStyle(node).animationDuration,
+  })))).toEqual([
+    { delay: '0.1s', duration: '0.8s' },
+    { delay: '0.12s', duration: '0.8s' },
+  ]);
+  const loadChildren = page.getByTestId('named-load').locator(':scope > div');
+  await expect(loadChildren.first()).toHaveCSS('animation-delay', '0.1s');
+  await expect(loadChildren.nth(1)).toHaveCSS('animation-delay', '0.12s');
+  await expect(children.first()).toHaveAttribute('data-reveal-state', 'done');
+  await expect(children.nth(1)).toHaveAttribute('data-reveal-state', 'done');
+});
+
+test('modular Input actions preserve the native input, focus, value and associated feedback', async ({ page }) => {
+  await openFixture(page);
+  const field = page.getByTestId('modular-password');
+  await expect(page.getByLabel('Modular password')).toBeVisible();
+  await expect(field).toHaveAttribute('type', 'password');
+  await expect(page.getByText('Исправьте значение', { exact: true })).toBeVisible();
+  const errorId = await page.getByText('Исправьте значение', { exact: true }).getAttribute('id');
+  expect(errorId).toBeTruthy();
+  await expect(field).toHaveAttribute('aria-describedby', errorId ?? '');
+
+  await field.fill('edited secret');
+  await field.evaluate((node) => { node.dataset.nativeIdentity = 'same-input'; });
+  await page.getByRole('button', { name: 'Показать пароль', exact: true }).click();
+  await expect(field).toHaveAttribute('type', 'text');
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue('edited secret');
+  await expect(field).toHaveAttribute('data-native-identity', 'same-input');
+
+  await field.press('Tab');
+  const hide = page.getByRole('button', { name: 'Скрыть пароль', exact: true });
+  await expect(hide).toBeFocused();
+  await hide.press('Space');
+  await expect(field).toHaveAttribute('type', 'password');
+  await expect(page.getByRole('button', { name: 'Показать пароль', exact: true })).toBeFocused();
+  await expect(field).toHaveAttribute('data-native-identity', 'same-input');
+  expect(await page.getByTestId('modular-input-form').evaluate((form: HTMLFormElement) => new FormData(form).get('password'))).toBe('edited secret');
+
+  await page.getByRole('button', { name: 'Clear modular error' }).click();
+  await expect(page.getByText('Исправьте значение', { exact: true })).toBeHidden();
+  const comment = page.getByText('Подсказка поля', { exact: true });
+  await expect(comment).toBeVisible();
+  await expect(field).toHaveAttribute('aria-describedby', await comment.getAttribute('id') ?? '');
+  await expect(field).toHaveAttribute('data-native-identity', 'same-input');
+});
+
+test('object and legacy Accordion triggers keep keyboard behavior, ARIA and option precedence', async ({ page }) => {
+  await openFixture(page);
+  const object = page.getByRole('button', { name: 'Object trigger', exact: true });
+  await expect(object).toHaveClass(/object-trigger/);
+  await expect(object).toHaveClass(/legacy-trigger/);
+  const dimensions = await page.evaluate(() => {
+    const probe = document.createElement('div');
+    probe.style.paddingTop = 'calc(var(--rpx) * 12)';
+    probe.style.columnGap = 'calc(var(--rpx) * 16)';
+    document.body.append(probe);
+    const computed = getComputedStyle(probe);
+    const values = { padding: computed.paddingTop, gap: computed.columnGap };
+    probe.remove();
+    return values;
+  });
+  await expect(object).toHaveCSS('padding-top', dimensions.padding);
+  await expect(object).toHaveCSS('column-gap', dimensions.gap);
+  await expect(object).toHaveAttribute('aria-expanded', 'false');
+  await object.focus();
+  await object.press('Enter');
+  await expect(object).toBeFocused();
+  await expect(object).toHaveAttribute('aria-expanded', 'true');
+  const panelId = await object.getAttribute('aria-controls');
+  await expect(page.getByText('Object panel', { exact: true })).toBeVisible();
+  expect(await page.getByText('Object panel', { exact: true }).getAttribute('id')).toBe(panelId);
+
+  await object.press('ArrowDown');
+  const legacy = page.getByRole('button', { name: 'Legacy trigger', exact: true });
+  await expect(legacy).toBeFocused();
+  await legacy.press('Space');
+  await expect(legacy).toHaveAttribute('aria-expanded', 'true');
+  await expect(object).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByText('Legacy panel', { exact: true })).toBeVisible();
+});
+
 test('Input and Textarea keep native events separate from normalized value changes', async ({ page }) => {
   await openFixture(page);
 
@@ -290,7 +409,7 @@ test('collapse hides focusable content with inert, then reopens and reports refs
   await openFixture(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
 
-  const wrap = page.locator('.ui-collapse').first();
+  const wrap = page.getByRole('region', { name: 'Collapse contracts' }).locator('.ui-collapse');
   const inside = page.getByTestId('inside-collapse');
   await expect(wrap).toHaveAttribute('inert', '');
   await expect(wrap).toHaveAttribute('hidden', '');
@@ -360,7 +479,7 @@ test('disabled Button links cannot activate external or internal destinations', 
 test('Icon tooltip keeps the link and inline SVG stable while merging accessible descriptions', async ({ page }) => {
   await openFixture(page);
   const link = page.getByRole('link', { name: 'Help link' });
-  const svg = page.getByTestId('tooltip-icon-svg');
+  const svg = link.getByTestId('tooltip-icon-svg');
   await expect(link).toHaveAttribute('href', 'https://example.test/icon-help');
 
   const initialDescription = (await link.getAttribute('aria-describedby'))?.split(/\s+/) ?? [];
@@ -375,7 +494,8 @@ test('Icon tooltip keeps the link and inline SVG stable while merging accessible
   expect(await page.evaluate(() => window.__iconEvents)).toEqual([
     { type: 'focus', currentTarget: 'A', trusted: true },
   ]);
-  expect(await page.evaluate(() => window.__iconSvg === document.querySelector('[data-testid="tooltip-icon-svg"]'))).toBe(true);
+  expect(await svg.evaluate((node) => window.__iconSvg === node)).toBe(true);
+  await svg.evaluate((node) => { node.dataset.nativeIdentity = 'same-svg'; });
 
   await page.evaluate(() => window.__setIconTooltip?.('Updated help'));
   await expect(page.getByRole('tooltip')).toHaveText('Updated help');
@@ -393,7 +513,8 @@ test('Icon tooltip keeps the link and inline SVG stable while merging accessible
   await expect(link).toHaveAttribute('aria-describedby', `consumer-description ${tooltipId}`);
   await expect(link).toBeFocused();
 
-  expect(await svg.evaluate((node) => node === document.querySelector('[data-testid="tooltip-icon-svg"]'))).toBe(true);
+  await expect(svg).toHaveAttribute('data-native-identity', 'same-svg');
+  expect(await svg.evaluate((node) => window.__iconSvg === node)).toBe(true);
   expect(await link.evaluate((node) => node === document.querySelector('.ui-icon-link'))).toBe(true);
   await link.evaluate((node) => (node as HTMLAnchorElement).blur());
   expect(await page.evaluate(() => window.__iconEvents)).toEqual([
@@ -694,7 +815,7 @@ test('shared motion primitives preserve enter, move, leave, and linked hover cal
       await node.click();
       expect(await page.evaluate(() => window.__imageMotionTargets)).toContain('IMG');
       expect(await page.evaluate(() => window.__imageClickTargets)).toEqual(['IMG']);
-      expect(await page.evaluate(() => window.__imageRoot === document.querySelector('.ui-img'))).toBe(true);
+      expect(await node.evaluate((image) => window.__imageRoot === image.closest('.ui-img'))).toBe(true);
     } else {
       expect(await page.evaluate((eventKey) => window.__motionEvents[eventKey] ?? [], key), key).toEqual(
         expect.arrayContaining(['enter', 'move', 'leave']),

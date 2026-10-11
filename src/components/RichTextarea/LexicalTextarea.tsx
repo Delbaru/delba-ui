@@ -111,6 +111,7 @@ export function LexicalTextarea({
   grow,
   perspective3d,
   parallax,
+  animate,
   w,
   minW,
   maxW,
@@ -166,6 +167,7 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
       grow={grow}
       perspective3d={perspective3d}
       parallax={parallax}
+      animate={animate}
       data-point-events={dataPointEvents}
       linkState={linkState}
     >

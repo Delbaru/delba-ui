@@ -4,9 +4,14 @@ import { createContext, useContext, useId, useState, type KeyboardEvent, type Re
 
 import styles from './Accordion.module.scss';
 
-import { Button, type ButtonProps } from '../Button';
+import { Button } from '../Button';
 import { Flex, type FlexProps } from '../Flex';
 import { cx, mergeComponentStates, type WithRef } from '../../core';
+import {
+    resolveAccordionItemTrigger,
+    type AccordionItemTriggerButtonProps,
+    type AccordionItemTriggerOptions,
+} from './trigger-options';
 
 /** Уровень заголовка-обёртки триггера. */
 export type AccordionHeading = 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
@@ -17,8 +22,9 @@ type ShellOmit =
   | 'collapse' | 'collapseGap' | 'collapseFade' | 'collapseAxis' | 'collapseAppear' | 'collapseOverflowVisible'
   | 'collapseKeepMounted' | 'onCollapseEnd' | 'onCollapseFound'
   | 'href' | 'target' | 'rel' | 'download' | 'newTab' | 'nofollow' | 'noreferrer' | 'linkState' | 'transitionKey' | 'animate';
+type AccordionRootOmit = Exclude<ShellOmit, 'animate'>;
 
-type AccordionShellProps = Omit<FlexProps, ShellOmit> & {
+type AccordionShellProps = Omit<FlexProps, AccordionRootOmit> & {
     children?: ReactNode;
     /** Иконка-индикатор для всех пунктов (плюс, стрелка): встаёт в триггер справа, `aria-hidden`.
      *  Поворот и цвет — у проекта по `[state~='open']`. Пункт перебивает своим `indicator`. */
@@ -167,8 +173,8 @@ export function Accordion(props: WithRef<AccordionProps, HTMLElement>) {
 export interface AccordionItemProps extends Omit<FlexProps, ShellOmit> {
     /** Ключ пункта: им пункт значится в `value` аккордеона. Уникален в пределах аккордеона. */
     value: string;
-    /** Содержимое кнопки-триггера (подпись): обычно `<Text>`. */
-    trigger: ReactNode;
+    /** Содержимое кнопки-триггера или её настройки с `content`; настройки объекта имеют приоритет над `triggerProps`. */
+    trigger: ReactNode | AccordionItemTriggerOptions;
     /** Содержимое панели. */
     children?: ReactNode;
     /** Уровень заголовка над триггером; по умолчанию — `headingAs` аккордеона. */
@@ -177,8 +183,8 @@ export interface AccordionItemProps extends Omit<FlexProps, ShellOmit> {
     indicator?: ReactNode;
     /** Пункт не раскрывается и пропускается стрелками. */
     disabled?: boolean;
-    /** Пропсы кнопки-триггера: отступы, зазор, шкура проекта. aria и обработчик ставит кит. */
-    triggerProps?: Omit<ButtonProps, 'id' | 'children' | 'onClick' | 'disabled' | 'aria-expanded' | 'aria-controls' | 'href'>;
+    /** Совместимые пропсы кнопки-триггера. При конфликте настройки `trigger` имеют приоритет; `className` объединяется. aria, disabled и обработчик задаёт кит. */
+    triggerProps?: AccordionItemTriggerButtonProps;
     /** Пропсы панели (раскладка, отступы содержимого). Сворачивание и роль ставит кит. */
     panelProps?: Omit<FlexProps, ShellOmit | 'id' | 'role' | 'aria-labelledby'>;
 }
@@ -208,6 +214,7 @@ export function AccordionItem({
     const state = open ? 'open' : undefined;
     const Heading = headingAs ?? ctx.headingAs;
     const icon = indicator === undefined ? ctx.indicator : indicator;
+    const triggerConfig = resolveAccordionItemTrigger(trigger);
     const triggerId = `${baseId}-trigger`;
     const panelId = `${baseId}-panel`;
 
@@ -216,19 +223,20 @@ export function AccordionItem({
             <Heading className={styles.heading}>
                 <Button
                     {...triggerProps}
-                    className={cx(styles.trigger, triggerProps?.className)}
+                    {...triggerConfig.props}
+                    className={cx(styles.trigger, triggerProps?.className, triggerConfig.props.className)}
                     id={triggerId}
                     aria-expanded={open}
                     aria-controls={panelId}
                     disabled={disabled}
-                    state={mergeComponentStates(state, triggerProps?.state)}
+                    state={mergeComponentStates(state, triggerProps?.state, triggerConfig.props.state)}
                     data-accordion-trigger={ctx.rootId}
                     onClick={(event) => {
                         ctx.toggle(value);
                         holdPosition(event.currentTarget, event.currentTarget.closest<HTMLElement>(`[data-accordion="${CSS.escape(ctx.rootId)}"]`));
                     }}
                 >
-                    <span className={styles.label}>{trigger}</span>
+                    <span className={styles.label}>{triggerConfig.content}</span>
                     {icon != null && <span aria-hidden className={styles.indicator}>{icon}</span>}
                 </Button>
             </Heading>

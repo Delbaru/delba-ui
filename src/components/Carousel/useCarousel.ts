@@ -12,7 +12,7 @@ export type CarouselConfig = Pick<
   CarouselProps,
   | 'children' | 'carouselId' | 'slidesPerView' | 'orientation' | 'effect' | 'navigation' | 'pagination'
   | 'autoplay' | 'mousewheel' | 'drag' | 'initialSlide' | 'loop' | 'centeredSlides' | 'offsetBefore'
-  | 'offsetAfter' | 'peekStart' | 'peekEnd' | 'speed' | 'scrollBased' | 'perspective3d' | 'parallax'
+  | 'offsetAfter' | 'peekStart' | 'peekEnd' | 'speed' | 'scrollBased' | 'perspective3d' | 'parallax' | 'animate'
   | 'apiRef' | 'onNavigationStateChange' | 'inertia' | 'scrollProgress' | 'paginationClassName'
   | 'navigationClassName'
 >;
@@ -26,7 +26,7 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
   const {
     children, carouselId: explicitCarouselId, slidesPerView, orientation, effect, navigation, pagination,
     autoplay, mousewheel, drag, initialSlide, loop, centeredSlides, offsetBefore, offsetAfter, peekStart,
-    peekEnd, speed, scrollBased, perspective3d, parallax, apiRef, onNavigationStateChange, inertia,
+    peekEnd, speed, scrollBased, perspective3d, parallax, animate, apiRef, onNavigationStateChange, inertia,
     scrollProgress, paginationClassName, navigationClassName,
   } = config;
 
@@ -53,7 +53,7 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     getNavigationState: () => DEFAULT_NAVIGATION_STATE,
   });
   const onNavigationStateChangeRef = useRef(onNavigationStateChange);
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
 
   onNavigationStateChangeRef.current = onNavigationStateChange;
 
@@ -401,7 +401,7 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
   const setRootRefs = useMergedRefs(rootRef, setMotionNode, ref);
 
   return {
-    carouselId, setRootRefs, motionHandlers, motionStyle, slidesPerViewKey, swiperKey, modules,
+    carouselId, setRootRefs, motionHandlers, motionStyle, revealAttrs, slidesPerViewKey, swiperKey, modules,
     handleSwiper, handleSwiperUpdate, handleSwiperTransitionEnd, autoplayConfig, renderedSlides,
     currentDrag, currentOrientation, currentCenteredSlides, currentInitialSlide, loopEnabled,
     currentMousewheel, currentSlidesPerView, currentOffsetAfterPx, currentOffsetBeforePx,

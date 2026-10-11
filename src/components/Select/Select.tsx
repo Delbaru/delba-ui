@@ -203,6 +203,7 @@ export function Select<T extends string = string>({
     grow,
     perspective3d,
     parallax,
+    animate,
     w,
     minW,
     maxW,
@@ -245,7 +246,7 @@ export function Select<T extends string = string>({
         errorId, displayError, commentId, listboxId, open, focusedIndex, setFocusedIndex,
         showInlineError, hasSelectedValue, displayContent, dropdownItems, dropdownOptions,
         dropdownScrolls, normalizedVisibleOptions, triggerAccessibilityProps, dropdownRef,
-        setWrapperRef, setOptionRef, motionHandlers, motionStyle, handleContainerClick, handleKeyDown,
+        setWrapperRef, setOptionRef, motionHandlers, motionStyle, revealAttrs, handleContainerClick, handleKeyDown,
         handleSelect, handleDropdownWheelCapture, handleDropdownTouchMoveCapture, optionIndexOf,
         closeDropdown,
         isOptionSelected, formValue,
@@ -253,7 +254,7 @@ export function Select<T extends string = string>({
         options, value: valueProp, defaultValue, onChange: emitChange, multiple: multiple === true, closeOnSelect,
         showSelected, renderValue, placeholder, loading, disabled, required, emptyMessage, visibleOptions,
         validate: validateValue,
-        id: idProp, error: errorProp, label, comment, ariaLabel, perspective3d, parallax,
+        id: idProp, error: errorProp, label, comment, ariaLabel, perspective3d, parallax, animate,
     });
 
     const { style: dropdownFloatingStyle } = useAnchoredFloating({
@@ -502,6 +503,7 @@ export function Select<T extends string = string>({
             ref={setWrapperRef}
             data-point-events={dataPointEvents}
             {...restProps}
+            {...revealAttrs}
             {...stateLinkProps(linkState, {
                 onMouseEnter: composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter),
                 onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),

@@ -91,7 +91,7 @@ watcher, который умирает вместе с dev. Проект со с
 serdcaBezGranic):
 
 ```bash
-delba-ui build   # шкуры, утилиты, масштаб
+delba-ui build   # шкуры, утилиты, масштаб, время анимаций
 delba-ui watch   # то же и следит; правка конфига или пресета — перезапуск
 delba-ui check   # красные линии (--update опускает планку), договор темы, старые пути к киту
 delba-ui test    # типы, архитектура, границы, тесты, браузер/SSR и договор проекта
@@ -100,7 +100,41 @@ delba-ui test    # типы, архитектура, границы, тесты,
 Конфиг ([`tools/config.ts`](tools/config.ts)) — всё необязательно: `scan` (`['src']`, кит
 сканируется всегда), `seeds`, `theme` (`theme`), `rules` (`['src']`), `baseline`
 (`.rules-baseline.json`), `skins`, `scale` (базы масштаба, см. ниже), `typography` (варианты
-типографики, см. «Тему»). `tsx` для CLI кит несёт сам; `typescript` и `sass` — peer.
+типографики, см. «Тему»), `motion.timing` (имена и время в секундах). `tsx` для CLI кит несёт сам;
+`typescript` и `sass` — peer.
+
+### Время анимаций: конфиг → тема → компоненты
+
+Имена и значения принадлежат проекту. Генератор пишет из `motion.timing` CSS-переменные
+в `src/core/_motion.scss`; файл не коммитится. Эти длительности повторно в теме не объявляют:
+`delba-ui test` отклоняет дублирование. Имеющиеся CSS-роли кита (`fast`, `normal`, `slow`,
+`verySlow`) нужно сохранить; рядом можно добавить свои имена.
+
+```ts
+// ui.config.ts (фрагмент)
+motion: {
+  timing: { veryFast: 0.16, fast: 0.24, normal: 0.4, slow: 0.7, verySlow: 1, gentle: 0.9 },
+},
+```
+
+Допустимые имена выводятся из этого же конфига в декларации проекта:
+
+```ts
+// index.d.ts
+interface UiMotionTiming {
+  names: keyof (typeof import('./ui.config'))['default']['motion']['timing'];
+}
+```
+
+```tsx
+<Text animate={{ when: 'inView', effect: 'up', delay: 'veryFast', duration: 'gentle' }}>{title}</Text>
+<Grid animate={{ when: 'inView', effect: 'up', stagger: 'veryFast' }}>{cards}</Grid>
+```
+
+Ручное `i * timing` не нужно: каскад вычисляет порядок сам. Числа в секундах остаются допустимы
+для точного времени. Конфиг не попадает в браузерный бандл через механизм motion.
+CLI проверяет форму имён и значения, компилятор проекта — существование используемых имён.
+Без `motion` и декларации сохраняется прежний договор темы со строковыми именами.
 
 `delba-ui test` запускает Playwright-браузерные сценарии, включая серверный HTML и гидратацию.
 При первой установке поставьте Chromium для Playwright из корня кита:

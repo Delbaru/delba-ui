@@ -102,6 +102,7 @@ function ModalSurface({
   grow,
   perspective3d,
   parallax,
+  animate,
   alignItems,
   justifyContent,
   color,
@@ -123,7 +124,7 @@ function ModalSurface({
   // Свежий onClose без переподписки: провайдер отдаёт новую стрелку на каждом рендере.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
   const setPanelNode = useMergedRefs(panelRef, setMotionNode);
 
   useEffect(() => {
@@ -266,6 +267,7 @@ function ModalSurface({
           ...(motionStyle ?? null),
           ...panelStyle,
         }}
+        {...revealAttrs}
         {...motionHandlers}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}

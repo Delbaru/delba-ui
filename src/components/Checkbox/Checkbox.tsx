@@ -41,6 +41,7 @@ export function Checkbox({
     gap,
     perspective3d,
     parallax,
+    animate,
     onMouseEnter,
     onMouseLeave,
     onClick,
@@ -70,7 +71,7 @@ export function Checkbox({
         && !onMouseLeave
         && !linkState;
     const rootDataPointEvents = dataPointEvents ?? (isPassiveReadOnly ? 'none' : undefined);
-    const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+    const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
     const inputRef = useRef<HTMLInputElement | null>(null);
     const setInputRef = useMergedRefs(inputRef, ref);
 
@@ -84,6 +85,7 @@ export function Checkbox({
             htmlFor={id}
             data-point-events={rootDataPointEvents}
             {...(rootProps as React.LabelHTMLAttributes<HTMLLabelElement>)}
+            {...revealAttrs}
             {...(!isDisabled ? stateLinkProps(linkState, { onMouseEnter, onMouseLeave, onClick, onFocus, onBlur, ...motionHandlers }) : {})}
             className={cx(styles.Checkbox, ...layout, className)}
             style={{ ...(motionStyle ?? null), ...style }}

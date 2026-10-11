@@ -2,140 +2,33 @@
 
 import { useCallback, useRef, useState, type CSSProperties } from 'react';
 import type React from 'react';
-import styles from './Input.module.scss';
-import { Skeleton } from '../Skeleton';
-import { assetUrl, cx, createLayoutClasses, stateProps, stateLinkProps, useMergedRefs, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
-import { textFont, type TextRole, type TextVariantName } from '../../core/base/typography';
-import { Icon } from '../Icon';
-import { Text } from '../Text';
-import { Flex } from '../Flex';
-import { Calendar } from './Calendar/Calendar';
-import { TimeField } from './TimeField/TimeField';
-import { useInputBehavior } from './lib/use-input-behavior';
-import type { FieldValueChangeHandler } from '../../core';
-import { DEFAULT_PHONE_FORMAT, maskGroups, type PhoneFormat } from './lib/phone-mask';
-import { Tooltip } from '../Tooltip';
-import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+
+import {
+    cx, createLayoutClasses, fieldLayoutClasses, fieldHelperPaddingLeft,
+    stateProps, stateLinkProps, useMergedRefs, type WithRef,
+} from '../../core';
+import { textFont } from '../../core/base/typography';
+import { useSharedMotion } from '../../hooks/useSharedMotion';
 import { useTextOverflow } from '../../hooks/useTextOverflow';
 import { useTooltip } from '../../hooks/useTooltip';
-import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
+import { CollapseWrap } from '../Collapse/CollapseWrap';
+import { Flex } from '../Flex';
+import { Skeleton } from '../Skeleton';
+import { Text } from '../Text';
+import { Tooltip } from '../Tooltip';
 
-import calendarIcon from '../../../assets/icons/ui/calendar/style-1/calendar.svg';
-import chevronIcon from '../../../assets/icons/ui/arrows/style-3/arrow.svg';
-import gazeAwayIcon from '../../../assets/icons/ui/eye/style-1/gaze-away.svg';
-import eyeIcon from '../../../assets/icons/ui/eye/style-1/eye.svg';
+import { Calendar } from './Calendar/Calendar';
+import { DateToggle, NumberControls, PasswordToggle } from './InputActions';
+import { InputBelowError, InputInlineError } from './InputFeedback';
+import { TimeField } from './TimeField/TimeField';
+import { DEFAULT_PHONE_FORMAT, maskGroups } from './lib/phone-mask';
+import { useInputBehavior } from './lib/use-input-behavior';
+import type { InputProps } from './types';
+import styles from './Input.module.scss';
 
-type VariantKey = 'primary' | 'secondary';
-type SizeKey = 'default' | 'fullWidth';
-// Типографика поля — вариант проекта или роль кита (--font-*). По умолчанию поле — роль `body`.
-type FontKey = TextVariantName | TextRole;
+export type { InputProps } from './types';
 
 const c = createLayoutClasses(styles, { local: { h: 'height' } });
-
-export interface InputProps
-    extends Omit<
-        React.InputHTMLAttributes<HTMLInputElement>,
-        'color' | 'placeholder' | 'size' | 'width' | 'minWidth' | 'maxWidth' | 'height' | 'minHeight' | 'maxHeight'
-    >,
-    LayoutSpaceProps,
-    RadiusPropsShort,
-    BorderStyleProps,
-    GrowProps,
-    SharedMotionProps,
-    SizePropsShort {
-    style?: CSSProperties;
-    /** Настоящее событие ввода; target.value содержит текст нативного поля, до форматирования. */
-    onChange?: React.ChangeEventHandler<HTMLInputElement>;
-    /** Значение модели после маски, seed, шага числа или выбора даты. */
-    onValueChange?: FieldValueChangeHandler<HTMLInputElement>;
-
-    variant?: ResponsiveValue<VariantKey>;
-    size?: ResponsiveValue<SizeKey>;
-    /** Типографика поля (--font-*). Не задан → роль `body`. */
-    font?: FontKey;
-
-    bg?: string;
-    color?: string;
-
-    placeholder?: string;
-    placeholderColor?: string;
-    /**
-     * Значение по умолчанию, которое ведёт себя как подсказка: пока в поле стоит `seed`, оно
-     * рисуется цветом подсказки и исчезает по фокусу, после чего уход из пустого поля возвращает
-     * `seed` назад.
-     *
-     * Нужен там, где модель уже держит значение по умолчанию (`value ?? '0'` у «Штрафа», `1` у
-     * баллов): засеянное значение иначе неотличимо от ответа человека — в поле с «0» ввод «1»
-     * даёт «01». Модель при этом не меняется, и после blur получает валидное значение.
-     * Проп `placeholderColor` тут ни при чём: подсказка всегда рисуется токеном
-     * `--field-placeholder-color`.
-     */
-    seed?: string;
-    label?: string;
-    labelColor?: string;
-    comment?: string;
-    showNumberControls?: boolean;
-    numberOptions?: number[];
-    /**
-     * Показать в поле пароля кнопку-глаз, открывающую набранное. ОПТ-ИН, а не поведение по
-     * умолчанию у `type='password'`: формы приложения живут без неё, и включить её всем разом
-     * значило бы поменять вид чужих экранов заодно с этим. Просят её там, где пароль ПРИДУМЫВАЮТ
-     * (регистрация, сброс) — там опечатку иначе не поймать, потому и нарисована она в макете входа.
-     */
-    revealable?: boolean;
-    /**
-     * Значение ещё грузится — вместо него бежит скелетон.
-     *
-     * ОДИН проп на всю механику ожидания: рамка, высота, паддинг и подпись поля остаются на
-     * месте, меняется только содержимое ячейки. Ветки «показывать ли поле» на call-site
-     * поэтому не нужно — а именно она и расползалась бы по экранам копиями.
-     */
-    loading?: boolean;
-
-    length?: { min?: number; max?: number };
-    /**
-     * Формат номера у `type='tel'`: код страны, длина, группы и образец для подсказки.
-     *
-     * Нужен там, где рядом с полем стоит выбор страны: без него поле обещает «+7» и десять цифр
-     * какой бы флаг ни выбрали. Не задан — российский формат, как было.
-     */
-    phone?: PhoneFormat;
-    /** Содержимое по краям строки поля; ref и события остаются у самого input. */
-    slots?: { start?: React.ReactNode; end?: React.ReactNode };
-    type?: React.HTMLInputTypeAttribute;
-
-    error?: string;
-
-    /** Сворачивать поле целиком, включая подпись, ошибку и комментарий. */
-    collapse?: CollapseOptions;
-
-    state?: ComponentStateValue;
-
-    // Класс на РЯД поля (.input) — тот элемент, который реально красится (фон/рамка/радиус).
-    // Нужен пресетам-обёрткам (SharedInput), чтобы вешать классы-оси из _axes.scss: обычный
-    // className уезжает на wrapper, а он включает label/comment и красить его нельзя.
-    rowClassName?: string;
-
-    required?: boolean;
-    emptyMessage?: string;
-    validate?: (value: string) => string | undefined;
-    /**
-     * Где рисовать ошибку поля.
-     *
-     * `inside` (по умолчанию) — слоем ПОВЕРХ значения: так набран весь кабинет, там поля стоят
-     * плотными рядами и лишняя строка двигала бы таблицу. Значение при этом гаснет, а на фокусе
-     * ошибка уходит, чтобы не мешать правке.
-     *
-     * `below` — строкой ПОД полем, значение остаётся видимым. Опт-ин, а не общий дефолт: это
-     * меняет высоту поля, то есть вид каждого экрана, где оно стоит. Просят его там, где человек
-     * набирает ДЛИННОЕ значение и должен видеть, что именно он написал: «ошибка закрывает поле
-     * ввода, и я не вижу, как я писал» — дословная претензия по форме обратной связи сайта.
-     */
-    errorPlacement?: 'inside' | 'below';
-
-    linkState?: StateLinkInput;
-    'data-point-events'?: string;
-}
 
 export function Input({
     ref,
@@ -172,6 +65,7 @@ export function Input({
     borderB,
     borderL,
     grow,
+    animate,
     perspective3d,
     parallax,
     w,
@@ -276,18 +170,14 @@ export function Input({
     const inlineError = !errorBelow && hasError && !isFieldActive ? helperText : undefined;
     const belowError = errorBelow && hasError ? helperText : undefined;
     const commentText = !hasError ? helperText : undefined;
-    // Последний непустой текст ошибки. Содержимое сворачиваемого блока живёт до конца анимации,
-    // а `belowError` обнуляется вместе с условием, которое блок прячет, — без этого строка
-    // уезжала бы вниз уже ПУСТОЙ (§12 «Появление и исчезновение»).
-    const lastBelowError = useRef('');
-    if (belowError) lastBelowError.current = belowError;
-
     // Показ пароля — МЕСТНОЕ состояние поля: это стадия просмотра, а не факт о данных, и в
     // сторе ему делать нечего (перезагрузи страницу — пароль снова скрыт, и так и надо).
     const [revealed, setRevealed] = useState(false);
     const showReveal = revealable && inputType === 'password';
+    const showNumberArrows = isNumber && showNumberControls && !isReadOnly && !disabled
+        && (rest.step !== 'any' || (numberOptions?.length ?? 0) > 0);
 
-    const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+    const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ animate, perspective3d, parallax });
     const dateAnchorRef = useRef<HTMLElement | null>(null);
     const setWrapperRef = useCallback((node: HTMLElement | null) => {
         rootRef.current = node;
@@ -350,6 +240,7 @@ export function Input({
             gap={[8, 8, 8]}
             className={cx(styles.wrapper, ...c.value('grow', grow), typeClassName, styles[inputType], className)}
             style={{ ...(motionStyle ?? null), ...style }}
+            {...revealAttrs}
             data-point-events={dataPointEvents}
             {...stateProps(isFieldActive && 'active')}
             {...stateLinkProps(linkState, { ...motionHandlers })}
@@ -395,203 +286,69 @@ export function Input({
                 )}
 
                 <div className={styles.fieldSlot}>
-                    {/* Значение ещё едет — вместо него полоса скелетона. Она стоит ВНУТРИ
-                        ячейки поля, а не вместо всего ряда: рамка, высота, паддинг и подпись
-                        остаются на месте, поэтому на приезде данных экран не прыгает — ради
-                        этого скелетон и нужен. Реальный `<input>` при этом не рендерится
-                        вовсе: поле, в которое можно печатать, пока значение не приехало,
-                        потеряет набранное на первом же ответе.
-
-                        Подмена одного другим ЕДЕТ, а не щёлкает: это `transitionKey` — ровно
-                        тот ответ, который §8.4 даёт для «узел подменяется другим узлом на том
-                        же месте». Раньше здесь стояло голое условие, и скелетон исчезал
-                        кадром — пользователь так и сказал: «пропадает не плавно».
-                        Перемонтирования `<input>` бояться нечего: своп случается один раз,
-                        когда данные приехали, а до этого поля в дереве нет вовсе — то есть
-                        отнимать фокус не у кого (в отличие от слоя ошибки, где `transitionKey`
-                        запрещён по этой самой причине, см. §12).
-                        `w='100%'` обязателен: обёртка свопа — это `Flex`, а у него ребёнок
-                        считается по контенту, и без ширины поле сжалось бы по своей надписи
-                        (§12 «Обёртка, вставленная РАДИ АНИМАЦИИ, меняет ось раскладки»).
-                        СКАЛЯРОМ, а не `['100%', null, null]`: ширина одна на всех ширинах, а
-                        кортеж печатал класс только десктопу — ниже 1024 `<input>` сжимался по
-                        набранному тексту внутри полноразмерной пилюли (§12). */}
+                    {/* Скелетон занимает ту же ячейку; своп нужен только при появлении input. */}
                     <Flex
                         transitionKey={loading ? 'skeleton' : 'value'}
                         animation='fadeIn'
                         w={['100%', '100%', '100%']}
                     >
-                    {loading ? (
-                        <Skeleton h={[16, null, null]} />
-                    ) : (
-                    <>
-                    {/* Маска телефона рисуется УЗЛАМИ, а не нативным `::placeholder`: в макете
-                        её части разного цвета и веса (скобки и тире чёрные полужирные, группы
-                        цифр серые Regular с разрядкой), а `::placeholder` — одна строка и
-                        покрасить её по частям нечем. Слой лежит поверх пустого поля и клики
-                        пропускает, поэтому фокус и каретка — по-прежнему у `<input>`. */}
-                    {isPhone && !hasValue && (
-                        <span aria-hidden className={styles.phoneMask}>
-                            {maskGroups(phoneFormat).map((group, groupIndex) => (
-                                <span key={groupIndex} className={styles.phoneMaskGroup}>
-                                    {group.map((part, partIndex) => (
-                                        <span key={partIndex} className={part.dim ? styles.phoneMaskDim : undefined}>
-                                            {part.text}
+                        {loading ? (
+                            <Skeleton h={[16, null, null]} />
+                        ) : (
+                        <>
+                            {/* Слой маски пропускает клики к нативному input. */}
+                            {isPhone && !hasValue && (
+                                <span aria-hidden className={styles.phoneMask}>
+                                    {maskGroups(phoneFormat).map((group, groupIndex) => (
+                                        <span key={groupIndex} className={styles.phoneMaskGroup}>
+                                            {group.map((part, partIndex) => (
+                                                <span key={partIndex} className={part.dim ? styles.phoneMaskDim : undefined}>
+                                                    {part.text}
+                                                </span>
+                                            ))}
                                         </span>
                                     ))}
                                 </span>
-                            ))}
-                        </span>
-                    )}
-                    {isTime ? (
-                        <TimeField
-                            inputRef={setFieldRef}
-                            inputProps={{ ...inputProps, 'aria-describedby': inputDescribedBy }}
-                            fieldClassName={fieldClassName}
-                            showMask={inlineError ? false : timeField.showMask}
-                            maskValue={timeField.value}
-                            maskSuffix={timeField.suffix}
-                        />
-                    ) : (
-                        <input
-                            ref={setFieldRef}
-                            className={fieldClassName}
-                            {...inputProps}
-                            // ПОСЛЕ спреда: `inputProps` несёт свой `type`, и переопределять
-                            // его надо здесь — иначе показ пароля молча не сработает (§12 про
-                            // пропы, которые атом выставляет после спреда).
-                            type={showReveal && revealed ? 'text' : inputProps.type}
-                            // У телефона нативный плейсхолдер гасим: его рисует слой-маска
-                            // выше, иначе обе строки наложились бы друг на друга.
-                            placeholder={isPhone ? '' : inputProps.placeholder}
-                            aria-describedby={inputDescribedBy}
-                        />
-                    )}
-                    </>
-                    )}
+                            )}
+                            {isTime ? (
+                                <TimeField
+                                    inputRef={setFieldRef}
+                                    inputProps={{ ...inputProps, 'aria-describedby': inputDescribedBy }}
+                                    fieldClassName={fieldClassName}
+                                    showMask={inlineError ? false : timeField.showMask}
+                                    maskValue={timeField.value}
+                                    maskSuffix={timeField.suffix}
+                                />
+                            ) : (
+                                <input
+                                    ref={setFieldRef}
+                                    className={fieldClassName}
+                                    {...inputProps}
+                                    // ПОСЛЕ спреда: `inputProps` несёт свой `type`, и переопределять
+                                    // его надо здесь — иначе показ пароля молча не сработает (§12 про
+                                    // пропы, которые атом выставляет после спреда).
+                                    type={showReveal && revealed ? 'text' : inputProps.type}
+                                    // У телефона нативный плейсхолдер гасим: его рисует слой-маска
+                                    // выше, иначе обе строки наложились бы друг на друга.
+                                    placeholder={isPhone ? '' : inputProps.placeholder}
+                                    aria-describedby={inputDescribedBy}
+                                />
+                            )}
+                        </>
+                        )}
                     </Flex>
-                    {/* Ошибка ПОЯВЛЯЕТСЯ от состояния, значит обязана ехать (§8.4). Из трёх
-                        ответов подходит только фейд обёртки: `collapse` тут не при чём (слой
-                        абсолютный, высоты не занимает), а `transitionKey` на ячейке перемонтировал
-                        бы сам `<input>` — то есть отнял бы у человека фокус и каретку ровно на
-                        blur'е. Уход ошибки ведёт гашение самого слоя вместе с возвратом цвета
-                        значения (см. модуль). */}
-                    {inlineError && (
-                        <Flex className={styles.inlineError} animation='fadeIn'>
-                            <Text
-                                as='div'
-                                id={inlineErrorId}
-                                role='alert'
-                                variant={['body', 'body', 'body']}
-                                color='var(--error)'
-                                className={styles.inlineErrorText}
-                            >
-                                {inlineError}
-                            </Text>
-                        </Flex>
-                    )}
+                    <InputInlineError id={inlineErrorId} message={inlineError} />
                 </div>
                 {slots?.end != null && <div data-input-action="true" className={styles.addon}>{slots.end}</div>}
-                {showReveal && (
-                    <Icon
-                        // Пара из ОДНОЙ семьи и одной техники (обе заливные): разная техника
-                        // дала бы разную толщину в одном и том же боксе. Смена картинки —
-                        // `animate='swap'`, то есть морф, а не подмена кадром (§8.6).
-                        src={revealed ? assetUrl(gazeAwayIcon) : assetUrl(eyeIcon)}
-                        animate='swap'
-                        // Скаляром, а не `[24, null, null]`: ниже 1024 кортеж не печатает
-                        // класса вовсе, и глаз схлопывался в точку. В макете окна входа он
-                        // там 20, но 24 — общий размер значка поля, и разница в четыре
-                        // единицы не стоит второй оси у атома.
-                        rootW={[24, 24, 24]}
-                        rootH={[24, 24, 24]}
-                        w={[24, 24, 24]}
-                        h={[24, 24, 24]}
-                        rootClassName={styles.passwordToggle}
-                        role='button'
-                        tabIndex={0}
-                        aria-label={revealed ? 'Скрыть пароль' : 'Показать пароль'}
-                        data-input-action='true'
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => setRevealed((current) => !current)}
-                        onKeyDown={(event) => {
-                            if (event.key !== 'Enter' && event.key !== ' ') return;
-
-                            // Пробелу нужен preventDefault, иначе он прокрутит страницу.
-                            event.preventDefault();
-                            setRevealed((current) => !current);
-                        }}
-                    />
-                )}
-                {isDate && (
-                    <Icon
-                        src={assetUrl(calendarIcon)}
-                        rootW={[48, null, null]}
-                        rootH={[48, null, null]}
-                        w={[24, null, null]}
-                        h={[24, null, null]}
-                        rootR={[16, null, null]}
-                        rootBg={['var(--background)', 'var(--background)', 'var(--background)']}
-                        rootClassName={styles.dateToggle}
-                        data-input-action='true'
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={datePicker.onToggle}
-                    />
-                )}
-                {isNumber && showNumberControls && !isReadOnly && !disabled && (rest.step !== 'any' || (numberOptions?.length ?? 0) > 0) && (
-                    <Flex
-                        dir={['column', 'column', 'column']}
-                        align={['center', 'center', 'center']}
-                        gap={[4, null, null]}
-                        className={styles.numberArrows}
-                    >
-                        <Icon
-                            src={assetUrl(chevronIcon)}
-                            rootW={[12, null, null]}
-                            rootH={[8, null, null]}
-                            w={[16, null, null]}
-                            h={['auto', null, null]}
-                            rootClassName={cx(styles.btn, styles.up)}
-                            data-input-action='true'
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => handleNumberStep(1)}
-                        />
-                        <Icon
-                            src={assetUrl(chevronIcon)}
-                            rootW={[12, null, null]}
-                            rootH={[8, null, null]}
-                            w={[16, null, null]}
-                            h={['auto', null, null]}
-                            rootClassName={cx(styles.btn, styles.down)}
-                            data-input-action='true'
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => handleNumberStep(-1)}
-                        />
-                    </Flex>
-                )}
+                <PasswordToggle
+                    visible={showReveal}
+                    revealed={revealed}
+                    onToggle={() => setRevealed((current) => !current)}
+                />
+                <DateToggle visible={isDate} onToggle={datePicker.onToggle} />
+                <NumberControls visible={showNumberArrows} onStep={handleNumberStep} />
             </Flex>
-            {/* Ошибка СТРОКОЙ под полем. Условие тут — статичный проп, а не состояние: набор
-                узлов от действий человека не меняется, поэтому анимировать сам этот `&&` нечего
-                (§8.4 «не каждое `? (` требует свопа»). Едет РАСКРЫТИЕ строки: `collapse` по
-                высоте, зазор — в `collapseGap`, то есть внутри той же анимации. */}
-            {errorBelow && (
-                <Flex
-                    collapse={Boolean(belowError)}
-                    collapseGap={[8, null, null]}
-                    collapseFade
-                    className={styles.belowError}
-                >
-                    <Text
-                        as='div'
-                        id={inlineErrorId}
-                        role='alert'
-                        variant={['caption', 'caption', 'caption']}
-                        color='var(--error)'
-                    >
-                        {belowError ?? lastBelowError.current}
-                    </Text>
-                </Flex>
-            )}
+            {errorBelow && <InputBelowError id={inlineErrorId} message={belowError} />}
             {overflow.isOverflowing && (
                 <Tooltip ref={overflowTooltip.tooltipRef} {...overflowTooltip.bubbleProps}>
                     {overflow.text}
@@ -619,9 +376,7 @@ export function Input({
                     variant={['caption', 'caption', 'caption']}
                     color='var(--text-muted)'
                     pl={fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl)}
-                >
-                    {commentText}
-                </Text>
+                >{commentText}</Text>
             )}
         </Flex>
     );

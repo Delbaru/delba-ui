@@ -142,6 +142,7 @@ export function Textarea({
     grow,
     perspective3d,
     parallax,
+    animate,
     w,
     minW,
     maxW,
@@ -294,7 +295,7 @@ export function Textarea({
         onBlur: handleBlur,
         ...(isControlled ? { value: seedField.displayValue } : {}),
     };
-    const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+    const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
     const setWrapperRef = useCallback((node: HTMLElement | null) => {
         setMotionNode(node);
     }, [setMotionNode]);
@@ -321,6 +322,7 @@ export function Textarea({
             gap={[8, 4, 8]}
             className={cx(styles.TextareaWrapper, ...c.value('grow', grow), className)}
             style={{ ...(motionStyle ?? null), ...style }}
+            {...revealAttrs}
             data-point-events={dataPointEvents}
             {...stateLinkProps(linkState, { ...motionHandlers })}
         >

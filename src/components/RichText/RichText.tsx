@@ -230,9 +230,9 @@ export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, '
   linkState?: StateLinkInput;
 }
 
-export function LexicalText({ content, variant = ['default', 'default', 'default'], w, h, animation, rows, ellipsis, bg, color, r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, grow, perspective3d, parallax, reveal, className = '', style, linkState, onMouseEnter, onMouseLeave, ...props }: LexicalTextProps) {
+export function LexicalText({ content, variant = ['default', 'default', 'default'], w, h, animation, animate, rows, ellipsis, bg, color, r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, grow, perspective3d, parallax, reveal, className = '', style, linkState, onMouseEnter, onMouseLeave, ...props }: LexicalTextProps) {
   // Пустой контент узла не рисует, поэтому и прятать нечего: атрибуты появления едут только с узлом.
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate, reveal });
   const radiusProps = resolveRadiusInput({ r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR });
   const setRootRef = useCallback((node: HTMLDivElement | null) => {
     setMotionNode(node);

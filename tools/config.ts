@@ -1,6 +1,13 @@
 import type { UiScale } from '../src/core/base/scale';
 import type { ExtractOptions } from './utilities/extract';
 
+export type MotionTiming = Readonly<Record<string, number>>;
+
+export interface UiMotion {
+  /** Named motion durations in seconds. At least one camelCase name is required. */
+  readonly timing: MotionTiming;
+}
+
 /** Словари осей шкур и папка компонентов проекта (см. `skin/`). */
 export interface UiSkins {
   /**
@@ -49,4 +56,6 @@ export interface UiConfig {
    * Из них генерируются `--rpx` и `sizes` у `Img`. Умолчания: 320 / 768 / 1920, потолок 2560.
    */
   readonly scale?: Partial<UiScale>;
+  /** Motion duration tokens in seconds; names and values are defined together here. */
+  readonly motion?: UiMotion;
 }

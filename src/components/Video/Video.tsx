@@ -102,6 +102,7 @@ export function Video({
   linkState,
   perspective3d,
   parallax,
+  animate,
   showPlayButton = false,
   controls = false,
   autoPlay = false,
@@ -164,7 +165,7 @@ export function Video({
 
   const resolvedSrc = pickSource(src);
   const resolvedPoster = pickSource(poster);
-  const { motionHandlers, motionStyle, setMotionNode } = useSharedMotion({ perspective3d, parallax });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
 
   const [objectFitResolved] = resolveResponsive(objectFit ?? 'cover');
   const [objectPositionResolved] = resolveResponsive(objectPosition ?? 'center');
@@ -210,6 +211,7 @@ export function Video({
       ref={setRootRef}
       data-point-events={dataPointEvents}
       {...(rootProps as React.HTMLAttributes<HTMLSpanElement>)}
+      {...revealAttrs}
       {...stateLinkProps(linkState, { ...motionHandlers })}
       className={cx(
         styles.VideoRoot,

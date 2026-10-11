@@ -24,7 +24,7 @@ export function projectSteps(root, config, { update = false, strict = false } = 
   const configs = readdirSync(root).filter((file) => /^(next|ui).config./.test(file));
   return [
     nodeStep('Правила проекта', [script('check-rules.mjs'), '--baseline', config.baseline ?? '.rules-baseline.json', ...(update ? ['--update'] : []), ...(config.rules ?? ['src'])], root),
-    nodeStep('Тема', [script('check-tokens.mjs'), ...(strict ? ['--strict'] : []), ...[config.theme ?? 'theme'].flat(), ...(config.typography ? ['--typography', config.typography.join(',')] : [])], root),
+    nodeStep('Тема', [script('check-tokens.mjs'), ...(strict ? ['--strict'] : []), ...[config.theme ?? 'theme'].flat(), ...(config.motion ? ['--generated-motion', path.join(KIT, 'src/core/_motion.scss')] : []), ...(config.typography ? ['--typography', config.typography.join(',')] : [])], root),
     nodeStep('Импорты', [script('check-migration.mjs'), ...(config.rules ?? ['src']), ...configs], root),
     astStep('Архитектура проекта', root, { rules: projectRules, dirs: config.rules ?? ['src'] }),
   ];
@@ -34,6 +34,7 @@ export function runUiChecks({ project, config = {}, configArg = 'ui.config.ts' }
   const steps = [
     ...(project ? [{ ...nodeStep('Генерация', [script('cli.mjs'), 'build', '--config', configArg], project), required: true }] : []),
     nodeStep('Типы', [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json', '--noEmit', '--incremental', 'false']),
+    ...(project ? [nodeStep('Типы проекта', [require.resolve('typescript/bin/tsc'), '--noEmit', '--incremental', 'false'], project)] : []),
     astStep('Архитектура'),
     nodeStep('Границы', [script('check-boundary.mjs')]),
     nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']),

@@ -201,22 +201,33 @@ placeholder })` — все решения двери в одной чистой 
 
 ## Появление по скроллу
 
-`reveal` у `Flex`, `Grid`, `Box` и `Img` (`src/core/reveal`, хук `useReveal` внутри `useSharedMotion`):
+Общий `animate` у компонентов с SharedMotion (`src/core/reveal`, хук `useReveal` внутри `useSharedMotion`):
 
 ```tsx
-<Flex reveal="up">…</Flex>                                   // сам блок целиком
-<Grid reveal={['up', { stagger: 0.08 }]}>{cards}</Grid>      // каскад по прямым детям
-<Img reveal={['blur', { delay: 0.1 }]} … />                  // у Img без каскада
+<Flex animate={{ effect: 'up', when: 'inView' }}>…</Flex>
+<Grid animate={{ effect: 'up', when: 'inView', stagger: 'veryFast' }}>{cards}</Grid>
+<Img animate={{ effect: 'blur', when: 'inView', delay: 'fast' }} … />
 ```
 
+Объект `{ effect, when, ...options }` — предпочтительная форма. `when: 'load'` запускает эффект
+через CSS с первого кадра, `inView` — через observer при входе в экран. Прежний `reveal`, его ключи и tuple
+(`[key, options]`) продолжают работать без изменения семантики.
+
 Ключи: `fade`, `up` (снизу), `left` / `right` (слева / справа), `scale` (из 0.96), `blur`; все — с fade.
-Опции (`RevealOptions`, секунды): `stagger` (нет — ход у самого узла), `delay` (`0`), `duration`
+Опции (`RevealOptions`): `stagger` (нет — ход у самого узла), `delay` (`0`), `duration`
 (токен `--t-d-slow`, кривая `--t-t-f-cubic-bezier`), `distance` (rpx, `32`), `once` (`true`; `false` —
 прячет снова, когда элемент уходит вниз), `threshold` (`0`), `rootMargin` (`'0px'`).
 `fade` (`true`; `false` — без прозрачности: узел виден с первого кадра и только доезжает), `start`
 (`'view'`; `'load'` — ход с первой отрисовки чистым CSS, без JS и наблюдателя).
 
-- **Первый экран — `['up', { fade: false, start: 'load' }]`.** Ход по экрану ждёт гидрации, а прозрачный
+`stagger`, `delay`, `duration` принимают имя из `ui.config.motion.timing` либо число секунд.
+Ключи задаёт конфиг, `UiMotionTiming.names` выводится через `keyof` (см. README); фиксированного
+списка в ядре нет. Генератор выпускает `_motion.scss`, runtime использует CSS-переменные.
+Именованный каскад вычисляет `calc(delay + порядок × stagger)`, поэтому ручное умножение не нужно.
+Срок завершения observer берёт из вычисленных браузером стилей. CSS-путь, SSR и reduced motion
+используют тот же договор; импорт конфига проекта в runtime отсутствует.
+
+- **Первый экран — `{ effect: 'up', fade: false, start: 'load' }`.** Ход по экрану ждёт гидрации, а прозрачный
   узел не засчитывается в LCP: герой с `fade` показывал LCP на 2,2 с при готовом за 20 мс фото. С `'load'`
   каскад идёт `:nth-child` × `--reveal-step` (до 24 детей), заливка `backwards` — после хода анимация
   не держит `translate`. `once`, `threshold`, `rootMargin` при `'load'` не действуют.
