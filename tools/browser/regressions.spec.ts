@@ -55,8 +55,11 @@ test('shared box CSS switches background, coordinates and dynamic visibility wit
   await expect(hidden).toBeVisible();
 });
 
-test('Dropdown aligns the visible wide surface rather than a trigger-sized collapse wrapper', async ({ page }) => {
-  for (const width of [320, 390, 768, 1024, 1440, 1920]) {
+// Шесть ширин в одном тесте укладывались в 24 цикла «открыл — померил — закрыл» и шесть
+// перезагрузок страницы на ОДИН бюджет в 30 с: 18 с на рабочей машине, то есть на раннике
+// за край. Ширина — своя проверка: свой бюджет, своё имя в отчёте и счёт параллельно.
+for (const width of [320, 390, 768, 1024, 1440, 1920]) {
+  test(`Dropdown aligns the visible wide surface rather than a trigger-sized collapse wrapper at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await openFixture(page);
     for (const side of ['start', 'center', 'end', 'portal']) {
@@ -87,8 +90,8 @@ test('Dropdown aligns the visible wide surface rather than a trigger-sized colla
       await expect(surface).toBeHidden();
       await expect(trigger).toBeFocused();
     }
-  }
-});
+  });
+}
 
 test('unified inView animate observes one HTML host per primitive and never leaks configuration to DOM', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
