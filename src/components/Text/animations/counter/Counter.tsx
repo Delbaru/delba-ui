@@ -38,7 +38,7 @@ export function Counter({ options, content }: TextAnimationContext<CounterOption
   const format = (value: number) => (grouped ? value.toLocaleString('ru-RU') : String(value));
   const text = (value: number) => `${prefix}${format(value)}${suffix}`;
 
-  useCountUpNode(valueRef, to, { duration: options?.duration, start }, shouldStart, !isInView, text);
+  useCountUpNode(valueRef, to, { duration: options?.duration, durationTime: options?.durationTime, start }, shouldStart, !isInView, text);
 
   return (
     <span ref={ref} className={'ui-counter'}>

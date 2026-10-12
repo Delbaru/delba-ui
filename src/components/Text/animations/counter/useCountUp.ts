@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
 import { clamp01, prefersReducedMotion } from '../../../../core';
+import { readMotionTimeMs, type MotionTime } from '../../../../core/base/timing';
 
 export interface UseCountUpOptions {
   duration?: number;
@@ -43,20 +44,21 @@ export function useCountUp(
   useEffect(() => {
     if (!enabled) {
       if (resetOnDisable) {
-        setTimeout(() => setValue(start), 0);
+        const timer = setTimeout(() => setValue(start), 0);
+        return () => clearTimeout(timer);
       }
-      return;
+      return undefined;
     }
 
     if (to === start) {
-      setTimeout(() => setValue(to), 0);
-      return;
+      const timer = setTimeout(() => setValue(to), 0);
+      return () => clearTimeout(timer);
     }
 
     // Уважаем prefers-reduced-motion: без анимации сразу показываем итоговое значение.
     if (prefersReducedMotion()) {
       setValue(to);
-      return;
+      return undefined;
     }
 
     return runCount(to, start, duration, setValue);
@@ -73,7 +75,7 @@ export function useCountUp(
 export function useCountUpNode(
   ref: RefObject<HTMLElement | null>,
   to: number,
-  { duration = 2500, start = 0 }: UseCountUpOptions,
+  { duration = 2500, durationTime, start = 0 }: UseCountUpOptions & { durationTime?: MotionTime },
   enabled: boolean,
   resetOnDisable: boolean,
   format: (value: number) => string
@@ -104,6 +106,11 @@ export function useCountUpNode(
       return undefined;
     }
 
-    return runCount(to, start, duration, write);
-  }, [ref, enabled, to, start, duration, resetOnDisable]);
+    const durationMs = durationTime === undefined ? duration : readMotionTimeMs(durationTime, node, duration / 1000);
+    if (durationMs <= 0) {
+      write(to);
+      return undefined;
+    }
+    return runCount(to, start, durationMs, write);
+  }, [ref, enabled, to, start, duration, durationTime, resetOnDisable]);
 }

@@ -5,26 +5,53 @@ import {
   useEffect,
   useCallback,
   useState,
+  useId,
+  useLayoutEffect,
+  cloneElement,
   type CSSProperties,
   type KeyboardEvent,
+  type ReactElement,
+  type MouseEventHandler,
 } from 'react';
 import styles from './Modal.module.scss';
-import { boxLayout, createLayoutClasses, cx, useMergedRefs, type GrowProps, type LayoutSpaceProps, type RadiusPropsShort, type ResponsiveInput, type ResponsiveValue, type SizePropsShort, type SpaceValue, type StateLinkInput, type WithRef } from '../../core';
+import { boxLayout, composeEventHandlers, createLayoutClasses, cx, MEDIA_QUERY, MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs, useMergedRefs, type BoxLayoutProps, type LayoutSpaceProps, type ResponsiveInput, type ResponsiveValue, type SpaceValue, type StateLinkInput, type WithRef } from '../../core';
 import { Flex } from '../Flex';
-import { useModalRuntime } from './ModalProvider';
+import { useModalRegistry, useModalRuntime } from './ModalProvider';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { isOpenAnimate, type OpenAnimate } from '../../core/reveal/reveal';
 
 type PresetKey = 'default' | 'fullWidth';
 
 const c = createLayoutClasses(styles);
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-interface ModalSurfaceProps extends LayoutSpaceProps, RadiusPropsShort, SizePropsShort, GrowProps, SharedMotionProps {
+export interface ModalCloseOptions {
+  /** Declarative dialogs close when this viewport breakpoint becomes active. */
+  breakpoint?: 'desktop' | 'below' | 'mobile' | 'tablet';
+  /** Close on an overlay click. Defaults to true. */
+  overlay?: boolean;
+  /** Close on Escape unless a nested control already consumed it. Defaults to true. */
+  escape?: boolean;
+}
+
+export interface ModalScrollOptions extends LayoutSpaceProps {
+  /** Reserve the legacy scrollbar padding. Set false for a panel with its own padding. */
+  gutter?: boolean;
+}
+
+export interface ModalTriggerProps {
+  onClick?: MouseEventHandler<HTMLElement>;
+  disabled?: boolean;
+  'aria-disabled'?: boolean | 'true' | 'false';
+  'aria-expanded'?: boolean;
+  'aria-controls'?: string;
+  'aria-haspopup'?: 'dialog';
+}
+
+interface ModalSurfaceProps extends BoxLayoutProps, SharedMotionProps<OpenAnimate> {
   id?: string;
-  open: boolean;
-  active: boolean;
-  onClose: () => void;
-  children?: React.ReactNode;
+  children?: React.ReactNode | ((close: () => void) => React.ReactNode);
   className?: string;
   rootClassName?: string;
   overlayClassName?: string;
@@ -36,6 +63,10 @@ interface ModalSurfaceProps extends LayoutSpaceProps, RadiusPropsShort, SizeProp
   animation?: ResponsiveInput<'fadeInUp' | 'fadeInDown'>;
 
   closeOnOverlayClick?: boolean;
+  /** Dismissal rules; grouped settings take precedence over the legacy overlay flag. */
+  closeOn?: ModalCloseOptions;
+  /** Padding of the sole scroll container inside the panel. */
+  scroll?: ModalScrollOptions;
 
   /** Снять клип с панели для содержимого, которое должно выступать за её границы.
    *  Выпадающий список Select использует портал и этой настройки не требует. Платой — нет своей
@@ -60,7 +91,6 @@ interface ModalSurfaceProps extends LayoutSpaceProps, RadiusPropsShort, SizeProp
     'start' | 'end' | 'center' | 'space_between' | 'space_around' | 'space_evenly'
   >;
 
-  bg?: string;
   color?: string;
 
   'aria-label'?: string;
@@ -70,14 +100,29 @@ interface ModalSurfaceProps extends LayoutSpaceProps, RadiusPropsShort, SizeProp
   linkState?: StateLinkInput;
 }
 
-export type ModalProps = Omit<ModalSurfaceProps, 'open' | 'active' | 'onClose'>;
+export type ModalProps = ModalSurfaceProps & {
+  /** Declarative opener. Its click handler runs first and can cancel opening. */
+  trigger?: ReactElement<ModalTriggerProps>;
+} & (
+  | {
+      /** Controlled opening, owned by the caller. */
+      open: boolean;
+      /** Request to change the controlled opening. */
+      onOpenChange: (open: boolean) => void;
+      defaultOpen?: never;
+    }
+  | {
+      open?: undefined;
+      /** Initial opening in uncontrolled declarative mode. */
+      defaultOpen?: boolean;
+      /** Notification when uncontrolled opening changes. */
+      onOpenChange?: (open: boolean) => void;
+    }
+);
 
 function ModalSurface({
   ref,
   id,
-  open,
-  active,
-  onClose,
   children,
   className = '',
   rootClassName,
@@ -88,6 +133,8 @@ function ModalSurface({
   preset = ['default', 'default', 'default'],
   animation,
   closeOnOverlayClick = true,
+  closeOn,
+  scroll,
   overflowVisible = false,
   rootP,
   rootPt,
@@ -112,6 +159,10 @@ function ModalSurface({
   linkState,
   ...panelBox
 }: WithRef<ModalSurfaceProps, HTMLDivElement>) {
+  const { open, active, closing, dismiss: onClose, exitAfter } = useModalRuntime();
+  const exitAfterRef = useRef(exitAfter);
+  exitAfterRef.current = exitAfter;
+  const closeOnEscape = closeOn?.escape ?? true;
   // Коробка делится на две: отступы root* и grow — у слоя-подложки, остальное — у панели диалога.
   const root = boxLayout(c, { p: rootP, pt: rootPt, pr: rootPr, pb: rootPb, pl: rootPl, m: rootM, mt: rootMt, mr: rootMr, mb: rootMb, ml: rootMl, grow });
   const panel = boxLayout(c, panelBox);
@@ -124,8 +175,19 @@ function ModalSurface({
   // Свежий onClose без переподписки: провайдер отдаёт новую стрелку на каждом рендере.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate, open });
   const setPanelNode = useMergedRefs(panelRef, setMotionNode);
+
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!closing || !panel) return;
+    const overlay = panel.previousElementSibling;
+    const duration = prefersReducedMotion() ? 0 : Math.max(
+      readMotionMs(panel), readMotionMs(panel, 'animation'),
+      overlay instanceof HTMLElement ? readMotionMs(overlay) : 0,
+    );
+    exitAfterRef.current(duration + MOTION_END_BUFFER_MS);
+  }, [closing]);
 
   useEffect(() => {
     if (open) {
@@ -140,14 +202,14 @@ function ModalSurface({
   // слой ставит preventDefault или останавливает всплытие, и сперва уходит он.
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (e.key !== 'Escape' || e.defaultPrevented || !closeOnEscape) return;
       e.preventDefault();
       onClose();
     },
-    [onClose]
+    [onClose, closeOnEscape]
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || !active) return;
     if (!hasFocusOrigin.current) {
       previousActiveElement.current = document.activeElement as HTMLElement | null;
@@ -156,7 +218,7 @@ function ModalSurface({
     if (!panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
   }, [open, active]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (open || !hasFocusOrigin.current) return;
     const target = previousActiveElement.current;
     const activeDialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
@@ -175,7 +237,7 @@ function ModalSurface({
     if (activeRef.current && hasFocusOrigin.current) previousActiveElement.current?.focus();
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || !active) return;
 
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -191,7 +253,7 @@ function ModalSurface({
       // Фокус потерян (узел с ним исчез, клик в пустое место) — Escape до панели не дойдёт,
       // поэтому верхнее окно ловит его здесь. Фокус внутри — им занят обработчик панели.
       if (event.key === 'Escape') {
-        if (!event.defaultPrevented && !focusScope.contains(document.activeElement)) {
+        if (closeOnEscape && !event.defaultPrevented && !focusScope.contains(document.activeElement)) {
           event.preventDefault();
           onCloseRef.current();
         }
@@ -217,10 +279,10 @@ function ModalSurface({
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [active, open]);
+  }, [active, open, closeOnEscape]);
 
   const handleOverlayClick = () => {
-    if (closeOnOverlayClick) onClose();
+    if (closeOn?.overlay ?? closeOnOverlayClick) onClose();
   };
 
   return (
@@ -231,6 +293,8 @@ function ModalSurface({
       className={cx(styles.Modal, rootClassName, ...c.value('animation', animation), ...root)}
       data-open={open}
       data-entered={entered}
+      data-closing={closing}
+      data-open-motion={isOpenAnimate(animate) || undefined}
       role="presentation"
       aria-hidden={!open || !active}
       inert={!open || !active}
@@ -272,14 +336,52 @@ function ModalSurface({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
-        <div className={cx(styles.inner, overflowVisible && styles.innerOverflowVisible)}>{children}</div>
+        <div className={cx(styles.inner, overflowVisible && styles.innerOverflowVisible, scroll?.gutter === false && styles.noGutter, ...boxLayout(c, scroll ?? {}))}>
+          {typeof children === 'function' ? children(onClose) : children}
+        </div>
       </div>
     </Flex>
   );
 }
 
-export function Modal({ ref, ...props }: WithRef<ModalProps, HTMLDivElement>) {
-  const { open, active, dismiss } = useModalRuntime();
+function DeclarativeModal({ ref, trigger, open: controlledOpen, defaultOpen = false, onOpenChange, ...props }: WithRef<ModalProps, HTMLDivElement>) {
+  const registry = useModalRegistry();
+  const generatedId = useId();
+  const id = props.id ?? generatedId;
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const requestedOpen = controlledOpen ?? internalOpen;
+  const breakpointMatches = useMediaQuery(props.closeOn?.breakpoint ? MEDIA_QUERY[props.closeOn.breakpoint] : 'not all');
+  const open = requestedOpen && !breakpointMatches;
+  const changeOpenRef = useRef<(next: boolean) => void>(() => {});
+  changeOpenRef.current = (next) => {
+    if (requestedOpen === next) return;
+    if (controlledOpen === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
+  const close = useCallback(() => changeOpenRef.current(false), []);
 
-  return <ModalSurface {...props} ref={ref} open={open} active={active} onClose={dismiss} />;
+  useLayoutEffect(() => {
+    registry.sync(id, <ModalSurface {...props} id={id} ref={ref} />, open, close);
+  });
+  useLayoutEffect(() => () => registry.remove(id), [registry, id]);
+  useEffect(() => {
+    if (breakpointMatches) changeOpenRef.current(false);
+  }, [breakpointMatches]);
+
+  if (!trigger) return null;
+  const disabled = trigger.props.disabled || trigger.props['aria-disabled'] === true || trigger.props['aria-disabled'] === 'true';
+  return cloneElement(trigger, {
+    onClick: composeEventHandlers(trigger.props.onClick, () => {
+      if (!disabled && !breakpointMatches) changeOpenRef.current(true);
+    }, { cancelable: true }),
+    'aria-haspopup': 'dialog',
+    'aria-expanded': open,
+    'aria-controls': open ? id : undefined,
+  });
+}
+
+export function Modal(props: WithRef<ModalProps, HTMLDivElement>) {
+  if (props.trigger || props.open !== undefined || props.defaultOpen !== undefined) return <DeclarativeModal {...props} />;
+  const { trigger: _trigger, open: _open, defaultOpen: _defaultOpen, onOpenChange: _onOpenChange, ...surface } = props;
+  return <ModalSurface {...surface} />;
 }

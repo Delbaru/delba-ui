@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from 'react';
 
 import type { ResponsiveInput } from '../../../core';
 import { animationRegistry } from './registry';
-import type { AnimationInput, AnimationKey, AnimationOptions, TextAnimationContext } from './types';
+import type { AnimationInput, AnimationKey, AnimationOptions, TextAnimate, TextAnimationContext } from './types';
 
 export interface ResolvedAnimation {
   active: boolean;
@@ -12,8 +12,27 @@ export interface ResolvedAnimation {
 
 // Разбор пропа `animate`/`animation` в пару (ключ, опции). responsive-форма [d, m, t] — берём desktop
 // (рендер всё равно одноключевой); одиночное значение — ключ или [ключ, опции].
-function parse(input: ResponsiveInput<AnimationInput> | undefined): { key?: AnimationKey; options?: AnimationOptions } {
+function parse(input: ResponsiveInput<AnimationInput> | TextAnimate | undefined): { key?: AnimationKey; options?: AnimationOptions } {
   if (input == null) return {};
+
+  if (typeof input === 'object' && !Array.isArray(input) && 'effect' in input) {
+    if (input.effect === 'counter') {
+      return {
+        key: 'counter',
+        options: {
+          to: input.to,
+          start: input.start,
+          suffix: input.suffix,
+          grouped: input.grouped,
+          trigger: input.when === 'load' ? 'onLoad' : 'onView',
+          durationTime: input.duration,
+        },
+      };
+    }
+    if (input.effect === 'textSlide') {
+      return { key: 'textSlide', options: { mode: 'swap', durationTime: input.duration } };
+    }
+  }
 
   const normalize = (v: AnimationInput): { key: AnimationKey; options?: AnimationOptions } =>
     Array.isArray(v)
@@ -33,7 +52,7 @@ function parse(input: ResponsiveInput<AnimationInput> | undefined): { key?: Anim
  * Pure (без хуков) — Text вызывает один раз и либо рендерит `Inner`, либо контент как есть.
  */
 export function resolveAnimation(
-  input: ResponsiveInput<AnimationInput> | undefined,
+  input: ResponsiveInput<AnimationInput> | TextAnimate | undefined,
   content: ReactNode
 ): ResolvedAnimation {
   const { key, options } = parse(input);

@@ -1,5 +1,5 @@
 import { MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs } from '../base/motion';
-import { isRevealKey, revealDelays, revealObserverKey, type ResolvedReveal } from './reveal';
+import { isRevealCascadeChild, isRevealKey, revealDelays, revealObserverKey, type ResolvedReveal } from './reveal';
 
 // Состояние цели — атрибутом, а не классом React: его пишет наблюдатель, рендер о нём не знает.
 // нет → до гидрации (прячет страховочная анимация `ui-reveal-hold`), wait → ждёт экрана,
@@ -7,7 +7,7 @@ import { isRevealKey, revealDelays, revealObserverKey, type ResolvedReveal } fro
 const STATE = 'data-reveal-state';
 const HOLD = 'ui-reveal-hold';
 
-type Target = { host: HTMLElement; config: ResolvedReveal };
+type Target = { host: HTMLElement; config: ResolvedReveal; ownsState: boolean };
 
 const observers = new Map<string, IntersectionObserver>();
 const targets = new Map<Element, Target>();
@@ -97,7 +97,7 @@ function observerFor(config: ResolvedReveal): IntersectionObserver {
 }
 
 function arm(el: Element, host: HTMLElement, config: ResolvedReveal) {
-  targets.set(el, { host, config });
+  targets.set(el, { host, config, ownsState: !el.hasAttribute(STATE) });
   hosts.get(host)?.own.add(el);
   const state = el.getAttribute(STATE);
 
@@ -116,13 +116,17 @@ function arm(el: Element, host: HTMLElement, config: ResolvedReveal) {
 
 function release(el: Element, config: ResolvedReveal) {
   observers.get(revealObserverKey(config))?.unobserve(el);
+  if (targets.get(el)?.ownsState) {
+    el.removeAttribute(STATE);
+    if (el instanceof HTMLElement) el.style.removeProperty('--reveal-delay');
+  }
   targets.delete(el);
   clearTimer(el);
 }
 
 function syncChildren(host: HTMLElement, own: Set<Element>, config: ResolvedReveal) {
   own.forEach((el) => {
-    if (el.parentElement !== host) {
+    if (el.parentElement !== host || el.hasAttribute('data-reveal-skip') || isRevealKey(el.getAttribute('data-reveal'))) {
       release(el, config);
       own.delete(el);
     }
@@ -130,7 +134,7 @@ function syncChildren(host: HTMLElement, own: Set<Element>, config: ResolvedReve
   // Ребёнок со своим `reveal` ведёт себя сам — иначе два хозяина спорили бы за его состояние.
   Array.from(host.children).forEach((child) => {
     // Именно СВОЙ: `data-reveal` с чужим значением — пометка проекта, хозяина она не отменяет.
-    if (!own.has(child) && !isRevealKey(child.getAttribute('data-reveal'))) arm(child, host, config);
+    if (!own.has(child) && isRevealCascadeChild(child)) arm(child, host, config);
   });
 }
 
@@ -150,8 +154,15 @@ export function armReveal(host: HTMLElement, config: ResolvedReveal) {
     return;
   }
   syncChildren(host, own, config);
-  const mutations = new MutationObserver(() => syncChildren(host, own, config));
-  mutations.observe(host, { childList: true });
+  const mutations = new MutationObserver((records) => {
+    const directChildrenChanged = records.some((record) =>
+      record.type === 'childList'
+        ? record.target === host
+        : record.target instanceof Element && record.target.parentElement === host,
+    );
+    if (directChildrenChanged) syncChildren(host, own, config);
+  });
+  mutations.observe(host, { childList: true, attributes: true, attributeFilter: ['data-reveal', 'data-reveal-skip'], subtree: true });
   hosts.set(host, { own, mutations });
 }
 

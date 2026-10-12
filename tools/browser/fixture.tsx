@@ -1,4 +1,4 @@
-import { Profiler, useRef, useState, type AnimationEvent as ReactAnimationEvent, type ChangeEvent, type FocusEvent, type MouseEvent as ReactMouseEvent, type SVGProps } from 'react';
+import { Profiler, useRef, useState, type AnimationEvent as ReactAnimationEvent, type ChangeEvent, type CSSProperties, type FocusEvent, type MouseEvent as ReactMouseEvent, type SVGProps } from 'react';
 
 import { Button } from '../../src/components/Button/Button';
 import { Accordion, AccordionItem } from '../../src/components/Accordion';
@@ -15,7 +15,7 @@ import { Carousel } from '../../src/components/Carousel/Carousel';
 import { CarouselNav } from '../../src/components/Carousel/CarouselNav/CarouselNav';
 import { Dropdown } from '../../src/components/Dropdown/Dropdown';
 import { Modal } from '../../src/components/Modal/Modal';
-import { useModal } from '../../src/components/Modal/ModalProvider';
+import { ModalProvider, useModal } from '../../src/components/Modal/ModalProvider';
 import { LexicalText } from '../../src/components/RichText/RichText';
 import { PhoneField } from '../../src/components/PhoneField/PhoneField';
 import { Select } from '../../src/components/Select/Select';
@@ -66,6 +66,7 @@ declare global {
     __iconSvg: SVGSVGElement | null;
     __setIconTooltip: ((value: string | undefined) => void) | null;
     __swapEvents: Record<string, { target: string; name: string }[]>;
+    __swapStarts: Record<string, { name: string; text: string | null }[]>;
     __swapNodes: Record<string, HTMLElement | null>;
     __setSwapKey: ((value: string) => void) | null;
     __setLexicalText: ((value: string) => void) | null;
@@ -105,6 +106,7 @@ const initWindowState = () => {
   window.__iconSvg = null;
   window.__setIconTooltip = null;
   window.__swapEvents = {};
+  window.__swapStarts = {};
   window.__swapNodes = {};
   window.__setSwapKey = null;
   window.__setLexicalText = null;
@@ -552,6 +554,9 @@ function ContentSwapField() {
   const onAnimationEnd = (target: string) => (event: ReactAnimationEvent<HTMLElement>) => {
     window.__swapEvents[target] = [...(window.__swapEvents[target] ?? []), { target: event.currentTarget.tagName, name: event.animationName }];
   };
+  const onAnimationStart = (target: string) => (event: ReactAnimationEvent<HTMLElement>) => {
+    window.__swapStarts[target] = [...(window.__swapStarts[target] ?? []), { name: event.animationName, text: event.currentTarget.textContent }];
+  };
 
   return (
     <section aria-label="Shared content swap contracts" className="fixture">
@@ -560,6 +565,7 @@ function ContentSwapField() {
         data-testid="swap-box"
         animate={['fadeInUp', { key }]}
         onAnimationEnd={onAnimationEnd('box')}
+        onAnimationStart={onAnimationStart('box')}
         style={{ minHeight: 36 }}
       >Box {key}</Box>
       <Flex
@@ -567,6 +573,7 @@ function ContentSwapField() {
         data-testid="swap-flex"
         animate={['fadeInUp', { key }]}
         onAnimationEnd={onAnimationEnd('flex')}
+        onAnimationStart={onAnimationStart('flex')}
         style={{ minHeight: 36 }}
       >Flex {key}</Flex>
     </section>
@@ -582,10 +589,197 @@ function LexicalRevealField() {
       <LexicalText
         data-testid="lexical-reveal"
         content={content}
-        reveal={['up', { duration: 0.08, fade: false }]}
+        reveal={['up', { duration: 'veryFast', fade: false }]}
       />
     </section>
   );
+}
+
+function DropdownContracts() {
+  const [showInitial, setShowInitial] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [allowChange, setAllowChange] = useState(false);
+  const [cancelClick, setCancelClick] = useState(false);
+  const [disabled, setDisabled] = useState(false);
+  const [requests, setRequests] = useState<boolean[]>([]);
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <section aria-label="Dropdown state contracts" className="fixture">
+      <button type="button" onClick={() => setShowInitial(true)}>Mount initially open dropdown</button>
+      <button type="button" onClick={() => setAllowChange((value) => !value)}>Toggle dropdown approval</button>
+      <button type="button" onClick={() => setCancelClick((value) => !value)}>Toggle dropdown cancellation</button>
+      <button type="button" onClick={() => setDisabled((value) => !value)}>Toggle dropdown disabled</button>
+      <button type="button" onClick={() => setExpanded((value) => !value)}>Toggle whole dropdown</button>
+      <output data-testid="dropdown-requests">{JSON.stringify(requests)}</output>
+      <Dropdown
+        open={open}
+        collapse={{ open: expanded }}
+        onOpenChange={(next) => {
+          setRequests((current) => [...current, next]);
+          if (allowChange) setOpen(next);
+        }}
+        panel={{ portal: true, matchTriggerWidth: true }}
+        trigger={
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={(event) => { if (cancelClick) event.preventDefault(); }}
+          >Controlled dropdown</button>
+        }
+      >
+        <button type="button">Controlled dropdown action</button>
+      </Dropdown>
+      {showInitial && <Dropdown
+        defaultOpen
+        trigger={<button type="button">Initially open dropdown</button>}
+      >
+        <button type="button">Initial dropdown action</button>
+      </Dropdown>}
+    </section>
+  );
+}
+
+function DropdownSizingContracts() {
+  return (
+    <section aria-label="Dropdown intrinsic sizing" className="fixture">
+      <Flex justify={['center', 'center', 'center']}>
+        {(['start', 'center', 'end'] as const).map((side) => (
+          <Dropdown
+            key={side}
+            w={[200, 200, 200]}
+            style={{ padding: 4, border: '1px solid transparent' }}
+            panel={{ side }}
+            trigger={<button type="button">Intrinsic {side}</button>}
+          >
+            <Flex
+              data-testid={`intrinsic-surface-${side}`}
+              style={{ boxSizing: 'border-box' }}
+              w={['100%', '100%', '100%']}
+              minW={[264, 264, 264]}
+              p={[8, 8, 8]}
+              dir={['column', 'column', 'column']}
+            >
+              <Button>Wide menu action</Button>
+            </Flex>
+          </Dropdown>
+        ))}
+        <Dropdown
+          panel={{ portal: true, side: 'end', w: [900, 900, 900], maxW: [900, 900, 900] }}
+          trigger={<button type="button">Intrinsic portal</button>}
+        >
+          <Flex data-testid="intrinsic-surface-portal" w={['100%', '100%', '100%']}>
+            <Button>Wide portal action</Button>
+          </Flex>
+        </Dropdown>
+      </Flex>
+    </section>
+  );
+}
+
+function DeclarativeModalContracts() {
+  const [controlledOpen, setControlledOpen] = useState(false);
+  const [allowClose, setAllowClose] = useState(false);
+  const [clicks, setClicks] = useState(0);
+  const [changes, setChanges] = useState<boolean[]>([]);
+  const [content, setContent] = useState(0);
+  const [showDefault, setShowDefault] = useState(false);
+  const surfaceRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <section aria-label="Declarative Modal contracts" className="fixture">
+      <output data-testid="declarative-modal-log">{JSON.stringify({ clicks, changes })}</output>
+      <Modal
+        ref={surfaceRef}
+        trigger={<button type="button" onClick={() => setClicks((value) => value + 1)}>Open controlled declaration</button>}
+        open={controlledOpen}
+        onOpenChange={(next) => { setChanges((values) => [...values, next]); if (next || allowClose) setControlledOpen(next); }}
+        aria-label="Controlled declaration"
+        style={{ width: 360, maxHeight: 240 }}
+        scroll={{ gutter: false, p: [16, 16, 16] }}
+      >{(close) => <>
+        <button type="button" onClick={close}>Request declaration close</button>
+        <button type="button" onClick={() => setAllowClose(true)}>Allow declaration close</button>
+        <button type="button" onClick={() => setContent((value) => value + 1)}>Update declaration content</button>
+        <button type="button" onClick={() => { if (surfaceRef.current) surfaceRef.current.dataset.refVerified = 'true'; }}>Verify declaration ref</button>
+        <p data-testid="declaration-content">Current content {content}</p>
+        <ModalStackOpener />
+      </>}</Modal>
+      <Modal
+        trigger={<button type="button" onClick={(event) => { event.preventDefault(); setClicks((value) => value + 1); }}>Cancelled declaration</button>}
+        aria-label="Cancelled declaration dialog"
+      >This opening should be cancelled.</Modal>
+      <Modal
+        trigger={<button type="button" disabled>Disabled declaration</button>}
+        aria-label="Disabled declaration dialog"
+      >This opening should be disabled.</Modal>
+      <button type="button" onClick={() => setShowDefault(true)}>Mount default declaration</button>
+      {showDefault && <Modal defaultOpen aria-label="Default declaration" style={{ width: 360 }}>
+        {(close) => <button type="button" onClick={close}>Close default declaration</button>}
+      </Modal>}
+      <Modal
+        trigger={<button type="button">Open mobile declaration</button>}
+        closeOn={{ breakpoint: 'desktop' }}
+        aria-label="Mobile declaration"
+        preset={['fullWidth', 'fullWidth', 'fullWidth']}
+        w={['100%', '100%', '100%']}
+        h={['100dvh', '100dvh', '100dvh']}
+        scroll={{ gutter: false }}
+        animate={{ when: 'open', effect: 'down', distance: 'full', duration: 0.8 }}
+      >{(close) => <>
+        <button type="button" onClick={close}>Close mobile declaration</button>
+        <div style={{ height: 1600 }}>Long mobile declaration content</div>
+      </>}</Modal>
+    </section>
+  );
+}
+
+function ModalScrollLockContracts() {
+  const [firstMounted, setFirstMounted] = useState(true);
+  const [secondMounted, setSecondMounted] = useState(true);
+  const openSecond = useRef<(() => void) | null>(null);
+
+  return (
+    <section aria-label="Modal scroll lock contracts" className="fixture">
+      {firstMounted && <ModalProvider>
+        <ModalScrollLeaseOpener
+          name="First independent lease"
+          unmountSelf={() => setFirstMounted(false)}
+          openOther={() => openSecond.current?.()}
+        />
+      </ModalProvider>}
+      {secondMounted && <ModalProvider>
+        <ModalScrollLeaseOpener
+          name="Second independent lease"
+          unmountSelf={() => setSecondMounted(false)}
+          unmountOther={() => setFirstMounted(false)}
+          registerOpen={(open) => { openSecond.current = open; }}
+        />
+      </ModalProvider>}
+    </section>
+  );
+}
+
+function ModalScrollLeaseOpener({ name, unmountSelf, unmountOther, openOther, registerOpen }: {
+  name: string;
+  unmountSelf: () => void;
+  unmountOther?: () => void;
+  openOther?: () => void;
+  registerOpen?: (open: () => void) => void;
+}) {
+  const { present } = useModal();
+  const open = () => { present(
+    <Modal aria-label={name} style={{ width: 360, maxHeight: 240 }}>
+      {openOther && <button type="button" onClick={openOther}>Open second independent lease</button>}
+      {unmountOther && <button type="button" onClick={unmountOther}>Unmount first provider</button>}
+      <button type="button" onClick={unmountSelf}>Unmount {name}</button>
+      <div style={{ height: 1600 }}>Long independently scrolling modal content</div>
+      <button type="button">Last focus stop in {name}</button>
+    </Modal>,
+  ); };
+  registerOpen?.(open);
+
+  return <button type="button" onClick={open}>Open {name}</button>;
 }
 
 function ModalDropdownField() {
@@ -594,9 +788,7 @@ function ModalDropdownField() {
     <Modal aria-label="Browser regression modal" style={{ maxHeight: 240, overflowY: 'auto', width: 360 }}>
       <div style={{ height: 520 }}>Long modal content</div>
       <Dropdown
-        portal
-        side="end"
-        offset={12}
+        panel={{ portal: true, side: 'end', offset: 12 }}
         trigger={<button type="button" data-testid="nested-dropdown-trigger">Nested actions</button>}
       >
         <button type="button" data-testid="nested-dropdown-action">Choose action</button>
@@ -761,6 +953,48 @@ function MotionFixtures() {
   );
 }
 
+const motionImageA = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"%3E%3Crect width="80" height="48" fill="%23a33"/%3E%3C/svg%3E';
+const motionImageC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"%3E%3Crect width="80" height="48" fill="%2333a"/%3E%3C/svg%3E';
+
+function ImgChangeContracts() {
+  const [src, setSrc] = useState(motionImageA);
+  const [direction, setDirection] = useState<1 | -1>(1);
+
+  return (
+    <section aria-label="Image change animation" className="fixture" style={{ '--t-d-fast': '0.35s' } as CSSProperties}>
+      <button type="button" data-testid="img-change-remote" onClick={() => setSrc('/motion-two.svg')}>Load remote image</button>
+      <button type="button" data-testid="img-change-latest" onClick={() => setSrc(motionImageC)}>Choose latest image</button>
+      <button type="button" data-testid="img-change-reverse" onClick={() => setDirection((value) => value === 1 ? -1 : 1)}>Reverse image direction</button>
+      <div data-testid="change-img">
+        <Img
+          alt="Animated source"
+          src={src}
+          w={[160, 160, 160]}
+          h={[96, 96, 96]}
+          style={{ width: 160, height: 96 }}
+          animate={{ when: 'change', effect: 'veil', duration: 'fast', direction, veil: <span data-testid="image-veil-content" /> }}
+        />
+      </div>
+    </section>
+  );
+}
+
+function TextObjectMotionContracts() {
+  const [counterTo, setCounterTo] = useState(100);
+  const [slideText, setSlideText] = useState('Page A');
+
+  return (
+    <section aria-label="Object text animation" className="fixture" style={{ '--t-d-fast': '0.35s' } as CSSProperties}>
+      <button type="button" data-testid="counter-change-target" onClick={() => setCounterTo((value) => value + 100)}>Change counter target</button>
+      <Text as="span" data-testid="text-load-counter" aria-label="Load counter" animate={{ when: 'load', effect: 'counter', duration: 'fast', to: counterTo }}>0</Text>
+      <div style={{ height: 1200 }} aria-hidden />
+      <Text as="span" data-testid="text-inview-counter" aria-label="Viewport counter" animate={{ when: 'inView', effect: 'counter', duration: 'fast', to: 50 }}>0</Text>
+      <button type="button" data-testid="text-slide-update" onClick={() => setSlideText((value) => value === 'Page A' ? 'Page B' : 'Page A')}>Update slide text</button>
+      <Text as="span" data-testid="text-slide-object" aria-label="Page title" animate={{ when: 'change', effect: 'textSlide', duration: 'fast' }}>{slideText}</Text>
+    </section>
+  );
+}
+
 function InViewContracts() {
   const animate = { effect: 'up', when: 'inView', delay: 0.02, duration: 0.04 } as const;
 
@@ -846,7 +1080,7 @@ function AccordionContracts() {
   );
 }
 
-function NamedTimingContracts() {
+function NamedTimingContracts({ skipDecoration }: { skipDecoration: boolean }) {
   return (
     <section
       aria-label="Named motion timing"
@@ -858,19 +1092,87 @@ function NamedTimingContracts() {
         <div>Named view second</div>
       </Box>
       <Box data-testid="named-load" animate={{ when: 'load', effect: 'up', duration: 'verySlow', delay: 'fast', stagger: 'veryFast' }}>
-        <div>Named load first</div>
-        <div>Named load second</div>
+        <div data-testid="named-load-first">Named load first</div>
+        <div data-testid="named-load-decoration" data-reveal-skip="">Decorative guide</div>
+        <Box data-testid="named-load-owned" animate={{ when: 'load', effect: 'up', duration: 'verySlow', delay: 'veryFast' }}>Owned load animation</Box>
+        <div data-testid="named-load-second">Named load second</div>
       </Box>
+      <Box data-testid="named-inview" animate={{ when: 'inView', effect: 'up', duration: 'fast', delay: 'fast', stagger: 'veryFast' }}>
+        <div data-testid="named-inview-first">In-view first</div>
+        <div data-testid="named-inview-decoration" data-reveal-skip={skipDecoration ? '' : undefined} style={{ marginTop: 1200 }}>In-view decoration</div>
+        <div data-testid="named-inview-last">In-view last</div>
+      </Box>
+    </section>
+  );
+}
+
+function SelectPanelContracts() {
+  return (
+    <section aria-label="Select panel contracts">
+      {(['primary', 'primaryFill', 'secondary'] as const).map((variant) => (
+        <Select
+          key={variant}
+          aria-label={`Panel ${variant}`}
+          variant={[variant, variant, variant]}
+          size={['fullWidth', 'fullWidth', 'fullWidth']}
+          multiple
+          closeOnSelect
+          style={{ '--select-dropdown-radius': '24px', '--select-dropdown-radius-top': '6px' } as CSSProperties}
+          options={[{ label: 'Panel group', options: [{ value: 'one', label: 'Panel option one' }, { value: 'two', label: 'Panel option two' }] }]}
+        />
+      ))}
+      <Select aria-label="Empty panel" options={[]} />
+      <Select aria-label="Loading panel" options={[{ value: 'one', label: 'Loading option' }]} loading />
+      <Select aria-label="Disabled panel" options={[{ value: 'one', label: 'Disabled option' }]} disabled />
+    </section>
+  );
+}
+
+function BoxLayoutContracts() {
+  const [hidden, setHidden] = useState(true);
+  return (
+    <section data-testid="box-layout-contracts">
+      <Button onClick={() => setHidden((value) => !value)}>Toggle responsive box</Button>
+      <div data-testid="box-layout-host" style={{ position: 'relative', height: 100 }}>
+        <Box
+          data-testid="responsive-box"
+          bg={['var(--primary)', 'var(--black)', 'var(--background)']}
+          position={['absolute', 'absolute', 'absolute']}
+          top={[24, 8, 16]}
+          left={[24, 8, 16]}
+          w={[80, 80, 80]}
+          h={[40, 40, 40]}
+        />
+        <Box data-testid="responsive-hidden" hide={[hidden, false, hidden]}>Responsive visibility</Box>
+        <Icon
+          data-testid="positioned-icon"
+          component={InlineFixtureIcon}
+          href="#box-layout-contracts"
+          aria-label="Positioned icon"
+          position={['absolute', 'absolute', 'absolute']}
+          right={[4, 4, 4]}
+          top={[4, 4, 4]}
+          w={[20, 20, 20]}
+          h={[20, 20, 20]}
+        />
+      </div>
     </section>
   );
 }
 
 export function BrowserFixture() {
   if (typeof window !== 'undefined' && !window.__fieldLogs) initWindowState();
+  const [skipDecoration, setSkipDecoration] = useState(false);
 
   return (
     <main className="fixture">
       <h1>Delba UI browser regression fixture</h1>
+      <button
+        type="button"
+        data-testid="toggle-reveal-skip"
+        style={{ position: 'fixed', top: 8, left: 8, zIndex: 1000 }}
+        onClick={() => setSkipDecoration((value) => !value)}
+      >Toggle in-view decorative marker</button>
       <output data-testid="react-profile" />
       <ContractFields />
       <InViewContracts />
@@ -887,7 +1189,12 @@ export function BrowserFixture() {
       <IconTooltipField />
       <ContentSwapField />
       <LexicalRevealField />
+      <DropdownContracts />
+      <DropdownSizingContracts />
+      <SelectPanelContracts />
       <ModalDropdownField />
+      <ModalScrollLockContracts />
+      <DeclarativeModalContracts />
       <ModalSelectField />
       <ModalStackField />
       <ModalCalendarField />
@@ -896,7 +1203,10 @@ export function BrowserFixture() {
       <VideoTimelineField />
       <NativeFocusFields />
       <MotionFixtures />
-      <NamedTimingContracts />
+      <NamedTimingContracts skipDecoration={skipDecoration} />
+      <ImgChangeContracts />
+      <TextObjectMotionContracts />
+      <BoxLayoutContracts />
     </main>
   );
 }

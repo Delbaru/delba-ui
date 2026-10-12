@@ -1,18 +1,28 @@
 import type { ClassBuilder } from '../layout/layout-classes';
+import { boxLayout, type BoxLayoutProps } from '../layout/box';
 import type { ResponsiveSpaceValue, SpaceValue } from '../layout/space';
 import { resolveResponsive, type ResponsiveInput } from './responsive';
-import { borderClasses, layoutSpaceClasses, radiusClasses, sizeClasses, type BorderStyleProps, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort } from './shared-props';
 
 /**
  * Объединённый интерфейс layout-пропсов для field-компонентов
  * (Input, Textarea, Select и аналогичных).
  */
-export interface FieldLayoutProps extends LayoutSpaceProps, RadiusPropsShort, SizePropsShort, BorderStyleProps {
+export interface FieldLayoutProps extends BoxLayoutProps {
     variant?: ResponsiveInput<string>;
     size?: ResponsiveInput<string>;
-    bg?: string;
     color?: string;
     placeholderColor?: string;
+}
+
+/** Общие умолчания полей: явная геометрия отменяет размер-пресет, явный size сохраняется. */
+export function resolveFieldLayout(props: FieldLayoutProps): FieldLayoutProps {
+    const hasExplicitSize = props.w !== undefined || props.minW !== undefined || props.maxW !== undefined
+        || props.h !== undefined || props.minH !== undefined || props.maxH !== undefined;
+    return {
+        ...props,
+        variant: props.variant ?? 'primary',
+        size: props.size ?? (hasExplicitSize ? undefined : 'default'),
+    };
 }
 
 /** Классы поля за один вызов: вариант и размер — из модуля поля, остальное — утилиты. */
@@ -20,15 +30,15 @@ export function fieldLayoutClasses(c: ClassBuilder, props: FieldLayoutProps): st
     return [
         ...c.value('variant', props.variant),
         ...c.value('size', props.size),
-        ...layoutSpaceClasses(c, props),
-        ...radiusClasses(c, props),
-        ...sizeClasses(c, props),
-        ...c.value('bg', props.bg),
+        ...boxLayout(c, { ...props, grow: undefined, position: undefined, top: undefined, bottom: undefined, left: undefined, right: undefined, hide: undefined }),
         ...c.value('color', props.color),
         ...c.value('placeholderColor', props.placeholderColor),
-        ...borderClasses(c, props),
     ];
 }
+
+/** Положение и видимость относятся ко всему полю, включая подпись и подсказки. */
+export const fieldRootLayoutClasses = (c: ClassBuilder, props: BoxLayoutProps): string[] =>
+    boxLayout(c, { grow: props.grow, position: props.position, top: props.top, bottom: props.bottom, left: props.left, right: props.right, hide: props.hide });
 
 const isSpaceToken = (value: unknown): value is number | string =>
     typeof value === 'number' || typeof value === 'string';

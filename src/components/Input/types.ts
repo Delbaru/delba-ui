@@ -2,14 +2,10 @@ import type React from 'react';
 import type { CSSProperties } from 'react';
 
 import type {
-    BorderStyleProps,
+    BoxLayoutProps,
     ComponentStateValue,
     FieldValueChangeHandler,
-    GrowProps,
-    LayoutSpaceProps,
-    RadiusPropsShort,
     ResponsiveValue,
-    SizePropsShort,
     StateLinkInput,
 } from '../../core';
 import type { TextRole, TextVariantName } from '../../core/base/typography';
@@ -26,12 +22,8 @@ export interface InputProps
         React.InputHTMLAttributes<HTMLInputElement>,
         'color' | 'placeholder' | 'size' | 'width' | 'minWidth' | 'maxWidth' | 'height' | 'minHeight' | 'maxHeight'
     >,
-    LayoutSpaceProps,
-    RadiusPropsShort,
-    BorderStyleProps,
-    GrowProps,
-    SharedMotionProps,
-    SizePropsShort {
+    BoxLayoutProps,
+    SharedMotionProps {
     style?: CSSProperties;
     /** Настоящее событие ввода; target.value содержит текст нативного поля, до форматирования. */
     onChange?: React.ChangeEventHandler<HTMLInputElement>;
@@ -43,7 +35,6 @@ export interface InputProps
     /** Типографика поля (--font-*). Не задан → роль `body`. */
     font?: FontKey;
 
-    bg?: string;
     color?: string;
 
     placeholder?: string;

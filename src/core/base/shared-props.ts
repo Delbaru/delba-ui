@@ -83,6 +83,25 @@ export interface GrowProps {
   grow?: ResponsiveValue<number>;
 }
 
+/** Положение коробки: числа смещения измеряются в дизайн-пикселях, строки — в CSS-единицах. */
+export interface PositionProps {
+  /** Способ позиционирования на каждой полосе ширины. */
+  position?: ResponsiveValue<NonNullable<CSSProperties['position']>>;
+  /** Смещение от верхнего края. */
+  top?: ResponsiveValue<SpaceValue>;
+  /** Смещение от нижнего края. */
+  bottom?: ResponsiveValue<SpaceValue>;
+  /** Смещение от левого края. */
+  left?: ResponsiveValue<SpaceValue>;
+  /** Смещение от правого края. */
+  right?: ResponsiveValue<SpaceValue>;
+}
+
+export interface VisibilityProps {
+  /** true скрывает коробку через display:none; false/null сохраняют её обычное отображение. */
+  hide?: ResponsiveValue<boolean>;
+}
+
 // ── Class helpers ───────────────────────────────────────
 
 export const layoutSpaceClasses = (c: ClassBuilder, s: LayoutSpaceProps): string[] => [

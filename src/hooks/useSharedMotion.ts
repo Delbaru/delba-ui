@@ -2,7 +2,7 @@
 
 import { useCallback, type CSSProperties } from 'react';
 
-import { resolveRevealInput, type AppearanceAnimate, type RevealProps } from '../core/reveal/reveal';
+import { isOpenAnimate, resolveRevealInput, type AppearanceAnimate, type RevealProps } from '../core/reveal/reveal';
 import { useParallaxMotion, type ParallaxInput } from './useParallaxMotion';
 import { usePerspective3dMotion, type Perspective3dInput } from './usePerspective3dMotion';
 import { useReveal } from './useReveal';
@@ -19,7 +19,7 @@ export interface SharedMotionProps<LegacyAnimate = never> {
 
 // `reveal` — не в SharedMotionProps: его принимают только примитивы раскладки и Img, остальные
 // компоненты молча проглотили бы проп из общего типа.
-export function useSharedMotion<LegacyAnimate>({ perspective3d, parallax, reveal, animate }: SharedMotionProps<LegacyAnimate> & RevealProps) {
+export function useSharedMotion<LegacyAnimate>({ perspective3d, parallax, reveal, animate, open }: SharedMotionProps<LegacyAnimate> & RevealProps & { open?: boolean }) {
   const {
     isEnabled: hasPerspective3d,
     motionHandlers,
@@ -35,7 +35,9 @@ export function useSharedMotion<LegacyAnimate>({ perspective3d, parallax, reveal
     transformValue: parallaxTransform,
   } = useParallaxMotion(parallax);
 
-  const { revealAttrs, revealStyle, setRevealNode } = useReveal(resolveRevealInput(animate, reveal));
+  const openAnimation = isOpenAnimate(animate);
+  const input = openAnimation ? { ...animate, stagger: 0, start: 'view' as const } : resolveRevealInput(animate, reveal);
+  const { revealAttrs, revealStyle, setRevealNode } = useReveal(input, openAnimation ? Boolean(open) : undefined);
 
   const motionTransform = [parallaxTransform, perspectiveTransform].filter(Boolean).join(' ');
   const hasMotion = hasPerspective3d || hasParallax;

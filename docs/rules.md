@@ -9,7 +9,8 @@
 ## 1. Проп раньше SCSS
 
 Перед каждой строкой в `.module.scss` — открыть `src/core/utilities/registry.ts`: есть проп — пишем
-пропом. В модуле остаётся только непропсовое: `:hover`/`:focus-visible`, `position`, `overflow`,
+пропом. `bg`, `position`, `top/bottom/left/right` и `hide` — общие адаптивные пропсы коробки.
+В модуле остаётся только непропсовое: `:hover`/`:focus-visible`, `overflow`,
 псевдоэлементы, `z-index`, `transform`, `list-style`, `display: grid`, стили разметки внутри
 `LexicalText`.
 

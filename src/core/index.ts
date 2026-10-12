@@ -66,7 +66,7 @@ export { sanitizeRichTextHtml } from './base/html-sanitize';
 // field control helpers
 export { useFieldControl } from './useFieldControl';
 export type { FieldControlConfig } from './useFieldControl';
-export { fieldLayoutClasses, fieldHelperPaddingLeft } from './base/field-layout';
+export { fieldLayoutClasses, fieldRootLayoutClasses, fieldHelperPaddingLeft, resolveFieldLayout } from './base/field-layout';
 export type { FieldLayoutProps } from './base/field-layout';
 
 // visibility hooks

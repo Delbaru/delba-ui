@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from 'react';
+import type { MotionTime } from '../../../core/base/timing';
 
 import type { CounterOptions } from './counter/types';
 import type { TextSlideOptions } from './textSlide/types';
@@ -24,6 +25,33 @@ export type AnimationInput =
   | AnimationKey
   | [AnimationKey]
   | { [K in AnimationKey]: [K, AnimationOptionsMap[K]] }[AnimationKey];
+
+/** Общая объектная форма анимаций содержимого Text. Время здесь в секундах или именем темы. */
+export type TextAnimate =
+  | {
+      /** Запуск при входе в экран или сразу после монтирования. */
+      when: 'inView' | 'load';
+      /** Число из содержимого или явного to. */
+      effect: 'counter';
+      /** Секунды или имя шкалы motion.timing. */
+      duration?: MotionTime;
+      /** Начальное число; по умолчанию 0. */
+      start?: number;
+      /** Итоговое число; без него разбирается содержимое Text. */
+      to?: number;
+      /** Текст после числа; без него сохраняется суффикс содержимого. */
+      suffix?: string;
+      /** Разделять разряды по ru-RU. */
+      grouped?: boolean;
+    }
+  | {
+      /** Смена по изменению содержимого Text. */
+      when: 'change';
+      /** Посимвольный слайд только изменившихся символов. */
+      effect: 'textSlide';
+      /** Секунды или имя шкалы motion.timing. */
+      duration?: MotionTime;
+    };
 
 /** Контекст рендера, который Text передаёт активному плагину. */
 export interface TextAnimationContext<O> {

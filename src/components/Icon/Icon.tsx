@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, type CSSProperties, type SVGProps } from 'react';
 import type React from 'react';
-import { boxLayout, cx, createLayoutClasses, resolveRadiusInput, resolveResponsive, shouldUseNextLink, splitRootDomProps, stateProps as buildStateProps, stateLinkProps, type BorderStyleProps, type ComponentStateValue, type GrowProps, type RadiusInput, type ResponsiveSpaceValue, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef, composeEventHandlers, useMergedRefs } from '../../core';
+import { boxLayout, cx, createLayoutClasses, resolveRadiusInput, resolveResponsive, shouldUseNextLink, splitBoxLayout, splitRootDomProps, stateProps as buildStateProps, stateLinkProps, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef, composeEventHandlers, useMergedRefs } from '../../core';
 import { Flex } from '../Flex';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { isAppearanceAnimate, type AppearanceAnimate } from '../../core/reveal/reveal';
@@ -38,7 +38,7 @@ type IconRootStyleProps = {
   rootClassName?: string;
 };
 
-export interface IconProps extends IconBaseSvgProps, SizeInput, RadiusInput, IconRootSizeProps, IconRootStyleProps, BorderStyleProps, GrowProps, SharedMotionProps<IconAnimate> {
+export interface IconProps extends Omit<IconBaseSvgProps, keyof BoxLayoutProps>, BoxLayoutProps, IconRootSizeProps, IconRootStyleProps, SharedMotionProps<IconAnimate> {
   /** Focus callbacks receive the actual focusable Icon element, which may be its anchor. */
   onFocus?: React.FocusEventHandler<Element>;
   onBlur?: React.FocusEventHandler<Element>;
@@ -79,11 +79,6 @@ export interface IconProps extends IconBaseSvgProps, SizeInput, RadiusInput, Ico
   rotate?: ResponsiveValue<number | string>;
 
   // layout props (tokens)
-  m?: ResponsiveSpaceValue;
-  mt?: ResponsiveValue<number>;
-  mr?: ResponsiveValue<number>;
-  mb?: ResponsiveValue<number>;
-  ml?: ResponsiveValue<number>;
 
   // simple style overrides (single value)
   color?: string;
@@ -210,8 +205,9 @@ export function Icon({
   parallax,
   animate,
   collapse,
-  ...props
+  ...rest
 }: WithRef<IconProps, SVGSVGElement>) {
+  const { box, rest: props } = splitBoxLayout(rest);
   const linkRel = rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined);
   const useNextLink = shouldUseNextLink(href, target);
   // Подсказка якорится к ВНЕШНЕМУ узлу иконки: ссылке, если она есть, иначе к корню контента.
@@ -228,7 +224,7 @@ export function Icon({
         href,
         target,
         rel: linkRel,
-        className: cx('ui-icon-link', hasTooltip && 'ui-icon-tooltip-anchor'),
+        className: cx('ui-icon-link', ...boxLayout(c, box), hasTooltip && 'ui-icon-tooltip-anchor'),
         id,
         role,
         tabIndex,
@@ -401,7 +397,7 @@ export function Icon({
   } as CSSProperties;
 
   // Коробка глифа: поля, радиус, размер. grow — у глифа, только когда нет root-обёртки (иначе он у неё).
-  const glyphLayout = boxLayout(c, { m, mt, mr, mb, ml, ...resolvedRadiusProps, ...iconSizeProps, grow: needsRootWrapper ? undefined : grow });
+  const glyphLayout = boxLayout(c, { ...(!needsRootWrapper && !linkProps ? box : {}), m, mt, mr, mb, ml, ...resolvedRadiusProps, ...iconSizeProps, grow: needsRootWrapper ? undefined : grow });
   const commonClasses = [...glyphLayout, className];
 
   const commonStyles = {

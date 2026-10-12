@@ -2,10 +2,13 @@ import type { UiScale } from '../src/core/base/scale';
 import type { ExtractOptions } from './utilities/extract';
 
 export type MotionTiming = Readonly<Record<string, number>>;
+export type MotionDistances = Readonly<Record<string, number | `${number}%`>>;
 
 export interface UiMotion {
   /** Named motion durations in seconds. At least one camelCase name is required. */
   readonly timing: MotionTiming;
+  /** Named reveal distances: numbers are rpx, percentages are relative to the element. */
+  readonly distance?: MotionDistances;
 }
 
 /** Словари осей шкур и папка компонентов проекта (см. `skin/`). */

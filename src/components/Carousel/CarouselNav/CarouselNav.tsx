@@ -36,7 +36,7 @@ export function CarouselNav({ className, carouselId }: CarouselNavProps) {
                         w={[132, 68, null]}
                         h={[80, 36, null]}
                         p={[0, 0, null]}
-                        bg='var(--black-70)'
+                        bg={['var(--black-70)', 'var(--black-70)', 'var(--black-70)']}
                         r={[40, 40, null]}
                         onClick={() => snapshot.api?.prev()}
                         disabled={prevDisabled}
@@ -52,7 +52,7 @@ export function CarouselNav({ className, carouselId }: CarouselNavProps) {
                         w={[132, 68, null]}
                         h={[80, 36, null]}
                         p={[0, 0, null]}
-                        bg='var(--black-70)'
+                        bg={['var(--black-70)', 'var(--black-70)', 'var(--black-70)']}
                         r={[40, 40, null]}
                         onClick={() => snapshot.api?.next()}
                         disabled={nextDisabled}

@@ -22,6 +22,10 @@ export function SsrFixture() {
     <main className="fixture">
       <h1>SSR and hydration</h1>
       <Text animate={{ effect: 'up', when: 'load', fade: false, duration: 'slow', delay: 'veryFast' }}>Первый кадр</Text>
+      <Text data-testid="ssr-counter" animate={{ when: 'load', effect: 'counter', duration: 'slow' }}>125%</Text>
+      <Flex as="dl" data-testid="ssr-requisites" dir={['column', 'column', 'column']} gap={[8, 8, 8]} m={[0, 0, 0]}>
+        <Flex><Text as="dt">ИНН</Text><Text as="dd">1234567890</Text></Flex>
+      </Flex>
       <Button
         data-testid="ssr-button"
         tooltip="Открыть"

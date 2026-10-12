@@ -93,7 +93,7 @@ export function Calendar({
       r={[16, null, null]}
       w={[336, null, null]}
       border={[`calc(1 * var(--rpx)) solid var(--line)`, null, null]}
-      bg='var(--white-100)'
+      bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
       className={styles.Calendar}
       style={floatingStyle}
       onMouseDownCapture={(event) => event.preventDefault()}
@@ -128,7 +128,7 @@ export function Calendar({
           w={[40, null, null]}
           h={[40, null, null]}
           r={[8, null, null]}
-          bg='var(--white-100)'
+          bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
           border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
           onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, -1))}
           className={cx(styles.btn, styles.prev)}
@@ -195,7 +195,7 @@ export function Calendar({
           w={[40, null, null]}
           h={[40, null, null]}
           r={[8, null, null]}
-          bg='var(--white-100)'
+          bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
           border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
           onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, 1))}
           className={cx(styles.btn, styles.next)}
@@ -228,7 +228,7 @@ export function Calendar({
                   h={['100%', null, null]}
                   r={[8, null, null]}
                   border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
-                  bg={isCurrentVisibleMonth ? 'var(--primary)' : 'var(--background)'}
+                  bg={isCurrentVisibleMonth ? ['var(--primary)', 'var(--primary)', 'var(--primary)'] : ['var(--background)', 'var(--background)', 'var(--background)']}
                   onClick={() => handleMonthSelect(monthIndex)}
                 >
                   <Text
@@ -290,7 +290,7 @@ export function Calendar({
                     h={[40, null, null]}
                     r={[8, null, null]}
                     className={styles.day}
-                    bg={dayBackground}
+                    bg={[dayBackground, dayBackground, dayBackground]}
                     state={dayState}
                     disabled={isDisabledDay}
                     linkState={[

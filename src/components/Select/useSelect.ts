@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from 'react';
 import type React from 'react';
 
-import { useFieldControl, useMergedRefs } from '../../core';
-import { useOutsideDismiss } from '../../hooks/useOutsideDismiss';
+import { useFieldControl } from '../../core';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { defaultEqual, flattenSelectItems, getFocusedOptionIndex, isValueArray, visibleDropdownItems, type SelectItem, type SelectOption } from './options';
 
@@ -122,10 +121,7 @@ export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined
     const [focusedIndex, setFocusedIndex] = useState(-1);
     const showInlineError = Boolean(displayError) && !open;
 
-    const rootRef = useRef<HTMLElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const dropdownPanelRef = useRef<HTMLDivElement>(null);
-    const triggerAnchorRef = useRef<HTMLDivElement>(null);
     const optionRefs = useRef<Array<HTMLElement | null>>([]);
 
     const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
@@ -193,14 +189,6 @@ export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined
         [onChange, setInternalError, validateValue, valueProp]
     );
 
-    // Escape выключен: у списка свой обработчик клавиш, и два закрытия подряд гасили бы заодно
-    // модалку, в которой список открыт.
-    const dropdownDismissProps = useOutsideDismiss(
-        [rootRef, dropdownPanelRef],
-        closeDropdown,
-        { enabled: open, escape: false },
-    );
-
     useEffect(() => {
         if (!open || focusedIndex < 0) return;
 
@@ -239,18 +227,13 @@ export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined
         });
     }, [dropdownOptions.length, open]);
 
-    const handleContainerClick = useCallback(
-        (e: React.MouseEvent<HTMLElement>) => {
-            if (disabled) return;
-            if ((e.target as HTMLElement).closest?.('[role="listbox"]')) return;
-
+    const handleOpenChange = useCallback((nextOpen: boolean) => {
+        if (nextOpen) {
             focusField();
-
-            if (open) closeDropdown();
-            else openDropdown();
-        },
-        [disabled, focusField, open, closeDropdown, openDropdown]
-    );
+            openDropdown();
+        }
+        else closeDropdown();
+    }, [focusField, openDropdown, closeDropdown]);
 
     const handleDropdownWheelCapture = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
         event.stopPropagation();
@@ -259,9 +242,6 @@ export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined
     const handleDropdownTouchMoveCapture = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
         event.stopPropagation();
     }, []);
-
-    const setWrapperRef = useMergedRefs(rootRef, setMotionNode);
-    const setTriggerRef = useMergedRefs(fieldRef, triggerAnchorRef);
 
     const handleSelect = useCallback(
         (option: SelectOption<T>) => {
@@ -385,13 +365,13 @@ export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined
     };
 
     return {
-        id, fieldRef: setTriggerRef, triggerAnchorRef, dropdownPanelRef, dropdownDismissProps,
+        id, fieldRef,
         errorId, displayError, commentId, listboxId, open, focusedIndex, setFocusedIndex,
         showInlineError, hasSelectedValue, displayContent, dropdownItems, dropdownOptions,
         selectedOption, selectedOptions,
         formValue: value,
         dropdownScrolls, normalizedVisibleOptions, triggerAccessibilityProps, dropdownRef,
-        setWrapperRef, setOptionRef, motionHandlers, motionStyle, revealAttrs, handleContainerClick, handleKeyDown,
+        setWrapperRef: setMotionNode, setOptionRef, motionHandlers, motionStyle, revealAttrs, handleOpenChange, handleKeyDown,
         handleSelect, handleDropdownWheelCapture, handleDropdownTouchMoveCapture, optionIndexOf, closeDropdown,
         isOptionSelected,
     };

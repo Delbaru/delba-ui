@@ -515,7 +515,7 @@ export function MediaDropDown({
                         dir={['column', 'column', 'column']}
                         gap={[8, 8, 8]}
                         className={styles.Dropdown}
-                        bg='var(--white-100)'
+                        bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
                         r={[16, 16, 16]}
                         tlr={[0, 0, 0]}
                         trr={[0, 0, 0]}
@@ -535,7 +535,7 @@ export function MediaDropDown({
                                     w={['100%', null, null]}
                                     p={[24, 16, 24, 16]}
                                     r={[12, 12, 12]}
-                                    bg='var(--white-100)'
+                                    bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
                                     border={['calc(1 * var(--rpx)) dashed var(--line)', null, null]}
                                     className={styles.DropZone}
                                     state={isDragging ? 'dragging' : undefined}
@@ -585,7 +585,7 @@ export function MediaDropDown({
                                         h={[40, 40, 40]}
                                         r={[12, 12, 12]}
                                         p={[0, 12, 0, 12]}
-                                        bg='var(--white-100)'
+                                        bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
                                         border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
                                     />
 

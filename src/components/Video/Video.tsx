@@ -1,6 +1,6 @@
 "use client";
 
-import { MEDIA_QUERY, cx, createLayoutClasses, radiusClasses, resolveRadiusInput, resolveResponsive, sizeClasses, splitRootDomProps, stateLinkProps, type GrowProps, type RadiusInput, type StateLinkInput, type ResponsiveValue, type SizeInput, type SizeValue, type WithRef, useMergedRefs } from '../../core';
+import { MEDIA_QUERY, boxLayout, cx, createLayoutClasses, resolveRadiusInput, resolveResponsive, sizeClasses, splitBoxLayout, splitRootDomProps, stateLinkProps, type BoxLayoutProps, type StateLinkInput, type ResponsiveValue, type SizeValue, type WithRef, useMergedRefs } from '../../core';
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -47,7 +47,7 @@ type VideoRootSizeProps = {
 
 type VideoElementProps = VideoBaseProps & Record<string, unknown>;
 
-export interface VideoProps extends VideoBaseProps, SizeInput, RadiusInput, VideoRootSizeProps, GrowProps, SharedMotionProps {
+export interface VideoProps extends VideoBaseProps, BoxLayoutProps, VideoRootSizeProps, SharedMotionProps {
   className?: string;
   style?: CSSProperties;
   'data-point-events'?: string;
@@ -64,7 +64,7 @@ export interface VideoProps extends VideoBaseProps, SizeInput, RadiusInput, Vide
   objectFit?: ResponsiveValue<ObjectFitKey>;
   objectPosition?: ResponsiveValue<string>;
 
-  bg?: string;
+
 
   linkState?: StateLinkInput;
   showPlayButton?: boolean;
@@ -113,8 +113,9 @@ export function Video({
   onPlay,
   onPause,
   onEnded,
-  ...props
+  ...rest
 }: WithRef<VideoProps, HTMLVideoElement>) {
+  const { box, rest: props } = splitBoxLayout(rest);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const sizeProps = {
@@ -216,10 +217,7 @@ export function Video({
       className={cx(
         styles.VideoRoot,
         ...sizeClasses(c, wrapperSizeProps),
-        ...radiusClasses(c, radiusProps),
-        ...c.value('bg', bg),
-        ...c.value('ratio', aspectRatio),
-        ...c.value('grow', grow),
+        ...boxLayout(c, { ...box, ...radiusProps, bg, aspectRatio, grow }),
         className
       )}
       style={{

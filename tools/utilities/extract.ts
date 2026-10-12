@@ -16,6 +16,8 @@
 
 import ts from 'typescript';
 
+import { BOX_LAYOUT_KEYS } from '../../src/core/layout/box';
+
 import { entryKey, type UtilityEntry } from '../../src/core/utilities/keys';
 import { resolveUtility, type Utility } from '../../src/core/utilities/registry';
 import { domainRules, exactRules, looseRules, type UtilityRule } from '../../src/core/utilities/rules';
@@ -125,16 +127,63 @@ function componentFunction(expr: ts.Expression | undefined): ts.FunctionLikeDecl
   return undefined;
 }
 
-/** Параметр-объект компонента: локальное имя → имя пропа. */
-function paramBindings(fn: ts.SignatureDeclaration): Map<string, string> {
+/** Импортированный адаптер ядра, включая локальное имя импорта. */
+function coreHelper(call: ts.CallExpression, facts: FileFacts): string | undefined {
+  if (!ts.isIdentifier(call.expression)) return undefined;
+  const imported = facts.imports.get(call.expression.text);
+  return imported && /(?:^|\/)core(?:\/layout\/box|\/base\/field-layout)?$/.test(imported.specifier)
+    ? imported.name : undefined;
+}
+
+/** Параметр-объект компонента: локальное имя или доступ к полю → имя пропа. */
+function paramBindings(fn: ts.FunctionLikeDeclaration, facts: FileFacts): Map<string, string> {
   const bindings = new Map<string, string>();
   const first = fn.parameters[0];
-  if (!first || !ts.isObjectBindingPattern(first.name)) return bindings;
-  for (const element of first.name.elements) {
-    if (element.dotDotDotToken || !ts.isIdentifier(element.name)) continue;
-    const prop = element.propertyName ? propName(element.propertyName) : element.name.text;
-    if (prop) bindings.set(element.name.text, prop);
-  }
+  if (!first) return bindings;
+  const bind = (pattern: ts.ObjectBindingPattern) => {
+    for (const element of pattern.elements) {
+      if (element.dotDotDotToken || !ts.isIdentifier(element.name)) continue;
+      const prop = element.propertyName ? propName(element.propertyName) : element.name.text;
+      if (prop) bindings.set(element.name.text, prop);
+    }
+  };
+  if (ts.isObjectBindingPattern(first.name)) bind(first.name);
+  if (!ts.isIdentifier(first.name) || !fn.body) return bindings;
+
+  // Известные адаптеры ядра сохраняют имена пропсов. Произвольные вызовы непрозрачны.
+  const objects = new Set([first.name.text]);
+  const isPropsObject = (expr: ts.Expression): boolean => {
+    const node = unwrap(expr);
+    return ts.isIdentifier(node) && objects.has(node.text);
+  };
+  const scan = (node: ts.Node): void => {
+    if (ts.isFunctionLike(node)) return;
+    if (ts.isVariableDeclaration(node) && node.initializer) {
+      const init = unwrap(node.initializer);
+      if (ts.isIdentifier(node.name) && isPropsObject(init)) objects.add(node.name.text);
+      if (ts.isObjectBindingPattern(node.name) && isPropsObject(init)) bind(node.name);
+      if (ts.isCallExpression(init)) {
+        const argument = init.arguments[0];
+        const helper = coreHelper(init, facts);
+        if (helper === 'splitBoxLayout' && argument && isPropsObject(argument) && ts.isObjectBindingPattern(node.name)) {
+          for (const element of node.name.elements) {
+            const key = element.propertyName ? propName(element.propertyName) : element.name.getText();
+            if ((key === 'box' || key === 'rest') && ts.isIdentifier(element.name)) objects.add(element.name.text);
+          }
+        }
+        if (helper === 'resolveFieldLayout' && argument && ts.isIdentifier(node.name)) {
+          const input = unwrap(argument);
+          if (isPropsObject(input) || (ts.isObjectLiteralExpression(input)
+            && input.properties.some((property) => ts.isSpreadAssignment(property) && isPropsObject(property.expression)))) {
+            objects.add(node.name.text);
+          }
+        }
+      }
+    }
+    if (ts.isPropertyAccessExpression(node) && isPropsObject(node.expression)) bindings.set(node.getText(), node.name.text);
+    ts.forEachChild(node, scan);
+  };
+  scan(fn.body);
   return bindings;
 }
 
@@ -247,7 +296,7 @@ const BUILDER_METHOD = 'value';
 
 function collectComponents(facts: FileFacts): void {
   const register = (name: string, fn: ts.FunctionLikeDeclaration) => {
-    const params = paramBindings(fn);
+    const params = paramBindings(fn, facts);
     if (!params.size || !fn.body) return;
     const forwards = facts.components.get(name) ?? [];
     facts.components.set(name, forwards);
@@ -266,6 +315,8 @@ function collectComponents(facts: FileFacts): void {
         if (depth > MAX_DEPTH || seen.has(node)) return;
         seen.add(node);
         if (ts.isPropertyAccessExpression(node)) {
+          const param = params.get(node.getText());
+          if (param) { found.add(param); return; }
           const base = unwrap(node.expression);
           const init = ts.isIdentifier(base) ? localConsts.get(base.text) : undefined;
           const object = init ? unwrap(init) : undefined;
@@ -300,6 +351,7 @@ function collectComponents(facts: FileFacts): void {
     const isDirect = (expr: ts.Expression): string | null => {
       const node = unwrap(expr);
       if (ts.isIdentifier(node)) return params.get(node.text) ?? null;
+      if (ts.isPropertyAccessExpression(node)) return params.get(node.getText()) ?? null;
       if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken) return isDirect(node.left);
       return null;
     };
@@ -310,6 +362,12 @@ function collectComponents(facts: FileFacts): void {
     };
 
     const walkBody = (node: ts.Node, jsxTag: string | null): void => {
+      // Общий стилизатор поля применяет коробку напрямую, даже если p также проброшен в helper pl.
+      if (ts.isCallExpression(node) && coreHelper(node, facts) === 'fieldLayoutClasses') {
+        for (const prop of [...BOX_LAYOUT_KEYS, 'color', 'placeholderColor']) {
+          if (prop !== 'grow' && prop !== 'aspectRatio') forwards.push({ param: prop, to: prop, tag: null, direct: true });
+        }
+      }
       if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
         const tag = tagName(node);
         for (const attr of node.attributes.properties) {

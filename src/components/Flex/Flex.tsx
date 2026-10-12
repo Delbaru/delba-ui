@@ -51,7 +51,7 @@ export interface FlexProps
   style?: CSSProperties;
   state?: ComponentStateValue;
   /** Тег узла без `href`: `header`, `nav`, `footer`… */
-  as?: 'div' | 'header' | 'nav' | 'footer' | 'main' | 'aside' | 'section' | 'ul' | 'li';
+  as?: 'div' | 'header' | 'nav' | 'footer' | 'main' | 'aside' | 'section' | 'ul' | 'li' | 'dl';
 
   gap?: ResponsiveValue<number>;
   rowGap?: ResponsiveValue<number>;

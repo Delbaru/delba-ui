@@ -9,7 +9,7 @@ import {
 } from 'react';
 import type React from 'react';
 import styles from './Textarea.module.scss';
-import { cx, createLayoutClasses, stateProps, stateLinkProps, useFieldControl, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
+import { cx, createLayoutClasses, stateProps, stateLinkProps, useFieldControl, fieldHelperPaddingLeft, type BoxLayoutProps, type ComponentStateValue, type StateLinkInput, type ResponsiveValue, type WithRef, fieldLayoutClasses, fieldRootLayoutClasses, resolveFieldLayout, splitBoxLayout } from '../../core';
 import { resolveSeedField } from '../../core/base/seed';
 import type { FieldValueChangeHandler } from '../../core';
 import { Text } from '../Text';
@@ -31,12 +31,8 @@ export interface TextareaProps
         React.TextareaHTMLAttributes<HTMLTextAreaElement>,
         'color' | 'placeholder' | 'width' | 'minWidth' | 'maxWidth' | 'height' | 'minHeight' | 'maxHeight'
     >,
-    LayoutSpaceProps,
-    RadiusPropsShort,
-    BorderStyleProps,
-    GrowProps,
-    SharedMotionProps,
-    SizePropsShort {
+    BoxLayoutProps,
+    SharedMotionProps {
     style?: CSSProperties;
     /** Настоящее событие ввода нативного textarea. */
     onChange?: React.ChangeEventHandler<HTMLTextAreaElement>;
@@ -46,7 +42,7 @@ export interface TextareaProps
     variant?: ResponsiveValue<VariantKey>;
     size?: ResponsiveValue<SizeKey>;
 
-    bg?: string;
+
     color?: string;
 
     placeholder?: string;
@@ -106,79 +102,46 @@ export interface TextareaProps
     fieldClassName?: string;
 }
 
-export function Textarea({
-    ref,
-    className = '',
-    style,
-    variant,
-    size,
-    p,
-    pt,
-    pr,
-    pb,
-    pl,
-    m,
-    mt,
-    mr,
-    mb,
-    ml,
-    r,
-    tlr,
-    trr,
-    brr,
-    blr,
-    borderTLR,
-    borderTRR,
-    borderBRR,
-    borderBLR,
-    border,
-    borderC,
-    borderS,
-    borderW,
-    borderT,
-    borderR,
-    borderB,
-    borderL,
-    grow,
-    perspective3d,
-    parallax,
-    animate,
-    w,
-    minW,
-    maxW,
-    h,
-    minH,
-    maxH,
-    bg,
-    color,
-    placeholder,
-    placeholderColor,
-    seed,
-    loading = false,
-    label,
-    labelColor,
-    comment,
-    rows = 3,
-    length,
-    showCount,
-    countPlacement = 'inside',
-    error,
-    collapse,
-    id: idProp,
-    onChange,
-    onValueChange,
-    onFocus,
-    onBlur,
-    required,
-    emptyMessage,
-    validate: validateProp,
-    value: _value,
-    state,
-    linkState,
-    'data-point-events': dataPointEvents,
-    fieldClassName,
-    ...rest
-}: WithRef<TextareaProps, HTMLTextAreaElement>) {
+export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
+    const { box, rest: fieldProps } = splitBoxLayout(props);
+    const {
+        ref,
+        className = '',
+        style,
+        variant,
+        size,
+        perspective3d,
+        parallax,
+        animate,
+        color,
+        placeholder,
+        placeholderColor,
+        seed,
+        loading = false,
+        label,
+        labelColor,
+        comment,
+        rows = 3,
+        length,
+        showCount,
+        countPlacement = 'inside',
+        error,
+        collapse,
+        id: idProp,
+        onChange,
+        onValueChange,
+        onFocus,
+        onBlur,
+        required,
+        emptyMessage,
+        validate: validateProp,
+        value: _value,
+        state,
+        linkState,
+        'data-point-events': dataPointEvents,
+        fieldClassName,
+        ...rest
+    } = fieldProps;
     const lengthValidate = useCallback(
         (value: string): string | undefined => {
             if (length?.min != null && value.length > 0 && value.length < length.min)
@@ -300,19 +263,7 @@ export function Textarea({
         setMotionNode(node);
     }, [setMotionNode]);
 
-    const hasExplicitSize = w !== undefined || minW !== undefined || maxW !== undefined || h !== undefined || minH !== undefined || maxH !== undefined;
-    const resolvedVariant = variant ?? 'primary';
-    const resolvedSize = size ?? (hasExplicitSize ? undefined : 'default');
-
-    const layoutProps = {
-        variant: resolvedVariant, size: resolvedSize,
-        p, pt, pr, pb, pl, m, mt, mr, mb, ml,
-        r, tlr, trr, brr, blr,
-        borderTLR, borderTRR, borderBRR, borderBLR,
-        border, borderC, borderS, borderW, borderT, borderR, borderB, borderL,
-        w, minW, maxW, h, minH, maxH,
-        bg, color, placeholderColor,
-    };
+    const layoutProps = resolveFieldLayout({ ...box, variant, size, color, placeholderColor });
     const fieldClasses = fieldLayoutClasses(c, layoutProps);
 
     const content = (
@@ -320,7 +271,7 @@ export function Textarea({
             ref={setWrapperRef}
             dir={["column", "column", "column"]}
             gap={[8, 4, 8]}
-            className={cx(styles.TextareaWrapper, ...c.value('grow', grow), className)}
+            className={cx(styles.TextareaWrapper, ...fieldRootLayoutClasses(c, box), className)}
             style={{ ...(motionStyle ?? null), ...style }}
             {...revealAttrs}
             data-point-events={dataPointEvents}
@@ -337,7 +288,7 @@ export function Textarea({
                 </Flex>
             )}
             <div
-                className={cx(styles.Textarea, ...fieldClasses, ...c.value('grow', grow), fieldClassName)}
+                className={cx(styles.Textarea, ...fieldClasses, ...c.value('grow', box.grow), fieldClassName)}
                 data-has-counter={(showCounter && countPlacement === 'inside') || undefined}
                 data-inline-error={inlineError ? 'true' : undefined}
                 {...stateProps(state, displayError && 'error', isFieldFocused && 'active', hasValue && 'filled')}

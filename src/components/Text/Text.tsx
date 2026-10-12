@@ -10,7 +10,7 @@ import type { TextRole, TextVariantName } from '../../core/base/typography';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { resolveAnimation } from './animations/resolveAnimation';
-import type { AnimationInput } from './animations/types';
+import type { AnimationInput, TextAnimate } from './animations/types';
 import type { LineHeightValue } from './typography';
 import { resolveTextContent, type TextFormat } from './formatContent';
 import { bindTextContent } from './nonBreaking';
@@ -31,11 +31,12 @@ export interface TextProps
   extends Omit<React.HTMLAttributes<HTMLElement>, 'color'>,
     Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
     Omit<BoxLayoutProps, 'aspectRatio'>,
-    SharedMotionProps<ResponsiveInput<AnimationInput>> {
+    SharedMotionProps<ResponsiveInput<AnimationInput> | TextAnimate> {
   children?: React.ReactNode;
   style?: CSSProperties;
   format?: ResponsiveValue<TextFormat>;
-  animate?: AppearanceAnimate | ResponsiveInput<AnimationInput>;
+  /** Общий reveal или анимация текста: `{ when: 'inView', effect: 'counter' }`, `{ when: 'change', effect: 'textSlide' }`. */
+  animate?: AppearanceAnimate | ResponsiveInput<AnimationInput> | TextAnimate;
   required?: boolean;
 
   newTab?: boolean;

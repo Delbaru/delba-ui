@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { isMotionTimingName, motionTimingVariable } from '../src/core/base/timing';
+import { isMotionDistanceName, motionDistanceVariable, normalizeMotionDistance } from '../src/core/base/distance';
 import type { UiMotion } from './config';
 
 const KIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -24,7 +25,7 @@ function assertOnlyKeys(value: Record<string, unknown>, allowed: readonly string
 export function validateMotion(value: unknown): asserts value is UiMotion | undefined {
   if (value === undefined) return;
   if (!isRecord(value)) throw new Error('motion must be an object');
-  assertOnlyKeys(value, ['timing'], 'motion');
+  assertOnlyKeys(value, ['timing', 'distance'], 'motion');
 
   if (!('timing' in value)) throw new Error('motion.timing is required');
   const timing = value.timing;
@@ -38,6 +39,18 @@ export function validateMotion(value: unknown): asserts value is UiMotion | unde
       throw new Error(`motion.timing.${name} must be a finite non-negative number of seconds`);
     }
   }
+
+  if ('distance' in value) {
+    const distance = value.distance;
+    if (!isRecord(distance)) throw new Error('motion.distance must be an object');
+    if (Object.keys(distance).length === 0) throw new Error('motion.distance must contain at least one distance');
+    for (const [name, amount] of Object.entries(distance)) {
+      if (!isMotionDistanceName(name)) throw new Error(`motion.distance.${name} must be a camelCase name`);
+      if (normalizeMotionDistance(amount) === null || (typeof amount === 'number' && amount < 0) || (typeof amount === 'string' && !amount.endsWith('%'))) {
+        throw new Error(`motion.distance.${name} must be a finite non-negative number of rpx or a non-negative percentage`);
+      }
+    }
+  }
 }
 
 /** Render the global timing variables; an unset section emits only a comment for existing themes. */
@@ -46,6 +59,9 @@ export function motionScss(motion?: UiMotion): string {
   if (!motion) return EMPTY_MOTION;
 
   const declarations = Object.entries(motion.timing).map(([name, seconds]) => `  ${motionTimingVariable(name)}: ${seconds}s;`);
+  for (const [name, value] of Object.entries(motion.distance ?? {})) {
+    declarations.push(`  ${motionDistanceVariable(name)}: ${typeof value === 'number' ? `calc(var(--rpx) * ${value})` : value};`);
+  }
   return `// AUTO-GENERATED: tools/motion.ts (ui.config.ts). Do not edit.\n:root {\n${declarations.join('\n')}\n}\n`;
 }
 

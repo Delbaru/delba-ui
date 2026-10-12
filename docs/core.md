@@ -10,6 +10,7 @@
 | Что | Где | Зачем |
 |---|---|---|
 | `splitBoxLayout`, `boxLayout` | `src/core/layout/box.ts` | пропы коробки (отступы, размеры, радиусы, рамка, фон, `grow`) одинаково у любого корня |
+| `resolveFieldLayout`, `fieldLayoutClasses` | `src/core/base/field-layout.ts` | общие умолчания и классы Input/Textarea/Select; размеры и отступы отделяет тот же splitBoxLayout, связь веток типов Select сохраняется |
 | `resolveResponsive`, `getBreakpointIndex`, `resolveResponsiveAtBreakpoint` | `src/core/base/responsive.ts` | кортеж `[desktop, mobile, tablet]` → значения; `null` — пропуск |
 | `ResponsiveInput<T>`, `ResponsiveValue<T>` | там же | вход помощников против типа пропа; строгий режим включает проект через `UiRules` |
 | `createLayoutClasses`, `utilityClasses`, `MEDIA`, `UTILITIES` | `src/core/layout`, `src/core/utilities` | имя класса утилиты = имя пропа; реестр — единственный источник правды |
@@ -73,6 +74,20 @@ rAF-цикл прогресса крутится только пока есть 
 Одна прокрутка за раз: новая прерывает недоехавшую, её обещание даёт `{ status: 'interrupted' }`;
 возвращает `Promise<{ status: 'finished' | 'interrupted' }>` (когда в ките появится `Transition`,
 тип им заменится — форма результата та же).
+
+## Модальный слой
+
+`ModalProvider` удерживает общую блокировку прокрутки документа до удаления последнего окна,
+включая выход. Внутренний `Modal/scroll-lock.ts` считает аренды нескольких провайдеров,
+сохраняет inline overflow/padding и их priorities, компенсирует только реально освободившуюся
+ширину scrollbar. Виджет не меняет html/body. Внутренняя прокрутка окна остаётся доступной.
+
+`Modal trigger={…}` — декларативное открытие через тот же стек. Управляемый вариант принимает
+`open/onOpenChange`, неуправляемый — `defaultOpen`. Триггер получает ID/ARIA и сохраняет свой
+обработчик; отменённый клик окно не открывает. `closeOn={{ breakpoint: 'desktop' }}` закрывает
+мобильную панель при смене раскладки, `scroll={{ gutter: false, p: […] }}` настраивает единственную
+внутреннюю прокрутку. `animate={{ when: 'open', effect: 'down', distance: 'full' }}` ведёт вход и выход;
+стек освобождает прокрутку после выхода. `present()` остаётся для программного открытия.
 
 ## Фокус
 
@@ -201,6 +216,22 @@ placeholder })` — все решения двери в одной чистой 
 
 ## Появление по скроллу
 
+`motionTimeCss` и `readMotionTimeMs` (`core/base/timing.ts`) переводят `MotionTime` в CSS и
+миллисекунды соответственно. DOM-чтение выполняется после mount на узле анимации, чтобы учитывать
+локальную тему. Число в новом API означает секунды. Имена задаёт конфиг проекта.
+
+Смена содержимого использует тот же объектный договор:
+
+```tsx
+<Img animate={{ when: 'change', effect: 'veil', direction, duration: 'slow' }} … />
+<Text animate={{ when: 'change', effect: 'textSlide', duration: 'fast' }}>{title}</Text>
+<Text animate={{ when: 'inView', effect: 'counter', duration: 'slow' }}>70%</Text>
+```
+
+`data-reveal-skip` исключает прямого ребёнка из каскада: декор не получает ход и не занимает
+шаг задержки. Ребёнок со своим reveal также не занимает шаг родительского load-каскада.
+Observer отслеживает добавление/удаление детей и изменение маркера у прямых детей.
+
 Общий `animate` у компонентов с SharedMotion (`src/core/reveal`, хук `useReveal` внутри `useSharedMotion`):
 
 ```tsx
@@ -213,9 +244,10 @@ placeholder })` — все решения двери в одной чистой 
 через CSS с первого кадра, `inView` — через observer при входе в экран. Прежний `reveal`, его ключи и tuple
 (`[key, options]`) продолжают работать без изменения семантики.
 
-Ключи: `fade`, `up` (снизу), `left` / `right` (слева / справа), `scale` (из 0.96), `blur`; все — с fade.
+Ключи: `fade`, `up` (снизу), `down` (сверху), `left` / `right` (слева / справа), `scale` (из 0.96), `blur`; все — с fade.
 Опции (`RevealOptions`): `stagger` (нет — ход у самого узла), `delay` (`0`), `duration`
-(токен `--t-d-slow`, кривая `--t-t-f-cubic-bezier`), `distance` (rpx, `32`), `once` (`true`; `false` —
+(токен `--t-d-slow`, кривая `--t-t-f-cubic-bezier`), `distance` (число rpx, процент собственного размера
+или имя из `ui.config.motion.distance`; по умолчанию `32`), `once` (`true`; `false` —
 прячет снова, когда элемент уходит вниз), `threshold` (`0`), `rootMargin` (`'0px'`).
 `fade` (`true`; `false` — без прозрачности: узел виден с первого кадра и только доезжает), `start`
 (`'view'`; `'load'` — ход с первой отрисовки чистым CSS, без JS и наблюдателя).

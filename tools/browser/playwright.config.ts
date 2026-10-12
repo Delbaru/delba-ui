@@ -11,7 +11,8 @@ export default defineConfig({
   testDir: '.',
   testMatch: ['regressions.spec.ts', 'ssr.spec.ts'],
   fullyParallel: true,
-  workers: 2,
+  // Local Windows browsers share the desktop resources; keep the complete gate stable there.
+  workers: process.platform === 'win32' && !process.env.CI ? 1 : 2,
   reporter: 'line',
   outputDir: '.test-results',
   use: {

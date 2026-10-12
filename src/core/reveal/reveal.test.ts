@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import path from 'node:path';
+import { compile } from 'sass';
 
 import {
   resolveReveal,
@@ -10,7 +12,9 @@ import {
   revealStyle,
   isAppearanceAnimate,
   isInViewAnimate,
+  isOpenAnimate,
   resolveRevealInput,
+  isRevealCascadeChild,
   withoutStagger,
   type RevealInput,
   type RevealOptions,
@@ -55,6 +59,8 @@ test('inView animate shares reveal normalization and wins over the legacy reveal
   assert.equal(isInViewAnimate(animate), true);
   assert.equal(isAppearanceAnimate(animate), true);
   assert.equal(isAppearanceAnimate({ when: 'load', effect: 'fade' }), true);
+  assert.equal(isOpenAnimate({ when: 'open', effect: 'down' }), true);
+  assert.equal(isAppearanceAnimate({ when: 'open', effect: 'down' }), false);
   assert.equal(isInViewAnimate({ when: 'mount', effect: 'up' }), false);
   assert.equal(isInViewAnimate({ when: 'load', effect: 'fade' }), false);
   assert.equal(isInViewAnimate({ when: 'inView', effect: 'spin' }), false);
@@ -93,15 +99,53 @@ test('revealAttrs: каскад помечается отдельным атри
   });
 });
 
+test('cascade eligibility skips marked nodes and nodes with their own reveal', () => {
+  const attrs = (values: Record<string, string | null>) => ({ getAttribute: (name: string) => values[name] ?? null });
+  assert.equal(isRevealCascadeChild(attrs({})), true);
+  assert.equal(isRevealCascadeChild(attrs({ 'data-reveal-skip': '' })), false);
+  assert.equal(isRevealCascadeChild(attrs({ 'data-reveal': 'up' })), false);
+  assert.equal(isRevealCascadeChild(attrs({ 'data-reveal-state': 'wait' })), false);
+  // Чужое значение не объявляет собственного reveal и остаётся участником каскада.
+  assert.equal(isRevealCascadeChild(attrs({ 'data-reveal': 'project-note' })), true);
+});
+
 test('revealStyle: только заданное — остальное берёт тема', () => {
   assert.deepEqual(revealStyle(resolveReveal('up')), {});
   assert.deepEqual(revealStyle(resolveReveal(['left', { duration: 0.4, delay: 0.2, distance: 64 }])), {
-    '--reveal-duration': '400ms', '--reveal-delay': '200ms', '--reveal-distance': '64',
+    '--reveal-duration': '400ms', '--reveal-delay': '200ms', '--reveal-distance': 'calc(var(--rpx) * 64)',
   });
   assert.deepEqual(revealStyle(resolveReveal(['up', { fade: false }])), { '--reveal-o': '1' });
   // Шаг каскада нужен CSS только при старте с загрузки: по экрану задержки ставит наблюдатель.
   assert.deepEqual(revealStyle(resolveReveal(['up', { stagger: 0.08 }])), {});
   assert.deepEqual(revealStyle(resolveReveal(['up', { stagger: 0.08, start: 'load' }])), { '--reveal-step': '80ms' });
+});
+
+test('down enters from above and distances keep rpx, percent and named token semantics', () => {
+  const down = resolveReveal({ effect: 'down', distance: 'full' });
+  assert.equal(down?.key, 'down');
+  assert.deepEqual(revealAttrs(down), { 'data-reveal': 'down' });
+  assert.deepEqual(revealStyle(down), { '--reveal-distance': 'var(--t-m-distance-full, calc(var(--rpx) * 32))' });
+  assert.deepEqual(revealStyle(resolveReveal({ effect: 'down', distance: '100%' })), { '--reveal-distance': '100%' });
+  assert.deepEqual(revealStyle(resolveReveal({ effect: 'down', distance: 24 })), { '--reveal-distance': 'calc(var(--rpx) * 24)' });
+  assert.deepEqual(revealStyle(resolveReveal({ effect: 'down', distance: 'small' })), { '--reveal-distance': 'var(--t-m-distance-small, calc(var(--rpx) * 32))' });
+  assert.equal(resolveReveal({ effect: 'down', distance: 'calc(100vh)' })?.distance, null);
+  assert.equal(resolveReveal({ effect: 'down', distance: '-100%' })?.distance, null);
+});
+
+test('compiled reveal CSS starts down above, reverses on close and removes motion on request', () => {
+  const css = compile(path.join(import.meta.dirname, '_reveal.scss')).css;
+  assert.match(css, /\[data-reveal=down\] \{\s*--reveal-t: 0 calc\(var\(--reveal-shift\) \* -1\);/);
+  assert.match(css, /\[data-reveal-state=out\] \{\s*animation: ui-reveal-out [^;]+ reverse both;/);
+  assert.match(css, /@media screen and \(scripting: enabled\) and \(prefers-reduced-motion: reduce\) \{[\s\S]*\[data-reveal-state\] \{\s*animation: none;/);
+});
+
+test('load cascade index counts only eligible children', () => {
+  const css = compile(path.join(import.meta.dirname, '_reveal.scss')).css;
+  const firstIndex = css.split('\n').find((line) => line.includes(':nth-child(1 of'));
+  assert.ok(firstIndex);
+  assert.match(firstIndex, /\[data-reveal-skip\]/);
+  assert.match(firstIndex, /\[data-reveal-state\]/);
+  assert.match(firstIndex, /\[data-reveal=fade\]/);
 });
 
 test('revealDelays: delay + порядок × stagger', () => {

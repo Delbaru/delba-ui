@@ -8,234 +8,191 @@
   .SelectWrapper {
       position: relative;
       transition: var(--t-fast);
+  }
 
-      &.DropdownPortal {
+  .Select {
+      position: relative;
+      transition: var(--t-fast);
+      cursor: pointer;
+
+      .SelectTrigger {
+          min-width: 0;
+          cursor: inherit;
+          outline: none;
+      }
+
+      .TriggerContent {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          overflow: hidden;
+          color: inherit;
+      }
+
+      .TriggerText {
+          flex: 1;
+          min-width: 0;
+          color: inherit;
+          font: m.role-font(body);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+      }
+
+      .Chevron {
+          flex-shrink: 0;
           pointer-events: none;
+          transition:
+              transform var(--t-d-fast);
       }
 
-      .selectVariantScope {
-          display: contents;
+      .Dropdown {
+          background: var(--white-100);
+          border: calc(1 * var(--rpx)) solid var(--line);
+          border-top: none;
+          // Скругления — ПЕРЕМЕННЫМИ, а не числами: пресет-обёртка вправе сказать, какой формы
+          // её выпадашка, а править ради этого правило атома нельзя — оно общее на все селекты
+          // приложения. Дефолты повторяют прежний вид один в один.
+          border-radius:
+              var(--select-dropdown-radius-top, 0) var(--select-dropdown-radius-top, 0)
+              var(--select-dropdown-radius, var(--s-16)) var(--select-dropdown-radius, var(--s-16));
+          overflow: hidden;
+          width: 100%;
+          max-height: min(
+              calc(var(--select-height) * var(--select-visible-options)),
+              var(--floating-available, 100vh)
+          );
       }
 
-      .Select {
-          position: relative;
-          transition: var(--t-fast);
-          cursor: pointer;
+      // Прокрутка и полоса под неё включаются, ТОЛЬКО когда строк больше, чем помещается в
+      // окно списка (`data-scrolls` ставит сам компонент). `scrollbar-gutter: stable` резервирует
+      // место под полосу безусловно — у короткого списка это пустая колонка справа, которая
+      // читается как «здесь что-то прокручивается», хотя прокручивать нечего.
+      .DropdownScroll {
+          overflow-x: hidden;
+          overflow-y: auto;
+          width: 100%;
+          max-height: inherit;
 
-          .SelectTrigger {
-              min-width: 0;
-              cursor: inherit;
-              outline: none;
+          &[data-scrolls] {
+              overscroll-behavior: contain;
+              -webkit-overflow-scrolling: touch;
+              scrollbar-gutter: stable;
           }
 
-          .TriggerContent {
+          &::-webkit-scrollbar-thumb {
+              background: var(--primary);
+          }
+      }
+
+      .GroupLabel {
+          padding: calc(12 * var(--rpx)) calc(16 * var(--rpx)) calc(4 * var(--rpx));
+          font-weight: 600;
+          pointer-events: none;
+
+          @media (min-width: 768px) and (max-width: 1023px) {
+              padding: calc(12 * var(--rpx)) calc(16 * var(--rpx)) calc(4 * var(--rpx));
+          }
+
+          @media (min-width: 1024px) {
+              padding: calc(12 * var(--rpx)) calc(24 * var(--rpx)) calc(4 * var(--rpx));
+          }
+      }
+
+      .Option {
+          cursor: pointer;
+          min-height: var(--select-height);
+          transition:
+              background var(--t-d-fast),
+              color var(--t-d-fast);
+
+          // Маркер множественного выбора. Рисунок повторяет квадрат атома `Checkbox`
+          // (24, r8, нить --text-muted, залитый --primary с белой галочкой), но живёт здесь:
+          // рамка и заливка ОБЯЗАНЫ переключаться состоянием строки, а проп `border`
+          // у Flex садится инлайном и без `!important` уже не перебивается (§9.3).
+          .OptionCheck {
+              flex-shrink: 0;
+              border: calc(1 * var(--rpx)) solid var(--text-muted);
+              transition:
+                  background var(--t-d-fast),
+                  border-color var(--t-d-fast);
+
+              .OptionCheckIcon {
+                  opacity: 0;
+                  transition: opacity var(--t-d-fast);
+              }
+          }
+
+          .OptionContent {
               flex: 1;
               min-width: 0;
               display: flex;
               align-items: center;
-              overflow: hidden;
+              overflow: visible;
               color: inherit;
           }
 
-          .TriggerText {
+          .OptionLabel {
               flex: 1;
               min-width: 0;
               color: inherit;
               font: m.role-font(body);
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
+              white-space: normal;
+              overflow: visible;
+              text-overflow: clip;
+              overflow-wrap: anywhere;
+          }
+
+          &:hover,
+          &[state~='focused'],
+          &[state~='hover'],
+          &[state~='selected'] {
+              background: var(--line);
+          }
+
+          &[state~='selected'] .OptionCheck {
+              background: var(--primary);
+              border-color: var(--primary);
+
+              .OptionCheckIcon {
+                  opacity: 1;
+              }
+          }
+      }
+
+      &[state~='error'] {
+          border-color: var(--error);
+      }
+
+      &[state~='open'] {
+          border-color: var(--primary);
+      }
+
+      &[state~='disabled'] {
+          cursor: not-allowed;
+
+          .TriggerText {
+              color: var(--text-muted);
           }
 
           .Chevron {
-              flex-shrink: 0;
-              pointer-events: none;
-              transition:
-                  transform var(--t-d-fast);
+              opacity: 0.4;
+          }
+      }
+
+      &[state~='open'] {
+          .Chevron {
+              transform: rotate(180deg);
           }
 
-          .DropdownWrapper {
-              z-index: var(--z-under-floating);
-              position: fixed;
-              width: calc(var(--floating-anchor-width) + var(--rpx) * 2);
-              margin-left: calc(-1 * var(--rpx));
-              display: grid;
-              grid-template-rows: 0fr;
-              overflow: hidden;
-              pointer-events: none;
-              // will-change: grid-template-rows убран — layout-свойства не промоутятся в отдельный слой,
-              // хинт бесполезен (только зря держит бюджет композитора).
-              transition:
-                  grid-template-rows var(--t-d-fast);
-          }
+      }
 
-          .DropdownInner {
-              min-height: 0;
-              overflow: hidden;
-              opacity: 0;
-              transform: translateY(calc(-10 * var(--rpx)));
-              will-change: transform, opacity;
-              transition:
-                  transform var(--t-d-fast),
-                  opacity var(--t-d-fast);
-          }
+      &[state~='open'][state~='error'] {
+          border-color: var(--error) !important;
 
           .Dropdown {
-              background: var(--white-100);
-              border: calc(1 * var(--rpx)) solid var(--line);
-              border-top: none;
-              // Скругления — ПЕРЕМЕННЫМИ, а не числами: пресет-обёртка вправе сказать, какой формы
-              // её выпадашка, а править ради этого правило атома нельзя — оно общее на все селекты
-              // приложения. Дефолты повторяют прежний вид один в один.
-              border-radius:
-                  var(--select-dropdown-radius-top, 0) var(--select-dropdown-radius-top, 0)
-                  var(--select-dropdown-radius, var(--s-16)) var(--select-dropdown-radius, var(--s-16));
-              overflow: hidden;
-              width: 100%;
-              max-height: min(
-                  calc(var(--select-height) * var(--select-visible-options)),
-                  var(--floating-available, 100vh)
-              );
-          }
-
-          // Прокрутка и полоса под неё включаются, ТОЛЬКО когда строк больше, чем помещается в
-          // окно списка (`data-scrolls` ставит сам компонент). `scrollbar-gutter: stable` резервирует
-          // место под полосу безусловно — у короткого списка это пустая колонка справа, которая
-          // читается как «здесь что-то прокручивается», хотя прокручивать нечего.
-          .DropdownScroll {
-              overflow-x: hidden;
-              overflow-y: auto;
-              width: 100%;
-              max-height: inherit;
-
-              &[data-scrolls] {
-                  overscroll-behavior: contain;
-                  -webkit-overflow-scrolling: touch;
-                  scrollbar-gutter: stable;
-              }
-
-              &::-webkit-scrollbar-thumb {
-                  background: var(--primary);
-              }
-          }
-
-          .GroupLabel {
-              padding: calc(12 * var(--rpx)) calc(16 * var(--rpx)) calc(4 * var(--rpx));
-              font-weight: 600;
-              pointer-events: none;
-
-              @media (min-width: 768px) and (max-width: 1023px) {
-                  padding: calc(12 * var(--rpx)) calc(16 * var(--rpx)) calc(4 * var(--rpx));
-              }
-
-              @media (min-width: 1024px) {
-                  padding: calc(12 * var(--rpx)) calc(24 * var(--rpx)) calc(4 * var(--rpx));
-              }
-          }
-
-          .Option {
-              cursor: pointer;
-              min-height: var(--select-height);
-              transition:
-                  background var(--t-d-fast),
-                  color var(--t-d-fast);
-
-              // Маркер множественного выбора. Рисунок повторяет квадрат атома `Checkbox`
-              // (24, r8, нить --text-muted, залитый --primary с белой галочкой), но живёт здесь:
-              // рамка и заливка ОБЯЗАНЫ переключаться состоянием строки, а проп `border`
-              // у Flex садится инлайном и без `!important` уже не перебивается (§9.3).
-              .OptionCheck {
-                  flex-shrink: 0;
-                  border: calc(1 * var(--rpx)) solid var(--text-muted);
-                  transition:
-                      background var(--t-d-fast),
-                      border-color var(--t-d-fast);
-
-                  .OptionCheckIcon {
-                      opacity: 0;
-                      transition: opacity var(--t-d-fast);
-                  }
-              }
-
-              .OptionContent {
-                  flex: 1;
-                  min-width: 0;
-                  display: flex;
-                  align-items: center;
-                  overflow: visible;
-                  color: inherit;
-              }
-
-              .OptionLabel {
-                  flex: 1;
-                  min-width: 0;
-                  color: inherit;
-                  font: m.role-font(body);
-                  white-space: normal;
-                  overflow: visible;
-                  text-overflow: clip;
-                  overflow-wrap: anywhere;
-              }
-
-              &:hover,
-              &[state~='focused'],
-              &[state~='hover'],
-              &[state~='selected'] {
-                  background: var(--line);
-              }
-
-              &[state~='selected'] .OptionCheck {
-                  background: var(--primary);
-                  border-color: var(--primary);
-
-                  .OptionCheckIcon {
-                      opacity: 1;
-                  }
-              }
-          }
-
-          &[state~='error'] {
               border-color: var(--error);
-          }
-
-          &[state~='open'] {
-              border-color: var(--primary);
-          }
-
-          &[state~='disabled'] {
-              cursor: not-allowed;
-
-              .TriggerText {
-                  color: var(--text-muted);
-              }
-
-              .Chevron {
-                  opacity: 0.4;
-              }
-          }
-
-          &[state~='open'] {
-              .Chevron {
-                  transform: rotate(180deg);
-              }
-
-              .DropdownWrapper {
-                  grid-template-rows: 1fr;
-                  pointer-events: auto;
-              }
-
-              .DropdownInner {
-                  opacity: 1;
-                  transform: translateY(0);
-              }
-          }
-
-          &[state~='open'][state~='error'] {
-              border-color: var(--error) !important;
-
-              .Dropdown {
-                  border-color: var(--error);
-              }
           }
       }
   }

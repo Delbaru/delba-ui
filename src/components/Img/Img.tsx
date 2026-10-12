@@ -5,7 +5,7 @@ import Image, { getImageProps, type ImageProps } from 'next/image';
 import { useMemo, useState, type CSSProperties } from 'react';
 import type React from 'react';
 
-import { MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveLinkProps, resolveResponsive, shouldUseNextLink, sizeClasses, splitRootDomProps, stateLinkProps, useMergedRefs, type GrowProps, type RadiusInput, type ResponsiveValue, type SizeInput, type SizeValue, type StateLinkInput, type WithRef } from '../../core';
+import { MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveLinkProps, resolveResponsive, shouldUseNextLink, sizeClasses, splitBoxLayout, splitRootDomProps, stateLinkProps, useMergedRefs, type BoxLayoutProps, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef } from '../../core';
 import { imageSizes } from '../../core/base/scale';
 import { SCALE } from '../../core/scale';
 import { useFancybox } from '../../hooks/useFancybox';
@@ -62,7 +62,7 @@ type ImgRootSizeProps = {
 
 type ImgElementProps = ImgBaseProps & Record<string, unknown>;
 
-export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootSizeProps, GrowProps, SharedMotionProps<ImgAnimate> {
+export interface ImgProps extends ImgBaseProps, BoxLayoutProps, ImgRootSizeProps, SharedMotionProps<ImgAnimate> {
   className?: string;
   style?: CSSProperties;
   'data-point-events'?: string;
@@ -77,9 +77,9 @@ export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootS
   src: ImgSource | ImgSrcTuple;
 
   /**
-   * Анимация смены картинки при смене `src`: `'fade' | 'zoom' | 'reveal' | 'parallax' | 'veil'`,
-   * или `[ключ, { duration, direction, veil }]`. Прежняя картинка держится слоем, пока новая не
-   * загрузится и не доедет; первый показ — без хода, «меньше движения» — мгновенно. См. `ImgAnimate`.
+   * Анимация смены картинки при смене `src`: `{ when: 'change', effect: 'veil', direction }`.
+   * Прежняя картинка держится слоем, пока новая не загрузится и не доедет; первый показ — без хода,
+   * «меньше движения» — мгновенно. Legacy ключи и tuple остаются поддержаны. См. `ImgAnimate`.
    */
   animate?: AppearanceAnimate | ImgAnimate;
 
@@ -95,7 +95,7 @@ export interface ImgProps extends ImgBaseProps, SizeInput, RadiusInput, ImgRootS
 
   aspectRatio?: ResponsiveValue<string>;
 
-  bg?: string;
+
 
   sizes?: string;
 
@@ -280,10 +280,11 @@ export function Img({
   newTab,
   nofollow,
   noreferrer,
-  ...props
+  ...rest
 }: WithRef<ImgProps, HTMLSpanElement>) {
+  const { box, rest: props } = splitBoxLayout(rest);
   // Размеры обёртки — не из коробки: `rootW`/`rootH` перекрывают размеры картинки.
-  const layout = boxLayout(c, { r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, bg, aspectRatio, grow });
+  const layout = boxLayout(c, { ...box, r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, bg, aspectRatio, grow });
   const [isLoaded, setIsLoaded] = useState(false);
   // Каскад у картинки означал бы её внутренние слои — снимаем.
   const appearanceAnimate = isAppearanceAnimate(animate) ? { ...animate, stagger: 0 } : undefined;
@@ -358,13 +359,13 @@ export function Img({
 
   const handleLoad: React.ComponentPropsWithoutRef<'img'>['onLoad'] = (event) => {
     setIsLoaded(true);
-    swapLoaded();
+    swapLoaded(swapIdentity);
     onLoad?.(event);
   };
 
   // Не загрузилась — смену всё равно доводим, иначе прежняя картинка висела бы вечно.
   const handleError: React.ComponentPropsWithoutRef<'img'>['onError'] = (event) => {
-    swapLoaded();
+    swapLoaded(swapIdentity);
     onError?.(event);
   };
 

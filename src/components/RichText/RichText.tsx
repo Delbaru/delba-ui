@@ -4,7 +4,7 @@ import styles from './RichText.module.scss';
 
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { composeInteractionHandlers, cx, createLayoutClasses, getBreakpointIndex, prefersReducedMotion, resolveResponsiveAtBreakpoint, buildClampStyle, decodeHtmlEntities, radiusClasses, sanitizeRichTextHtml, stripHtmlTags, sizeClasses, stateLinkProps, resolveRadiusInput, type GrowProps, type RadiusPropsShort, type StateLinkInput, type ResponsiveInput, type ResponsiveValue, type SizeValue } from '../../core';
+import { boxLayout, splitBoxLayout, composeInteractionHandlers, cx, createLayoutClasses, getBreakpointIndex, prefersReducedMotion, resolveResponsiveAtBreakpoint, buildClampStyle, decodeHtmlEntities, sanitizeRichTextHtml, stripHtmlTags, stateLinkProps, resolveRadiusInput, type BoxLayoutProps, type StateLinkInput, type ResponsiveInput, type ResponsiveValue, } from '../../core';
 import { renderLexicalContent } from './LexicalRenderer';
 import type { RevealProps } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
@@ -214,15 +214,13 @@ function extractLexicalPlainText(node: unknown): string {
 /** `plain` — без типографики варианта: блоки наследуют шрифт окружения, роль (`role-*`) по-прежнему красит блок. */
 export type LexicalTextVariant = 'default' | 'plain' | 'style-1' | 'style-2' | 'style-3' | 'style-4' | 'style-5';
 
-export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color'>, RadiusPropsShort, GrowProps, SharedMotionProps, RevealProps {
+export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color'>, BoxLayoutProps, SharedMotionProps, RevealProps {
   content?: string | any; // string for HTML, object for Lexical JSON
   variant?: ResponsiveValue<LexicalTextVariant>;
-  w?: ResponsiveValue<SizeValue>;
-  h?: ResponsiveValue<SizeValue>;
   animation?: ResponsiveInput<AnimationInput>;
   rows?: ResponsiveValue<number>;
   ellipsis?: boolean;
-  bg?: string;
+
   color?: string;
   className?: string;
   style?: CSSProperties;
@@ -230,7 +228,8 @@ export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, '
   linkState?: StateLinkInput;
 }
 
-export function LexicalText({ content, variant = ['default', 'default', 'default'], w, h, animation, animate, rows, ellipsis, bg, color, r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, grow, perspective3d, parallax, reveal, className = '', style, linkState, onMouseEnter, onMouseLeave, ...props }: LexicalTextProps) {
+export function LexicalText({ content, variant = ['default', 'default', 'default'], w, h, animation, animate, rows, ellipsis, bg, color, r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, grow, perspective3d, parallax, reveal, className = '', style, linkState, onMouseEnter, onMouseLeave, ...rest }: LexicalTextProps) {
+  const { box, rest: props } = splitBoxLayout(rest);
   // Пустой контент узла не рисует, поэтому и прятать нечего: атрибуты появления едут только с узлом.
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate, reveal });
   const radiusProps = resolveRadiusInput({ r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR });
@@ -244,11 +243,8 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
   const [breakpointIndex, setBreakpointIndex] = useState<0 | 1 | 2>(0);
   const rootClassName = cx(
     styles.RichText,
-    ...radiusClasses(c, radiusProps),
-    ...sizeClasses(c, { w, h }),
-    ...c.value('bg', bg),
+    ...boxLayout(c, { ...box, ...radiusProps, w, h, bg, grow }),
     ...c.value('color', color),
-    ...c.value('grow', grow),
     className
   );
   const rootStyle = {

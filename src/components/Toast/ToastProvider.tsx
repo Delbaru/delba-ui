@@ -147,7 +147,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             dir={['column', null, null]}
             onCollapseEnd={item.open ? undefined : () => remove(item.id)}
           >
-            <Flex align={['center', null, null]} gap={[12, null, null]} p={[[16, 20], null, null]} r={[16, null, null]} bg='var(--white-100)' className={styles.card}>
+            <Flex align={['center', null, null]} gap={[12, null, null]} p={[[16, 20], null, null]} r={[16, null, null]} bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']} className={styles.card}>
               <Icon
                 src={TONE[item.tone ?? 'success'].glyph}
                 w={[18, null, null]}

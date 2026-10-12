@@ -147,6 +147,12 @@ export const UTILITIES: readonly Utility[] = [
   { name: 'blr', declare: lengthOf('border-bottom-left-radius') },
 
   { name: 'bg', declare: literalOf('background') },
+  { name: 'position', ...enumOf('position', { static: 'static', relative: 'relative', absolute: 'absolute', fixed: 'fixed', sticky: 'sticky', inherit: 'inherit', initial: 'initial', unset: 'unset', revert: 'revert', 'revert-layer': 'revert-layer', '-webkit-sticky': '-webkit-sticky' }) },
+  { name: 'top', declare: lengthOf('top', MARGIN_WORDS) },
+  { name: 'bottom', declare: lengthOf('bottom', MARGIN_WORDS) },
+  { name: 'left', declare: lengthOf('left', MARGIN_WORDS) },
+  { name: 'right', declare: lengthOf('right', MARGIN_WORDS) },
+  { name: 'hide', declare: (value) => value === 'true' ? 'display: none !important' : null, domain: ['true'] },
   { name: 'color', declare: literalOf('color') },
   { name: 'placeholderColor', declare: literalOf('--field-placeholder-color') },
 

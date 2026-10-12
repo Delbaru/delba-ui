@@ -143,9 +143,9 @@ export function TabTrack({ value, thumb, className, children, ...props }: TabTra
         <Flex ref={trackRef} className={cx(styles.TabTrack, className)} data-thumb={thumb} {...props}>
             {children}
             <Flex ref={thumbRef} aria-hidden className={styles.thumb}>
-                <Flex bg={bg} className={cx(styles.part, styles.cap)} />
-                <Flex bg={bg} className={cx(styles.part, styles.body)} />
-                <Flex bg={bg} className={cx(styles.part, styles.cap)} />
+                <Flex bg={[bg ?? null, bg ?? null, bg ?? null]} className={cx(styles.part, styles.cap)} />
+                <Flex bg={[bg ?? null, bg ?? null, bg ?? null]} className={cx(styles.part, styles.body)} />
+                <Flex bg={[bg ?? null, bg ?? null, bg ?? null]} className={cx(styles.part, styles.cap)} />
             </Flex>
         </Flex>
     );

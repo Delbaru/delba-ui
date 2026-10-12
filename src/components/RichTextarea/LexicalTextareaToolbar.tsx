@@ -106,13 +106,13 @@ function ToolbarIconButton({
       p={[0, 0, 0]}
       w={[size, size, size]}
       h={[size, size, size]}
-      bg='transparent'
+      bg={['transparent', 'transparent', 'transparent']}
       justifyContent={['center', 'center', 'center']}
       alignItems={['center', 'center', 'center']}
       tooltip={
         <Text
           variant={['micro', null, null]}
-          bg='rgba(43,47,51,0.8)'
+          bg={['rgba(43,47,51,0.8)', 'rgba(43,47,51,0.8)', 'rgba(43,47,51,0.8)']}
           color='var(--white-100)'
           p={[4, 8, 4, 8]}
           r={[8, null, null]}
@@ -293,7 +293,7 @@ export function LexicalTextareaToolbar({ hasVariables, allowLink = true }: { has
             />
           ))}
 
-          {groupIndex < toolbarGroups.length - 1 && <Flex w={[1, null, null]} h={[20, null, null]} bg='var(--line)' />}
+          {groupIndex < toolbarGroups.length - 1 && <Flex w={[1, null, null]} h={[20, null, null]} bg={['var(--line)', 'var(--line)', 'var(--line)']} />}
         </Fragment>
       ))}
 

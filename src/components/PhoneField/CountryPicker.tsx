@@ -35,9 +35,7 @@ export const CountryPicker = memo(function CountryPicker({ countries, country, d
 
     return (
         <Dropdown
-            portal
-            side="start"
-            className={styles.countryPanel}
+            panel={{ portal: true, side: 'start', className: styles.countryPanel }}
             trigger={
                 <Button
                     type="button"
@@ -58,7 +56,7 @@ export const CountryPicker = memo(function CountryPicker({ countries, country, d
                     maxW={['calc(100vw - 32 * var(--rpx))', 'calc(100vw - 32 * var(--rpx))', 'calc(100vw - 32 * var(--rpx))']}
                     border={['calc(1 * var(--rpx)) solid var(--line)', 'calc(1 * var(--rpx)) solid var(--line)', 'calc(1 * var(--rpx)) solid var(--line)']}
                     r={[8, 8, 8]}
-                    bg="var(--background)"
+                    bg={["var(--background)", "var(--background)", "var(--background)"]}
                     className={styles.countryContent}
                     role="dialog"
                     aria-label={words.choose}
@@ -110,7 +108,7 @@ export const CountryPicker = memo(function CountryPicker({ countries, country, d
                                         variant={['caption', 'caption', 'caption']}
                                         p={[4, 4, 4]}
                                         pl={[12, 12, 12]}
-                                        bg="var(--background)"
+                                        bg={["var(--background)", "var(--background)", "var(--background)"]}
                                         color="var(--text-muted)"
                                         className={styles.countryGroupLabel}
                                     >

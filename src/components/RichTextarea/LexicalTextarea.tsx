@@ -16,7 +16,7 @@ import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import { Box } from '../Box';
 import { Flex } from '../Flex';
 import { Text } from '../Text';
-import { cx, mergeComponentStates, type BorderStyleProps, type ComponentStateValue, type GrowProps, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type StateLinkInput, type WithRef } from '../../core';
+import { cx, mergeComponentStates, type BoxLayoutProps, type ComponentStateValue, type StateLinkInput, type WithRef } from '../../core';
 import { roleFont } from '../../core/base/typography';
 import richTextStyles from '../RichText/RichText.module.scss';
 import type { LexicalTextVariant } from '../RichText';
@@ -30,17 +30,12 @@ import { useLexicalTextarea } from './useLexicalTextarea';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 
 export interface LexicalTextareaProps
-  extends LayoutSpaceProps,
-    RadiusPropsShort,
-    BorderStyleProps,
-    GrowProps,
-    SharedMotionProps,
-    SizePropsShort {
+  extends BoxLayoutProps, SharedMotionProps {
   id?: string;
   className?: string;
   style?: CSSProperties;
 
-  bg?: string;
+
   color?: string;
   placeholder?: string;
   placeholderColor?: string;
@@ -141,6 +136,7 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
   validate,
   linkState,
   'data-point-events': dataPointEvents,
+  ...rootBox
 }: WithRef<LexicalTextareaProps, LexicalTextareaHandle>) {
   const {
     id, editorRef, variableLookup, contentSignature, editorMeta, helperError, helperText,
@@ -162,6 +158,7 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
 
   const renderedContent = (
     <Box
+      {...rootBox}
       className={cx(styles.RichTextareaWrapper, className)}
       style={style}
       grow={grow}

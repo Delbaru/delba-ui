@@ -70,7 +70,7 @@ function ChoiceInfoTooltip({
                 <Flex
                     p={[16, null, null]}
                     r={[16, null, null]}
-                    bg='var(--white-100)'
+                    bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
                     maxW={[400, null, null]}
                     minW={[264, null, null]}
                     border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
@@ -174,7 +174,7 @@ export function ChoiceButtons<T extends string = string>({
                 align={['center', null, null]}
                 p={[4, null, null]}
                 r={[12, null, null]}
-                bg='var(--background)'
+                bg={['var(--background)', 'var(--background)', 'var(--background)']}
                 className={cx(styles.ChoiceButtons, className)}
                 data-hide-mobile
                 data-hide-tablet

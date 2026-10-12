@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -31,6 +31,12 @@ export function projectSteps(root, config, { update = false, strict = false } = 
 }
 
 export function runUiChecks({ project, config = {}, configArg = 'ui.config.ts' } = {}) {
+  const source = project ? path.join(project, 'src') : undefined;
+  const projectTests = source && existsSync(source)
+    ? readdirSync(source, { recursive: true })
+      .filter((file) => /\.test\.(?:[cm]?[jt]s|tsx|jsx)$/.test(file))
+      .map((file) => path.join('src', file)).sort()
+    : [];
   const steps = [
     ...(project ? [{ ...nodeStep('Генерация', [script('cli.mjs'), 'build', '--config', configArg], project), required: true }] : []),
     nodeStep('Типы', [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json', '--noEmit', '--incremental', 'false']),
@@ -39,6 +45,7 @@ export function runUiChecks({ project, config = {}, configArg = 'ui.config.ts' }
     nodeStep('Границы', [script('check-boundary.mjs')]),
     nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']),
     nodeStep('Тесты', ['--import', 'tsx', '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, 'src/**/*.test.ts', 'tools/**/*.test.ts']),
+    ...(projectTests.length ? [nodeStep('Тесты проекта', ['--import', pathToFileURL(require.resolve('tsx')).href, '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, ...projectTests], project)] : []),
     nodeStep('Браузер', [require.resolve('@playwright/test/cli'), 'test', '--config', 'tools/browser/playwright.config.ts']),
     ...(project ? projectSteps(project, config, { strict: true }) : []),
   ];

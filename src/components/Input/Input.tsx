@@ -4,7 +4,7 @@ import { useCallback, useRef, useState, type CSSProperties } from 'react';
 import type React from 'react';
 
 import {
-    cx, createLayoutClasses, fieldLayoutClasses, fieldHelperPaddingLeft,
+    cx, createLayoutClasses, fieldLayoutClasses, fieldRootLayoutClasses, fieldHelperPaddingLeft, resolveFieldLayout, splitBoxLayout,
     stateProps, stateLinkProps, useMergedRefs, type WithRef,
 } from '../../core';
 import { textFont } from '../../core/base/typography';
@@ -30,87 +30,54 @@ export type { InputProps } from './types';
 
 const c = createLayoutClasses(styles, { local: { h: 'height' } });
 
-export function Input({
-    ref,
-    className = '',
-    style,
-    variant,
-    size,
-    font,
-    p,
-    pt,
-    pr,
-    pb,
-    pl,
-    m,
-    mt,
-    mr,
-    mb,
-    ml,
-    r,
-    tlr,
-    trr,
-    brr,
-    blr,
-    borderTLR,
-    borderTRR,
-    borderBRR,
-    borderBLR,
-    border,
-    borderC,
-    borderS,
-    borderW,
-    borderT,
-    borderR,
-    borderB,
-    borderL,
-    grow,
-    animate,
-    perspective3d,
-    parallax,
-    w,
-    minW,
-    maxW,
-    h,
-    minH,
-    maxH,
-    bg,
-    color,
-    placeholder,
-    placeholderColor,
-    seed,
-    label,
-    labelColor,
-    comment,
-    showNumberControls = true,
-    revealable = false,
-    loading = false,
-    numberOptions,
-    length,
-    phone: phoneFormat = DEFAULT_PHONE_FORMAT,
-    slots,
-    type: typeProp,
-    value: valueProp,
-    defaultValue: defaultValueProp,
-    error,
-    collapse,
-    id: idProp,
-    disabled,
-    onChange,
-    onValueChange,
-    onFocus,
-    onBlur,
-    onKeyDown: onInputKeyDown,
-    required,
-    emptyMessage,
-    validate: validateProp,
-    errorPlacement = 'inside',
-    state,
-    linkState,
-    rowClassName,
-    'data-point-events': dataPointEvents,
-    ...rest
-}: WithRef<InputProps, HTMLInputElement>) {
+export function Input(props: WithRef<InputProps, HTMLInputElement>) {
+    const { box, rest: fieldProps } = splitBoxLayout(props);
+    const {
+        ref,
+        className = '',
+        style,
+        variant,
+        size,
+        font,
+        animate,
+        perspective3d,
+        parallax,
+        color,
+        placeholder,
+        placeholderColor,
+        seed,
+        label,
+        labelColor,
+        comment,
+        showNumberControls = true,
+        revealable = false,
+        loading = false,
+        numberOptions,
+        length,
+        phone: phoneFormat = DEFAULT_PHONE_FORMAT,
+        slots,
+        type: typeProp,
+        value: valueProp,
+        defaultValue: defaultValueProp,
+        error,
+        collapse,
+        id: idProp,
+        disabled,
+        onChange,
+        onValueChange,
+        onFocus,
+        onBlur,
+        onKeyDown: onInputKeyDown,
+        required,
+        emptyMessage,
+        validate: validateProp,
+        errorPlacement = 'inside',
+        state,
+        linkState,
+        rowClassName,
+        'data-point-events': dataPointEvents,
+        ...rest
+    } = fieldProps;
     const {
         id,
         innerRef,
@@ -212,19 +179,7 @@ export function Input({
         }
     }, [innerRef]);
 
-    const hasExplicitSize = w !== undefined || minW !== undefined || maxW !== undefined || h !== undefined || minH !== undefined || maxH !== undefined;
-    const resolvedVariant = variant ?? 'primary';
-    const resolvedSize = size ?? (hasExplicitSize ? undefined : 'default');
-
-    const layoutProps = {
-        variant: resolvedVariant, size: resolvedSize,
-        p, pt, pr, pb, pl, m, mt, mr, mb, ml,
-        r, tlr, trr, brr, blr,
-        borderTLR, borderTRR, borderBRR, borderBLR,
-        border, borderC, borderS, borderW, borderT, borderR, borderB, borderL,
-        w, minW, maxW, h, minH, maxH,
-        bg, color, placeholderColor,
-    };
+    const layoutProps = resolveFieldLayout({ ...box, variant, size, color, placeholderColor });
     const fieldClasses = fieldLayoutClasses(c, layoutProps);
     const typeClassName = inputType || undefined;
     // Класс кегля садится на РЯД, а не на `<input>`: его читают ещё маска телефона и префикс
@@ -238,7 +193,7 @@ export function Input({
             ref={setWrapperRef}
             dir={['column', 'column', 'column']}
             gap={[8, 8, 8]}
-            className={cx(styles.wrapper, ...c.value('grow', grow), typeClassName, styles[inputType], className)}
+            className={cx(styles.wrapper, ...fieldRootLayoutClasses(c, box), typeClassName, styles[inputType], className)}
             style={{ ...(motionStyle ?? null), ...style }}
             {...revealAttrs}
             data-point-events={dataPointEvents}

@@ -19,6 +19,28 @@ test('boxLayout: пустая коробка не даёт классов', () =
     assert.deepEqual(boxLayout(c, {}), []);
 });
 
+test('boxLayout: responsive положение, фон и скрытие не попадают на DOM', () => {
+    const { box, rest } = splitBoxLayout({
+        position: ['fixed', 'absolute', 'relative'],
+        top: [16, 'auto', null],
+        bottom: [null, 0, 0],
+        left: ['50%', '50%', '50%'],
+        right: [null, null, 8],
+        bg: ['var(--paper)', 'var(--background)', 'var(--paper)'],
+        hide: [true, false, null],
+        id: 'responsive-box',
+    });
+    assert.deepEqual(rest, { id: 'responsive-box' });
+    const classes = boxLayout(c, box);
+    assert.ok(classes.includes('position_fixed') && classes.includes('m_position_absolute') && classes.includes('t_position_relative'));
+    assert.ok(classes.includes('d_top_16') && classes.includes('m_top_auto'));
+    assert.ok(classes.includes('n_bottom_0') && classes.includes('left_50%') && classes.includes('t_right_8'));
+    assert.ok(classes.includes('bg_--paper') && classes.includes('m_bg_--background'));
+    assert.ok(classes.includes('d_hide_true'));
+    assert.ok(!classes.includes('hide_true'), 'false/null не скрывают другие полосы ширины');
+    assert.deepEqual(boxLayout(c, { hide: [false, false, false] }), []);
+});
+
 test('boxLayout: любое значение — классом утилиты, инлайна нет', () => {
     assert.deepEqual(boxLayout(c, { bg: 'var(--white-100)', grow: [1, 0, null], mt: -8, aspectRatio: '16 / 9' }), [
         'mt_-8',

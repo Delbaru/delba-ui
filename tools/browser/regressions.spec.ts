@@ -5,6 +5,91 @@ async function openFixture(page: Page) {
   await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
 }
 
+test('shared box CSS switches background, coordinates and dynamic visibility without DOM prop leakage', async ({ page }) => {
+  await openFixture(page);
+  const box = page.getByTestId('responsive-box');
+  const hidden = page.getByTestId('responsive-hidden');
+  for (const { width, offset, token, visible } of [
+    { width: 320, offset: 8, token: '--black', visible: true },
+    { width: 768, offset: 16, token: '--background', visible: false },
+    { width: 1440, offset: 24, token: '--primary', visible: false },
+  ]) {
+    await page.setViewportSize({ width, height: 900 });
+    const styles = await box.evaluate((node, token) => {
+      const style = getComputedStyle(node);
+      const host = node.parentElement;
+      if (!host) throw new Error('Missing box host');
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = `var(${token})`;
+      probe.style.display = 'block';
+      probe.style.width = 'calc(var(--rpx) * 100)';
+      node.append(probe);
+      const expectedColor = getComputedStyle(probe).backgroundColor;
+      const rpx = probe.getBoundingClientRect().width / 100;
+      probe.remove();
+      const rect = node.getBoundingClientRect();
+      const parent = host.getBoundingClientRect();
+      return {
+        position: style.position,
+        color: style.backgroundColor,
+        expectedColor,
+        left: rect.left - parent.left,
+        top: rect.top - parent.top,
+        rpx,
+        leaked: ['position', 'top', 'left', 'bg', 'hide'].filter((name) => node.hasAttribute(name)),
+      };
+    }, token);
+    expect(styles.position).toBe('absolute');
+    expect(styles.color).toBe(styles.expectedColor);
+    expect(styles.left).toBeCloseTo(offset * styles.rpx, 1);
+    expect(styles.top).toBeCloseTo(offset * styles.rpx, 1);
+    expect(styles.leaked).toEqual([]);
+    if (visible) await expect(hidden).toBeVisible();
+    else await expect(hidden).toBeHidden();
+
+    const icon = page.getByRole('link', { name: 'Positioned icon', exact: true });
+    await expect(icon).toHaveCSS('position', 'absolute');
+    expect(await icon.evaluate((node) => node.hasAttribute('position') || Boolean(node.querySelector('svg[position], svg[top], svg[right], svg[hide]')))).toBe(false);
+  }
+  await page.getByRole('button', { name: 'Toggle responsive box', exact: true }).click();
+  await expect(hidden).toBeVisible();
+});
+
+test('Dropdown aligns the visible wide surface rather than a trigger-sized collapse wrapper', async ({ page }) => {
+  for (const width of [320, 390, 768, 1024, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await openFixture(page);
+    for (const side of ['start', 'center', 'end', 'portal']) {
+      const trigger = page.getByRole('button', { name: `Intrinsic ${side}`, exact: true });
+      await trigger.click();
+      const surface = page.getByTestId(`intrinsic-surface-${side}`);
+      await expect(surface).toBeVisible();
+      const rects = await trigger.evaluate((node, side) => {
+        const id = node.getAttribute('aria-controls');
+        const panel = id ? document.getElementById(id) : null;
+        const surface = document.querySelector(`[data-testid="intrinsic-surface-${side}"]`);
+        if (!panel || !surface) throw new Error('Missing dropdown surface');
+        const rect = (element: Element) => {
+          const r = element.getBoundingClientRect();
+          return { left: r.left, right: r.right, width: r.width };
+        };
+        return { trigger: rect(node), panel: rect(panel), surface: rect(surface) };
+      }, side);
+      expect(Math.abs(rects.surface.width - rects.panel.width)).toBeLessThan(1);
+      if (side === 'start') expect(Math.abs(rects.surface.left - rects.trigger.left)).toBeLessThan(1);
+      if (side === 'end') expect(Math.abs(rects.surface.right - rects.trigger.right)).toBeLessThan(1);
+      if (side === 'center') expect(Math.abs(rects.surface.left + rects.surface.right - rects.trigger.left - rects.trigger.right)).toBeLessThan(1);
+      if (side === 'portal') {
+        expect(rects.surface.left).toBeGreaterThanOrEqual(0);
+        expect(rects.surface.right).toBeLessThanOrEqual(width);
+      }
+      await trigger.press('Escape');
+      await expect(surface).toBeHidden();
+      await expect(trigger).toBeFocused();
+    }
+  }
+});
+
 test('unified inView animate observes one HTML host per primitive and never leaks configuration to DOM', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   const errors: string[] = [];
@@ -30,11 +115,10 @@ test('unified inView animate observes one HTML host per primitive and never leak
   expect(errors).toEqual([]);
 });
 
-test('named timing resolves theme values for observer and CSS cascades', async ({ page }) => {
+test('reveal skip marker dynamically releases an in-view child without stale observer state or delay', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Named motion timing' });
-  // Read current theme values on entry, rather than freezing defaults during render.
   await scope.evaluate((node) => (node as HTMLElement).style.setProperty('--t-d-fast', '0.1s'));
   const view = page.getByTestId('named-view');
   await view.scrollIntoViewIfNeeded();
@@ -48,10 +132,104 @@ test('named timing resolves theme values for observer and CSS cascades', async (
     { delay: '0.12s', duration: '0.8s' },
   ]);
   const loadChildren = page.getByTestId('named-load').locator(':scope > div');
-  await expect(loadChildren.first()).toHaveCSS('animation-delay', '0.1s');
-  await expect(loadChildren.nth(1)).toHaveCSS('animation-delay', '0.12s');
+  await expect(loadChildren).toHaveCount(4);
+  await expect(page.getByTestId('named-load-first')).toHaveCSS('animation-delay', '0.1s');
+  await expect(page.getByTestId('named-load-second')).toHaveCSS('animation-delay', '0.12s');
+  await expect(page.getByTestId('named-load-decoration')).toHaveCSS('animation-name', 'none');
+  await expect(page.getByTestId('named-load-owned')).toHaveCSS('animation-delay', '0.02s');
   await expect(children.first()).toHaveAttribute('data-reveal-state', 'done');
   await expect(children.nth(1)).toHaveAttribute('data-reveal-state', 'done');
+
+  const decoration = page.getByTestId('named-inview-decoration');
+  await decoration.scrollIntoViewIfNeeded();
+  await expect(decoration).toHaveAttribute('data-reveal-state', /^(in|done)$/);
+  expect(await decoration.evaluate((node) => node.style.getPropertyValue('--reveal-delay'))).not.toBe('');
+
+  await page.getByTestId('toggle-reveal-skip').click();
+  await expect(decoration).toHaveAttribute('data-reveal-skip', '');
+  await expect(decoration).not.toHaveAttribute('data-reveal-state', /.+/);
+  expect(await decoration.evaluate((node) => node.style.getPropertyValue('--reveal-delay'))).toBe('');
+
+  await decoration.scrollIntoViewIfNeeded();
+  await expect(decoration).not.toHaveAttribute('data-reveal-state', /.+/);
+  await page.getByTestId('toggle-reveal-skip').click();
+  await expect(decoration).not.toHaveAttribute('data-reveal-skip', /.+/);
+  await expect(decoration).toHaveAttribute('data-reveal-state', /^(in|done)$/);
+});
+
+test('Img object change animate snapshots direction, waits for load, follows the latest source and cleans layers', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  let releaseRemote: (() => void) | undefined;
+  const remoteReady = new Promise<void>((resolve) => { releaseRemote = resolve; });
+  await page.route('**/motion-two.svg', async (route) => {
+    await remoteReady;
+    await route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"><rect width="80" height="48" fill="red"/></svg>' });
+  });
+  await openFixture(page);
+  const image = page.getByTestId('change-img');
+  const swap = image.locator('.ui-img-swap');
+  await expect(swap).toHaveCount(1);
+  await expect(swap.locator('img.ui-img-image')).toHaveAttribute('src', /data:image\/svg\+xml/);
+  await expect.poll(() => swap.locator('img.ui-img-image').evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await expect(swap.locator('.ui-img-swap-out')).toHaveCount(0);
+
+  await page.getByTestId('img-change-remote').click();
+  await expect(swap.locator('.ui-img-swap-pending')).toHaveCount(1);
+  await swap.locator('.ui-img-swap-layer[aria-hidden="true"] img').dispatchEvent('load');
+  await expect(swap.locator('.ui-img-swap-pending')).toHaveCount(1);
+  await page.getByTestId('img-change-reverse').click();
+  await expect.poll(() => swap.evaluate((node) => getComputedStyle(node).getPropertyValue('--img-swap-dir').trim())).toBe('1');
+  await page.getByTestId('img-change-latest').click();
+  releaseRemote?.();
+
+  await expect(swap.locator('.ui-img-swap-veil')).toHaveCount(1);
+  await expect(swap.locator('.ui-img-swap-veil')).toHaveCSS('animation-duration', '0.7s');
+  await expect.poll(() => swap.evaluate((node) => getComputedStyle(node).getPropertyValue('--img-swap-dir').trim()), { timeout: 4000 }).toBe('-1');
+  await expect.poll(() => image.locator('.ui-img-swap-layer:not(.ui-img-swap-out) img.ui-img-image').last().getAttribute('src'), { timeout: 4000 })
+    .toBe('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"%3E%3Crect width="80" height="48" fill="%2333a"/%3E%3C/svg%3E');
+  await expect(swap.locator('.ui-img-swap-out, .ui-img-swap-veil')).toHaveCount(0, { timeout: 4000 });
+});
+
+test('Text object counter and textSlide keep timing, root semantics and reduced-motion behavior', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Object text animation' });
+  await expect(scope).toHaveCSS('--t-d-fast', '0.35s');
+
+  const loadCounter = page.getByTestId('text-load-counter');
+  const loadValue = loadCounter.locator('.ui-counter-value');
+  await expect(loadValue).toHaveText('100');
+  const start = Date.now();
+  await page.getByTestId('counter-change-target').click();
+  await expect(loadValue).toHaveText('200', { timeout: 1500 });
+  expect(Date.now() - start).toBeGreaterThanOrEqual(250);
+
+  const inViewCounter = page.getByTestId('text-inview-counter');
+  const inViewValue = inViewCounter.locator('.ui-counter-value');
+  await expect(inViewValue).toHaveText('0');
+  const viewStart = Date.now();
+  await inViewCounter.scrollIntoViewIfNeeded();
+  await expect(inViewValue).toHaveText('50', { timeout: 1500 });
+  expect(Date.now() - viewStart).toBeGreaterThanOrEqual(250);
+
+  const slide = page.getByTestId('text-slide-object');
+  await slide.evaluate((node) => { node.setAttribute('data-identity', 'stable-root'); });
+  await page.getByTestId('text-slide-update').click();
+  const swap = slide.locator('.ui-slide-swap');
+  const outgoing = swap.locator('[data-swap-out]');
+  await expect(outgoing).toHaveAttribute('aria-hidden', 'true');
+  await expect(swap.locator('[data-swap-in]')).toHaveText('B');
+  await expect(swap.locator('[data-swap-in]')).toHaveCSS('animation-duration', '0.35s');
+  await expect(slide).toHaveAttribute('aria-label', 'Page title');
+  await expect(slide).toHaveAttribute('data-identity', 'stable-root');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByTestId('counter-change-target').click();
+  await expect(loadValue).toHaveText('300');
+  await page.getByTestId('text-slide-update').click();
+  await expect(slide.locator('.ui-slide-swap')).toContainText('Page A');
+  await expect(slide.locator('[data-swap-out]')).toHaveCount(0);
+  await expect(slide).toHaveAttribute('data-identity', 'stable-root');
 });
 
 test('modular Input actions preserve the native input, focus, value and associated feedback', async ({ page }) => {
@@ -581,11 +759,17 @@ test('Box and Flex swap content through real exit and enter animation completion
   await expect(box).toHaveText('Box first');
   await expect(flex).toHaveText('Flex first');
 
+  // Initial entry can finish before the first action on a busy worker. Start the swap observation afterwards.
+  await expect.poll(() => page.evaluate(() => window.__swapEvents)).toMatchObject({
+    box: [{ name: 'ui-flex-fadeInUp' }],
+    flex: [{ name: 'ui-flex-fadeInUp' }],
+  });
+  await page.evaluate(() => {
+    window.__swapEvents = { box: [], flex: [] };
+    window.__swapStarts = { box: [], flex: [] };
+  });
+
   await page.evaluate(() => window.__setSwapKey?.('second'));
-  await expect(box).toHaveClass(/ui-anim-fadeOutDown/);
-  await expect(flex).toHaveClass(/ui-anim-fadeOutDown/);
-  await expect(box).toHaveText('Box first');
-  await expect(flex).toHaveText('Flex first');
   await expect(box).toHaveText('Box second');
   await expect(flex).toHaveText('Flex second');
   await expect(box).toHaveClass(/ui-anim-fadeInUp/);
@@ -596,6 +780,16 @@ test('Box and Flex swap content through real exit and enter animation completion
   await expect.poll(() => page.evaluate(() => window.__swapEvents)).toMatchObject({
     box: [{ name: 'ui-flex-fadeOutDown' }, { name: 'ui-flex-fadeInUp' }],
     flex: [{ name: 'ui-flex-fadeOutDown' }, { name: 'ui-flex-fadeInUp' }],
+  });
+  await expect.poll(() => page.evaluate(() => window.__swapStarts)).toMatchObject({
+    box: [
+      { name: 'ui-flex-fadeOutDown', text: 'Box first' },
+      { name: 'ui-flex-fadeInUp', text: 'Box second' },
+    ],
+    flex: [
+      { name: 'ui-flex-fadeOutDown', text: 'Flex first' },
+      { name: 'ui-flex-fadeInUp', text: 'Flex second' },
+    ],
   });
 });
 
@@ -610,6 +804,101 @@ test('LexicalText mounted from empty content attaches reveal observation and set
   await lexical.scrollIntoViewIfNeeded();
   await expect(lexical).toHaveAttribute('data-reveal-state', 'done');
   await expect(lexical).toContainText('Revealed lexical content');
+});
+
+test('Dropdown keeps controlled state with its owner and honors cancellation, disabled and defaultOpen', async ({ page }) => {
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Dropdown state contracts' });
+  const trigger = scope.getByRole('button', { name: 'Controlled dropdown', exact: true });
+  const requests = scope.getByTestId('dropdown-requests');
+  await scope.getByRole('button', { name: 'Mount initially open dropdown' }).click();
+  const initial = scope.getByRole('button', { name: 'Initially open dropdown', exact: true });
+  await expect(initial).toHaveAttribute('aria-expanded', 'true');
+  await scope.getByRole('button', { name: 'Initial dropdown action' }).press('Escape');
+  await expect(initial).toHaveAttribute('aria-expanded', 'false');
+  await expect(initial).toBeFocused();
+
+  await trigger.click();
+  await expect(requests).toHaveText('[true]');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await scope.getByRole('button', { name: 'Toggle dropdown approval' }).click();
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  const action = page.getByRole('button', { name: 'Controlled dropdown action' });
+  await expect(action).toBeVisible();
+  const panelId = await trigger.getAttribute('aria-controls');
+  const panel = page.locator(`[id="${panelId}"]`);
+  expect(await panel.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(await trigger.evaluate((node) => node.getBoundingClientRect().width), 0);
+  await action.press('Escape');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger).toBeFocused();
+  await expect(requests).toHaveText('[true,true,false]');
+
+  await scope.getByRole('button', { name: 'Toggle dropdown cancellation' }).click();
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(requests).toHaveText('[true,true,false]');
+  await scope.getByRole('button', { name: 'Toggle dropdown cancellation' }).click();
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  // Change disabled while focus stays inside the panel; outside dismissal must not be the cause.
+  await scope.getByRole('button', { name: 'Toggle dropdown disabled' }).dispatchEvent('click');
+  await expect(trigger).toBeDisabled();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(action).toBeHidden();
+  await expect(requests).toHaveText('[true,true,false,true,false]');
+  await scope.getByRole('button', { name: 'Toggle dropdown disabled' }).click();
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  // Root collapse hides the portalled panel too; preserve focus to exclude outside dismissal.
+  await scope.getByRole('button', { name: 'Toggle whole dropdown' }).dispatchEvent('click');
+  await expect(action).toBeHidden();
+  await expect(panel).toBeHidden();
+  await expect(requests).toHaveText('[true,true,false,true,false,true,false]');
+  await expect(trigger).toBeHidden();
+  await scope.getByRole('button', { name: 'Toggle whole dropdown' }).click();
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  await expect(action).toBeVisible();
+  expect(await panel.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(await trigger.evaluate((node) => node.getBoundingClientRect().width), 0);
+  await action.press('Escape');
+  await expect(trigger).toBeFocused();
+});
+
+test('Select preserves panel styling, grouped options and opening guards through Dropdown', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Select panel contracts' });
+  for (const variant of ['primary', 'primaryFill', 'secondary']) {
+    const trigger = scope.getByRole('button', { name: `Panel ${variant}`, exact: true });
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const list = page.locator(`[id="${await trigger.getAttribute('aria-controls')}"]`);
+    await expect(list.getByText('Panel group', { exact: true })).toBeVisible();
+    await expect(list.getByRole('option')).toHaveCount(2);
+    const surface = list.locator('..');
+    await expect(surface).toHaveCSS('border-bottom-left-radius', '24px');
+    await expect(surface).toHaveCSS('border-top-left-radius', '6px');
+    const sizes = await trigger.evaluate((node) => {
+      const list = document.getElementById(node.getAttribute('aria-controls') ?? '');
+      return { trigger: node.getBoundingClientRect().width, surface: list?.parentElement?.getBoundingClientRect().width };
+    });
+    expect(sizes.surface).toBeDefined();
+    expect(Math.abs((sizes.surface ?? 0) - sizes.trigger)).toBeLessThan(1);
+    await list.getByRole('option', { name: 'Panel option two', exact: true }).click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(trigger).toHaveText('Выбрано (1)');
+  }
+  for (const name of ['Empty panel', 'Loading panel']) {
+    const trigger = scope.getByRole('button', { name, exact: true });
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  }
+  const disabled = scope.getByRole('button', { name: 'Disabled panel', exact: true });
+  await disabled.dispatchEvent('click');
+  await expect(disabled).toHaveAttribute('aria-expanded', 'false');
+  await expect(disabled).toHaveAttribute('aria-disabled', 'true');
 });
 
 test('nested Dropdown consumes the first Escape inside a scrolling Modal', async ({ page }) => {
@@ -697,8 +986,267 @@ test('Select portal escapes the scroll-clipped Modal, keeps focus trapped, and c
   await expect(page.getByRole('listbox')).toHaveCount(0);
   await expect(dialog).toBeVisible();
   await select.press('Escape');
-  await expect(page.locator('[aria-label="Portal select modal"]').locator('xpath=ancestor::*[@aria-hidden="true"]')).toHaveCount(1);
+  // Reduced motion can complete before another protocol call observes the inactive DOM phase.
+  await expect(page.locator('[role="dialog"][aria-label="Portal select modal"]')).toHaveCount(0);
   await expect(opener).toBeFocused();
+  await expect(page.locator('html')).not.toHaveCSS('overflow-y', 'hidden');
+  await expect(opener).toBeFocused();
+});
+
+test('declarative Modal composes the trigger, respects its controlled owner, updates content, and shares the imperative stack', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await openFixture(page);
+  const trigger = page.getByRole('button', { name: 'Open controlled declaration', exact: true });
+  await expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  const dialog = page.locator('[role="dialog"][aria-label="Controlled declaration"]');
+  await expect(dialog).toBeVisible();
+  await expect(trigger).toHaveAttribute('aria-controls', await dialog.getAttribute('id') ?? '');
+  await expect(page.getByTestId('declarative-modal-log')).toHaveText('{"clicks":1,"changes":[true]}');
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Request declaration close' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByTestId('declarative-modal-log')).toHaveText('{"clicks":1,"changes":[true,false]}');
+  for (let value = 1; value <= 5; value += 1) {
+    await dialog.getByRole('button', { name: 'Update declaration content' }).click();
+    await expect(page.getByTestId('declaration-content')).toHaveText(`Current content ${value}`);
+  }
+  await dialog.getByRole('button', { name: 'Verify declaration ref' }).click();
+  await expect(dialog.locator('..')).toHaveAttribute('data-ref-verified', 'true');
+  const inner = dialog.locator(':scope > div');
+  expect(await inner.evaluate((node) => {
+    const measure = document.createElement('div');
+    measure.style.width = 'calc(16 * var(--rpx))';
+    node.append(measure);
+    const expected = measure.getBoundingClientRect().width;
+    measure.remove();
+    return { actual: Number.parseFloat(getComputedStyle(node).paddingRight), expected };
+  }).then(({ actual, expected }) => Math.abs(actual - expected))).toBeLessThan(1);
+
+  await dialog.getByTestId('open-top-modal').click();
+  const top = page.getByRole('dialog', { name: 'Top stacked modal', exact: true });
+  await expect(top).toBeVisible();
+  await expect(dialog.locator('..')).toHaveAttribute('inert', '');
+  await page.keyboard.press('Escape');
+  await expect(dialog.getByTestId('open-top-modal')).toBeFocused();
+  await expect(dialog.locator('..')).not.toHaveAttribute('inert', '');
+  await expect(page.locator('[role="dialog"][aria-label="Top stacked modal"]')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Allow declaration close' }).click();
+  await dialog.getByRole('button', { name: 'Request declaration close' }).click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger).toBeFocused();
+  await expect(page.locator('[role="dialog"][aria-label="Controlled declaration"]')).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveCSS('overflow-y', 'hidden');
+  expect(errors).toEqual([]);
+});
+
+test('declarative Modal cancellation, disabled trigger, defaultOpen and rapid reopen use one stack entry', async ({ page }) => {
+  await openFixture(page);
+  await page.getByRole('button', { name: 'Cancelled declaration', exact: true }).click();
+  await expect(page.locator('[role="dialog"][aria-label="Cancelled declaration dialog"]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Disabled declaration', exact: true })).toBeDisabled();
+  await expect(page.locator('[role="dialog"][aria-label="Disabled declaration dialog"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Mount default declaration' }).click();
+  const defaultDialog = page.getByRole('dialog', { name: 'Default declaration', exact: true });
+  await expect(defaultDialog).toBeVisible();
+  await defaultDialog.getByRole('button', { name: 'Close default declaration' }).click();
+  await expect(page.getByRole('button', { name: 'Mount default declaration' })).toBeFocused();
+  await expect(page.locator('[role="dialog"][aria-label="Default declaration"]')).toHaveCount(0);
+
+  const trigger = page.getByRole('button', { name: 'Open controlled declaration', exact: true });
+  await trigger.click();
+  const dialog = page.locator('[role="dialog"][aria-label="Controlled declaration"]');
+  const id = await dialog.getAttribute('id');
+  await dialog.getByRole('button', { name: 'Allow declaration close' }).click();
+  await dialog.getByRole('button', { name: 'Request declaration close' }).click();
+  await trigger.click();
+  await expect(dialog).toHaveCount(1);
+  await expect(dialog).toHaveAttribute('id', id ?? '');
+  await expect(dialog.locator('..')).toHaveAttribute('data-open', 'true');
+  await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden');
+  await dialog.getByRole('button', { name: 'Request declaration close' }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test('declarative Modal uses shared full distance open motion, one inner scroll owner and desktop dismissal', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 640 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  await page.evaluate(() => document.documentElement.style.setProperty('--t-m-distance-full', '100%'));
+  const trigger = page.getByRole('button', { name: 'Open mobile declaration', exact: true });
+  await trigger.click();
+  const dialog = page.locator('[role="dialog"][aria-label="Mobile declaration"]');
+  await expect(dialog).toHaveAttribute('data-reveal', 'down');
+  await expect(dialog).toHaveAttribute('data-reveal-state', 'in');
+  await expect(dialog).toHaveCSS('--reveal-distance', '100%');
+  await expect(dialog).toHaveCSS('overflow-y', 'hidden');
+  const inner = dialog.locator(':scope > div');
+  await expect(inner).toHaveCSS('overflow-y', 'auto');
+  await expect(inner).toHaveCSS('padding-right', '0px');
+  const pageY = await page.evaluate(() => window.scrollY);
+  await expect.poll(() => dialog.evaluate((node) => getComputedStyle(node).translate)).toMatch(/^0px(?: 0(?:px|%))?$/);
+  await inner.hover();
+  await page.mouse.wheel(0, 480);
+  await expect.poll(() => inner.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(pageY);
+  await dialog.evaluate((node) => {
+    const sample = document.createElement('output');
+    sample.dataset.testid = 'modal-exit-sample';
+    document.body.append(sample);
+    const observer = new MutationObserver(() => {
+      if (node.getAttribute('data-reveal-state') !== 'out') return;
+      observer.disconnect();
+      const style = getComputedStyle(node);
+      const startOpacity = Number.parseFloat(style.opacity);
+      const animation = style.animationName;
+      const duration = style.animationDuration;
+      // Sample within the browser clock; separate protocol calls must not consume the exit interval.
+      setTimeout(() => {
+        sample.textContent = JSON.stringify({
+          startOpacity, animation, duration,
+          retained: node.isConnected,
+          locked: getComputedStyle(document.documentElement).overflowY === 'hidden',
+        });
+      }, 550);
+    });
+    observer.observe(node, { attributes: true, attributeFilter: ['data-reveal-state'] });
+  });
+  await page.setViewportSize({ width: 1024, height: 640 });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  const sample = page.getByTestId('modal-exit-sample');
+  await expect(sample).not.toBeEmpty();
+  const exit = JSON.parse(await sample.textContent() ?? '{}');
+  expect(exit).toMatchObject({ animation: 'ui-reveal-out', duration: '0.8s', retained: true, locked: true });
+  expect(exit.startOpacity).toBeGreaterThan(0);
+  await sample.evaluate((node) => node.remove());
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveCSS('overflow-y', 'hidden');
+  await page.setViewportSize({ width: 390, height: 640 });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  await expect(dialog).toHaveCount(1);
+  await expect(dialog.locator('..')).toHaveAttribute('data-open', 'true');
+  await dialog.getByRole('button', { name: 'Close mobile declaration' }).click();
+  await expect(trigger).toBeFocused();
+  await expect(dialog).toHaveCount(0);
+});
+
+test('declarative Modal reduced motion still releases the shared lock after closing', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 640 });
+  await openFixture(page);
+  const trigger = page.getByRole('button', { name: 'Open mobile declaration', exact: true });
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: 'Mobile declaration', exact: true });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+  await expect(page.locator('[role="dialog"][aria-label="Mobile declaration"]')).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveCSS('overflow-y', 'hidden');
+});
+
+test('Modal scroll lock keeps independent provider leases through provider unmounts and restores inline priorities', async ({ page }) => {
+  await openFixture(page);
+  const baseline = await page.evaluate(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    root.style.setProperty('overflow-x', 'clip', 'important');
+    root.style.setProperty('overflow-y', 'scroll');
+    body.style.setProperty('overflow', 'auto', 'important');
+    body.style.setProperty('padding', '24px 40px', 'important');
+    return { width: root.clientWidth, padding: Number.parseFloat(getComputedStyle(body).paddingRight) };
+  });
+  await page.getByRole('button', { name: 'Open First independent lease', exact: true }).click();
+  const first = page.getByRole('dialog', { name: 'First independent lease', exact: true });
+  await expect(first).toBeVisible();
+  await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden');
+  const lockedPadding = await page.evaluate(() => Number.parseFloat(getComputedStyle(document.body).paddingRight));
+  const reclaimedWidth = await page.evaluate(() => document.documentElement.clientWidth);
+  expect(lockedPadding).toBe(baseline.padding + reclaimedWidth - baseline.width);
+
+  await first.getByRole('button', { name: 'Open second independent lease' }).click();
+  const second = page.getByRole('dialog', { name: 'Second independent lease', exact: true });
+  await expect(second).toBeVisible();
+  expect(await page.evaluate(() => Number.parseFloat(getComputedStyle(document.body).paddingRight))).toBe(lockedPadding);
+  await second.getByRole('button', { name: 'Unmount first provider', exact: true }).click();
+  await expect(page.locator('[role="dialog"][aria-label="First independent lease"]')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden');
+  await second.getByRole('button', { name: 'Unmount Second independent lease', exact: true }).click();
+  await expect(second).toHaveCount(0);
+  expect(await page.evaluate(() => ({
+    rootX: document.documentElement.style.getPropertyValue('overflow-x'),
+    rootXPriority: document.documentElement.style.getPropertyPriority('overflow-x'),
+    rootY: document.documentElement.style.getPropertyValue('overflow-y'),
+    rootYPriority: document.documentElement.style.getPropertyPriority('overflow-y'),
+    bodyOverflow: document.body.style.getPropertyValue('overflow'),
+    bodyOverflowPriority: document.body.style.getPropertyPriority('overflow'),
+    padding: document.body.style.getPropertyValue('padding'),
+    paddingPriority: document.body.style.getPropertyPriority('padding-right'),
+  }))).toEqual({ rootX: 'clip', rootXPriority: 'important', rootY: 'scroll', rootYPriority: '', bodyOverflow: 'auto', bodyOverflowPriority: 'important', padding: '24px 40px', paddingPriority: 'important' });
+});
+
+test('Modal scroll lock stays while stacked dialogs exit and releases after the final DOM removal', async ({ page }) => {
+  await openFixture(page);
+  await page.getByRole('button', { name: 'Open stacked modal', exact: true }).click();
+  await page.getByTestId('open-top-modal').click();
+  const top = page.locator('[role="dialog"][aria-label="Top stacked modal"]');
+  const lower = page.locator('[role="dialog"][aria-label="Lower stacked modal"]');
+  await expect(top).toBeVisible();
+  await expect(top.locator('..')).toHaveAttribute('data-open', 'true');
+  await page.keyboard.press('Tab');
+  await expect(page.getByTestId('top-first')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(top.locator('..')).toHaveAttribute('data-open', 'false');
+  await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden');
+  await expect(top).toHaveCount(0);
+  await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden');
+  await page.keyboard.press('Escape');
+  await expect(lower.locator('..')).toHaveAttribute('data-open', 'false');
+  await expect(lower).toHaveCount(1);
+  await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden');
+  await expect(lower).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveCSS('overflow-y', 'hidden');
+});
+
+test('Modal scroll lock allows inner wheel scrolling while page wheel stays blocked without SmoothScroll', async ({ page }) => {
+  await openFixture(page);
+  await page.getByRole('button', { name: 'Open First independent lease', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'First independent lease', exact: true });
+  await expect(dialog).toBeVisible();
+  const inner = dialog.locator(':scope > div');
+  const pageY = await page.evaluate(() => window.scrollY);
+  expect(await inner.evaluate((node) => node.scrollHeight > node.clientHeight)).toBe(true);
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Open second independent lease' })).toBeFocused();
+  await inner.hover();
+  await page.mouse.wheel(0, 1000);
+  await expect.poll(() => inner.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(pageY);
+  await page.mouse.move(8, 8);
+  await page.mouse.wheel(0, 1000);
+  await page.waitForTimeout(120);
+  expect(await page.evaluate(() => window.scrollY)).toBe(pageY);
+});
+
+test('Modal scroll lock preserves body padding when a stable scrollbar gutter remains reserved', async ({ page }) => {
+  await openFixture(page);
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty('scrollbar-gutter', 'stable');
+    document.body.style.setProperty('padding-right', '36px', 'important');
+  });
+  const before = await page.evaluate(() => document.documentElement.clientWidth);
+  await page.getByRole('button', { name: 'Open First independent lease', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'First independent lease', exact: true });
+  await expect(dialog).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.clientWidth)).toBe(before);
+  await expect(page.locator('body')).toHaveCSS('padding-right', '36px');
+  await dialog.getByRole('button', { name: 'Unmount First independent lease', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(await page.evaluate(() => document.body.style.getPropertyValue('padding-right'))).toBe('36px');
+  expect(await page.evaluate(() => document.body.style.getPropertyPriority('padding-right'))).toBe('important');
 });
 
 test('stacked Modals isolate the lower dialog and restore focus when the top closes', async ({ page }) => {
@@ -728,7 +1276,7 @@ test('stacked Modals isolate the lower dialog and restore focus when the top clo
   await first.press('Shift+Tab');
   await expect(last).toBeFocused();
   await last.press('Escape');
-  await expect(topRoot).toHaveAttribute('aria-hidden', 'true');
+  await expect(top).toHaveCount(0);
   await expect.poll(() => lowerRoot.getAttribute('aria-hidden')).toBe('false');
   await expect(lowerButton).toBeFocused();
   await expect(lowerRoot).not.toHaveAttribute('inert', '');

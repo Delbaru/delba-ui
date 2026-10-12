@@ -14,15 +14,18 @@ const validMotion = {
     fast: 0.16,
     gentleEase: 0.42,
   },
+  distance: { small: 16, full: '100%' },
 } as const satisfies UiMotion;
 
 test('project timing types follow config keys, including custom names and renames', () => {
   const fixture = path.join(import.meta.dirname, 'motion-types.fixture.ts');
   const source = `
     import type { MotionTime } from '../src/core/base/timing';
-    const config = { motion: { timing: { gentleEase: 0.42 } } };
+    import type { MotionDistance } from '../src/core/base/distance';
+    const config = { motion: { timing: { gentleEase: 0.42 }, distance: { full: '100%', compact: 16 } } };
     declare global {
       interface UiMotionTiming { names: keyof typeof config.motion.timing; }
+      interface UiMotionDistance { names: keyof typeof config.motion.distance; }
     }
     const named: MotionTime = 'gentleEase';
     const exact: MotionTime = 0.16;
@@ -30,6 +33,11 @@ test('project timing types follow config keys, including custom names and rename
     const oldName: MotionTime = 'slow';
     // @ts-expect-error misspelled names cannot be used
     const typo: MotionTime = 'gentleEsae';
+    const namedDistance: MotionDistance = 'full';
+    const percentDistance: MotionDistance = '100%';
+    const exactDistance: MotionDistance = 24;
+    // @ts-expect-error names absent from config cannot be used
+    const oldDistance: MotionDistance = 'large';
   `;
   const options: ts.CompilerOptions = { strict: true, noEmit: true, types: [], target: ts.ScriptTarget.ES2022 };
   const host = ts.createCompilerHost(options);
@@ -63,6 +71,7 @@ test('validateMotion rejects malformed objects, empty maps, invalid names and in
   assert.throws(() => validateMotion({}), /motion\.timing is required/);
   assert.throws(() => validateMotion(Object.create({ timing: validMotion.timing })), /motion must be an object/);
   assert.throws(() => validateMotion({ timing: {} }), /motion\.timing must contain at least one duration/);
+  assert.throws(() => validateMotion({ timing: { fast: 0.1 }, distance: {} }), /motion\.distance must contain at least one distance/);
   assert.throws(() => validateMotion({ timing: [] }), /motion\.timing must be an object/);
   assert.throws(() => validateMotion({ timing: Object.create({ fast: 0.1 }) }), /motion\.timing must be an object/);
 
@@ -76,6 +85,10 @@ test('validateMotion rejects malformed objects, empty maps, invalid names and in
       /motion\.timing\.slow must be a finite non-negative number of seconds/,
     );
   }
+  for (const value of ['calc(100% - 1px)', 'var(--x)', '-100%', '100vh', 'small', '100', Infinity, -1]) {
+    assert.throws(() => validateMotion({ timing: { fast: 0.1 }, distance: { full: value } }), /motion\.distance\.full must be/);
+  }
+  assert.throws(() => validateMotion({ timing: { fast: 0.1 }, distance: { 'bad-name': 12 } }), /motion\.distance\.bad-name must be a camelCase name/);
 });
 
 test('motionScss emits config entries in their declared order or a comment-only partial when unset', () => {
@@ -86,6 +99,8 @@ test('motionScss emits config entries in their declared order or a comment-only 
     '  --t-d-flash: 0.06s;',
     '  --t-d-fast: 0.16s;',
     '  --t-d-gentle-ease: 0.42s;',
+    '  --t-m-distance-small: calc(var(--rpx) * 16);',
+    '  --t-m-distance-full: 100%;',
     '}',
     '',
   ].join('\n'));

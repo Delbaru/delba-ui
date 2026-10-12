@@ -48,7 +48,7 @@ description: Правка и создание компонентов общей 
 6. **`ref` — обычный проп (`WithRef`), склейка — `useMergedRefs`.** `forwardRef` не используем.
 7. **Классы примитивов — глобальные `ui-*`.** CSS-модуль — только крупному виджету.
 8. **Слои: покой в `ui.components`, пропы в `ui.utilities`, состояния в `ui.states`.**
-9. **SCSS — только непропсовое** (position, overflow, transform, transition, z-index, opacity,
+9. **SCSS — только непропсовое** (overflow, transform, transition, z-index, opacity,
    псевдоэлементы, селекторы состояний). Отступ, размер, радиус, фон — пропом.
 10. **`@media` ради размера — ошибка**: это кортеж. Законные медиазапросы берутся из `MEDIA_QUERY`
     или миксинов ядра.

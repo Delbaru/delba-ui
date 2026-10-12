@@ -2,17 +2,17 @@
 
 import styles from './Select.module.scss';
 
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, type CSSProperties } from 'react';
 import type React from 'react';
-import { assetUrl, composeEventHandlers, cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BorderStyleProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type SizePropsShort, type ResponsiveValue, type GrowProps, type WithRef, fieldLayoutClasses } from '../../core';
+import { assetUrl, composeEventHandlers, cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BoxLayoutProps, type ComponentStateValue, type StateLinkInput, type ResponsiveValue, type WithRef, fieldLayoutClasses, fieldRootLayoutClasses, resolveFieldLayout, splitBoxLayout } from '../../core';
 import { Icon } from '../Icon';
 import { Text } from '../Text';
 import { Skeleton } from '../Skeleton';
 import { Flex } from '../Flex';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 import type { SharedMotionProps } from '../../hooks/useSharedMotion';
-import { useAnchoredFloating } from '../../hooks/useAnchoredFloating';
+import { Box } from '../Box';
+import { Dropdown } from '../Dropdown';
 import { isValueArray, selectFormValues, type SelectItem } from './options';
 import { useSelect, type SelectRenderValuePayload } from './useSelect';
 
@@ -27,16 +27,13 @@ const c = createLayoutClasses(styles, { local: { h: 'height' } });
 const DEFAULT_PLACEHOLDER = 'Выберите значение';
 const DEFAULT_EMPTY_MESSAGE = 'Выберите значение';
 const DEFAULT_VISIBLE_OPTIONS = 4;
+const PANEL_VARIABLES = ['--select-height', '--select-dropdown-radius', '--select-dropdown-radius-top'] as const;
 
 /** Пропсы Select без значения. Обёртке: `SelectBaseProps<T> & SelectValueProps<T>`, а не `extends SelectProps`. */
 export interface SelectBaseProps<T extends string = string>
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue' | 'onChange' | 'dir' | 'rel'>,
-        LayoutSpaceProps,
-        RadiusPropsShort,
-        BorderStyleProps,
-        GrowProps,
-        SharedMotionProps,
-        SizePropsShort {
+        BoxLayoutProps,
+    SharedMotionProps {
     className?: string;
 
     /** Сворачивает всё поле вместе с подписью и ошибкой; не управляет списком вариантов. */
@@ -92,7 +89,7 @@ export interface SelectBaseProps<T extends string = string>
     variant?: ResponsiveValue<VariantKey>;
     size?: ResponsiveValue<SizeKey>;
 
-    bg?: string;
+
     color?: string;
 
     error?: string;
@@ -140,93 +137,58 @@ function isPrimitiveNode(node: React.ReactNode): node is string | number {
 function renderSelectNode(node: React.ReactNode, textClassName: string | undefined): React.ReactNode {
     if (isPrimitiveNode(node)) {
         return (
-            <Text variant={['body', 'body', 'body']} className={textClassName} color="inherit">
-                {node}
-            </Text>
+            <Text variant={['body', 'body', 'body']} className={textClassName} color="inherit">{node}</Text>
         );
     }
 
     return node;
 }
 
-export function Select<T extends string = string>({
-    ref,
-    className = '',
-    collapse,
-    fieldClassName,
-    style,
-    options,
-    name,
-    form,
-    value: valueProp,
-    defaultValue,
-    onChange,
-    multiple,
-    closeOnSelect = false,
-    showSelected = true,
-    renderValue,
-    placeholder = DEFAULT_PLACEHOLDER,
-    placeholderColor,
-    loading = false,
-    label,
-    labelColor,
-    comment,
-    variant,
-    size,
-    p,
-    pt,
-    pr,
-    pb,
-    pl,
-    m,
-    mt,
-    mr,
-    mb,
-    ml,
-    r,
-    tlr,
-    trr,
-    brr,
-    blr,
-    borderTLR,
-    borderTRR,
-    borderBRR,
-    borderBLR,
-    border,
-    borderC,
-    borderS,
-    borderW,
-    borderT,
-    borderR,
-    borderB,
-    borderL,
-    grow,
-    perspective3d,
-    parallax,
-    animate,
-    w,
-    minW,
-    maxW,
-    h,
-    minH,
-    maxH,
-    bg,
-    color,
-    error: errorProp,
-    disabled,
-    required,
-    emptyMessage = DEFAULT_EMPTY_MESSAGE,
-    visibleOptions = DEFAULT_VISIBLE_OPTIONS,
-    validate: validateProp,
-    id: idProp,
-    state,
-    linkState,
-    onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp,
-    onClick, onFocus, onBlur,
-    'aria-label': ariaLabel,
-    'data-point-events': dataPointEvents,
-    ...restProps
-}: WithRef<SelectProps<T>, HTMLDivElement>) {
+export function Select<T extends string = string>(props: WithRef<SelectProps<T>, HTMLDivElement>) {
+    const { box, rest: fieldProps } = splitBoxLayout(props);
+    const {
+        ref,
+        className = '',
+        collapse,
+        fieldClassName,
+        style,
+        options,
+        name,
+        form,
+        value: valueProp,
+        defaultValue,
+        onChange,
+        multiple,
+        closeOnSelect = false,
+        showSelected = true,
+        renderValue,
+        placeholder = DEFAULT_PLACEHOLDER,
+        placeholderColor,
+        loading = false,
+        label,
+        labelColor,
+        comment,
+        variant,
+        size,
+        perspective3d,
+        parallax,
+        animate,
+        color,
+        error: errorProp,
+        disabled,
+        required,
+        emptyMessage = DEFAULT_EMPTY_MESSAGE,
+        visibleOptions = DEFAULT_VISIBLE_OPTIONS,
+        validate: validateProp,
+        id: idProp,
+        state,
+        linkState,
+        onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp,
+        onClick, onFocus, onBlur,
+        'aria-label': ariaLabel,
+        'data-point-events': dataPointEvents,
+        ...restProps
+    } = fieldProps;
     // Хук хранит общий `T | null | T[]`; наружу значение уходит типом своей ветки `multiple`.
     const emitChange = (next: T | null | T[]) => {
         if (multiple) {
@@ -242,11 +204,11 @@ export function Select<T extends string = string>({
     };
 
     const {
-        id, fieldRef, triggerAnchorRef, dropdownPanelRef, dropdownDismissProps,
+        id, fieldRef,
         errorId, displayError, commentId, listboxId, open, focusedIndex, setFocusedIndex,
         showInlineError, hasSelectedValue, displayContent, dropdownItems, dropdownOptions,
         dropdownScrolls, normalizedVisibleOptions, triggerAccessibilityProps, dropdownRef,
-        setWrapperRef, setOptionRef, motionHandlers, motionStyle, revealAttrs, handleContainerClick, handleKeyDown,
+        setWrapperRef, setOptionRef, motionHandlers, motionStyle, revealAttrs, handleOpenChange, handleKeyDown,
         handleSelect, handleDropdownWheelCapture, handleDropdownTouchMoveCapture, optionIndexOf,
         closeDropdown,
         isOptionSelected, formValue,
@@ -257,240 +219,165 @@ export function Select<T extends string = string>({
         id: idProp, error: errorProp, label, comment, ariaLabel, perspective3d, parallax, animate,
     });
 
-    const { style: dropdownFloatingStyle } = useAnchoredFloating({
-        anchorRef: triggerAnchorRef,
-        floatingRef: dropdownPanelRef,
-        isActive: open,
-        placement: 'bottom',
-        align: 'start',
-        gap: -1,
-        viewportPadding: 8,
-        keepPositionWhenInactive: true,
-    });
-    const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
-    const portalSelectRef = useRef<HTMLDivElement>(null);
     const isCollapsed = typeof collapse === 'boolean' ? !collapse : collapse?.open === false;
-
-    useEffect(() => {
-        const modal = triggerAnchorRef.current?.closest<HTMLElement>('[role="dialog"][aria-modal="true"]');
-        // Keep a modal's list in that modal's stacking context so a later dialog covers it.
-        // A regular page Select has no such ancestor and uses the body-level floating layer.
-        setPortalNode(modal?.parentElement ?? document.body);
-    }, []);
-
-    useLayoutEffect(() => {
-        const anchor = triggerAnchorRef.current;
-        const portalSelect = portalSelectRef.current;
-        if (!anchor || !portalSelect) return;
-
-        const syncSelectVariables = () => {
-            const computed = window.getComputedStyle(anchor);
-            for (const variable of ['--select-height', '--select-dropdown-radius', '--select-dropdown-radius-top']) {
-                const value = computed.getPropertyValue(variable).trim();
-                if (value) portalSelect.style.setProperty(variable, value);
-                else portalSelect.style.removeProperty(variable);
-            }
-        };
-
-        syncSelectVariables();
-        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(syncSelectVariables) : null;
-        observer?.observe(anchor);
-        window.addEventListener('resize', syncSelectVariables);
-
-        return () => {
-            observer?.disconnect();
-            window.removeEventListener('resize', syncSelectVariables);
-        };
-    });
 
     useEffect(() => {
         if (isCollapsed) closeDropdown(false);
     }, [closeDropdown, isCollapsed]);
 
-    const hasExplicitSize =
-        w !== undefined ||
-        minW !== undefined ||
-        maxW !== undefined ||
-        h !== undefined ||
-        minH !== undefined ||
-        maxH !== undefined;
-
-    const resolvedVariant = variant ?? 'primary';
-    const resolvedSize = size ?? (hasExplicitSize ? undefined : 'default');
-
-    const layoutProps = {
-        variant: resolvedVariant,
-        size: resolvedSize,
-        p,
-        pt,
-        pr,
-        pb,
-        pl,
-        m,
-        mt,
-        mr,
-        mb,
-        ml,
-        r,
-        tlr,
-        trr,
-        brr,
-        blr,
-        borderTLR,
-        borderTRR,
-        borderBRR,
-        borderBLR,
-        border,
-        borderC,
-        borderS,
-        borderW,
-        borderT,
-        borderR,
-        borderB,
-        borderL,
-        w,
-        minW,
-        maxW,
-        h,
-        minH,
-        maxH,
-        bg,
-        color,
-        placeholderColor,
-    };
+    const layoutProps = resolveFieldLayout({ ...box, variant, size, color, placeholderColor });
 
     const fieldClasses = fieldLayoutClasses(c, layoutProps);
 
-    const dropdownPortal = (
-        <div
-            className={cx(styles.SelectWrapper, styles.DropdownPortal)}
-            role="presentation"
+    const optionsContent = (
+        <Flex
+            ref={dropdownRef}
+            dir={['column', 'column', 'column']}
+            id={listboxId}
+            role="listbox"
+            scrollFade
+            className={styles.DropdownScroll}
+            data-scrolls={dropdownScrolls || undefined}
             aria-hidden={!open}
+            aria-multiselectable={multiple || undefined}
+            aria-activedescendant={
+                open && focusedIndex >= 0 && dropdownOptions[focusedIndex]
+                    ? `${id}-option-${focusedIndex}`
+                    : undefined
+            }
+            data-lenis-prevent
+            data-lenis-prevent-wheel
+            data-lenis-prevent-touch
+            onWheelCapture={handleDropdownWheelCapture}
+            onTouchMoveCapture={handleDropdownTouchMoveCapture}
         >
-            <Flex
-                ref={portalSelectRef}
-                dir={['column', 'column', 'column']}
-                className={cx(styles.Select, ...c.value('size', resolvedSize), ...c.value('h', h))}
-                style={
-                    {
-                        ['--select-visible-options' as string]: String(normalizedVisibleOptions),
-                    } as CSSProperties
+            {dropdownItems.map((item) => {
+                if (item.type === 'group') {
+                    return (
+                        <Text
+                            key={item.key}
+                            as="div"
+                            variant={['caption', 'caption', 'caption']}
+                            className={styles.GroupLabel}
+                            color="var(--text-muted)"
+                        >{item.label}</Text>
+                    );
                 }
-                {...stateProps(state, displayError && 'error', disabled && 'disabled', open && 'open')}
-            >
-                <div className={cx(styles.selectVariantScope, ...c.value('variant', resolvedVariant))}>
-                    <div
-                        ref={dropdownPanelRef}
-                        className={styles.DropdownWrapper}
-                        style={dropdownFloatingStyle}
-                        role="presentation"
-                        aria-hidden={!open}
-                        inert={!open}
-                        onKeyDown={handleKeyDown}
-                        {...dropdownDismissProps}
+
+                const opt = item.option;
+                const optionIndex = optionIndexOf(opt);
+                const isSelected = isOptionSelected(opt);
+                const isFocused = optionIndex === focusedIndex;
+                const optionContent = opt.children ?? opt.label;
+
+                return (
+                    // Короткий зазор оставляет больше места переносимой подписи.
+                    <Flex
+                        key={item.key}
+                        ref={setOptionRef(optionIndex)}
+                        align={['center', 'center', 'center']}
+                        justify={['space_between', 'space_between', 'space_between']}
+                        gap={[8, 8, 8]}
+                        id={`${id}-option-${optionIndex}`}
+                        role="option"
+                        aria-label={opt.label}
+                        aria-selected={isSelected}
+                        className={styles.Option}
+                        {...stateProps(isSelected && 'selected', isFocused && 'focused')}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => handleSelect(opt)}
+                        onMouseEnter={() => setFocusedIndex(optionIndex)}
                     >
-                        <div className={styles.DropdownInner} role="presentation">
-                            <div className={styles.Dropdown}>
-                                <Flex
-                                    ref={dropdownRef}
-                                    dir={['column', 'column', 'column']}
-                                    id={listboxId}
-                                    role="listbox"
-                                    scrollFade
-                                    className={styles.DropdownScroll}
-                                    data-scrolls={dropdownScrolls || undefined}
-                                    aria-hidden={!open}
-                                    aria-multiselectable={multiple || undefined}
-                                    aria-activedescendant={
-                                        open && focusedIndex >= 0 && dropdownOptions[focusedIndex]
-                                            ? `${id}-option-${focusedIndex}`
-                                            : undefined
-                                    }
-                                    data-lenis-prevent
-                                    data-lenis-prevent-wheel
-                                    data-lenis-prevent-touch
-                                    onWheelCapture={handleDropdownWheelCapture}
-                                    onTouchMoveCapture={handleDropdownTouchMoveCapture}
-                                >
-                                    {dropdownItems.map((item) => {
-                                        if (item.type === 'group') {
-                                            return (
-                                                <Text
-                                                    key={item.key}
-                                                    as="div"
-                                                    variant={['caption', 'caption', 'caption']}
-                                                    className={styles.GroupLabel}
-                                                    color="var(--text-muted)"
-                                                >
-                                                    {item.label}
-                                                </Text>
-                                            );
-                                        }
+                        {/* Строка — сам option; галочка только помечает его состояние. */}
+                        {multiple && (
+                            <Flex
+                                aria-hidden
+                                className={styles.OptionCheck}
+                                align={['center', 'center', 'center']}
+                                justify={['center', 'center', 'center']}
+                                w={[24, 24, 24]}
+                                h={[24, 24, 24]}
+                                r={[8, 8, 8]}
+                            >
+                                <Icon
+                                    aria-hidden
+                                    src={assetUrl(checkIcon)}
+                                    fill="var(--white-100)"
+                                    w={[16, 16, 16]}
+                                    h={[16, 16, 16]}
+                                    className={styles.OptionCheckIcon}
+                                />
+                            </Flex>
+                        )}
 
-                                        const opt = item.option;
-                                        const optionIndex = optionIndexOf(opt);
-                                        const isSelected = isOptionSelected(opt);
-                                        const isFocused = optionIndex === focusedIndex;
-                                        const optionContent = opt.children ?? opt.label;
-
-                                        return (
-                                            // Короткий зазор оставляет больше места переносимой подписи.
-                                            <Flex
-                                                key={item.key}
-                                                ref={setOptionRef(optionIndex)}
-                                                align={['center', 'center', 'center']}
-                                                justify={['space_between', 'space_between', 'space_between']}
-                                                gap={[8, 8, 8]}
-                                                id={`${id}-option-${optionIndex}`}
-                                                role="option"
-                                                aria-label={opt.label}
-                                                aria-selected={isSelected}
-                                                className={styles.Option}
-                                                {...stateProps(isSelected && 'selected', isFocused && 'focused')}
-                                                onMouseDown={(event) => event.preventDefault()}
-                                                onClick={() => handleSelect(opt)}
-                                                onMouseEnter={() => setFocusedIndex(optionIndex)}
-                                            >
-                                                {/* Строка — сам option; галочка только помечает его состояние. */}
-                                                {multiple && (
-                                                    <Flex
-                                                        aria-hidden
-                                                        className={styles.OptionCheck}
-                                                        align={['center', 'center', 'center']}
-                                                        justify={['center', 'center', 'center']}
-                                                        w={[24, 24, 24]}
-                                                        h={[24, 24, 24]}
-                                                        r={[8, 8, 8]}
-                                                    >
-                                                        <Icon
-                                                            aria-hidden
-                                                            src={assetUrl(checkIcon)}
-                                                            fill="var(--white-100)"
-                                                            w={[16, 16, 16]}
-                                                            h={[16, 16, 16]}
-                                                            className={styles.OptionCheckIcon}
-                                                        />
-                                                    </Flex>
-                                                )}
-
-                                                <div className={styles.OptionContent}>
-                                                    {renderSelectNode(optionContent, styles.OptionLabel)}
-                                                </div>
-                                            </Flex>
-                                        );
-                                    })}
-                                </Flex>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </Flex>
-        </div>
+                        <Box className={styles.OptionContent}>
+                            {renderSelectNode(optionContent, styles.OptionLabel)}
+                        </Box>
+                    </Flex>
+                );
+            })}
+        </Flex>
     );
 
-    const dropdownContent = portalNode
-        ? createPortal(dropdownPortal, portalNode)
-        : dropdownPortal;
+    const trigger = (
+        <Flex
+            ref={fieldRef}
+            align={['center', 'center', 'center']}
+            justify={['space_between', 'space_between', 'space_between']}
+            gap={[8, 8, 8]}
+            className={styles.SelectTrigger}
+            w={['100%', '100%', '100%']}
+            role="button"
+            tabIndex={disabled ? -1 : 0}
+            id={id}
+            onKeyDown={handleKeyDown}
+            {...triggerAccessibilityProps}
+        >
+            <Box
+                className={styles.TriggerContent}
+                style={{
+                    color: showInlineError
+                        ? 'var(--error)'
+                        : !hasSelectedValue
+                            ? placeholderColor ?? 'var(--field-placeholder-color, var(--text-muted))'
+                            : undefined,
+                }}
+            >
+                {/* Скелетон и значение подменяют друг друга на одном месте — значит
+                    `transitionKey` (§8.4), а не голое условие: иначе полоса исчезает
+                    кадром. Шеврон при этом снаружи обёртки и не мигает. */}
+                <Flex
+                    transitionKey={loading ? 'skeleton' : 'value'}
+                    animation="fadeIn"
+                    w={['100%', null, null]}
+                >
+                    {loading ? (
+                        <Skeleton h={[16, null, null]} />
+                    ) : showInlineError ? (
+                        <Text
+                            as="div"
+                            id={errorId}
+                            role="alert"
+                            variant={['body', 'body', 'body']}
+                            color="inherit"
+                            className={styles.TriggerText}
+                        >{displayError}</Text>
+                    ) : (
+                        renderSelectNode(displayContent, styles.TriggerText)
+                    )}
+                </Flex>
+            </Box>
+
+            <Icon
+                aria-hidden
+                src={assetUrl(arrowIcon)}
+                fill="transparent"
+                w={[20, 20, 20]}
+                h={[20, 20, 20]}
+                className={styles.Chevron}
+            />
+        </Flex>
+    );
 
     return (
         <Flex
@@ -498,7 +385,7 @@ export function Select<T extends string = string>({
             href={undefined}
             dir={['column', 'column', 'column']}
             gap={[8, 8, 8]}
-            className={cx(styles.SelectWrapper, ...c.value('grow', grow), className)}
+            className={cx(styles.SelectWrapper, ...fieldRootLayoutClasses(c, box), className)}
             style={{ ...(motionStyle ?? null), ...style }}
             ref={setWrapperRef}
             data-point-events={dataPointEvents}
@@ -517,92 +404,32 @@ export function Select<T extends string = string>({
         >
             {label && (
                 <Flex dir={['row', 'row', 'row']} gap={required ? [4, 4, 4] : [0, 0, 0]}>
-                    <Text variant={['caption', 'caption', 'caption']} color={labelColor}>
-                        {label}
-                    </Text>
+                    <Text variant={['caption', 'caption', 'caption']} color={labelColor}>{label}</Text>
 
                     {required && (
-                        <Text variant={['caption', 'caption', 'caption']} color="var(--error)">
-                            *
-                        </Text>
+                        <Text variant={['caption', 'caption', 'caption']} color="var(--error)">*</Text>
                     )}
                 </Flex>
             )}
 
-            <Flex
+            <Dropdown
+                open={open}
+                onOpenChange={handleOpenChange}
+                trigger={trigger}
                 className={cx(styles.Select, ...fieldClasses, fieldClassName)}
-                style={
-                    {
-                        ['--select-visible-options' as string]: String(normalizedVisibleOptions),
-                    } as CSSProperties
-                }
+                style={{ '--select-visible-options': String(normalizedVisibleOptions) } as CSSProperties}
                 {...stateProps(state, displayError && 'error', disabled && 'disabled', open && 'open')}
-                role="presentation"
-                onClick={handleContainerClick}
+                panel={{
+                    portal: true,
+                    offset: -1,
+                    matchTriggerWidth: true,
+                    inheritVariables: PANEL_VARIABLES,
+                    className: styles.Dropdown,
+                    onKeyDown: handleKeyDown,
+                }}
             >
-                <Flex
-                    ref={fieldRef}
-                    align={['center', 'center', 'center']}
-                    justify={['space_between', 'space_between', 'space_between']}
-                    gap={[8, 8, 8]}
-                    className={styles.SelectTrigger}
-                    w={['100%', '100%', '100%']}
-                    role="button"
-                    tabIndex={disabled ? -1 : 0}
-                    id={id}
-                    onKeyDown={handleKeyDown}
-                    {...triggerAccessibilityProps}
-                >
-                    <div
-                        className={styles.TriggerContent}
-                        style={{
-                            color: showInlineError
-                                ? 'var(--error)'
-                                : !hasSelectedValue
-                                    ? placeholderColor ?? 'var(--field-placeholder-color, var(--text-muted))'
-                                    : undefined,
-                        }}
-                    >
-                        {/* Скелетон и значение подменяют друг друга на одном месте — значит
-                            `transitionKey` (§8.4), а не голое условие: иначе полоса исчезает
-                            кадром. Шеврон при этом снаружи обёртки и не мигает. */}
-                        <Flex
-                            transitionKey={loading ? 'skeleton' : 'value'}
-                            animation='fadeIn'
-                            w={['100%', null, null]}
-                        >
-                        {loading ? (
-                            <Skeleton h={[16, null, null]} />
-                        ) : showInlineError ? (
-                            <Text
-                                as="div"
-                                id={errorId}
-                                role="alert"
-                                variant={['body', 'body', 'body']}
-                                color="inherit"
-                                className={styles.TriggerText}
-                            >
-                                {displayError}
-                            </Text>
-                        ) : (
-                            renderSelectNode(displayContent, styles.TriggerText)
-                        )}
-                        </Flex>
-                    </div>
-
-                    <Icon
-                        aria-hidden
-                        src={assetUrl(arrowIcon)}
-                        fill="transparent"
-                        w={[20, 20, 20]}
-                        h={[20, 20, 20]}
-                        className={styles.Chevron}
-                    />
-                </Flex>
-
-            </Flex>
-
-            {dropdownContent}
+                {optionsContent}
+            </Dropdown>
 
             {name && !disabled && selectFormValues(formValue, multiple === true).map((itemValue, index) => (
                 <input key={`${itemValue}-${index}`} type="hidden" name={name} form={form} value={itemValue} />
@@ -615,9 +442,7 @@ export function Select<T extends string = string>({
                     id={commentId}
                     color="var(--text-muted)"
                     pl={fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl)}
-                >
-                    {comment}
-                </Text>
+                >{comment}</Text>
             )}
         </Flex>
     );

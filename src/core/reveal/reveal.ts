@@ -11,8 +11,9 @@
  * `fade: false` снимает прозрачность, `start: 'load'` запускает ход чистым CSS с первой отрисовки.
  */
 import { isMotionTimingName, motionTimingVariable, type MotionTime, type MotionTimingName } from '../base/timing';
+import { motionDistanceCss, normalizeMotionDistance, type MotionDistance } from '../base/distance';
 
-export type RevealKey = 'fade' | 'up' | 'left' | 'right' | 'scale' | 'blur';
+export type RevealKey = 'fade' | 'up' | 'down' | 'left' | 'right' | 'scale' | 'blur';
 
 export interface RevealOptions {
   /** Интервал стартов прямых детей: имя motion.timing либо секунды. Нет или `0` — появляется корень целиком. */
@@ -21,8 +22,8 @@ export interface RevealOptions {
   delay?: MotionTime;
   /** Длительность: имя motion.timing либо секунды. По умолчанию — `--t-d-slow`. */
   duration?: MotionTime;
-  /** Сдвиг для `up`/`left`/`right`, rpx (кратно 4). По умолчанию `32`. */
-  distance?: number;
+  /** Сдвиг: число в rpx, процент собственного размера или имя motion.distance. По умолчанию 32rpx. */
+  distance?: MotionDistance;
   /** Один раз (по умолчанию) или при каждом входе в экран: `false` снова прячет ушедший вниз элемент. */
   once?: boolean;
   /** Доля площади в экране, с которой стартует ход. По умолчанию `0` — с первого пикселя. */
@@ -44,8 +45,11 @@ export interface RevealOptions {
 /** Объектная форма reveal. Секунды, пороги и остальные опции совпадают с legacy API. */
 export type RevealConfig<O extends RevealOptions = RevealOptions> = { effect: RevealKey } & O;
 
-/** Shared appearance animation. `load` is the CSS-only first-paint variant; `inView` uses the observer. */
+/** Shared appearance animation: scroll or first paint. */
 export type AppearanceAnimate = { when: 'inView' | 'load' } & Omit<RevealConfig, 'start'>;
+
+/** An owner's open state drives both enter and exit; opt in only on components with that state. */
+export type OpenAnimate = { when: 'open' } & Omit<RevealConfig, 'start' | 'stagger' | 'once' | 'threshold' | 'rootMargin'>;
 
 /** Narrow type for the observer-started appearance variant. */
 export type InViewAnimate = { when: 'inView' } & Omit<RevealConfig, 'start'>;
@@ -65,6 +69,12 @@ export function isAppearanceAnimate(value: unknown): value is AppearanceAnimate 
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const candidate = value as { when?: unknown; effect?: unknown };
   return (candidate.when === 'inView' || candidate.when === 'load') && isRevealKey(candidate.effect as string | null | undefined);
+}
+
+export function isOpenAnimate(value: unknown): value is OpenAnimate {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const candidate = value as { when?: unknown; effect?: unknown };
+  return candidate.when === 'open' && isRevealKey(candidate.effect as string | null | undefined);
 }
 
 /** Narrow guard for consumers that specifically require an observer-started reveal. */
@@ -87,6 +97,12 @@ export interface RevealProps {
    * контент виден сразу. См. `RevealOptions`.
    */
   reveal?: RevealInput;
+
+  /**
+   * Исключает узел из каскада reveal его родителя, не отменяя его собственную анимацию.
+   * Установите `true` или уберите атрибут через `undefined`; учитывается load CSS и observer.
+   */
+  'data-reveal-skip'?: true;
 }
 
 export interface ResolvedReveal {
@@ -95,7 +111,7 @@ export interface ResolvedReveal {
   stagger: number | MotionTimingName;
   delay: number | MotionTimingName;
   duration: number | MotionTimingName | null;
-  distance: number | null;
+  distance: MotionDistance | null;
   once: boolean;
   threshold: number;
   rootMargin: string;
@@ -103,11 +119,18 @@ export interface ResolvedReveal {
   start: 'view' | 'load';
 }
 
-const KEYS: readonly RevealKey[] = ['fade', 'up', 'left', 'right', 'scale', 'blur'];
+const KEYS: readonly RevealKey[] = ['fade', 'up', 'down', 'left', 'right', 'scale', 'blur'];
 
 /** Пометка кита, а не проекта: `data-reveal` — имя заманчивое, на нём держат и свои каскады. */
 export const isRevealKey = (value: string | null | undefined): value is RevealKey =>
   value != null && KEYS.includes(value as RevealKey);
+
+/** Прямой ребёнок участвует в каскаде, если не помечен как пропускаемый и не владеет reveal сам. */
+export function isRevealCascadeChild(child: Pick<Element, 'getAttribute'>): boolean {
+  return child.getAttribute('data-reveal-skip') === null
+    && child.getAttribute('data-reveal-state') === null
+    && !isRevealKey(child.getAttribute('data-reveal'));
+}
 
 const toMs = (seconds: MotionTime | undefined): number | MotionTimingName =>
   isMotionTimingName(seconds) ? seconds
@@ -135,7 +158,7 @@ export function resolveReveal(input: RevealInput | undefined | null): ResolvedRe
     stagger: toMs(options.stagger),
     delay: toMs(options.delay),
     duration: duration !== 0 ? duration : null,
-    distance: options.distance != null && Number.isFinite(options.distance) ? Math.abs(options.distance) : null,
+    distance: normalizeMotionDistance(options.distance),
     once: options.once ?? true,
     threshold: Math.min(1, Math.max(0, options.threshold ?? 0)),
     rootMargin: options.rootMargin ?? '0px',
@@ -172,7 +195,7 @@ export function revealStyle(r: ResolvedReveal | null): Record<string, string> | 
   const style: Record<string, string> = {};
   if (r.duration != null) style['--reveal-duration'] = timeCss(r.duration);
   if (r.delay !== 0) style['--reveal-delay'] = timeCss(r.delay);
-  if (r.distance != null) style['--reveal-distance'] = String(r.distance);
+  if (r.distance != null) style['--reveal-distance'] = motionDistanceCss(r.distance);
   if (!r.fade) style['--reveal-o'] = '1';
   // Каскад без JS: шаг — переменной, порядок ребёнка CSS берёт из :nth-child.
   if (r.start === 'load' && r.stagger !== 0) style['--reveal-step'] = timeCss(r.stagger);
