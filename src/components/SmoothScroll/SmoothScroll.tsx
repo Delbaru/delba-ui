@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode }
 import { registerScrollProvider, unregisterScrollProvider } from '../../core/base/scroll';
 import { createSmoothScroll, type SmoothScrollConfig, type SmoothScrollController, type SmoothScrollTarget, type SmoothScrollToOptions } from './engine';
 import { easeOutExpo, type SmoothScrollEasing, type SmoothScrollOffset } from './smooth-scroll';
+import { subscribeWindowScroll } from './scroll-events';
 
 export type SmoothScrollProps = {
   children: ReactNode;
@@ -109,11 +110,7 @@ export function SmoothScroll({
     },
     // Скролл нативный, поэтому подписка — прямо на окно: эффект потомка идёт раньше эффекта
     // провайдера, и подписка через движок в первом кадре потерялась бы.
-    subscribe: (listener) => {
-      const handle = () => listener(window.scrollY);
-      window.addEventListener('scroll', handle, { passive: true });
-      return () => window.removeEventListener('scroll', handle);
-    },
+    subscribe: subscribeWindowScroll,
   }), []);
 
   // Дверь scrollTo ядра едет через этого провайдера, пока он жив, и падает в нативную прокрутку без него.

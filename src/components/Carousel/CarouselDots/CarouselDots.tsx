@@ -21,13 +21,13 @@ export function CarouselDots({ className, carouselId }: CarouselDotsProps) {
 
   return (
     <Flex
-      ref={setRootRef}
-      dir={['row', null, null]}
-      align={['center', null, null]}
-      justify={['center', null, null]}
-      gap={[8, null, null]}
-      className={cx(styles.CarouselDots, snapshot.paginationClassName, className)}
-      data-carousel-dots
+        ref={setRootRef}
+        dir={['row', null, null]}
+        align={['center', null, null]}
+        justify={['center', null, null]}
+        gap={[8, null, null]}
+        className={cx(styles.CarouselDots, snapshot.paginationClassName, className)}
+        data-carousel-dots
     >
       {shouldRender
         ? Array.from({ length: snapshot.pageCount }, (_, index) => {
@@ -36,14 +36,14 @@ export function CarouselDots({ className, carouselId }: CarouselDotsProps) {
 
           return (
             <Button
-              key={dotId}
-              id={dotId}
-              className={styles.dot}
-              state={isActive ? 'active' : undefined}
-              linkState={isActive ? undefined : dotId}
-              aria-label={`Перейти к слайду ${index + 1}`}
-              aria-current={isActive ? 'true' : undefined}
-              onClick={() => snapshot.api?.goTo(index)}
+                key={dotId}
+                id={dotId}
+                className={styles.dot}
+                state={isActive ? 'active' : undefined}
+                linkState={isActive ? undefined : dotId}
+                aria-label={`Перейти к слайду ${index + 1}`}
+                aria-current={isActive ? 'true' : undefined}
+                onClick={() => snapshot.api?.goTo(index)}
             />
           );
         })

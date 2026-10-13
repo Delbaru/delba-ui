@@ -11,6 +11,8 @@ import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMo
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { resolveAnimation } from './animations/resolveAnimation';
 import type { AnimationInput, TextAnimate } from './animations/types';
+import { isTextTimeline } from './animations/timeline';
+import { useTextTimeline } from './animations/useTextTimeline';
 import type { LineHeightValue } from './typography';
 import { resolveTextContent, type TextFormat } from './formatContent';
 import { bindTextContent } from './nonBreaking';
@@ -35,7 +37,7 @@ export interface TextProps
   children?: React.ReactNode;
   style?: CSSProperties;
   format?: ResponsiveValue<TextFormat>;
-  /** Общий reveal или анимация текста: `{ when: 'inView', effect: 'counter' }`, `{ when: 'change', effect: 'textSlide' }`. */
+  /** Появление, эффект текста или композиция: `{ when: 'inView', effect: { up: {}, counter: { to: 100 } } }`. */
   animate?: AppearanceAnimate | ResponsiveInput<AnimationInput> | TextAnimate;
   required?: boolean;
 
@@ -49,7 +51,8 @@ export interface TextProps
   /** Сворачивание текста с сохранением содержимого до конца анимации закрытия. Для блочного текста. */
   collapse?: CollapseOptions;
 
-  fontSize?: ResponsiveValue<number>;
+  /** Размер в rpx либо CSS-длина (`min(…, 10svh)`, `var(…)`); поверх variant. */
+  fontSize?: ResponsiveValue<number | string>;
   fontWeight?: ResponsiveValue<number>;
   lineHeight?: ResponsiveValue<LineHeightValue>;
   fontFamily?: ResponsiveValue<FontFamilyKey>;
@@ -118,7 +121,9 @@ export function Text({
 
   // Контент и анимация: формат строки → плагин анимации из реестра (или контент как есть).
   const content = resolveTextContent(children, format);
-  const contentAnimate = isAppearanceAnimate(animate) ? undefined : animate;
+  const timelineInput = isTextTimeline(animate) ? animate : undefined;
+  const timeline = useTextTimeline(timelineInput, content, internalRef);
+  const contentAnimate = isAppearanceAnimate(animate) || timelineInput ? undefined : animate;
   const anim = resolveAnimation(animation ?? contentAnimate, content);
 
   // Классы и inline-стиль host'а — коробка из ядра (boxLayout), типографика здесь. Алгоритмика (letter-spacing,
@@ -130,6 +135,8 @@ export function Text({
   const inline: CSSProperties = {
     ...clampStyle,
     ...(motionStyle ?? null),
+    ...(timeline.style ?? null),
+    ...(timelineInput && as === 'span' ? { display: 'inline-block' } : null),
   };
 
   const normalizedState = normalizeComponentState(state);
@@ -171,24 +178,28 @@ export function Text({
 
   const textNode = (
     <Comp
-      ref={setRef}
-      {...(normalizedState ? { state: normalizedState } : undefined)}
-      className={classNames}
-      style={{ ...inline, ...style }}
-      {...revealAttrs}
-      {...anchorProps}
-      {...sharedHandlerProps}
+        ref={setRef}
+        {...(normalizedState ? { state: normalizedState } : undefined)}
+        className={classNames}
+        style={{ ...inline, ...style }}
+        {...revealAttrs}
+        {...timeline.attrs}
+        {...anchorProps}
+        {...sharedHandlerProps}
     >
-      {anim.active && anim.Inner ? <anim.Inner content={content} options={anim.options} /> : bindTextContent(content)}
+      {timeline.hasCounter ? (
+        <span className="ui-counter">
+          <span aria-hidden className="ui-counter-reserve">{timeline.finalText}</span>
+          <span ref={timeline.valueRef} className="ui-counter-value">{timeline.finalText}</span>
+        </span>
+      ) : anim.active && anim.Inner ? <anim.Inner content={content} options={anim.options} /> : bindTextContent(content)}
     </Comp>
   );
 
   if (!collapse) return textNode;
 
   return (
-    <CollapsibleText collapse={collapse} hasChildren={hasChildren}>
-      {textNode}
-    </CollapsibleText>
+    <CollapsibleText collapse={collapse} hasChildren={hasChildren}>{textNode}</CollapsibleText>
   );
 }
 
@@ -202,7 +213,7 @@ function CollapsibleText({ collapse, hasChildren, children }: {
   const [lastChildren, setLastChildren] = useState<React.ReactNode>(hasChildren ? children : null);
 
   useLayoutEffect(() => {
-    if (collapse.open && hasChildren) setLastChildren(children);
+    if (collapse.open !== false && hasChildren) setLastChildren(children);
   }, [collapse.open, hasChildren, children]);
 
   return (

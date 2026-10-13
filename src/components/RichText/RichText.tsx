@@ -347,12 +347,12 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
     if ((hasRows || hasSingleLineEllipsis) && previewText) {
       return (
         <div
-          ref={setRootRef}
-          className={cx(rootClassName, styles[resolvedVariant])}
-          style={rootStyle}
-          {...revealAttrs}
-          {...props}
-          {...linkedHandlers}
+            ref={setRootRef}
+            className={cx(rootClassName, styles[resolvedVariant])}
+            style={rootStyle}
+            {...revealAttrs}
+            {...props}
+            {...linkedHandlers}
         >
           <p className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)} style={clampStyle}>
             {previewText}
@@ -363,12 +363,12 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
 
     return (
       <div
-        ref={setRootRef}
-        className={cx(rootClassName, styles[resolvedVariant])}
-        style={rootStyle}
-        {...revealAttrs}
-        {...props}
-        {...linkedHandlers}
+          ref={setRootRef}
+          className={cx(rootClassName, styles[resolvedVariant])}
+          style={rootStyle}
+          {...revealAttrs}
+          {...props}
+          {...linkedHandlers}
       >
         {renderLexicalContent(content)}
       </div>
@@ -380,11 +380,11 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
     const translateY = cumHeights[(resolvedTextSlideOpts?.currentStep ?? 0) - 1] || 0;
     return (
       <div
-        ref={setRootRef}
-        className={cx(rootClassName, styles[resolvedVariant], styles.animation_textSlide)}
-        style={rootStyle}
-        {...revealAttrs}
-        {...linkedHandlers}
+          ref={setRootRef}
+          className={cx(rootClassName, styles[resolvedVariant], styles.animation_textSlide)}
+          style={rootStyle}
+          {...revealAttrs}
+          {...linkedHandlers}
       >
         <div
           className={styles.textContainer}
@@ -422,11 +422,11 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
     const maxHeight = heights.length > 0 ? Math.max(...heights) : 0;
     return (
       <div
-        ref={setRootRef}
-        className={cx(rootClassName, styles[resolvedVariant], styles.animation_textClip)}
-        style={rootStyle}
-        {...revealAttrs}
-        {...linkedHandlers}
+          ref={setRootRef}
+          className={cx(rootClassName, styles[resolvedVariant], styles.animation_textClip)}
+          style={rootStyle}
+          {...revealAttrs}
+          {...linkedHandlers}
       >
         <div
           className={styles.clipContainer}
@@ -468,12 +468,12 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
 
     return (
       <div
-        ref={setRootRef}
-        className={cx(rootClassName, styles[resolvedVariant])}
-        style={rootStyle}
-        {...revealAttrs}
-        {...props}
-        {...linkedHandlers}
+          ref={setRootRef}
+          className={cx(rootClassName, styles[resolvedVariant])}
+          style={rootStyle}
+          {...revealAttrs}
+          {...props}
+          {...linkedHandlers}
       >
         <p className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)} style={clampStyle}>
           {previewText}
@@ -484,10 +484,10 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
 
   return (
     <div
-      ref={setRootRef}
-      className={cx(rootClassName, styles[resolvedVariant])}
-      style={rootStyle}
-      {...revealAttrs}
+        ref={setRootRef}
+        className={cx(rootClassName, styles[resolvedVariant])}
+        style={rootStyle}
+        {...revealAttrs}
         {...props}
         {...linkedHandlers}
     >

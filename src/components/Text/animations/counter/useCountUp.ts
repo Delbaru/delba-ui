@@ -92,8 +92,9 @@ export function useCountUpNode(
 
     const write = (value: number) => {
       const text = formatRef.current(value);
-      if (node.firstChild) node.firstChild.nodeValue = text;
-      else node.textContent = text;
+      if (node.firstChild) {
+        if (node.firstChild.nodeValue !== text) node.firstChild.nodeValue = text;
+      } else if (node.textContent !== text) node.textContent = text;
     };
 
     if (!enabled) {

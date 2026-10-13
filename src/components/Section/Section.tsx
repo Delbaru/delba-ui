@@ -26,12 +26,12 @@ export function Section({ ref, children, className = '', style, perspective3d, p
 
   return (
     <section
-      ref={setRefs}
-      {...stateLinkProps(linkState, { onMouseEnter, onMouseLeave, ...motionHandlers })}
-      className={cx('ui-section', ...layout, className)}
-      style={{ ...(motionStyle ?? null), ...style }}
-      {...rest}
-      {...revealAttrs}
+        ref={setRefs}
+        {...stateLinkProps(linkState, { onMouseEnter, onMouseLeave, ...motionHandlers })}
+        className={cx('ui-section', ...layout, className)}
+        style={{ ...(motionStyle ?? null), ...style }}
+        {...rest}
+        {...revealAttrs}
     >
       {children}
     </section>

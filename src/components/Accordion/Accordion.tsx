@@ -219,7 +219,13 @@ export function AccordionItem({
     const panelId = `${baseId}-panel`;
 
     return (
-        <Flex ref={ref} {...props} className={cx(styles.item, className)} state={mergeComponentStates(state, props.state)} data-disabled={disabled || undefined}>
+        <Flex
+            ref={ref}
+            {...props}
+            className={cx(styles.item, className)}
+            state={mergeComponentStates(state, props.state)}
+            data-disabled={disabled || undefined}
+        >
             <Heading className={styles.heading}>
                 <Button
                     {...triggerProps}

@@ -30,14 +30,14 @@ export function Tooltip({ ref, portalNode, style, placement, active, className, 
 
   return createPortal(
     <div
-      ref={ref}
-      id={id}
-      className={cx(styles.Tooltip, surface && styles.surface, className)}
-      style={style}
-      role='tooltip'
-      aria-hidden={!active}
-      data-placement={placement}
-      {...stateProps(active && 'active')}
+        ref={ref}
+        id={id}
+        className={cx(styles.Tooltip, surface && styles.surface, className)}
+        style={style}
+        role='tooltip'
+        aria-hidden={!active}
+        data-placement={placement}
+        {...stateProps(active && 'active')}
     >
       {children}
     </div>,

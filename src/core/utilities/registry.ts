@@ -187,7 +187,7 @@ export const UTILITIES: readonly Utility[] = [
   { name: 'rowEnd', declare: numberOf('grid-row-end') },
 
   { name: 'text', declare: textVariant, domain: textDomain() },
-  { name: 'fontSize', declare: numberOf('font-size', rpx) },
+  { name: 'fontSize', declare: lengthOf('font-size') },
   { name: 'fontWeight', declare: numberOf('font-weight'), domain: range(100, 900, 100) },
   { name: 'lineHeight', declare: lineHeight },
   { name: 'fontFamily', ...enumOf('font-family', { primary: 'var(--font-primary)', secondary: 'var(--font-secondary)', inherit: 'inherit' }) },

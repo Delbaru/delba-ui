@@ -111,14 +111,12 @@ function ToolbarIconButton({
       alignItems={['center', 'center', 'center']}
       tooltip={
         <Text
-          variant={['micro', null, null]}
-          bg={['rgba(43,47,51,0.8)', 'rgba(43,47,51,0.8)', 'rgba(43,47,51,0.8)']}
-          color='var(--white-100)'
-          p={[4, 8, 4, 8]}
-          r={[8, null, null]}
-        >
-          {ariaLabel}
-        </Text>
+            variant={['micro', null, null]}
+            bg={['rgba(43,47,51,0.8)', 'rgba(43,47,51,0.8)', 'rgba(43,47,51,0.8)']}
+            color='var(--white-100)'
+            p={[4, 8, 4, 8]}
+            r={[8, null, null]}
+        >{ariaLabel}</Text>
       }
       tooltipDirection='bottom'
       onMouseDown={(event) => event.preventDefault()}
@@ -139,11 +137,7 @@ export function LexicalTextareaCounter({
   maxLength?: number;
 }) {
   return (
-    <Text
-      variant={['caption', null, null]}
-      color='var(--text-muted)'
-      style={{ whiteSpace: 'nowrap', lineHeight: 1 }}
-    >
+    <Text variant={['caption', null, null]} color='var(--text-muted)' style={{ whiteSpace: 'nowrap', lineHeight: 1 }}>
       {maxLength != null ? `${characters} / ${maxLength}` : `${characters}`}
     </Text>
   );
@@ -274,26 +268,24 @@ export function LexicalTextareaToolbar({ hasVariables, allowLink = true }: { has
   ] as const;
 
   return (
-    <Flex
-      dir={['row', null, null]}
-      wrap={['wrap', 'wrap', 'wrap']}
-      align={['center', null, null]}
-      gap={[16, null, null]}
-      grow={[1, 1, 1]}
-    >
+    <Flex dir={['row', null, null]} wrap={['wrap', 'wrap', 'wrap']} align={['center', null, null]} gap={[16, null, null]} grow={[1, 1, 1]}>
       {toolbarGroups.map((group, groupIndex) => (
         <Fragment key={groupIndex}>
           {group.map((action) => (
             <ToolbarIconButton
-              key={action.ariaLabel}
-              iconSrc={action.iconSrc}
-              isActive={action.isActive}
-              onClick={action.onClick}
-              ariaLabel={action.ariaLabel}
+                key={action.ariaLabel}
+                iconSrc={action.iconSrc}
+                isActive={action.isActive}
+                onClick={action.onClick}
+                ariaLabel={action.ariaLabel}
             />
           ))}
 
-          {groupIndex < toolbarGroups.length - 1 && <Flex w={[1, null, null]} h={[20, null, null]} bg={['var(--line)', 'var(--line)', 'var(--line)']} />}
+          {groupIndex < toolbarGroups.length - 1 && <Flex
+              w={[1, null, null]}
+              h={[20, null, null]}
+              bg={['var(--line)', 'var(--line)', 'var(--line)']}
+          />}
         </Fragment>
       ))}
 

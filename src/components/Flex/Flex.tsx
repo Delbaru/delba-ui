@@ -23,22 +23,7 @@ export type FlexAnimation = ContentAnimation;
 
 const c = createLayoutClasses();
 
-interface FlexCollapseOptions extends CollapseOptions {
-  /** Оставить закрытый контент в DOM для поиска по странице. */
-  keepMounted?: boolean;
-  /** Раскрыть найденный браузером контент. Используется вместе с `keepMounted`. */
-  onFound?: () => void;
-  /** Вызывается после завершённого раскрытия или закрытия. */
-  onEnd?: () => void;
-  /** Передать начавшийся переход вызывающему коду. */
-  onTransition?: (transition: Transition) => void;
-  /** Доступ к последнему переходу для ожидания и композиции. */
-  ref?: React.Ref<CollapseHandle>;
-  /** Снять обрезку после раскрытия для вложенных выпадающих элементов. */
-  overflowVisibleWhenOpen?: boolean;
-  /** Анимировать появление при первом монтировании. */
-  appear?: boolean;
-}
+type FlexCollapseOptions = CollapseOptions;
 
 export interface FlexProps
   extends Omit<React.HTMLAttributes<HTMLElement>, 'dir' | 'href' | 'target' | 'rel' | 'download'>,
@@ -51,7 +36,7 @@ export interface FlexProps
   style?: CSSProperties;
   state?: ComponentStateValue;
   /** Тег узла без `href`: `header`, `nav`, `footer`… */
-  as?: 'div' | 'header' | 'nav' | 'footer' | 'main' | 'aside' | 'section' | 'ul' | 'li' | 'dl';
+  as?: 'div' | 'header' | 'nav' | 'footer' | 'main' | 'aside' | 'section' | 'ul' | 'li' | 'dl' | 'figure' | 'figcaption';
 
   gap?: ResponsiveValue<number>;
   rowGap?: ResponsiveValue<number>;
@@ -209,19 +194,21 @@ export function Flex({
   // сжаться не даст — тогда клипает внутренний слой, как раньше.
   return (
     <CollapseWrap
-      open={collapseOptions.open}
-      clip={box.minH != null}
-      axis={collapseOptions.axis ?? collapseAxis}
-      gap={collapseOptions.gap ?? collapseGap}
-      gapSide={collapseOptions.gapSide}
-      fade={collapseOptions.fade ?? collapseFade}
-      overflowVisibleWhenOpen={collapseOptions.overflowVisibleWhenOpen ?? collapseOverflowVisible}
-      appear={collapseOptions.appear ?? collapseAppear}
-      keepMounted={collapseOptions.keepMounted ?? collapseKeepMounted}
-      onFound={collapseOptions.onFound ?? onCollapseFound}
-      onEnd={collapseOptions.onEnd ?? onCollapseEnd}
-      onTransition={collapseOptions.onTransition ?? onTransition}
-      handleRef={collapseOptions.ref ?? collapseRef}
+        open={collapseOptions.open}
+        defaultOpen={collapseOptions.defaultOpen}
+        onOpenChange={collapseOptions.onOpenChange}
+        clip={box.minH != null}
+        axis={collapseOptions.axis ?? collapseAxis}
+        gap={collapseOptions.gap ?? collapseGap}
+        gapSide={collapseOptions.gapSide}
+        fade={collapseOptions.fade ?? collapseFade}
+        overflowVisibleWhenOpen={collapseOptions.overflowVisibleWhenOpen ?? collapseOverflowVisible}
+        appear={collapseOptions.appear ?? collapseAppear}
+        keepMounted={collapseOptions.keepMounted ?? collapseKeepMounted}
+        onFound={collapseOptions.onFound ?? onCollapseFound}
+        onEnd={collapseOptions.onEnd ?? onCollapseEnd}
+        onTransition={collapseOptions.onTransition ?? onTransition}
+        handleRef={collapseOptions.ref ?? collapseRef}
     >
       {content}
     </CollapseWrap>

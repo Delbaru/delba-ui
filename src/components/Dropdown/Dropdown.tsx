@@ -6,8 +6,9 @@ import { createPortal } from 'react-dom';
 import { composeEventHandlers, cx, stateProps, useMergedRefs, type ComponentStateValue, type WithRef } from '../../core';
 import { useAnchoredFloating } from '../../hooks/useAnchoredFloating';
 import { useOutsideDismiss } from '../../hooks/useOutsideDismiss';
+import { useCollapseState } from '../../hooks/useCollapseState';
 import { Box, type BoxProps } from '../Box';
-import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
+import { CollapseWrap, type CollapseSettings } from '../Collapse/CollapseWrap';
 import { composeDropdownTriggerClick } from './trigger';
 import styles from './Dropdown.module.scss';
 
@@ -28,10 +29,12 @@ export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'colla
   portal?: boolean;
   /** Растянуть панель по ширине триггера. */
   matchTriggerWidth?: boolean;
+  /** Сохранять закрытое содержимое в DOM; false удаляет его после анимации закрытия. */
+  keepMounted?: boolean;
   /** CSS-переменные оформления, которые нужно перенести из корня в портал. */
   inheritVariables?: readonly `--${string}`[];
   /** Настройки общего collapse; открытие определяется состоянием Dropdown. */
-  collapse?: Omit<CollapseOptions, 'open'>;
+  collapse?: Omit<CollapseSettings, 'ref' | 'onOpenChange' | 'keepMounted' | 'onFound'>;
 }
 
 interface DropdownBaseProps extends Omit<BoxProps, 'children'> {
@@ -82,13 +85,15 @@ export function Dropdown({
   ...rootProps
 }: WithRef<DropdownProps, HTMLDivElement>) {
   const {
-    side = 'start', offset = 8, portal = false, matchTriggerWidth = false,
+    side = 'start', offset = 8, portal = false, matchTriggerWidth = false, keepMounted = true,
     inheritVariables = NO_VARIABLES, collapse: panelCollapse, ...panelProps
   } = panel;
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const requestedOpen = controlledOpen ?? internalOpen;
+  const rootCollapse = useCollapseState(collapse ?? { open: true });
+  const { defaultOpen: _defaultCollapseOpen, ...collapseSettings } = collapse ?? {};
   const disabled = trigger.props.disabled || trigger.props['aria-disabled'] === true || trigger.props['aria-disabled'] === 'true';
-  const blocked = disabled || collapse?.open === false;
+  const blocked = disabled || !rootCollapse.open;
   const open = requestedOpen && !blocked;
   const rootRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLElement>(null);
@@ -209,8 +214,11 @@ export function Dropdown({
         {...panelCollapse}
         open={open}
         fade={panelCollapse?.fade ?? true}
-        keepMounted
-        onTransition={updatePosition}
+        keepMounted={keepMounted}
+        onTransition={(transition) => {
+          updatePosition();
+          panelCollapse?.onTransition?.(transition);
+        }}
       >
         <Box {...panelProps} className={cx(styles.surface, panelProps.className)}>
           {typeof children === 'function' ? children(close) : children}
@@ -223,7 +231,11 @@ export function Dropdown({
     <Box
       {...rootProps}
       ref={setRootRef}
-      collapse={collapse}
+      collapse={collapse ? {
+        ...collapseSettings,
+        open: rootCollapse.open,
+        onOpenChange: rootCollapse.changeOpen,
+      } : undefined}
       className={cx(styles.Dropdown, className)}
       style={style}
       {...stateProps(state)}
@@ -235,16 +247,9 @@ export function Dropdown({
         'aria-expanded': open,
         'aria-controls': trigger.props['aria-controls'] ?? id,
       })}
-      <Box
-        ref={probeRef}
-        className={styles.gapProbe}
-        aria-hidden
-        style={{ width: `calc(${Math.abs(offset)} * var(--rpx))` }}
-      />
+      <Box ref={probeRef} className={styles.gapProbe} aria-hidden style={{ width: `calc(${Math.abs(offset)} * var(--rpx))` }} />
       {portal && portalNode ? createPortal(
-        <Box ref={scopeRef} className={cx(styles.PortalRoot, className)} style={style} {...stateProps(state)}>
-          {content}
-        </Box>, portalNode,
+        <Box ref={scopeRef} className={cx(styles.PortalRoot, className)} style={style} {...stateProps(state)}>{content}</Box>, portalNode,
       ) : content}
     </Box>
   );

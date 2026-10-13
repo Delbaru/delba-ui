@@ -128,37 +128,38 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const stack = items.length > 0 && host
     ? createPortal(
-      <Flex
-        dir={['column', null, null]}
-        align={['center', null, null]}
-        role='status'
-        aria-live='polite'
-        className={styles.Toast}
-      >
+      <Flex dir={['column', null, null]} align={['center', null, null]} role='status' aria-live='polite' className={styles.Toast}>
         {items.map((item) => (
           // `collapseAppear` обязателен: узел монтируется УЖЕ раскрытым, и без опт-ина
           // enter-анимации не будет вовсе (§8.4).
           <Flex
-            key={item.id}
-            collapse={item.open}
-            collapseAppear
-            collapseGap={[12, null, null]}
-            collapseFade
-            dir={['column', null, null]}
-            onCollapseEnd={item.open ? undefined : () => remove(item.id)}
+              key={item.id}
+              collapse={item.open}
+              collapseAppear
+              collapseGap={[12, null, null]}
+              collapseFade
+              dir={['column', null, null]}
+              onCollapseEnd={item.open ? undefined : () => remove(item.id)}
           >
-            <Flex align={['center', null, null]} gap={[12, null, null]} p={[[16, 20], null, null]} r={[16, null, null]} bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']} className={styles.card}>
+            <Flex
+                align={['center', null, null]}
+                gap={[12, null, null]}
+                p={[[16, 20], null, null]}
+                r={[16, null, null]}
+                bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
+                className={styles.card}
+            >
               <Icon
-                src={TONE[item.tone ?? 'success'].glyph}
-                w={[18, null, null]}
-                h={[18, null, null]}
-                rootW={[32, null, null]}
-                rootH={[32, null, null]}
-                rootMinW={[32, null, null]}
-                rootR={[999, null, null]}
-                rootBg={fillOf(item.tone)}
-                stroke='var(--white-100)'
-                aria-hidden
+                  src={TONE[item.tone ?? 'success'].glyph}
+                  w={[18, null, null]}
+                  h={[18, null, null]}
+                  rootW={[32, null, null]}
+                  rootH={[32, null, null]}
+                  rootMinW={[32, null, null]}
+                  rootR={[999, null, null]}
+                  rootBg={fillOf(item.tone)}
+                  stroke='var(--white-100)'
+                  aria-hidden
               />
 
               <Flex dir={['column', null, null]} gap={[4, null, null]}>

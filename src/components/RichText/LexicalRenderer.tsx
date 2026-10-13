@@ -200,10 +200,10 @@ function renderTextNode(node: LexicalTextNode, key: string): ReactNode {
 function renderVariableNode(node: LexicalVariableNode, key: string): ReactNode {
   return (
     <span
-      key={key}
-      className={styles.variableChip}
-      style={node.color ? ({ ['--rich-text-variable-color' as string]: node.color } as CSSProperties) : undefined}
-      data-variable-key={node.variableKey}
+        key={key}
+        className={styles.variableChip}
+        style={node.color ? ({ ['--rich-text-variable-color' as string]: node.color } as CSSProperties) : undefined}
+        data-variable-key={node.variableKey}
     >
       {node.label ?? node.text}
     </span>

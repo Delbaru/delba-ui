@@ -5,7 +5,11 @@ import { Accordion, AccordionItem } from '../../src/components/Accordion';
 import { Box } from '../../src/components/Box/Box';
 import { ChoiceButtons } from '../../src/components/ChoiceButtons/ChoiceButtons';
 import { CollapseWrap } from '../../src/components/Collapse/CollapseWrap';
+import { CollapseControlsFixture } from './collapse-controls.fixture';
+import { TextTimelineFixture } from './text-timeline.fixture';
 import { Grid, GridItem } from '../../src/components/Grid/Grid';
+import { GradientBorder } from '../../src/components/GradientBorder';
+import type { createSmoothScroll } from '../../src/components/SmoothScroll/engine';
 import { Flex } from '../../src/components/Flex/Flex';
 import { MediaDropDown } from '../../src/components/MediaDropDown/MediaDropDown';
 import { Img } from '../../src/components/Img/Img';
@@ -46,6 +50,7 @@ type FieldLog = {
 
 declare global {
   interface Window {
+    __createSmoothScroll: typeof createSmoothScroll;
     __fieldLogs: Record<string, FieldLog[]>;
     __lastChange: Record<string, ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | undefined>;
     __focusLogs: Record<string, { type: string; targetIsControl: boolean; trusted: boolean }>;
@@ -912,6 +917,7 @@ function NativeFocusFields() {
 }
 
 function MotionFixtures() {
+  const [scrollParallax, setScrollParallax] = useState(true);
   const record = (key: string, name: string) => (event: ReactMouseEvent<HTMLElement>) => {
     window.__motionEvents[key] = [...(window.__motionEvents[key] ?? []), name];
     if (key === 'img') window.__imageMotionTargets.push(event.currentTarget.tagName);
@@ -926,6 +932,10 @@ function MotionFixtures() {
 
   return (
     <section aria-label="Shared motion callback contracts" className="fixture">
+      <Box data-testid="parallax-target" parallax={{ distance: 40, scroll: 'native' }} style={{ width: 240, height: 160 }}><span>Parallax photo surface</span></Box>
+      <button data-testid="toggle-scroll-parallax" onClick={() => setScrollParallax((value) => !value)}>Toggle scroll parallax</button>
+      {scrollParallax && <Box data-testid="parallax-scroll-target" parallax={{ distance: 40, mode: 'scroll' }} perspective3d={{ perspective: 1600, follow: 'viewport' }} animate={{ when: 'inView', effect: 'up', duration: 0.3 }} style={{ width: 240, height: 160 }}>Native parallax with reveal and tilt</Box>}
+      <Button data-testid="idle-visibility" animate={{ when: 'idle', effect: 'glow', duration: 2 }}>Idle visibility</Button>
       <div id="motion-state" data-testid="motion-state" />
       <Text data-testid="motion-text" {...interactionProps('text')}>Text motion</Text>
       <Grid data-testid="motion-grid" columns={[1, 1, 1]} {...interactionProps('grid')}>
@@ -1183,6 +1193,7 @@ export function BrowserFixture() {
       <FormDataFields />
       <NumberFields />
       <CollapseField />
+      <CollapseControlsFixture />
       <SearchableFlexField />
       <ButtonField />
       <MediaDropDownField />
@@ -1206,7 +1217,12 @@ export function BrowserFixture() {
       <NamedTimingContracts skipDecoration={skipDecoration} />
       <ImgChangeContracts />
       <TextObjectMotionContracts />
+      <TextTimelineFixture />
       <BoxLayoutContracts />
+      <Flex position={['relative', 'relative', 'relative']} r={[24, 16, 20]} p={[24, 24, 24]} data-testid="gradient-frame">
+        <GradientBorder gradient={['linear-gradient(90deg, red, blue)', 'linear-gradient(90deg, red, blue)', 'linear-gradient(90deg, red, blue)']} width={[4, 8, 4]} />
+        <Button data-testid="gradient-button" animate={{ when: 'hover', effect: 'rise', fill: 'var(--primary)' }}>Framed action</Button>
+      </Flex>
     </main>
   );
 }

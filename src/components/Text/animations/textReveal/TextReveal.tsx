@@ -88,17 +88,15 @@ function Layer({ text, mode, staticPrefix, staticSuffix }: LayerProps) {
 
   return (
     <span
-      data-reveal-layer=""
-      data-reveal-mode={mode}
-      className={cx('ui-reveal-layer', mode === 'in' && 'ui-reveal-in', mode === 'out' && 'ui-reveal-out')}
-      aria-hidden={mode === 'out' ? true : undefined}
+        data-reveal-layer=""
+        data-reveal-mode={mode}
+        className={cx('ui-reveal-layer', mode === 'in' && 'ui-reveal-in', mode === 'out' && 'ui-reveal-out')}
+        aria-hidden={mode === 'out' ? true : undefined}
     >
       {tokens.map((token, tokenIdx) => {
         if (IS_WS.test(token)) {
           return (
-            <span key={`s-${tokenIdx}`} className={'ui-reveal-space'}>
-              {token}
-            </span>
+            <span key={`s-${tokenIdx}`} className={'ui-reveal-space'}>{token}</span>
           );
         }
 
@@ -110,9 +108,7 @@ function Layer({ text, mode, staticPrefix, staticSuffix }: LayerProps) {
               // Статичный символ (общий край) не несёт data-reveal-char → не анимируется и не участвует в волне.
               const isStatic = gi < staticPrefix || gi >= total - staticSuffix;
               return (
-                <span key={i} {...(isStatic ? null : { 'data-reveal-char': '' })} className={'ui-reveal-char'}>
-                  {ch}
-                </span>
+                <span key={i} {...(isStatic ? null : { 'data-reveal-char': '' })} className={'ui-reveal-char'}>{ch}</span>
               );
             })}
           </span>
@@ -351,11 +347,11 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
       )}
 
       <Layer
-        key={`in-${generation}`}
-        text={current}
-        mode={previous === null ? 'idle' : 'in'}
-        staticPrefix={affixes.prefix}
-        staticSuffix={affixes.suffix}
+          key={`in-${generation}`}
+          text={current}
+          mode={previous === null ? 'idle' : 'in'}
+          staticPrefix={affixes.prefix}
+          staticSuffix={affixes.suffix}
       />
     </span>
   );

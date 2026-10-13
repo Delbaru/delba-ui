@@ -24,8 +24,8 @@
           border-radius: var(--button-radius, 999px);
           border: calc(2 * var(--rpx)) solid var(--primary);
 
-          &:hover,
-          &[state~='hover'] {
+          &:not([data-button-hover]):hover,
+          &:not([data-button-hover])[state~='hover'] {
               background: var(--white-100);
               color: var(--black);
               border-color: var(--black);
@@ -56,8 +56,8 @@
           border: calc(2 * var(--rpx)) solid var(--text);
           border-radius: var(--button-radius, 999px);
 
-          &:hover,
-          &[state~='hover'] {
+          &:not([data-button-hover]):hover,
+          &:not([data-button-hover])[state~='hover'] {
               background: var(--white-100);
               color: var(--black);
               border-color: var(--white-100);
@@ -79,8 +79,8 @@
           border: calc(2 * var(--rpx)) solid var(--text);
           border-radius: var(--button-radius, 999px);
 
-          &:hover,
-          &[state~='hover'] {
+          &:not([data-button-hover]):hover,
+          &:not([data-button-hover])[state~='hover'] {
               background: var(--primary);
               color: var(--on-fill, var(--black));
               border-color: var(--black);
@@ -98,8 +98,8 @@
           border: calc(2 * var(--rpx)) solid var(--tertiary);
           border-radius: var(--button-radius, 999px);
 
-          &:hover,
-          &[state~='hover'] {
+          &:not([data-button-hover]):hover,
+          &:not([data-button-hover])[state~='hover'] {
               background: var(--text);
               color: var(--on-fill, var(--black));
               border-color: var(--black);

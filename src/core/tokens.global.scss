@@ -8,6 +8,20 @@
 // Слои библиотеки: покой компонента < проп (утилита) < состояние компонента; стили проекта без слоя сильнее всех.
 @layer ui.scale, ui.components, ui.utilities, ui.states;
 
+// Transform-параметры локальны узлу. Наследование меняющихся каждый кадр значений
+// заставляло браузер пересчитывать стили всего содержимого наклоняемой карточки.
+@property --perspective3d { syntax: '<length>'; inherits: false; initial-value: 1600px; }
+@property --perspective3d-rotate-x { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --perspective3d-rotate-y { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --perspective3d-translate-x { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --perspective3d-translate-y { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --perspective3d-translate-z { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --perspective3d-scale { syntax: '<number>'; inherits: false; initial-value: 1; }
+@property --perspective3d-transform { syntax: '*'; inherits: false; initial-value: none; }
+@property --parallax-translate-x { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --parallax-translate-y { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --parallax-transform { syntax: '*'; inherits: false; initial-value: none; }
+
 // Масштаб: `--base-width` и `--rpx` по полосам из `scale` конфига (генерат). Слой — чтобы тема
 // проекта, которая ещё объявляет `--rpx` сама, перебивала его при любом порядке подключения.
 @layer ui.scale {
@@ -28,6 +42,7 @@
   @include meta.load-css('./layout/container');
   @include meta.load-css('../components/Flex/flex');
   @include meta.load-css('../components/Grid/grid');
+  @include meta.load-css('../components/GradientBorder/gradient-border');
   @include meta.load-css('../components/Icon/icon');
   @include meta.load-css('../components/Icon/swap/icon-swap');
   @include meta.load-css('../components/Img/img');
@@ -44,6 +59,9 @@
 @layer ui.states {
   @include meta.load-css('./reveal/reveal');
 }
+
+@include meta.load-css('../components/Button/hover/button-hover');
+@include meta.load-css('../components/Button/idle/button-idle');
 
 // ── Краевой fade скролл-контейнеров (mask + scroll-driven animations) ─────────────────────────
 // Утилита-класс .scrollFadeY (ось Y) / .scrollFadeX (ось X). Мягко гасит контент у краёв области

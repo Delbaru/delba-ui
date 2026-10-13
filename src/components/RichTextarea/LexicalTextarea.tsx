@@ -158,62 +158,60 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
 
   const renderedContent = (
     <Box
-      {...rootBox}
-      className={cx(styles.RichTextareaWrapper, className)}
-      style={style}
-      grow={grow}
-      perspective3d={perspective3d}
-      parallax={parallax}
-      animate={animate}
-      data-point-events={dataPointEvents}
-      linkState={linkState}
+        {...rootBox}
+        className={cx(styles.RichTextareaWrapper, className)}
+        style={style}
+        grow={grow}
+        perspective3d={perspective3d}
+        parallax={parallax}
+        animate={animate}
+        data-point-events={dataPointEvents}
+        linkState={linkState}
     >
       {label && (
-        <Text id={`${id}-label`} color={labelColor} mb={[8, 4, 8]} required={required}>
-          {label}
-        </Text>
+        <Text id={`${id}-label`} color={labelColor} mb={[8, 4, 8]} required={required}>{label}</Text>
       )}
 
       <Box
-        className={styles.Field}
-        style={fieldStyle}
-        p={p}
-        pt={pt}
-        pr={pr}
-        pb={pb}
-        pl={pl}
-        m={m}
-        mt={mt}
-        mr={mr}
-        mb={mb}
-        ml={ml}
-        r={r}
-        tlr={tlr}
-        trr={trr}
-        brr={brr}
-        blr={blr}
-        borderTLR={borderTLR}
-        borderTRR={borderTRR}
-        borderBRR={borderBRR}
-        borderBLR={borderBLR}
-        border={border}
-        borderC={borderC}
-        borderS={borderS}
-        borderW={borderW}
-        borderT={borderT}
-        borderR={borderR}
-        borderB={borderB}
-        borderL={borderL}
-        w={w}
-        minW={minW}
-        maxW={maxW}
-        h={h}
-        minH={minH ?? [220, null, null]}
-        maxH={maxH}
-        bg={bg}
-        data-state={fieldState ?? undefined}
-        role='presentation'
-        onClick={() => editorRef.current?.focus()}
+          className={styles.Field}
+          style={fieldStyle}
+          p={p}
+          pt={pt}
+          pr={pr}
+          pb={pb}
+          pl={pl}
+          m={m}
+          mt={mt}
+          mr={mr}
+          mb={mb}
+          ml={ml}
+          r={r}
+          tlr={tlr}
+          trr={trr}
+          brr={brr}
+          blr={blr}
+          borderTLR={borderTLR}
+          borderTRR={borderTRR}
+          borderBRR={borderBRR}
+          borderBLR={borderBLR}
+          border={border}
+          borderC={borderC}
+          borderS={borderS}
+          borderW={borderW}
+          borderT={borderT}
+          borderR={borderR}
+          borderB={borderB}
+          borderL={borderL}
+          w={w}
+          minW={minW}
+          maxW={maxW}
+          h={h}
+          minH={minH ?? [220, null, null]}
+          maxH={maxH}
+          bg={bg}
+          data-state={fieldState ?? undefined}
+          role='presentation'
+          onClick={() => editorRef.current?.focus()}
       >
         <LexicalComposer
           initialConfig={{
@@ -231,10 +229,10 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
         >
           <EditorRefPlugin editorRef={editorRef} />
           <ContentSyncPlugin
-            content={content}
-            contentSignature={contentSignature}
-            variableLookup={variableLookup}
-            onSync={handleContentSync}
+              content={content}
+              contentSignature={contentSignature}
+              variableLookup={variableLookup}
+              onSync={handleContentSync}
           />
           <VariablesPlugin variableLookup={variableLookup} />
           <VariableSelectionPlugin />
@@ -247,33 +245,31 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
             <RichTextPlugin
               contentEditable={
                 <ContentEditable
-                  id={id}
-                  className={contentClassName}
-                  aria-labelledby={label ? `${id}-label` : undefined}
-                  aria-describedby={helperTextId}
-                  aria-invalid={Boolean(helperError)}
-                  aria-required={required || undefined}
-                  onBlur={handleBlur}
+                    id={id}
+                    className={contentClassName}
+                    aria-labelledby={label ? `${id}-label` : undefined}
+                    aria-describedby={helperTextId}
+                    aria-invalid={Boolean(helperError)}
+                    aria-required={required || undefined}
+                    onBlur={handleBlur}
                 />
               }
               placeholder={placeholder ? (
-                <Text as='div' variant={['body', null, null]} color={placeholderColor} className={styles.Placeholder}>
-                  {placeholder}
-                </Text>
+                <Text as='div' variant={['body', null, null]} color={placeholderColor} className={styles.Placeholder}>{placeholder}</Text>
               ) : null}
               ErrorBoundary={LexicalErrorBoundary}
             />
           </Box>
 
           <Flex
-            dir={['row', null, null]}
-            justify={['space_between', null, null]}
-            align={['center', null, null]}
-            wrap={['wrap', 'wrap', 'wrap']}
-            gap={[16, 8, 16]}
-            mt={[16, 16, 16]}
-            pt={[16, 16, 16]}
-            borderT={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
+              dir={['row', null, null]}
+              justify={['space_between', null, null]}
+              align={['center', null, null]}
+              wrap={['wrap', 'wrap', 'wrap']}
+              gap={[16, 8, 16]}
+              mt={[16, 16, 16]}
+              pt={[16, 16, 16]}
+              borderT={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
           >
             <LexicalTextareaToolbar hasVariables={hasVariables} allowLink={allowLink} />
             {showCounter && <LexicalTextareaCounter characters={editorMeta.payload.characters} maxLength={maxLength} />}
@@ -283,15 +279,13 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
 
       {helperText && (
         <Text
-          as='div'
-          variant={['caption', 'caption', 'caption']}
-          mt={[8, 4, 8]}
-          id={helperTextId}
-          color={helperTextColor}
-          role={helperError ? 'alert' : undefined}
-        >
-          {helperText}
-        </Text>
+            as='div'
+            variant={['caption', 'caption', 'caption']}
+            mt={[8, 4, 8]}
+            id={helperTextId}
+            color={helperTextColor}
+            role={helperError ? 'alert' : undefined}
+        >{helperText}</Text>
       )}
     </Box>
   );
@@ -299,8 +293,6 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
   if (!collapse) return renderedContent;
 
   return (
-    <CollapseWrap {...collapse}>
-      {renderedContent}
-    </CollapseWrap>
+    <CollapseWrap {...collapse}>{renderedContent}</CollapseWrap>
   );
 }

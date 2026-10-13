@@ -24,6 +24,7 @@ const fixtureUtilities: Plugin = {
     const rules = extractUtilityRules([
       { file: fixtureFile, text: fs.readFileSync(fixtureFile, 'utf8') },
       { file: ssrFixtureFile, text: fs.readFileSync(ssrFixtureFile, 'utf8') },
+      { file: path.join(kitRoot, 'src/components/GradientBorder/GradientBorder.tsx'), text: fs.readFileSync(path.join(kitRoot, 'src/components/GradientBorder/GradientBorder.tsx'), 'utf8') },
     ]);
     return `${renderRules(rules)}\n${scaleCss(resolveScale())}`;
   },

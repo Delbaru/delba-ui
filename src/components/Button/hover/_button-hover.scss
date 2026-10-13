@@ -1,0 +1,49 @@
+@use '../../../core/mixins' as m;
+
+// Opt-in на Button: без JS-обработчиков, работает также с клавиатурой и связанными состояниями.
+@layer ui.components {
+    .ui-button[data-button-hover='rise'] {
+        position: relative;
+        isolation: isolate;
+        &:not([data-button-idle='glow']) {
+            overflow: hidden;
+        }
+
+        &:not([data-button-idle='glow'])::before,
+        > .ui-button-glow-surface::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            background: var(--button-hover-fill, var(--white-100));
+            // Уходим также за рамку: иначе светлый слой оставляет полоску у нижнего края.
+            transform: translateY(calc(100% + 2 * var(--rpx, 1px)));
+            transition: transform var(--button-hover-duration, var(--t-d-normal)) var(--t-t-f-ease);
+        }
+
+        &:not([data-button-idle='glow'])::before {
+            z-index: -1;
+        }
+
+        @include m.reduced-motion {
+            &:not([data-button-idle='glow'])::before,
+            > .ui-button-glow-surface::before {
+                transition: none;
+            }
+        }
+    }
+}
+
+@layer ui.states {
+    .ui-button[data-button-hover='rise']:is(:hover, :focus-visible, [state~='hover'], [state~='focus-visible']):not(
+            :disabled,
+            [aria-disabled='true'],
+            [state~='disabled']
+        ) {
+        &:not([data-button-idle='glow'])::before,
+        > .ui-button-glow-surface::before {
+            transform: translateY(0);
+        }
+    }
+}

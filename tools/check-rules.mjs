@@ -7,10 +7,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { jsxFormatRule } from './check/rules/jsx-format.mjs';
+
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'generated', 'public', 'UI']);
 const GRID_PROPS = 'w|h|minW|maxW|minH|maxH|p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|r';
 
 export const RULES = {
+  'jsx-format': { ext: /\.tsx$/, ast: jsxFormatRule, hint: 'короткий тег — в строку, длинный — по одному пропу на строку. Исправить: npm run ui:test --silent -- --fix' },
   'raw-button': { ext: /\.tsx$/, test: (line) => /<button[\s>]/.test(line), hint: 'SharedButton*' },
   'raw-input': { ext: /\.tsx$/, test: (line) => /<input[\s/>]/.test(line), hint: 'SharedInput / SharedCheckbox / SharedRadio' },
   'raw-anchor': { ext: /\.tsx$/, test: (line) => /<a[\s>]/.test(line), hint: "Text as='a' или Button href" },
@@ -51,11 +54,15 @@ export const RULES = {
 
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
+  if (fs.statSync(dir).isFile()) {
+    if (/\.(tsx|scss)$/.test(dir) && !/\.(test|typecheck|type-test)\.tsx?$/.test(dir)) out.push(dir);
+    return out;
+  }
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const abs = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) walk(abs, out);
-    } else if (/\.(tsx|scss)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) {
+    } else if (/\.(tsx|scss)$/.test(entry.name) && !/\.(test|typecheck|type-test)\.tsx?$/.test(entry.name)) {
       out.push(abs);
     }
   }
@@ -77,6 +84,14 @@ export function countViolations(dirs) {
     const client = lines.some((line) => /^\s*['"]use client['"]/.test(line));
     for (const [rule, def] of Object.entries(RULES)) {
       if (!def.ext.test(file) || (def.client && !client)) continue;
+      if (def.ast) {
+        const diagnostics = def.ast.count(fs.readFileSync(file, 'utf8'), file);
+        if (diagnostics.length) {
+          counts[rule][rel] = diagnostics.length;
+          places[rule][rel] = diagnostics.map(({ line }) => line);
+        }
+        continue;
+      }
       if (def.file) {
         const n = def.file(lines, file);
         if (n) {
@@ -103,10 +118,20 @@ if (isMain) {
   const args = process.argv.slice(2);
   const baselineFile = args[args.indexOf('--baseline') + 1];
   const update = args.includes('--update');
+  const fix = args.includes('--fix');
   const dirs = args.filter((arg, i) => !arg.startsWith('--') && args[i - 1] !== '--baseline');
   if (!baselineFile || !dirs.length) {
-    console.error('Usage: node check-rules.mjs --baseline <file.json> [--update] <dirs…>');
+    console.error('Usage: node check-rules.mjs --baseline <file.json> [--update] [--fix] <dirs…>');
     process.exit(1);
+  }
+
+  if (fix) {
+    for (const file of dirs.flatMap((dir) => walk(path.resolve(dir)))) {
+      if (!/\.tsx$/.test(file)) continue;
+      const before = fs.readFileSync(file, 'utf8');
+      const after = jsxFormatRule.fix(before, file);
+      if (after !== before) fs.writeFileSync(file, after);
+    }
   }
 
   const { counts, places } = countViolations(dirs);

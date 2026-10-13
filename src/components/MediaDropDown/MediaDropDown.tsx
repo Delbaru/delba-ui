@@ -438,16 +438,9 @@ export function MediaDropDown({
                         justify={['center', 'center', 'center']}
                         className={styles.TriggerIconRoot}
                     >
-                        <Icon
-                            name={selectedMedia.icon}
-                            w={[20, 20, 20]}
-                            h={[20, 20, 20]}
-                            className={styles.TriggerIcon}
-                        />
+                        <Icon name={selectedMedia.icon} w={[20, 20, 20]} h={[20, 20, 20]} className={styles.TriggerIcon} />
                     </Flex>
-                    <Text variant={['caption', 'caption', 'caption']} className={styles.TriggerLabel}>
-                        {triggerLabel}
-                    </Text>
+                    <Text variant={['caption', 'caption', 'caption']} className={styles.TriggerLabel}>{triggerLabel}</Text>
                 </Flex>
                 <Flex
                     dir={['row', 'row', 'row']}
@@ -500,12 +493,7 @@ export function MediaDropDown({
                             />
                         </button>
                     ) : null}
-                    <Icon
-                        name="ui/arrows/arrow-2/arrow"
-                        w={[16, 16, 16]}
-                        h={[16, 16, 16]}
-                        className={styles.Arrow}
-                    />
+                    <Icon name="ui/arrows/arrow-2/arrow" w={[16, 16, 16]} h={[16, 16, 16]} className={styles.Arrow} />
                 </Flex>
             </Flex>
 
@@ -546,11 +534,7 @@ export function MediaDropDown({
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
                                 >
-                                    <Flex
-                                        dir={['column', 'column', 'column']}
-                                        align={['center', 'center', 'center']}
-                                        gap={[8, 8, 8]}
-                                    >
+                                    <Flex dir={['column', 'column', 'column']} align={['center', 'center', 'center']} gap={[8, 8, 8]}>
                                         <Icon
                                             name='ui/upload/style-2/upload'
                                             w={[20, 20, 20]}
@@ -559,15 +543,11 @@ export function MediaDropDown({
                                         />
 
                                         <Flex align={['center', 'center', 'center']} gap={[8, 8, 8]}>
-                                            <Text variant={['micro', 'micro', 'micro']} color='var(--black)'>
-                                                {dropTitle}
-                                            </Text>
+                                            <Text variant={['micro', 'micro', 'micro']} color='var(--black)'>{dropTitle}</Text>
                                             <Text variant={['micro', 'micro', 'micro']} color='var(--line)' aria-hidden>
                                                 ·
                                             </Text>
-                                            <Text variant={['micro', 'micro', 'micro']} color='var(--text-muted)'>
-                                                {dropHint}
-                                            </Text>
+                                            <Text variant={['micro', 'micro', 'micro']} color='var(--text-muted)'>{dropHint}</Text>
                                         </Flex>
                                     </Flex>
                                 </Button>
@@ -622,15 +602,8 @@ export function MediaDropDown({
                                                 className={cx(styles.TypeButton, isActive && styles.TypeButtonActive)}
                                                 onClick={() => handleSelect(media.type)}
                                             >
-                                                <Icon
-                                                    name={media.icon}
-                                                    w={[16, 16, 16]}
-                                                    h={[16, 16, 16]}
-                                                    className={styles.TypeIcon}
-                                                />
-                                                <Text variant={['micro', 'micro', 'micro']} className={styles.TypeLabel}>
-                                                    {media.label}
-                                                </Text>
+                                                <Icon name={media.icon} w={[16, 16, 16]} h={[16, 16, 16]} className={styles.TypeIcon} />
+                                                <Text variant={['micro', 'micro', 'micro']} className={styles.TypeLabel}>{media.label}</Text>
                                             </Button>
                                         );
                                     })}
@@ -673,9 +646,7 @@ export function MediaDropDown({
                                             className={styles.LinkInput}
                                         />
                                     </div>
-                                    <Text variant={['micro', 'micro', 'micro']} className={styles.LinkHint}>
-                                        {selectedMedia.hint}
-                                    </Text>
+                                    <Text variant={['micro', 'micro', 'micro']} className={styles.LinkHint}>{selectedMedia.hint}</Text>
                                 </Flex>
                             </>
                         )}

@@ -9,8 +9,11 @@ import styles from './Button.module.scss';
 
 import { boxLayout, composeEventHandlers, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
 import { useTooltip } from '../../hooks/useTooltip';
+import { useAnimationVisibility } from '../../hooks/useAnimationVisibility';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
+import { buttonHoverProps, type ButtonHoverAnimate } from './hover/buttonHover';
+import { buttonIdleProps, type ButtonIdleAnimate } from './idle/buttonIdle';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'secondaryFill' | 'tertiary';
 export type ButtonSize = 'small' | 'medium' | 'large';
@@ -24,7 +27,7 @@ export interface ButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'color' | 'href' | 'target' | 'rel'>,
     Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
     Omit<BoxLayoutProps, 'aspectRatio'>,
-    SharedMotionProps {
+    SharedMotionProps<ButtonHoverAnimate | ButtonIdleAnimate> {
   children?: React.ReactNode;
   style?: CSSProperties;
   /** Сворачивает кнопку целиком; для ширины укажите `axis: 'column'`. */
@@ -101,6 +104,9 @@ export function Button({
   const Comp = (useNextLink ? Link : isLink ? 'a' : 'button') as React.ElementType;
   const linkProps = resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer });
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
+  const hover = buttonHoverProps(animate);
+  const idle = buttonIdleProps(animate);
+  const setIdleNode = useAnimationVisibility(idle['data-button-idle'] === 'glow' && !disabled);
   const tooltipId = useId();
   const hasTooltip = Boolean(tooltip);
   const describedBy = [ariaDescribedBy, hasTooltip ? tooltipId : undefined].filter(Boolean).join(' ') || undefined;
@@ -109,7 +115,8 @@ export function Button({
     direction: tooltipDirection,
     gap: tooltipGap,
   });
-  const setRefs = useMergedRefs(anchorRef, setMotionNode, ref);
+  const setBehaviorRefs = useMergedRefs(anchorRef, setMotionNode, setIdleNode);
+  const setRefs = useMergedRefs(setBehaviorRefs, ref);
 
   // Native anchors can be disabled without changing their host node by removing href. Next Link
   // requires a valid href prop, so that branch keeps its source href and blocks activation below.
@@ -149,11 +156,15 @@ export function Button({
       )}
       style={{
         ...(motionStyle ?? null),
+        ...hover.style,
+        ...idle.style,
         ...style,
       }}
       {...stateProps(state, disabled && 'disabled')}
       {...anchorProps}
       {...revealAttrs}
+      data-button-hover={hover['data-button-hover']}
+      data-button-idle={idle['data-button-idle']}
       aria-describedby={describedBy}
       {...stateLinkProps(disabled ? undefined : linkState, {
         onMouseEnter: composeEventHandlers(composeEventHandlers(anchorHandlers.onMouseEnter, motionHandlers?.onMouseEnter), onMouseEnter),
@@ -166,20 +177,26 @@ export function Button({
         onBlur: composeEventHandlers(anchorHandlers.onBlur, onBlur),
       })}
     >
+      {idle['data-button-idle'] === 'glow' && (
+        <>
+          <span aria-hidden="true" className="ui-button-glow" />
+          <span aria-hidden="true" className="ui-button-glow-surface" />
+        </>
+      )}
       {children}
     </Comp>
   );
 
   const tooltipNode = hasTooltip && bubbleProps.portalNode ? createPortal(
     <span
-      ref={tooltipRef}
-      id={tooltipId}
-      className={'ui-button-tooltip'}
-      style={bubbleProps.style}
-      role='tooltip'
-      aria-hidden={!bubbleProps.active}
-      data-placement={bubbleProps.placement}
-      {...stateProps(bubbleProps.active && 'active')}
+        ref={tooltipRef}
+        id={tooltipId}
+        className={'ui-button-tooltip'}
+        style={bubbleProps.style}
+        role='tooltip'
+        aria-hidden={!bubbleProps.active}
+        data-placement={bubbleProps.placement}
+        {...stateProps(bubbleProps.active && 'active')}
     >
       {tooltip}
     </span>,

@@ -429,12 +429,12 @@ export function Icon({
 
       return (
         <LayerComponent
-          ref={layer === 'default' ? setSvgRefs : undefined}
-          data-icon-layer={layer}
-          {...(layer === 'default' && !needsRootWrapper ? revealAttrs : null)}
-          className={'ui-icon'}
-          style={commonSvgStyle}
-          {...layerProps}
+            ref={layer === 'default' ? setSvgRefs : undefined}
+            data-icon-layer={layer}
+            {...(layer === 'default' && !needsRootWrapper ? revealAttrs : null)}
+            className={'ui-icon'}
+            style={commonSvgStyle}
+            {...layerProps}
         />
       );
     }
@@ -443,15 +443,15 @@ export function Icon({
 
     return (
       <svg
-        ref={layer === 'default' ? setSvgRefs : undefined}
-        data-icon-layer={layer}
-        {...(layer === 'default' && !needsRootWrapper ? revealAttrs : null)}
-        className={'ui-icon'}
-        style={commonSvgStyle}
-        fill={fill == null ? fetched.rootFill : undefined}
-        viewBox={fetched.viewBox || (layer === 'default' ? elementProps.viewBox : undefined)}
-        dangerouslySetInnerHTML={html}
-        {...layerProps}
+          ref={layer === 'default' ? setSvgRefs : undefined}
+          data-icon-layer={layer}
+          {...(layer === 'default' && !needsRootWrapper ? revealAttrs : null)}
+          className={'ui-icon'}
+          style={commonSvgStyle}
+          fill={fill == null ? fetched.rootFill : undefined}
+          viewBox={fetched.viewBox || (layer === 'default' ? elementProps.viewBox : undefined)}
+          dangerouslySetInnerHTML={html}
+          {...layerProps}
       />
     );
   };
@@ -495,7 +495,14 @@ export function Icon({
     };
 
     content = (
-      <span ref={setStackRef} {...wrapperProps} {...contentHandlers} {...(!needsRootWrapper ? revealAttrs : null)} data-icon-root="true" data-icon-stack="true">
+      <span
+          ref={setStackRef}
+          {...wrapperProps}
+          {...contentHandlers}
+          {...(!needsRootWrapper ? revealAttrs : null)}
+          data-icon-root="true"
+          data-icon-stack="true"
+      >
         {renderStackLayer(baseSource, { content: svgContent, viewBox: svgViewBox, rootFill: svgRootFill }, svgHtml, 'default')}
         {renderStackLayer(hoverSource, { content: hoverSvgContent, viewBox: hoverSvgViewBox, rootFill: hoverSvgRootFill }, hoverSvgHtml, 'hover')}
       </span>

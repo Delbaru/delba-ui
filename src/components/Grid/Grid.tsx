@@ -125,20 +125,20 @@ export function Grid({
     {renderItem && items
       ? items.map((item, index) => (
           <GridItem
-            key={item.key ?? index}
-            area={item.area}
-            colSpan={item.colSpan}
-            rowSpan={item.rowSpan}
-            colStart={item.colStart}
-            colEnd={item.colEnd}
-            rowStart={item.rowStart}
-            rowEnd={item.rowEnd}
-            h={item.h}
-            w={item.w}
-            grow={item.grow}
-            aspectRatio={item.aspectRatio}
-            className={item.className}
-            style={item.style}
+              key={item.key ?? index}
+              area={item.area}
+              colSpan={item.colSpan}
+              rowSpan={item.rowSpan}
+              colStart={item.colStart}
+              colEnd={item.colEnd}
+              rowStart={item.rowStart}
+              rowEnd={item.rowEnd}
+              h={item.h}
+              w={item.w}
+              grow={item.grow}
+              aspectRatio={item.aspectRatio}
+              className={item.className}
+              style={item.style}
           >
             {renderItem(item, index)}
           </GridItem>

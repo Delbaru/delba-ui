@@ -1,4 +1,5 @@
 import { MEDIA_QUERY } from '../../core/base/breakpoints';
+import { subscribeWindowScroll } from './scroll-events';
 import {
   anchorTop,
   autoDurationMs,
@@ -81,7 +82,16 @@ export function createSmoothScroll(initial: SmoothScrollConfig): SmoothScrollCon
   const touch = window.matchMedia(MEDIA_QUERY.touch);
 
   const smooth = () => !reduced.matches && (config.mobile || (desktop.matches && !touch.matches));
-  const maxScroll = () => (document.scrollingElement ?? document.documentElement).scrollHeight - window.innerHeight;
+  let maximum = 0;
+  const measure = () => {
+    maximum = Math.max(0, (document.scrollingElement ?? document.documentElement).scrollHeight - window.innerHeight);
+  };
+  const resize = new ResizeObserver(measure);
+  resize.observe(document.body);
+  resize.observe(document.documentElement);
+  window.addEventListener('resize', measure);
+  measure();
+  const maxScroll = () => maximum;
 
   const write = (y: number) => {
     written = y;
@@ -99,9 +109,6 @@ export function createSmoothScroll(initial: SmoothScrollConfig): SmoothScrollCon
     frame = 0;
     const dt = Math.min(now - last, MAX_FRAME_MS);
     last = now;
-
-    // Окно уехало не нашей рукой — уступаем, а не тащим обратно.
-    if (isManualDrift(window.scrollY, written)) return stop();
 
     const max = maxScroll();
 
@@ -170,6 +177,8 @@ export function createSmoothScroll(initial: SmoothScrollConfig): SmoothScrollCon
     if (!resolve) return;
 
     stop();
+    // Явная команда может прийти в том же task, что и изменение DOM, до ResizeObserver.
+    measure();
     const top = clampScroll(resolve(), maxScroll());
 
     if (options.immediate || reduced.matches) {
@@ -237,6 +246,7 @@ export function createSmoothScroll(initial: SmoothScrollConfig): SmoothScrollCon
       current = target = written = window.scrollY;
     }
 
+    measure();
     target = clampScroll(target + delta, maxScroll());
     mode = 'wheel';
     run();
@@ -245,6 +255,11 @@ export function createSmoothScroll(initial: SmoothScrollConfig): SmoothScrollCon
   const interrupt = () => {
     if (mode !== 'idle') stop();
   };
+
+  // Проверяем чужую прокрутку по нативному событию, до следующего кадра записи.
+  const unsubscribeScroll = subscribeWindowScroll((y) => {
+    if (mode !== 'idle' && isManualDrift(y, written)) stop();
+  });
 
   const onKey = (event: KeyboardEvent) => {
     if (SCROLL_KEYS.has(event.key)) interrupt();
@@ -327,6 +342,9 @@ export function createSmoothScroll(initial: SmoothScrollConfig): SmoothScrollCon
     },
     destroy: () => {
       stop();
+      resize.disconnect();
+      unsubscribeScroll();
+      window.removeEventListener('resize', measure);
       cancelAnimationFrame(hashFrame);
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('click', onClick, true);

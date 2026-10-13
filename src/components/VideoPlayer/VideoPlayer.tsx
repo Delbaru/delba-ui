@@ -196,7 +196,15 @@ function TimelinePreview({ ref, source }: WithRef<{ source?: VideoPlayerPreviewS
 
     return (
         <div ref={boxRef} className={styles.preview} data-visible={visible ? 'true' : 'false'} aria-hidden='true'>
-            {source ? <video ref={videoRef} className={styles.previewVideo} data-framed={framed ? 'true' : 'false'} src={source.src} muted preload='auto' playsInline /> : null}
+            {source ? <video
+                ref={videoRef}
+                className={styles.previewVideo}
+                data-framed={framed ? 'true' : 'false'}
+                src={source.src}
+                muted
+                preload='auto'
+                playsInline
+            /> : null}
 
             <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{formatClock(sec)}</Text>
 
@@ -542,7 +550,12 @@ export function VideoPlayer({
                     onBlur={handleControlsBlur}
                 >
                     {show('play') ? (
-                        <button type='button' className={styles.button} aria-label={state.playing ? 'Пауза' : 'Воспроизвести'} onClick={() => player.toggle()}>
+                        <button
+                            type='button'
+                            className={styles.button}
+                            aria-label={state.playing ? 'Пауза' : 'Воспроизвести'}
+                            onClick={() => player.toggle()}
+                        >
                             <IconSwap active={state.playing} a={ICON.play} b={ICON.pause} />
                         </button>
                     ) : null}
@@ -584,7 +597,12 @@ export function VideoPlayer({
                     ) : null}
 
                     {show('rate') ? (
-                        <button type='button' className={cx(styles.button, styles.rate)} aria-label={`Скорость ${formatRate(state.rate)}`} onClick={() => player.setRate(nextRate(rates, state.rate))}>
+                        <button
+                            type='button'
+                            className={cx(styles.button, styles.rate)}
+                            aria-label={`Скорость ${formatRate(state.rate)}`}
+                            onClick={() => player.setRate(nextRate(rates, state.rate))}
+                        >
                             <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{formatRate(state.rate)}</Text>
                         </button>
                     ) : null}
@@ -609,14 +627,24 @@ export function VideoPlayer({
                                 </div>
                             </div>
 
-                            <button type='button' className={styles.button} aria-label={isMuted ? 'Включить звук' : 'Выключить звук'} onClick={() => player.toggleMute()}>
+                            <button
+                                type='button'
+                                className={styles.button}
+                                aria-label={isMuted ? 'Включить звук' : 'Выключить звук'}
+                                onClick={() => player.toggleMute()}
+                            >
                                 <IconSwap active={isMuted} a={ICON.volume} b={ICON.volumeMuted} />
                             </button>
                         </div>
                     ) : null}
 
                     {show('fullscreen') ? (
-                        <button type='button' className={styles.button} aria-label={state.fullscreen ? 'Выйти из полного экрана' : 'Полный экран'} onClick={() => player.toggleFullscreen()}>
+                        <button
+                            type='button'
+                            className={styles.button}
+                            aria-label={state.fullscreen ? 'Выйти из полного экрана' : 'Полный экран'}
+                            onClick={() => player.toggleFullscreen()}
+                        >
                             <IconSwap active={state.fullscreen} a={ICON.fullscreen} b={ICON.fullscreenQuit} />
                         </button>
                     ) : null}

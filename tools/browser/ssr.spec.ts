@@ -5,6 +5,8 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   expect(response.ok()).toBe(true);
   const html = await response.text();
   expect(html).toContain('Иван');
+  expect(html).toContain('Server state');
+  expect(html).toContain('ui-gradient-border');
   expect(html).toContain('Текст из CMS');
   expect(html).toContain('aria-hidden="true"');
   expect(html).toContain('data-reveal="up"');
@@ -15,6 +17,7 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   expect(html).not.toContain('animate="[object Object]"');
   expect(html).toContain('ui-counter-reserve');
   expect(html).toContain('125');
+  expect(html).toContain('250%');
 
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -25,9 +28,11 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   await expect(page.getByRole('heading', { name: 'SSR and hydration' })).toBeVisible();
   const button = page.getByTestId('ssr-button');
   await expect(page.getByTestId('ssr-counter').locator('.ui-counter-value')).toHaveText('125%');
+  await expect(page.getByTestId('ssr-timeline').locator('.ui-counter-value')).toHaveText('250%');
   await expect(page.locator('dl[data-testid="ssr-requisites"] dt')).toHaveText('ИНН');
   await expect(page.locator('dl[data-testid="ssr-requisites"] dd')).toHaveText('1234567890');
   await button.click();
+  await expect(page.getByRole('textbox', { name: 'Uncontrolled server field' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Closed field' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Closed field' })).not.toHaveAttribute('inert');
   await expect.poll(() => page.evaluate(() => ({

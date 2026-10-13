@@ -215,7 +215,7 @@ function ModalSurface({
       previousActiveElement.current = document.activeElement as HTMLElement | null;
       hasFocusOrigin.current = true;
     }
-    if (!panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
+    if (!panelRef.current?.contains(document.activeElement)) panelRef.current?.focus({ preventScroll: true });
   }, [open, active]);
 
   useLayoutEffect(() => {
@@ -228,13 +228,13 @@ function ModalSurface({
       ? activeDialogs.at(-1) === targetDialog
       : activeDialogs.length === 0;
 
-    if (canRestoreFocus) target?.focus();
+    if (canRestoreFocus) target?.focus({ preventScroll: true });
     previousActiveElement.current = null;
     hasFocusOrigin.current = false;
   }, [open, active]);
 
   useEffect(() => () => {
-    if (activeRef.current && hasFocusOrigin.current) previousActiveElement.current?.focus();
+    if (activeRef.current && hasFocusOrigin.current) previousActiveElement.current?.focus({ preventScroll: true });
   }, []);
 
   useLayoutEffect(() => {
@@ -287,27 +287,22 @@ function ModalSurface({
 
   return (
     <Flex
-      ref={ref}
-      linkState={linkState}
-      data-point-events={dataPointEvents}
-      className={cx(styles.Modal, rootClassName, ...c.value('animation', animation), ...root)}
-      data-open={open}
-      data-entered={entered}
-      data-closing={closing}
-      data-open-motion={isOpenAnimate(animate) || undefined}
-      role="presentation"
-      aria-hidden={!open || !active}
-      inert={!open || !active}
-      align={alignItems ?? ['center', 'center', 'center']}
-      justify={justifyContent ?? ['center', 'center', 'center']}
-      style={rootStyle}
-    >
-      <div
-        className={cx(styles.Overlay, overlayClassName)}
-        style={overlayStyle}
-        onClick={handleOverlayClick}
+        ref={ref}
+        linkState={linkState}
+        data-point-events={dataPointEvents}
+        className={cx(styles.Modal, rootClassName, ...c.value('animation', animation), ...root)}
+        data-open={open}
+        data-entered={entered}
+        data-closing={closing}
+        data-open-motion={isOpenAnimate(animate) || undefined}
         role="presentation"
-      />
+        aria-hidden={!open || !active}
+        inert={!open || !active}
+        align={alignItems ?? ['center', 'center', 'center']}
+        justify={justifyContent ?? ['center', 'center', 'center']}
+        style={rootStyle}
+    >
+      <div className={cx(styles.Overlay, overlayClassName)} style={overlayStyle} onClick={handleOverlayClick} role="presentation" />
       <div
         id={id}
         ref={setPanelNode}
@@ -336,7 +331,9 @@ function ModalSurface({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
-        <div className={cx(styles.inner, overflowVisible && styles.innerOverflowVisible, scroll?.gutter === false && styles.noGutter, ...boxLayout(c, scroll ?? {}))}>
+        <div
+            className={cx(styles.inner, overflowVisible && styles.innerOverflowVisible, scroll?.gutter === false && styles.noGutter, ...boxLayout(c, scroll ?? {}))}
+        >
           {typeof children === 'function' ? children(onClose) : children}
         </div>
       </div>

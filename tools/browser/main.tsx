@@ -10,10 +10,12 @@ import 'virtual:browser-utilities.css';
 import './styles.scss';
 import { BrowserFixture } from './fixture';
 import { ModalProvider } from '../../src/components/Modal/ModalProvider';
+import { createSmoothScroll } from '../../src/components/SmoothScroll/engine';
 
 const root = document.getElementById('root');
 
 if (!root) throw new Error('Browser fixture root is missing');
+window.__createSmoothScroll = createSmoothScroll;
 
 createRoot(root).render(
   <Profiler id="browser-fixture" onRender={(_id, phase, actualDuration, baseDuration) => {
@@ -23,7 +25,9 @@ createRoot(root).render(
     if (output) output.value = JSON.stringify(window.__profileSamples);
   }}>
     <StrictMode>
-      <ModalProvider><BrowserFixture /></ModalProvider>
+      <ModalProvider>{location.search === '?smooth'
+        ? <main style={{ height: 2000 }}><h1>Delba UI browser regression fixture</h1></main>
+        : <BrowserFixture />}</ModalProvider>
     </StrictMode>
   </Profiler>,
 );

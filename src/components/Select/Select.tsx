@@ -11,6 +11,7 @@ import { Skeleton } from '../Skeleton';
 import { Flex } from '../Flex';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 import type { SharedMotionProps } from '../../hooks/useSharedMotion';
+import { useCollapseState } from '../../hooks/useCollapseState';
 import { Box } from '../Box';
 import { Dropdown } from '../Dropdown';
 import { isValueArray, selectFormValues, type SelectItem } from './options';
@@ -219,7 +220,9 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
         id: idProp, error: errorProp, label, comment, ariaLabel, perspective3d, parallax, animate,
     });
 
-    const isCollapsed = typeof collapse === 'boolean' ? !collapse : collapse?.open === false;
+    const rootCollapse = useCollapseState(collapse ?? { open: true });
+    const { defaultOpen: _defaultCollapseOpen, ...collapseSettings } = collapse ?? {};
+    const isCollapsed = !rootCollapse.open;
 
     useEffect(() => {
         if (isCollapsed) closeDropdown(false);
@@ -346,11 +349,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
                 {/* Скелетон и значение подменяют друг друга на одном месте — значит
                     `transitionKey` (§8.4), а не голое условие: иначе полоса исчезает
                     кадром. Шеврон при этом снаружи обёртки и не мигает. */}
-                <Flex
-                    transitionKey={loading ? 'skeleton' : 'value'}
-                    animation="fadeIn"
-                    w={['100%', null, null]}
-                >
+                <Flex transitionKey={loading ? 'skeleton' : 'value'} animation="fadeIn" w={['100%', null, null]}>
                     {loading ? (
                         <Skeleton h={[16, null, null]} />
                     ) : showInlineError ? (
@@ -368,20 +367,17 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
                 </Flex>
             </Box>
 
-            <Icon
-                aria-hidden
-                src={assetUrl(arrowIcon)}
-                fill="transparent"
-                w={[20, 20, 20]}
-                h={[20, 20, 20]}
-                className={styles.Chevron}
-            />
+            <Icon aria-hidden src={assetUrl(arrowIcon)} fill="transparent" w={[20, 20, 20]} h={[20, 20, 20]} className={styles.Chevron} />
         </Flex>
     );
 
     return (
         <Flex
-            collapse={collapse}
+            collapse={collapse ? {
+                ...collapseSettings,
+                open: rootCollapse.open,
+                onOpenChange: rootCollapse.changeOpen,
+            } : undefined}
             href={undefined}
             dir={['column', 'column', 'column']}
             gap={[8, 8, 8]}

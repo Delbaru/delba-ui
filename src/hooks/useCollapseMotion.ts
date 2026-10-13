@@ -96,12 +96,14 @@ export function useCollapseMotion<T extends HTMLElement = HTMLElement>(options: 
     if (!visualOpen) setSettled(false);
 
     transition.finished.then((result) => {
-      if (result.status !== 'finished' || previousOpen.current !== visualOpen) return;
+      if (handle.current.transition !== transition || previousOpen.current !== visualOpen || wrapRef.current !== wrap) return;
 
       if (visualOpen) setSettled(true);
       else setMounted(false);
 
-      latest.current.onEnd?.();
+      // При cancel CSS уже стоит в целевом состоянии. Снимаем клип/DOM даже без onEnd,
+      // иначе повторная команда того же направления ждала бы переход, которого больше нет.
+      if (result.status === 'finished') latest.current.onEnd?.();
     });
   }, [visualOpen, axis, gapSide, sizeOnInner, fade]);
 

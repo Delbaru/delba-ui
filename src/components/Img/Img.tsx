@@ -401,25 +401,25 @@ export function Img({
         <source media={MEDIA_QUERY.below} srcSet={pictureProps(sources.tablet).srcSet} sizes={computedSizes} />
       )}
       <img
-        {...pictureProps(sources.desktop)}
-        alt={normalizedAlt}
-        draggable={false}
-        className={imageClassName}
-        onLoad={handleLoad}
-        onError={handleError}
+          {...pictureProps(sources.desktop)}
+          alt={normalizedAlt}
+          draggable={false}
+          className={imageClassName}
+          onLoad={handleLoad}
+          onError={handleError}
       />
     </picture>
   ) : (
     <Image
-      {...imageProps}
-      alt={normalizedAlt}
-      draggable={false}
-      fill
-      sizes={computedSizes}
-      quality={normalizedQuality}
-      className={imageClassName}
-      onLoad={handleLoad}
-      onError={handleError}
+        {...imageProps}
+        alt={normalizedAlt}
+        draggable={false}
+        fill
+        sizes={computedSizes}
+        quality={normalizedQuality}
+        className={imageClassName}
+        onLoad={handleLoad}
+        onError={handleError}
     />
   );
 
@@ -442,12 +442,12 @@ export function Img({
     >
       {hasFancybox ? (
         <a
-          href={fancyboxHref ?? undefined}
-          data-fancybox={fancyboxGroup}
-          data-caption={normalizedAlt || undefined}
-          className={'ui-img-link'}
-          draggable={false}
-          aria-label={fancyboxAriaLabel}
+            href={fancyboxHref ?? undefined}
+            data-fancybox={fancyboxGroup}
+            data-caption={normalizedAlt || undefined}
+            className={'ui-img-link'}
+            draggable={false}
+            aria-label={fancyboxAriaLabel}
         >
           {blur && (
             <Image

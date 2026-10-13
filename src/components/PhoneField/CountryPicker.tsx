@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { getCountryCallingCode, type CountryCode } from 'libphonenumber-js/min';
 
 import { Button } from '../Button';
@@ -23,9 +23,24 @@ const ENGLISH = { country: 'Country', choose: 'Choose a country', search: 'Searc
 // Поиск и список обновляются независимо от ввода номера в соседнем input.
 export const CountryPicker = memo(function CountryPicker({ countries, country, disabled, locale, onSelect }: CountryPickerProps) {
     const [query, setQuery] = useState('');
+    const searchRef = useRef<HTMLInputElement | null>(null);
+    const focusFrame = useRef<number | null>(null);
     const countryName = countries.find(({ code }) => code === country)?.name ?? country;
     const countryGroups = useMemo(() => groupPhoneCountries(filterPhoneCountries(countries, query)), [countries, query]);
     const words = locale.toLowerCase().startsWith('ru') ? RUSSIAN : ENGLISH;
+
+    useEffect(() => () => {
+        if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+    }, []);
+
+    function handleTriggerClick(event: MouseEvent<HTMLElement>) {
+        if (event.currentTarget.getAttribute('aria-expanded') === 'true') return;
+        if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
+        focusFrame.current = requestAnimationFrame(() => {
+            focusFrame.current = null;
+            searchRef.current?.focus();
+        });
+    }
 
     function handleCountryChange(nextCountry: CountryCode, close: () => void) {
         onSelect(nextCountry);
@@ -35,11 +50,12 @@ export const CountryPicker = memo(function CountryPicker({ countries, country, d
 
     return (
         <Dropdown
-            panel={{ portal: true, side: 'start', className: styles.countryPanel }}
+            panel={{ portal: true, side: 'start', className: styles.countryPanel, keepMounted: false }}
             trigger={
                 <Button
                     type="button"
                     disabled={disabled}
+                    onClick={handleTriggerClick}
                     aria-label={`${words.country}: ${countryName} (${country})`}
                     aria-haspopup="dialog"
                     className={styles.countryTrigger}
@@ -70,6 +86,7 @@ export const CountryPicker = memo(function CountryPicker({ countries, country, d
                         ]}
                     >
                         <Input
+                            ref={searchRef}
                             type="text"
                             value={query}
                             onChange={(event) => setQuery(event.currentTarget.value)}
@@ -137,14 +154,7 @@ export const CountryPicker = memo(function CountryPicker({ countries, country, d
                                 </Flex>
                             ))
                         ) : (
-                            <Text
-                                as="div"
-                                variant={['body', 'body', 'body']}
-                                p={[12, 12, 12]}
-                                color="var(--text-muted)"
-                            >
-                                {words.empty}
-                            </Text>
+                            <Text as="div" variant={['body', 'body', 'body']} p={[12, 12, 12]} color="var(--text-muted)">{words.empty}</Text>
                         )}
                     </Flex>
                 </Flex>

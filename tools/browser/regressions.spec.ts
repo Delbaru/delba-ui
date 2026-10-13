@@ -5,6 +5,208 @@ async function openFixture(page: Page) {
   await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
 }
 
+test('smooth scroll caches the range and refreshes it when page content grows', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/?smooth');
+  await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
+  const result = await page.evaluate(async () => {
+    const root = document.documentElement;
+    const getter = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollHeight')?.get;
+    if (!getter) throw new Error('Missing native scrollHeight getter');
+    let reads = 0;
+    Object.defineProperty(root, 'scrollHeight', { configurable: true, get: () => { reads++; return getter.call(root); } });
+    const engine = window.__createSmoothScroll({ lerp: 0.1, wheelMultiplier: 1, duration: 0.1, easing: (x: number) => x, offset: 0, mobile: true, anchors: false, updateHash: false });
+    const content = document.createElement('div');
+    content.style.height = '1000px';
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      reads = 0;
+      engine.scrollTo(300);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const duringScroll = reads;
+      const previousMaximum = getter.call(root) - innerHeight;
+      document.body.append(content);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      engine.scrollTo(Number.MAX_SAFE_INTEGER, { immediate: true });
+      const maximum = getter.call(root) - innerHeight;
+      const reachedEnd = Math.abs(scrollY - maximum) < 2;
+      content.style.height = '2000px';
+      engine.scrollTo(Number.MAX_SAFE_INTEGER, { immediate: true });
+      const synchronousResize = Math.abs(scrollY - (getter.call(root) - innerHeight)) < 2;
+      engine.scrollTo(0, { duration: 0.5 });
+      await new Promise((resolve) => setTimeout(resolve, 75));
+      window.scrollTo({ top: 500, behavior: 'instant' });
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return { duringScroll, grew: maximum > previousMaximum, reachedEnd, synchronousResize, manualInterrupt: Math.abs(scrollY - 500) < 2 };
+    } finally {
+      engine.destroy();
+      Reflect.deleteProperty(root, 'scrollHeight');
+      content.remove();
+    }
+  });
+  expect(result).toEqual({ duringScroll: 1, grew: true, reachedEnd: true, synchronousResize: true, manualInterrupt: true });
+});
+
+test('gradient frame keeps a transparent center, radius and live button across breakpoints', async ({ page }) => {
+  await openFixture(page);
+  const frame = page.getByTestId('gradient-frame');
+  await frame.scrollIntoViewIfNeeded();
+  const border = frame.locator('.ui-gradient-border');
+  await expect(border).toHaveAttribute('aria-hidden', 'true');
+  await expect(border).toHaveCSS('mask-composite', /^exclude/);
+  await expect(border).toHaveCSS('background-image', /linear-gradient/);
+  await expect(border).toHaveCSS('pointer-events', 'none');
+  const geometry = () => frame.evaluate((node) => {
+    const parent = getComputedStyle(node);
+    const layer = getComputedStyle(node.querySelector('.ui-gradient-border') ?? node);
+    return { width: parseFloat(layer.paddingTop) / parseFloat(parent.paddingTop) * 24, sameRadius: layer.borderTopLeftRadius === parent.borderTopLeftRadius };
+  });
+  await expect.poll(async () => (await geometry()).width).toBeCloseTo(4, 3);
+  expect((await geometry()).sameRadius).toBe(true);
+  await expect(frame).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  const button = page.getByTestId('gradient-button');
+  await button.click();
+  await button.focus();
+  await expect(button).toBeFocused();
+  await expect.poll(() => button.evaluate((node) => getComputedStyle(node, '::before').transform)).toBe('matrix(1, 0, 0, 1, 0, 0)');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await geometry()).width).toBeCloseTo(8, 3);
+  expect((await geometry()).sameRadius).toBe(true);
+});
+
+test('perspective caches pointer geometry and keeps frame variables local to its root', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const target = page.getByTestId('motion-grid');
+  await target.scrollIntoViewIfNeeded();
+  await target.hover();
+  await page.waitForTimeout(150);
+  await target.evaluate((node) => {
+    const original = node.getBoundingClientRect.bind(node);
+    node.dataset.rectReads = '0';
+    node.getBoundingClientRect = () => {
+      node.dataset.rectReads = String(Number(node.dataset.rectReads ?? 0) + 1);
+      return original();
+    };
+  });
+  const box = await target.boundingBox();
+  if (!box) throw new Error('Missing motion target');
+  // boundingBox itself uses browser geometry, so count only the following real pointer moves.
+  await target.evaluate((node) => { node.dataset.rectReads = '0'; });
+  await page.mouse.move(box.x + 12, box.y + 8, { steps: 12 });
+  await page.waitForTimeout(100);
+  expect(Number(await target.getAttribute('data-rect-reads'))).toBeLessThanOrEqual(1);
+  await expect.poll(() => target.evaluate((node) => Math.abs(parseFloat(node.style.getPropertyValue('--perspective3d-rotate-y'))))).toBeGreaterThan(0.1);
+  await expect(target.locator('div')).toHaveCSS('--perspective3d-rotate-y', '0deg');
+  await page.evaluate(() => window.scrollBy(0, 4));
+  await page.waitForTimeout(80);
+  await page.mouse.move(box.x + 24, box.y + 8);
+  await expect.poll(async () => Number(await target.getAttribute('data-rect-reads'))).toBeGreaterThan(0);
+});
+
+test('parallax settles without feedback, skips offscreen geometry and resets on reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const target = page.getByTestId('parallax-target');
+  await target.scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, 100));
+  await expect.poll(() => target.evaluate((node) => Math.abs(parseFloat(node.style.getPropertyValue('--parallax-translate-y'))))).toBeGreaterThan(1);
+  await page.waitForTimeout(1000);
+  const settled = await target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y')));
+  await page.evaluate(() => { for (let i = 0; i < 10; i++) window.dispatchEvent(new Event('scroll')); });
+  await page.waitForTimeout(400);
+  expect(await target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y')))).toBeCloseTo(settled, 1);
+
+  await target.evaluate((node) => {
+    const original = node.getBoundingClientRect.bind(node);
+    node.getBoundingClientRect = () => {
+      node.dataset.rectReads = String(Number(node.dataset.rectReads ?? 0) + 1);
+      return original();
+    };
+  });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(200);
+  await target.evaluate((node) => { node.dataset.rectReads = '0'; });
+  await page.evaluate(() => { for (let i = 0; i < 10; i++) window.dispatchEvent(new Event('scroll')); });
+  await page.waitForTimeout(100);
+  await expect(target).toHaveAttribute('data-rect-reads', '0');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect.poll(() => target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y')))).toBe(0);
+  await target.scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, 80));
+  await expect.poll(() => target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y')))).toBe(0);
+});
+
+test('scroll parallax composes with reveal and tilt without frame writes, resets and cleans up', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const target = page.getByTestId('parallax-scroll-target');
+  await target.scrollIntoViewIfNeeded();
+  await expect(target).toHaveAttribute('data-reveal-state', 'done');
+  await expect.poll(() => target.evaluate((el) => el.getAnimations().some((animation) => animation.timeline !== document.timeline))).toBe(true);
+  const initial = await target.evaluate((el) => getComputedStyle(el).translate);
+  await target.evaluate((node) => {
+    const original = node.getBoundingClientRect.bind(node);
+    node.dataset.rectReads = '0';
+    node.getBoundingClientRect = () => { node.dataset.rectReads = String(Number(node.dataset.rectReads) + 1); return original(); };
+  });
+  await page.evaluate(() => window.scrollBy(0, 100));
+  await expect.poll(() => target.evaluate((el) => getComputedStyle(el).translate)).not.toBe(initial);
+  await expect(target).toHaveAttribute('data-rect-reads', '0');
+  await expect(target).toHaveCSS('--parallax-translate-y', '0px');
+  await page.mouse.move(1200, 100);
+  await expect.poll(() => target.evaluate((el) => Math.abs(parseFloat(el.style.getPropertyValue('--perspective3d-rotate-y'))))).toBeGreaterThan(1);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect.poll(() => target.evaluate((el) => el.getAnimations().length)).toBe(0);
+  await expect(target).toHaveCSS('translate', 'none');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await expect.poll(() => target.evaluate((el) => el.getAnimations().length)).toBeGreaterThan(0);
+  const oldNode = await target.elementHandle();
+  await page.getByTestId('toggle-scroll-parallax').click();
+  await expect(target).toHaveCount(0);
+  expect(await oldNode?.evaluate((el) => el.getAnimations().length)).toBe(0);
+});
+
+test('scroll parallax falls back when ViewTimeline is unavailable', async ({ page }) => {
+  await page.addInitScript(() => { Reflect.deleteProperty(window, 'ViewTimeline'); });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const target = page.getByTestId('parallax-scroll-target');
+  await target.scrollIntoViewIfNeeded();
+  await expect.poll(() => target.evaluate((el) => Math.abs(parseFloat(el.style.getPropertyValue('--parallax-translate-y'))))).toBeGreaterThan(1);
+});
+
+test('idle glow pauses offscreen and in a hidden document, then resumes the same cycle', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const button = page.getByTestId('idle-visibility');
+  const state = () => button.evaluate((node) => getComputedStyle(node.querySelector('.ui-button-glow') ?? node, '::before').animationPlayState);
+  await expect.poll(state).toBe('paused');
+  await button.scrollIntoViewIfNeeded();
+  await expect.poll(state).toBe('running');
+  await page.waitForTimeout(150);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect.poll(state).toBe('paused');
+  const paused = await button.evaluate((node) => node.getAnimations({ subtree: true })[0]?.currentTime);
+  await page.waitForTimeout(150);
+  expect(await button.evaluate((node) => node.getAnimations({ subtree: true })[0]?.currentTime)).toBe(paused);
+  await button.scrollIntoViewIfNeeded();
+  await expect.poll(state).toBe('running');
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect.poll(state).toBe('paused');
+  await page.evaluate(() => {
+    Reflect.deleteProperty(document, 'hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect.poll(state).toBe('running');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect.poll(() => button.evaluate((node) => getComputedStyle(node.querySelector('.ui-button-glow') ?? node, '::before').animationName)).toBe('none');
+});
+
 test('shared box CSS switches background, coordinates and dynamic visibility without DOM prop leakage', async ({ page }) => {
   await openFixture(page);
   const box = page.getByTestId('responsive-box');
@@ -416,12 +618,14 @@ test('all-country PhoneField typing exposes render cost and current picker mount
   expect(visibleOptionCount).toBeGreaterThan(200);
   await page.keyboard.press('Escape');
   await expect(picker).toBeHidden();
+  await expect.poll(() => page.locator('[aria-label="Страны"] button').count()).toBe(0);
   const countBefore = await page.evaluate(() => window.__phoneCountryOptionCount);
-  expect(countBefore).toBeGreaterThan(200);
-  const samplesBefore = await page.evaluate(() => window.__phoneProfileSamples.length);
+  expect(countBefore).toBe(0);
+  // Буфер ограничен 20 записями: новая выборка не измеряется ростом уже заполненного буфера.
+  await page.evaluate(() => { window.__phoneProfileSamples = []; });
   await phone.pressSequentially('4155552671');
   await expect(phone).toHaveValue(/\+7/);
-  await expect.poll(() => page.evaluate(() => window.__phoneProfileSamples.length)).toBeGreaterThan(samplesBefore + 5);
+  await expect.poll(() => page.evaluate(() => window.__phoneProfileSamples.length)).toBeGreaterThanOrEqual(10);
   const samples = await page.evaluate(() => window.__phoneProfileSamples.slice(-10));
   expect(samples).toHaveLength(10);
   expect(await page.evaluate(() => window.__phoneCountryOptionCount)).toBe(countBefore);
@@ -1146,6 +1350,33 @@ test('declarative Modal reduced motion still releases the shared lock after clos
   await expect(trigger).toBeFocused();
   await expect(page.locator('[role="dialog"][aria-label="Mobile declaration"]')).toHaveCount(0);
   await expect(page.locator('html')).not.toHaveCSS('overflow-y', 'hidden');
+});
+
+test('Modal restores a sticky header trigger without changing the page position', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 640 });
+  await openFixture(page);
+  const trigger = page.getByRole('button', { name: 'Open mobile declaration', exact: true });
+  await trigger.evaluate((node) => {
+    document.documentElement.style.scrollbarGutter = 'stable';
+    document.documentElement.style.overflowAnchor = 'none';
+    const header = document.createElement('header');
+    header.style.cssText = 'position: sticky; top: 0; z-index: 2000';
+    document.getElementById('root')!.prepend(header);
+    header.append(node);
+    window.scrollTo({ top: 600, behavior: 'instant' });
+  });
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(600);
+  const bounds = await trigger.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  await page.mouse.click(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
+  const dialog = page.getByRole('dialog', { name: 'Mobile declaration', exact: true });
+  await expect(dialog).toBeVisible();
+  expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  expect(await page.evaluate(() => window.scrollY)).toBe(600);
 });
 
 test('Modal scroll lock keeps independent provider leases through provider unmounts and restores inline priorities', async ({ page }) => {

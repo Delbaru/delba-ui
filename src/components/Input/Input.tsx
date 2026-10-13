@@ -231,22 +231,12 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
                     // и который разъезжался, стоило смениться кеглю или масштабу темы.
                     // Шрифт даёт модуль (`--field-font`), поэтому класса типографики у префикса нет:
                     // утилита стоит слоем выше и перебила бы его.
-                    <Text
-                        variant={[null, null, null]}
-                        color='var(--primary)'
-                        className={styles.phonePrefix}
-                    >
-                        {phoneFormat.dial}
-                    </Text>
+                    <Text variant={[null, null, null]} color='var(--primary)' className={styles.phonePrefix}>{phoneFormat.dial}</Text>
                 )}
 
                 <div className={styles.fieldSlot}>
                     {/* Скелетон занимает ту же ячейку; своп нужен только при появлении input. */}
-                    <Flex
-                        transitionKey={loading ? 'skeleton' : 'value'}
-                        animation='fadeIn'
-                        w={['100%', '100%', '100%']}
-                    >
+                    <Flex transitionKey={loading ? 'skeleton' : 'value'} animation='fadeIn' w={['100%', '100%', '100%']}>
                         {loading ? (
                             <Skeleton h={[16, null, null]} />
                         ) : (
@@ -295,19 +285,13 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
                     <InputInlineError id={inlineErrorId} message={inlineError} />
                 </div>
                 {slots?.end != null && <div data-input-action="true" className={styles.addon}>{slots.end}</div>}
-                <PasswordToggle
-                    visible={showReveal}
-                    revealed={revealed}
-                    onToggle={() => setRevealed((current) => !current)}
-                />
+                <PasswordToggle visible={showReveal} revealed={revealed} onToggle={() => setRevealed((current) => !current)} />
                 <DateToggle visible={isDate} onToggle={datePicker.onToggle} />
                 <NumberControls visible={showNumberArrows} onStep={handleNumberStep} />
             </Flex>
             {errorBelow && <InputBelowError id={inlineErrorId} message={belowError} />}
             {overflow.isOverflowing && (
-                <Tooltip ref={overflowTooltip.tooltipRef} {...overflowTooltip.bubbleProps}>
-                    {overflow.text}
-                </Tooltip>
+                <Tooltip ref={overflowTooltip.tooltipRef} {...overflowTooltip.bubbleProps}>{overflow.text}</Tooltip>
             )}
             {isDate && (
                 <Calendar
@@ -339,8 +323,6 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
     if (!collapse) return content;
 
     return (
-        <CollapseWrap {...collapse}>
-            {content}
-        </CollapseWrap>
+        <CollapseWrap {...collapse}>{content}</CollapseWrap>
     );
 }

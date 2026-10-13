@@ -117,44 +117,44 @@ export function Calendar({
       data-placement={placement}
     >
       <Flex
-        dir={['row', 'row', 'row']}
-        align={['center', 'center', 'center']}
-        justify={['space_between', 'space_between', 'space_between']}
-        gap={[8, null, null]}
+          dir={['row', 'row', 'row']}
+          align={['center', 'center', 'center']}
+          justify={['space_between', 'space_between', 'space_between']}
+          gap={[8, null, null]}
       >
         <Button
-          type='button'
-          aria-label='Previous month'
-          w={[40, null, null]}
-          h={[40, null, null]}
-          r={[8, null, null]}
-          bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
-          border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
-          onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, -1))}
-          className={cx(styles.btn, styles.prev)}
+            type='button'
+            aria-label='Previous month'
+            w={[40, null, null]}
+            h={[40, null, null]}
+            r={[8, null, null]}
+            bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
+            border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
+            onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, -1))}
+            className={cx(styles.btn, styles.prev)}
         >
           <Icon src={assetUrl(arrowIcon)} w={[18, null, null]} h={[18, null, null]} aria-hidden='true' />
         </Button>
 
         <Flex dir={['row', 'row', 'row']} align={['center', 'center', 'center']} gap={[16, null, null]}>
           <Button
-            type='button'
-            aria-label='Choose month'
-            aria-expanded={isMonthPickerActive}
-            aria-controls={`${id}-calendar-grid`}
-            gap={[4, null, null]}
-            className={styles.monthPick}
-            onClick={toggleMonthPickerActive}
-            {...stateProps(isMonthPickerActive && 'active')}
+              type='button'
+              aria-label='Choose month'
+              aria-expanded={isMonthPickerActive}
+              aria-controls={`${id}-calendar-grid`}
+              gap={[4, null, null]}
+              className={styles.monthPick}
+              onClick={toggleMonthPickerActive}
+              {...stateProps(isMonthPickerActive && 'active')}
           >
             <Text variant={['inherit', null, null]}>{visibleMonthLabel}</Text>
 
             <Icon
-              src={assetUrl(chevronIcon)}
-              w={[20, null, null]}
-              h={[20, null, null]}
-              rootClassName={cx(styles.btn, styles.prev)}
-              aria-hidden='true'
+                src={assetUrl(chevronIcon)}
+                w={[20, null, null]}
+                h={[20, null, null]}
+                rootClassName={cx(styles.btn, styles.prev)}
+                aria-hidden='true'
             />
           </Button>
 
@@ -165,23 +165,23 @@ export function Calendar({
                 мишенью 10×7 пикселей. Зазор между ними теперь внутри корней. */}
             <Flex dir={['column', 'column', 'column']} align={['center', 'center', 'center']}>
               <Button
-                type='button'
-                aria-label='Next year'
-                w={[20, null, null]}
-                h={[16, null, null]}
-                className={cx(styles.btn, styles.prev)}
-                onClick={() => changeVisibleYear(1)}
+                  type='button'
+                  aria-label='Next year'
+                  w={[20, null, null]}
+                  h={[16, null, null]}
+                  className={cx(styles.btn, styles.prev)}
+                  onClick={() => changeVisibleYear(1)}
               >
                 <Icon src={assetUrl(chevronIcon)} w={[16, null, null]} h={['auto', null, null]} aria-hidden='true' />
               </Button>
 
               <Button
-                type='button'
-                aria-label='Previous year'
-                w={[20, null, null]}
-                h={[16, null, null]}
-                className={cx(styles.btn, styles.next)}
-                onClick={() => changeVisibleYear(-1)}
+                  type='button'
+                  aria-label='Previous year'
+                  w={[20, null, null]}
+                  h={[16, null, null]}
+                  className={cx(styles.btn, styles.next)}
+                  onClick={() => changeVisibleYear(-1)}
               >
                 <Icon src={assetUrl(chevronIcon)} w={[16, null, null]} h={['auto', null, null]} aria-hidden='true' />
               </Button>
@@ -190,15 +190,15 @@ export function Calendar({
         </Flex>
 
         <Button
-          type='button'
-          aria-label='Next month'
-          w={[40, null, null]}
-          h={[40, null, null]}
-          r={[8, null, null]}
-          bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
-          border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
-          onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, 1))}
-          className={cx(styles.btn, styles.next)}
+            type='button'
+            aria-label='Next month'
+            w={[40, null, null]}
+            h={[40, null, null]}
+            r={[8, null, null]}
+            bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
+            border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
+            onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, 1))}
+            className={cx(styles.btn, styles.next)}
         >
           <Icon src={assetUrl(arrowIcon)} w={[18, null, null]} h={[18, null, null]} aria-hidden='true' />
         </Button>
@@ -209,12 +209,12 @@ export function Calendar({
           иначе карточка прыгала бы на 124 при каждом входе в выбор месяца, а месяцы растягиваются
           на ту же высоту и становятся крупными плитками. */}
       <Flex
-        id={`${id}-calendar-grid`}
-        transitionKey={isMonthPickerActive ? 'months' : 'days'}
-        animation='fadeIn'
-        dir={['column', 'column', 'column']}
-        gap={[8, null, null]}
-        h={[308, null, null]}
+          id={`${id}-calendar-grid`}
+          transitionKey={isMonthPickerActive ? 'months' : 'days'}
+          animation='fadeIn'
+          dir={['column', 'column', 'column']}
+          gap={[8, null, null]}
+          h={[308, null, null]}
       >
         {isMonthPickerActive ? (
           <Grid columns={[3, 3, 3]} rows={[4, 4, 4]} gap={[8, 8, 8]} h={['100%', null, null]}>
@@ -223,18 +223,15 @@ export function Calendar({
 
               return (
                 <Button
-                  key={monthLabel}
-                  type='button'
-                  h={['100%', null, null]}
-                  r={[8, null, null]}
-                  border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
-                  bg={isCurrentVisibleMonth ? ['var(--primary)', 'var(--primary)', 'var(--primary)'] : ['var(--background)', 'var(--background)', 'var(--background)']}
-                  onClick={() => handleMonthSelect(monthIndex)}
+                    key={monthLabel}
+                    type='button'
+                    h={['100%', null, null]}
+                    r={[8, null, null]}
+                    border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
+                    bg={isCurrentVisibleMonth ? ['var(--primary)', 'var(--primary)', 'var(--primary)'] : ['var(--background)', 'var(--background)', 'var(--background)']}
+                    onClick={() => handleMonthSelect(monthIndex)}
                 >
-                  <Text
-                    variant={['caption', 'caption', 'caption']}
-                    color={isCurrentVisibleMonth ? 'var(--white-100)' : undefined}
-                  >
+                  <Text variant={['caption', 'caption', 'caption']} color={isCurrentVisibleMonth ? 'var(--white-100)' : undefined}>
                     {monthLabel.slice(0, 3)}
                   </Text>
                 </Button>
@@ -246,11 +243,11 @@ export function Calendar({
             <Grid columns={[7, 7, 7]}>
               {datePicker.WEEKDAY_LABELS.map((weekday) => (
                 <Flex
-                  key={weekday}
-                  align={['center', 'center', 'center']}
-                  justify={['center', 'center', 'center']}
-                  w={[40, null, null]}
-                  h={[40, null, null]}
+                    key={weekday}
+                    align={['center', 'center', 'center']}
+                    justify={['center', 'center', 'center']}
+                    w={[40, null, null]}
+                    h={[40, null, null]}
                 >
                   <Text variant={['caption', 'caption', 'caption']} color='#AAA'>{weekday}</Text>
                 </Flex>
@@ -299,11 +296,7 @@ export function Calendar({
                     ]}
                     onClick={() => onDateSelect(day)}
                   >
-                    <Text
-                      className={styles.dayText}
-                      variant={['caption', 'caption', 'caption']}
-                      color={dayTextColor}
-                    >
+                    <Text className={styles.dayText} variant={['caption', 'caption', 'caption']} color={dayTextColor}>
                       {day.getDate()}
                     </Text>
                   </Button>

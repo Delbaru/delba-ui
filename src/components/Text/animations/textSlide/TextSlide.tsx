@@ -50,10 +50,10 @@ function TextSlideSequence({ options }: { options: SequenceOptions }) {
     <Flex className={'ui-slide'} style={stageStyle}>
       {options.steps.map((step, index) => (
         <span
-          key={step.slice(0, 60)}
-          ref={(el) => { itemRefs.current[index] = el; }}
-          className={'ui-slide-item'}
-          style={{ top: cumHeights[index - 1] || 0 }}
+            key={step.slice(0, 60)}
+            ref={(el) => { itemRefs.current[index] = el; }}
+            className={'ui-slide-item'}
+            style={{ top: cumHeights[index - 1] || 0 }}
         >
           {step}
         </span>
@@ -231,9 +231,7 @@ function TextSlideSwap({ content, options }: TextAnimationContext<TextSlideOptio
   flushWord();
 
   return (
-    <span ref={viewportRef} className={'ui-slide-swap'} style={vars}>
-      {groups}
-    </span>
+    <span ref={viewportRef} className={'ui-slide-swap'} style={vars}>{groups}</span>
   );
 }
 

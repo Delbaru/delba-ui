@@ -104,9 +104,7 @@ export function LenisScrollProviderNative({ children }: LenisScrollProviderProps
   );
 
   return (
-    <LenisScrollContext.Provider value={value}>
-      {children}
-    </LenisScrollContext.Provider>
+    <LenisScrollContext.Provider value={value}>{children}</LenisScrollContext.Provider>
   );
 }
 
@@ -172,8 +170,6 @@ export function LenisScrollProvider({ children }: LenisScrollProviderProps) {
   );
 
   return (
-    <LenisScrollContext.Provider value={value}>
-      {children}
-    </LenisScrollContext.Provider>
+    <LenisScrollContext.Provider value={value}>{children}</LenisScrollContext.Provider>
   );
 }

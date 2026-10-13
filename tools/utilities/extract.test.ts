@@ -1,10 +1,24 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { extractUtilityRules, type Source } from './extract';
 
 const classesOf = (sources: Source[], options: Parameters<typeof extractUtilityRules>[1] = {}) =>
   new Set(extractUtilityRules(sources, options).map((rule) => rule.className));
+
+test('GradientBorder generates its default thickness and forwarded gradient/width', () => {
+  const classes = classesOf([
+    { file: 'border.tsx', text: readFileSync(new URL('../../src/components/GradientBorder/GradientBorder.tsx', import.meta.url), 'utf8') },
+    { file: 'page.tsx', text: `import { GradientBorder } from './border'; export const A = () => <><GradientBorder gradient={['var(--frame)', 'var(--frame)', 'var(--frame)']} /><GradientBorder gradient={['var(--frame)', 'var(--frame)', 'var(--frame)']} width={[4, 8, 4]} /></>;` },
+  ]);
+  for (const name of ['p_1', 'bg_--frame', 'p_4', 'm_p_8']) assert.ok(classes.has(name), name);
+});
+
+test('fontSize accepts CSS lengths for layouts constrained by viewport height', () => {
+  const rules = extractUtilityRules([{ file: 'hero.tsx', text: `export const Hero = () => <Text fontSize={['min(calc(var(--rpx) * 92), 10svh)', 40, 64]} />;` }]);
+  assert.ok(rules.some((rule) => rule.declaration === 'font-size: min(calc(var(--rpx) * 92), 10svh)'));
+});
 
 test('литерал в пропе — ровно те классы, что выдаст рантайм', () => {
   const classes = classesOf([{ file: 'a.tsx', text: 'export const A = () => <Flex p={[8, 0, 0]} gap={[16]} />;' }]);

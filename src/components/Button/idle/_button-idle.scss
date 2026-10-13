@@ -1,0 +1,75 @@
+@use '../../../core/mixins' as m;
+
+@layer ui.components {
+  .ui-button[data-button-idle='glow'] {
+    position: relative;
+    isolation: isolate;
+    overflow: visible;
+
+    > .ui-button-glow,
+    > .ui-button-glow-surface {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    > .ui-button-glow {
+      z-index: -2;
+      transform: translateY(calc(var(--rpx) * 8));
+      filter: blur(calc(var(--rpx) * 16));
+      background: linear-gradient(105deg, var(--button-glow-color, var(--primary)), var(--button-glow-color-to, var(--button-glow-color, var(--primary))));
+      opacity: calc(0.35 * var(--button-glow-strength, 1));
+      transition: opacity var(--button-hover-duration, var(--t-d-normal)) var(--t-t-f-ease);
+
+      // Both gradients stay opaque, so blending changes color without breathing the halo.
+      &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(105deg, var(--button-glow-color-to, var(--button-glow-color, var(--primary))), var(--button-glow-color, var(--primary)));
+        animation: ui-button-glow-color var(--button-glow-duration, calc(var(--t-d-very-slow) * 8)) ease-in-out infinite alternate;
+        animation-play-state: var(--idle-animation-state, running);
+        will-change: opacity;
+      }
+    }
+
+    > .ui-button-glow-surface {
+      z-index: -1;
+      overflow: hidden;
+      background: inherit;
+    }
+
+    @include m.reduced-motion {
+      > .ui-button-glow {
+        transition: none;
+
+        &::before {
+          animation: none;
+          will-change: auto;
+        }
+      }
+    }
+  }
+}
+
+@layer ui.states {
+  .ui-button[data-button-idle='glow']:is(:hover, :focus-visible, [state~='hover'], [state~='focus-visible']):not(:disabled, [aria-disabled='true'], [state~='disabled']) > .ui-button-glow {
+    opacity: calc(0.5 * var(--button-glow-strength, 1));
+  }
+
+  .ui-button[data-button-idle='glow']:is(:disabled, [aria-disabled='true'], [state~='disabled']) > .ui-button-glow {
+    visibility: hidden;
+
+    &::before {
+      animation: none;
+      will-change: auto;
+    }
+  }
+}
+
+@keyframes ui-button-glow-color {
+  from {opacity: 0;}
+  to {opacity: 1;}
+}

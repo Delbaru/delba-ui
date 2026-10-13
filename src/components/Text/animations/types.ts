@@ -5,6 +5,7 @@ import type { CounterOptions } from './counter/types';
 import type { TextSlideOptions } from './textSlide/types';
 import type { TextClipOptions } from './textClip/types';
 import type { TextRevealOptions } from './textReveal/types';
+import type { TextTimelineAnimate } from './timeline';
 
 /**
  * Центральная карта анимаций Text: ключ → тип его опций. Добавление новой фишки = одна строка здесь
@@ -28,6 +29,7 @@ export type AnimationInput =
 
 /** Общая объектная форма анимаций содержимого Text. Время здесь в секундах или именем темы. */
 export type TextAnimate =
+  | TextTimelineAnimate
   | {
       /** Запуск при входе в экран или сразу после монтирования. */
       when: 'inView' | 'load';

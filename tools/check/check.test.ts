@@ -10,6 +10,7 @@ import { collapseRule } from './rules/collapse.mjs';
 import { domRefRule } from './rules/dom-ref.mjs';
 import { formatCheck } from './format.mjs';
 import { projectSteps } from './index.mjs';
+import { jsxFormatRule } from './rules/jsx-format.mjs';
 
 const root = path.resolve('fixture');
 const sourceOf = (code: string, file: string) => ts.createSourceFile(path.join(root, file), code, ts.ScriptTarget.Latest, true);
@@ -152,6 +153,67 @@ test('проект получает общее правило отдельным
         assert.equal(found[0]?.rule, 'dom-ref');
         assert.match(found[0]?.docs ?? '', /delba-ui[\\/]docs[\\/]authoring\.md$/);
         assert.equal(projectSteps(project, {}).at(-1)?.name, 'Архитектура проекта');
+    } finally {
+        fs.rmSync(project, { recursive: true, force: true });
+    }
+});
+
+test('архитектурный обход пропускает typecheck и type-test примеры', () => {
+    const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-check-fixtures-'));
+    const visited: string[] = [];
+    const rule = {
+        id: 'scan-test', docs: 'docs/authoring.md',
+        check(source: ts.SourceFile) { visited.push(path.basename(source.fileName)); return []; },
+    };
+    try {
+        fs.mkdirSync(path.join(project, 'src'));
+        for (const file of ['Live.tsx', 'Select.typecheck.tsx', 'Input.type-test.tsx', 'Panel.test.tsx']) {
+            fs.writeFileSync(path.join(project, 'src', file), 'export {};');
+        }
+        check(project, { rules: [rule] });
+        assert.deepEqual(visited, ['Live.tsx']);
+    } finally {
+        fs.rmSync(project, { recursive: true, force: true });
+    }
+});
+
+test('архитектурный fixer меняет только TSX по явному запросу и не трогает generic TypeScript', () => {
+    const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-architecture-fix-'));
+    try {
+        const src = path.join(project, 'src');
+        fs.mkdirSync(src);
+        const tsx = path.join(src, 'View.tsx');
+        const tsFile = path.join(src, 'identity.ts');
+        const before = '<Card\n  role="group"\n  id="card"\n/>;\n';
+        const generic = 'export const identity = <T,>(value: T): T => value;\n';
+        fs.writeFileSync(tsx, before);
+        fs.writeFileSync(tsFile, generic);
+
+        assert.equal(check(project, { rules: [jsxFormatRule] }).length, 1);
+        assert.equal(fs.readFileSync(tsx, 'utf8'), before);
+        assert.equal(check(project, { rules: [jsxFormatRule], fix: true }).length, 0);
+        assert.equal(fs.readFileSync(tsx, 'utf8'), '<Card role="group" id="card" />;\n');
+        assert.equal(fs.readFileSync(tsFile, 'utf8'), generic);
+    } finally {
+        fs.rmSync(project, { recursive: true, force: true });
+    }
+});
+
+test('единый шаг проверяет JSX без изменений и форматирует только при --fix', async () => {
+    const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-jsx-fix-'));
+    try {
+        fs.mkdirSync(path.join(project, 'src'));
+        const file = path.join(project, 'src', 'View.tsx');
+        const before = '<Card role="group" id="card"><Text>\n  {label}\n</Text></Card>';
+        fs.writeFileSync(file, before);
+        fs.writeFileSync(path.join(project, '.rules-baseline.json'), JSON.stringify({ 'jsx-format': {} }));
+        const checkStep = projectSteps(project, {}).at(0);
+        assert.equal((await checkStep?.run())?.ok, false);
+        assert.equal(fs.readFileSync(file, 'utf8'), before);
+        const fixStep = projectSteps(project, {}, { fix: true }).at(0);
+        assert.equal((await fixStep?.run())?.ok, true);
+        assert.match(fs.readFileSync(file, 'utf8'), /<Text>\{label\}<\/Text>/);
+        assert.equal((await checkStep?.run())?.ok, true);
     } finally {
         fs.rmSync(project, { recursive: true, force: true });
     }

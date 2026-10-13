@@ -15,6 +15,12 @@
 | `ResponsiveInput<T>`, `ResponsiveValue<T>` | там же | вход помощников против типа пропа; строгий режим включает проект через `UiRules` |
 | `createLayoutClasses`, `utilityClasses`, `MEDIA`, `UTILITIES` | `src/core/layout`, `src/core/utilities` | имя класса утилиты = имя пропа; реестр — единственный источник правды |
 
+`GradientBorder` — декоративный дочерний слой позиционированного Box/Flex/Grid/Button:
+`<GradientBorder gradient={['var(--frame)', 'var(--frame)', 'var(--frame)']} width={[1, 1, 1]} />`.
+Центр прозрачен (CSS mask exclude), радиус наследуется от родителя; рамка не влияет на
+раскладку, фокус и клики, не занимает его ::before/::after и пропускается reveal-каскадом.
+Градиент и толщина проходят через обычные utility-классы; поддержка CSS mask обязательна.
+
 ## Полосы и медиазапросы
 
 `src/core/base/breakpoints.ts` — `BREAKPOINT` (числа) и `MEDIA_QUERY` (строки запросов: `desktop`,
@@ -137,6 +143,16 @@ placeholder })` — все решения двери в одной чистой 
 `data-smooth-scroll-ignore` (и `data-lenis-prevent`) — браузеру. Чистая математика хода, отступа и
 разбора якорей — `smooth-scroll.ts` с тестами; `MEDIA_QUERY.touch` — «главный ввод — палец».
 
+Диапазон окна кэшируется по resize/ResizeObserver, явная команда обновляет его сразу.
+`subscribe` получает один снимок `scrollY` на нативное событие; последний unsubscribe
+снимает слушатель. Движок распознаёт внешний скролл через ту же подписку.
+
+`parallax={{ distance, direction, mode: 'scroll' }}` привязывает смещение от -distance
+до +distance к проходу узла через ближайший scroll-контейнер посредством ViewTimeline.
+Аддитивный `translate` сохраняет reveal и perspective. Без поддержки браузера или в
+Lenis-контексте работает прежний spring; `mode: 'spring'` остаётся значением по умолчанию,
+`ease` управляет только им. Reduced motion отменяет timeline, смена узла/unmount очищает его.
+
 ## Сворачивание
 
 `CollapseWrap` в `src/components/Collapse/CollapseWrap.tsx` подключает общий `useCollapseMotion` к
@@ -191,10 +207,17 @@ placeholder })` — все решения двери в одной чистой 
 ⚠️ `!important` у закрытого состояния там же ловил кадр: важное объявление перебивает анимацию, и
 отступы с рамкой схлопывались мгновенно, пока остальное ещё ехало. Урок — `lessons/authoring.md`.
 
-Наружу ход отдаётся **переходом, а не командой**: `collapseRef` даёт `CollapseHandle` с текущим
-`transition`, `onTransition` зовётся тем же событием. Открыто/закрыто решает React-состояние, императив
-только узнаёт, какой ход вызвала смена; доменный глагол — это смена состояния плюс возврат этого
-перехода.
+`collapseRef` сохраняет прежний `CollapseHandle` с текущим `transition`; `onTransition` получает
+тот же переход. Общий `collapse.ref` поддерживает `CollapseControls`: `show`, `hide`, `toggle`
+возвращают Promise с `finished / interrupted`. `useCollapseControls` владеет только целевым
+состоянием и ожиданием; `useCollapseMotion` по-прежнему ведёт единственный движок.
+Общий `useCollapseState` хранит собственную цель либо читает controlled-цель. Dropdown/Select
+поднимают это же состояние к корню, чтобы скрытие корня закрывало портальную панель;
+CollapseWrap получает принятую цель, без второго независимого состояния раскрытия.
+`defaultOpen` задаёт неуправляемое начальное состояние, `open` — состояние владельца.
+В управляемом режиме команда требует принятия через `onOpenChange`; отказ не меняет `open`.
+Завершение ждёт layout-коммита: DOM ref поля готов к фокусу. Противоположные команды в одном
+обработчике отменяют прежнее ожидание и сохраняют последнюю цель, даже до первого рендера.
 
 ⚠️ `onCollapseEnd` больше не получает аргумент-событие: ход больше не CSS-переход, и `TransitionEvent`
 у него нет. Три вызывающих места в проекте его и не читали, но сигнатура поменялась — `docs/Roadmap.md`
@@ -227,6 +250,30 @@ placeholder })` — все решения двери в одной чистой 
 <Text animate={{ when: 'change', effect: 'textSlide', duration: 'fast' }}>{title}</Text>
 <Text animate={{ when: 'inView', effect: 'counter', duration: 'slow' }}>70%</Text>
 ```
+
+`Text` также принимает составной `effect`: одно появление (`up`, `fade`, `scale` и т. д.) и
+`counter`. Без `startAt` они начинаются одновременно; зависимости не зависят от порядка ключей:
+
+```tsx
+<Text animate={{
+  when: 'inView',
+  effect: {
+    up: { distance: 'small', duration: 'slow' },
+    counter: { to: 100, duration: 'normal', startAt: { effect: 'up', progress: 0.5 } },
+  },
+}}>100</Text>
+```
+
+`progress` — доля времени зависимости от 0 до 1, без её delay и easing. `1` ждёт её завершения.
+`delay` внутри эффекта добавляется к его старту; общий `delay` — ко всей композиции. `start` у
+counter остаётся начальным числом. Длительности — секунды либо имена темы. Можно запускать и
+появление после counter. Неизвестные зависимости, циклы и несколько появлений одновременно
+отклоняются с ошибкой. `once` (по умолчанию true), `threshold`, `rootMargin` задаются снаружи effect.
+
+Композиция запускается после гидрации, по `load` либо при входе в экран. Она учитывает задержку
+reveal предков, включая stagger. CSS-появление и число используют общие часы без React-рендера
+на каждый кадр. При reduced motion сразу показывается итог; серверный HTML также содержит итоговое
+число, а CSS-страховка раскрывает его при недоступном JS. Строковая форма `effect` сохраняет прежнее поведение.
 
 `data-reveal-skip` исключает прямого ребёнка из каскада: декор не получает ход и не занимает
 шаг задержки. Ребёнок со своим reveal также не занимает шаг родительского load-каскада.
@@ -340,6 +387,13 @@ DOM-узле. Это сохраняет ref и фокус; `prefers-reduced-moti
 `aria-describedby`, не затирая описание потребителя.
 
 ## SCSS
+
+`useAnimationVisibility(enabled?)` из `@delba/ui` возвращает стабильный DOM callback-ref
+для HTMLElement/SVGElement. Записывает `--idle-animation-state: running|paused` при входе
+в экран и изменении видимости документа; CSS подключает его через `animation-play-state`.
+Смещение наблюдения — 100 px, чтобы движение возобновлялось перед входом в кадр.
+Не вызывает React-render на кадрах и освобождает observer/listener при unmount/disable,
+восстанавливая прежнее inline-значение. Button idle glow подключает его автоматически.
 
 `src/core/_mixins.scss` — `role-font($role, $legacy?)` (шрифт служебной роли), `reduced-motion`, `truncate`, `line-clamp($n)`, `fill`, `hidden-control`,
 `thin-scrollbar-track`, `thin-scrollbar-hover`, `hide-scrollbar`.

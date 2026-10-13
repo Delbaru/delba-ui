@@ -41,13 +41,13 @@ export function useIconTooltip(tooltip: React.ReactNode, direction: IconTooltipD
   const bubble = hasTooltip && bubbleProps.portalNode
     ? createPortal(
         <span
-          ref={tooltipRef}
-          id={id}
-          className="ui-icon-tooltip"
-          style={bubbleProps.style}
-          data-placement={bubbleProps.placement}
-          role="tooltip"
-          {...buildStateProps(bubbleProps.active && 'active')}
+            ref={tooltipRef}
+            id={id}
+            className="ui-icon-tooltip"
+            style={bubbleProps.style}
+            data-placement={bubbleProps.placement}
+            role="tooltip"
+            {...buildStateProps(bubbleProps.active && 'active')}
         >
           {tooltip}
         </span>,

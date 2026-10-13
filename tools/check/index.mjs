@@ -20,34 +20,37 @@ const astStep = (name, ...args) => ({
 });
 
 /** Один список шагов для быстрой проверки проекта и полной проверки UI. */
-export function projectSteps(root, config, { update = false, strict = false } = {}) {
+export function projectSteps(root, config, { update = false, strict = false, fix = false } = {}) {
   const configs = readdirSync(root).filter((file) => /^(next|ui).config./.test(file));
   return [
-    nodeStep('Правила проекта', [script('check-rules.mjs'), '--baseline', config.baseline ?? '.rules-baseline.json', ...(update ? ['--update'] : []), ...(config.rules ?? ['src'])], root),
+    nodeStep('Правила проекта', [script('check-rules.mjs'), '--baseline', config.baseline ?? '.rules-baseline.json', ...(update ? ['--update'] : []), ...(fix ? ['--fix'] : []), ...(config.rules ?? ['src'])], root),
     nodeStep('Тема', [script('check-tokens.mjs'), ...(strict ? ['--strict'] : []), ...[config.theme ?? 'theme'].flat(), ...(config.motion ? ['--generated-motion', path.join(KIT, 'src/core/_motion.scss')] : []), ...(config.typography ? ['--typography', config.typography.join(',')] : [])], root),
     nodeStep('Импорты', [script('check-migration.mjs'), ...(config.rules ?? ['src']), ...configs], root),
     astStep('Архитектура проекта', root, { rules: projectRules, dirs: config.rules ?? ['src'] }),
   ];
 }
 
-export function runUiChecks({ project, config = {}, configArg = 'ui.config.ts' } = {}) {
+export function runUiChecks({ project, config = {}, configArg = 'ui.config.ts', fix = false } = {}) {
   const source = project ? path.join(project, 'src') : undefined;
   const projectTests = source && existsSync(source)
     ? readdirSync(source, { recursive: true })
       .filter((file) => /\.test\.(?:[cm]?[jt]s|tsx|jsx)$/.test(file))
       .map((file) => path.join('src', file)).sort()
     : [];
+  const projectChecks = project ? projectSteps(project, config, { strict: true, fix }) : [];
   const steps = [
     ...(project ? [{ ...nodeStep('Генерация', [script('cli.mjs'), 'build', '--config', configArg], project), required: true }] : []),
+    ...(fix ? [astStep('Архитектура', undefined, { fix: true })] : []),
+    ...(fix ? projectChecks.slice(0, 1) : []),
     nodeStep('Типы', [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json', '--noEmit', '--incremental', 'false']),
     ...(project ? [nodeStep('Типы проекта', [require.resolve('typescript/bin/tsc'), '--noEmit', '--incremental', 'false'], project)] : []),
-    astStep('Архитектура'),
+    ...(!fix ? [astStep('Архитектура')] : []),
     nodeStep('Границы', [script('check-boundary.mjs')]),
     nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']),
     nodeStep('Тесты', ['--import', 'tsx', '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, 'src/**/*.test.ts', 'tools/**/*.test.ts']),
     ...(projectTests.length ? [nodeStep('Тесты проекта', ['--import', pathToFileURL(require.resolve('tsx')).href, '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, ...projectTests], project)] : []),
     nodeStep('Браузер', [require.resolve('@playwright/test/cli'), 'test', '--config', 'tools/browser/playwright.config.ts']),
-    ...(project ? projectSteps(project, config, { strict: true }) : []),
+    ...(fix ? projectChecks.slice(1) : projectChecks),
   ];
   return runSteps(steps);
 }

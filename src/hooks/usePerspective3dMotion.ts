@@ -5,6 +5,7 @@ import type React from 'react';
 
 import { MEDIA_QUERY } from '../core/base/breakpoints';
 import { clamp } from '../core/utils';
+import { isPerspective3dSettled, perspectiveFrameEase, type Perspective3dValues as MotionValues } from './perspective3d';
 
 const MOTION_STYLE_PROPS = [
   '--perspective3d',
@@ -18,15 +19,6 @@ const MOTION_STYLE_PROPS = [
 ] as const;
 
 type MotionTarget = HTMLElement | SVGElement;
-
-type MotionValues = {
-  rotateX: number;
-  rotateY: number;
-  translateX: number;
-  translateY: number;
-  scale: number;
-  translateZ: number;
-};
 
 export type Perspective3dConfig = {
   perspective: number | string;
@@ -134,6 +126,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
   const configRef = useRef(config);
   const nodeRef = useRef<MotionTarget | null>(null);
   const frameRef = useRef<number | null>(null);
+  const lastFrameRef = useRef<number | null>(null);
   const activeRef = useRef(false);
   const reducedMotionRef = useRef(false);
   const currentRef = useRef<MotionValues>({ ...INITIAL_VALUES });
@@ -143,6 +136,8 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
   const isMobileRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const observedRef = useRef<MotionTarget | null>(null);
+  const pointerRectRef = useRef<DOMRect | null>(null);
+  const pointerResizeRef = useRef<ResizeObserver | null>(null);
 
   useEffect(() => {
     configRef.current = config;
@@ -152,6 +147,25 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
   // держала по MediaQueryList на каждый Flex и Text (2400 на главной сайта фонда).
   const enabled = config !== null;
 
+  // Наклон не меняет исходную геометрию наведения. Чтение уже наклонённого rect на
+  // каждом mousemove давало обратную связь и принудительный style/layout посреди ввода.
+  const followsElement = config?.follow === 'element';
+  useEffect(() => {
+    if (!followsElement || typeof window === 'undefined') return undefined;
+    const invalidate = () => { pointerRectRef.current = null; };
+    pointerResizeRef.current = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(invalidate);
+    if (nodeRef.current) pointerResizeRef.current?.observe(nodeRef.current);
+    window.addEventListener('scroll', invalidate, { passive: true, capture: true });
+    window.addEventListener('resize', invalidate);
+    return () => {
+      pointerResizeRef.current?.disconnect();
+      pointerResizeRef.current = null;
+      window.removeEventListener('scroll', invalidate, true);
+      window.removeEventListener('resize', invalidate);
+      invalidate();
+    };
+  }, [followsElement]);
+
   useEffect(() => {
     if (!enabled || typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
       return undefined;
@@ -160,6 +174,18 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     const mediaQuery = window.matchMedia(MEDIA_QUERY.reducedMotion);
     const updatePreference = () => {
       reducedMotionRef.current = mediaQuery.matches;
+      if (mediaQuery.matches) {
+        activeRef.current = false;
+        currentRef.current = { ...INITIAL_VALUES };
+        targetRef.current = { ...INITIAL_VALUES };
+        smoothedTargetRef.current = { ...INITIAL_VALUES };
+        lastFrameRef.current = null;
+        if (frameRef.current !== null) {
+          cancelAnimationFrame(frameRef.current);
+          frameRef.current = null;
+        }
+        if (nodeRef.current) applyMotionValues(nodeRef.current, INITIAL_VALUES);
+      }
     };
 
     updatePreference();
@@ -254,16 +280,23 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
   const scheduleAnimation = useCallback(() => {
     if (frameRef.current !== null) return;
 
-    frameRef.current = requestAnimationFrame(() => {
+    frameRef.current = requestAnimationFrame((timestamp) => {
       frameRef.current = null;
 
       const node = nodeRef.current;
       const nextConfig = configRef.current;
       if (!node || !nextConfig) return;
 
-      if (!isVisibleRef.current) return;
+      if (!isVisibleRef.current) {
+        lastFrameRef.current = null;
+        return;
+      }
 
-      const targetEase = Math.min(nextConfig.ease * 3.5, 0.25);
+      // Настройки относятся к 60 Hz: одинаковое торможение и на 144 Hz, и после пропуска кадра.
+      const elapsed = lastFrameRef.current === null ? 1 : Math.min((timestamp - lastFrameRef.current) / (1000 / 60), 3);
+      lastFrameRef.current = timestamp;
+      const frameEase = (value: number) => perspectiveFrameEase(value, elapsed);
+      const targetEase = frameEase(Math.min(nextConfig.ease * 3.5, 0.25));
       const smoothed = smoothedTargetRef.current;
       const raw = targetRef.current;
       smoothedTargetRef.current = {
@@ -275,7 +308,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
         translateZ: smoothed.translateZ + (raw.translateZ - smoothed.translateZ) * targetEase,
       };
 
-      const ease = activeRef.current ? nextConfig.ease : nextConfig.restEase;
+      const ease = frameEase(activeRef.current ? nextConfig.ease : nextConfig.restEase);
       const st = smoothedTargetRef.current;
       const nextValues: MotionValues = {
         rotateX: currentRef.current.rotateX + (st.rotateX - currentRef.current.rotateX) * ease,
@@ -289,16 +322,12 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       currentRef.current = nextValues;
       applyMotionValues(node, nextValues);
 
-      const isSettled =
-        Math.abs(raw.rotateX - nextValues.rotateX) < 0.01 &&
-        Math.abs(raw.rotateY - nextValues.rotateY) < 0.01 &&
-        Math.abs(raw.translateX - nextValues.translateX) < 0.05 &&
-        Math.abs(raw.translateY - nextValues.translateY) < 0.05 &&
-        Math.abs(raw.scale - nextValues.scale) < 0.001 &&
-        Math.abs(raw.translateZ - nextValues.translateZ) < 0.05;
+      const isSettled = isPerspective3dSettled(nextValues, raw, st);
 
       if (!isSettled) {
         scheduleAnimation();
+      } else {
+        lastFrameRef.current = null;
       }
     });
   }, []);
@@ -323,7 +352,8 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       ratioX = (clientX / viewportWidth) * 2 - 1;
       ratioY = (clientY / viewportHeight) * 2 - 1;
     } else {
-      const rect = node.getBoundingClientRect();
+      const rect = pointerRectRef.current ?? node.getBoundingClientRect();
+      pointerRectRef.current = rect;
       if (!rect.width || !rect.height) return;
 
       ratioX = ((clientX - rect.left) / rect.width) * 2 - 1;
@@ -346,6 +376,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
           if (reducedMotionRef.current || isMobileRef.current) return;
 
           nodeRef.current = event.currentTarget;
+          pointerRectRef.current = null;
           activeRef.current = true;
           updateTargetFromPointer(event.currentTarget, event.clientX, event.clientY, 'element');
           scheduleAnimation();
@@ -362,6 +393,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
 
           nodeRef.current = event.currentTarget;
           activeRef.current = false;
+          pointerRectRef.current = null;
           targetRef.current = { ...INITIAL_VALUES };
           scheduleAnimation();
         },
@@ -418,6 +450,11 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
    * потребителя обнулял бы накопленный наклон. Внутри — только ref'ы и стабильная `syncObserver`.
    */
   const setMotionNode = useCallback((node: MotionTarget | null) => {
+    if (nodeRef.current !== node) {
+      pointerRectRef.current = null;
+      pointerResizeRef.current?.disconnect();
+      if (node) pointerResizeRef.current?.observe(node);
+    }
     nodeRef.current = node;
     syncObserver();
 
