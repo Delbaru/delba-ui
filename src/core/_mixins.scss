@@ -20,6 +20,20 @@ $text-roles: (body: p, caption: small, micro: dop);
   }
 }
 
+/// Смещение части интерактивного элемента при hover и клавиатурном фокусе.
+@mixin interaction-shift($target, $distance, $duration: var(--t-d-fast), $properties: translate) {
+  #{$target} {
+    transition-property: $properties;
+    transition-duration: $duration;
+    transition-timing-function: var(--t-t-f-ease);
+  }
+  &:is(:hover, :focus-visible) #{$target} {translate: $distance 0;}
+  @include reduced-motion {
+    #{$target} {transition: none;}
+    &:is(:hover, :focus-visible) #{$target} {translate: none;}
+  }
+}
+
 // Одна строка с многоточием. `min-width: 0` НЕ включён: он нужен только внутри flex-ряда и там
 // ставится рядом осознанно.
 @mixin truncate {

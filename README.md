@@ -31,6 +31,7 @@
 | `@delba/ui/next` | плагин Next `withUi` и `UI_SASS` (типы — `tools/next.d.mts`) | `export default withUi(nextConfig)` |
 | `@delba/ui/rich-text` | роли и санитайзер rich-text без React и SCSS — для node-скриптов и route handlers; роль-вариант проекта → классы `textVariantClasses` | `import { sanitizeRichTextHtml, textVariantClasses } from '@delba/ui/rich-text'` |
 | `@delba/ui/config` | тип `UiConfig` для `ui.config.ts` | `import type { UiConfig } from '@delba/ui/config'` |
+| `@delba/ui/url` | API маршрута без React и SCSS; браузерный глобальный сервис устанавливается приложением | `createUrl(pathname)`, `installBrowserUrl(window)` |
 | `delba-ui` | CLI (bin пакета) | `delba-ui build`, `watch`, `check`, `test` |
 
 SCSS-входы — под теми же именами, но их даёт `loadPaths` плагина (`UI_SASS` = `tools/sass`), а не `exports`:

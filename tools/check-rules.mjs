@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { jsxFormatRule } from './check/rules/jsx-format.mjs';
+import { unanimatedConditionalRule } from './check/rules/unanimated-conditional.mjs';
 
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'generated', 'public', 'UI']);
 const GRID_PROPS = 'w|h|minW|maxW|minH|maxH|p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|r';
@@ -18,13 +19,17 @@ export const RULES = {
   'raw-input': { ext: /\.tsx$/, test: (line) => /<input[\s/>]/.test(line), hint: 'SharedInput / SharedCheckbox / SharedRadio' },
   'raw-anchor': { ext: /\.tsx$/, test: (line) => /<a[\s>]/.test(line), hint: "Text as='a' или Button href" },
   'inline-svg': { ext: /\.tsx$/, test: (line) => /<svg[\s>]/.test(line), hint: 'файл в public/icons + Icon' },
-  // Появление по состоянию анимируется; в серверном файле условие — данные, а не состояние.
-  'unanimated-conditional': { ext: /\.tsx$/, client: true, test: (line) => /(&&|\?)\s*\($/.test(line.trimEnd()), hint: 'collapse / transitionKey' },
+  // Появление по интерактивному состоянию анимируется; CMS-данные сами по себе не требуют motion.
+  'unanimated-conditional': { ext: /\.tsx$/, client: true, ast: unanimatedConditionalRule, hint: 'collapse / transitionKey' },
   'off-grid-number': {
     ext: /\.tsx$/,
     // Одно место — одно нарушение: полный кортеж `[6, 6, 6]` — это одно число, а не три.
-    count: (line) => [...line.matchAll(new RegExp(`\\b(?:${GRID_PROPS})=\\{(\\[[^\\]]*\\]|-?\\d+)\\}`, 'g'))]
-      .reduce((total, m) => total + new Set((m[1].replace(/'[^']*'|"[^"]*"/g, '').match(/-?\d+/g) ?? []).filter((n) => Math.abs(Number(n)) % 4 !== 0)).size, 0),
+    count: (line) => [...line.matchAll(new RegExp(`\\b(${GRID_PROPS})=\\{(\\[[^\\]]*\\]|-?\\d+)\\}`, 'g'))]
+      .reduce((total, m) => total + new Set((m[2].replace(/'[^']*'|"[^"]*"/g, '').match(/-?\d+/g) ?? []).filter((n) => {
+        const size = Math.abs(Number(n));
+        // Тонкая линия — геометрия, а не шаг отступов. Не разрешаем 1–2px padding/gap.
+        return size % 4 !== 0 && !(/^(w|h|minW|maxW|minH|maxH)$/.test(m[1]) && (size === 1 || size === 2));
+      })).size, 0),
     hint: 'размер кратный 4',
   },
   'raw-transition': {

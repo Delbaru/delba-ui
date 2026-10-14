@@ -10,7 +10,14 @@ import { fileURLToPath } from 'node:url';
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'public', 'UI', 'delba-ui']);
 const DOC = 'README кита, «Переход на 2.0»';
 // Папка сабмодуля у проектов зовётся по-разному: `UI` (socrat, D4Y) или `delba-ui`.
-const DEEP = /(^|\/)(UI|delba-ui)(\/|$)|^@delba\/ui\/(?!(skin|next|config|rich-text|phone-field|icons\/.+)$)/;
+const packageExports = Object.keys(JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).exports);
+const isPublicEntry = (spec) => packageExports.some((entry) => {
+  const name = `@delba/ui${entry === '.' ? '' : entry.slice(1)}`;
+  if (!name.includes('*')) return spec === name;
+  const [start, end] = name.split('*');
+  return spec.startsWith(start) && spec.endsWith(end) && spec.length > start.length + end.length;
+});
+const isDeepImport = (spec) => /(^|\/)(UI|delba-ui)(\/|$)/.test(spec) || (spec.startsWith('@delba/ui/') && !isPublicEntry(spec));
 // Регистр значим: папка кита — `UI` или `delba-ui`, а `/ui/container` уже записан строчными.
 // С флагом `i` под правило попадал любой неймспейс проекта с сегментом `ui` (`@socrat/shared/ui/components`).
 const KIT_MODULE = /^@delba\/ui$|(^|\/)(UI|delba-ui)(\/|$)|\/ui\/container$/;
@@ -18,8 +25,8 @@ const SCSS_SHORT = /^(mixins|scss-utils|UI\/core\/.+)$/;
 const SCSS_ENTRY = /^@delba\/ui\/(mixins|styles|theme|skin-classes|skin-states)$/;
 
 const RULES = [
-  [/@(?:use|forward|import)\s+['"]([^'"]+)['"]/g, (spec) => !SCSS_ENTRY.test(spec) && (DEEP.test(spec) || SCSS_SHORT.test(spec)) && `SCSS кита — по имени: '@delba/ui/mixins' | '@delba/ui/styles' | '@delba/ui/skin-classes' | '@delba/ui/skin-states' (было '${spec}')`],
-  [/(?:from\s*|import\s*\(\s*|^\s*import\s+)['"]([^'"]+)['"]/gm, (spec) => DEEP.test(spec) && !/\.s?css$/.test(spec) && `импорт внутрь кита '${spec}' → '@delba/ui' (или '@delba/ui/skin', '/next', '/config', '/rich-text')`],
+  [/@(?:use|forward|import)\s+['"]([^'"]+)['"]/g, (spec) => !SCSS_ENTRY.test(spec) && (isDeepImport(spec) || SCSS_SHORT.test(spec)) && `SCSS кита — по имени: '@delba/ui/mixins' | '@delba/ui/styles' | '@delba/ui/skin-classes' | '@delba/ui/skin-states' (было '${spec}')`],
+  [/(?:from\s*|import\s*\(\s*|^\s*import\s+)['"]([^'"]+)['"]/gm, (spec) => isDeepImport(spec) && !/\.s?css$/.test(spec) && `импорт внутрь кита '${spec}' → публичный вход из exports @delba/ui`],
   [/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g, (names, spec) => KIT_MODULE.test(spec) && /\bContainer\b/.test(names) && '<Container/> удалён → <Box container> (или Flex/Grid container); вертикальные поля — у секции'],
 ];
 

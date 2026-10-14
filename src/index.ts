@@ -70,6 +70,7 @@ export {
 } from './core';
 export { clamp, clamp01 } from './core/utils';
 export { pad, pluralize, type PluralForms } from './core/base/text-format';
+export { createUrl, createBrowserUrl, installBrowserUrl, type BrowserUrl } from './core/base/url';
 
 // Хуки и типы, которые нужны D-компонентам и страницам проекта.
 export { LenisScroll, LenisScrollProvider, useLenisScroll, useLenisScrollOptional, type LenisScrollContextValue } from './components/LenisScroll';
@@ -77,6 +78,10 @@ export * from './components/SmoothScroll';
 export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
 export { useAnchoredFloating, type FloatingAlign, type FloatingPlacement } from './hooks/useAnchoredFloating';
 export { useMediaQuery } from './hooks/useMediaQuery';
+export { useScroll } from './hooks/useScroll';
+export { useUrl } from './hooks/useUrl';
+export type { ScrollSnapshot, ScrollState, ScrollWatchOptions } from './core/base/scroll-direction';
+export { InteractionScope, useInteractionActivity, type InteractionScopeProps } from './core/InteractionScope';
 export { useAnimationVisibility } from './hooks/useAnimationVisibility';
 export type { CollapseHandle } from './hooks/useCollapseMotion';
 export type { CollapseControls } from './hooks/useCollapseControls';

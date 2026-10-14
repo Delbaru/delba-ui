@@ -192,7 +192,7 @@ export const UTILITIES: readonly Utility[] = [
   { name: 'lineHeight', declare: lineHeight },
   { name: 'fontFamily', ...enumOf('font-family', { primary: 'var(--font-primary)', secondary: 'var(--font-secondary)', inherit: 'inherit' }) },
   { name: 'textTransform', ...enumOf('text-transform', { none: 'none', uppercase: 'uppercase', lowercase: 'lowercase', capitalize: 'capitalize' }) },
-  { name: 'letterSpacing', declare: numberOf('letter-spacing', rpx) },
+  { name: 'letterSpacing', declare: lengthOf('letter-spacing', new Set(['normal'])) },
   { name: 'textAlign', ...enumOf('text-align', { left: 'left', right: 'right', center: 'center', justify: 'justify', start: 'start', end: 'end' }) },
   { name: 'whiteSpace', ...enumOf('white-space', { normal: 'normal', nowrap: 'nowrap', pre: 'pre', 'pre-wrap': 'pre-wrap', 'pre-line': 'pre-line', 'break-spaces': 'break-spaces' }) },
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { type CSSProperties } from 'react';
+import { useRef, type CSSProperties } from 'react';
 import type React from 'react';
 import { boxLayout, composeEventHandlers, containerClass, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ContainerProp, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
 import type { Transition } from '../../core';
@@ -11,6 +11,7 @@ import type { CollapseHandle } from '../../hooks/useCollapseMotion';
 import { resolveContentAnimate, type ContentAnimate, type ContentAnimation, type ContentEnter } from '../../hooks/contentMotion';
 import { useContentMotion } from '../../hooks/useContentMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
+import { InteractionScope } from '../../core/InteractionScope';
 
 type DirectionKey = 'row' | 'row_reverse' | 'column' | 'column_reverse';
 type WrapKey = 'nowrap' | 'wrap' | 'wrap_reverse';
@@ -35,6 +36,12 @@ export interface FlexProps
   children?: React.ReactNode;
   style?: CSSProperties;
   state?: ComponentStateValue;
+  /** Добавляет state="interacting" при указателе, фокусе или открытом дочернем контроле.
+   * Порталы Modal/Dropdown учитываются автоматически; без дополнительного DOM-узла. */
+  trackInteraction?: boolean;
+  /** Активность области: указатель, фокус или открытая дочерняя Modal/Dropdown, включая порталы.
+   * Fixed/sticky-панель с top=0 также реагирует на указатель у верхнего края viewport. */
+  onInteractionChange?: (active: boolean) => void;
   /** Тег узла без `href`: `header`, `nav`, `footer`… */
   as?: 'div' | 'header' | 'nav' | 'footer' | 'main' | 'aside' | 'section' | 'ul' | 'li' | 'dl' | 'figure' | 'figcaption';
 
@@ -125,6 +132,8 @@ export function Flex({
   reveal,
   container,
   state,
+  trackInteraction,
+  onInteractionChange,
   onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp,
   onClick, onFocus, onBlur,
   href, target, rel, download, newTab, nofollow, noreferrer,
@@ -141,9 +150,11 @@ export function Flex({
   const contentAnimate = isAppearanceAnimate(animate) ? undefined : animate;
   const motionInput = contentAnimate !== undefined ? resolveContentAnimate(contentAnimate) : { animation, key: transitionKey };
   const contentMotion = useContentMotion({ ...motionInput, children, onAnimationEnd: anchorProps.onAnimationEnd });
-  const setRefs = useMergedRefs(setMotionNode, contentMotion.ref, ref);
+  const interactionRef = useRef<HTMLElement>(null);
+  const surfaceRef = useMergedRefs(ref, interactionRef);
+  const setRefs = useMergedRefs(setMotionNode, contentMotion.ref, surfaceRef);
 
-  const content = (
+  const content = (active = false) => (
     <Comp
       ref={setRefs}
       className={cx(
@@ -166,7 +177,7 @@ export function Flex({
         ...style,
       }}
       {...revealAttrs}
-      {...stateProps(state)}
+      {...stateProps(state, trackInteraction && active && 'interacting')}
       {...anchorProps}
       {...stateLinkProps(linkState, {
         onMouseEnter: composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter),
@@ -184,8 +195,12 @@ export function Flex({
     </Comp>
   );
 
+  const scopedContent = trackInteraction || onInteractionChange
+    ? <InteractionScope target={interactionRef} onChange={onInteractionChange}>{content}</InteractionScope>
+    : content();
+
   if (collapse === undefined) {
-    return content;
+    return scopedContent;
   }
 
   const collapseOptions: FlexCollapseOptions = typeof collapse === 'boolean' ? { open: collapse } : collapse;
@@ -210,7 +225,7 @@ export function Flex({
         onTransition={collapseOptions.onTransition ?? onTransition}
         handleRef={collapseOptions.ref ?? collapseRef}
     >
-      {content}
+      {scopedContent}
     </CollapseWrap>
   );
 }

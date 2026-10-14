@@ -11,6 +11,33 @@ const hit = (rule: keyof typeof RULES, line: string) => {
     return def.test?.(line) ?? false;
 };
 
+test('client CMS labels do not require an appearance animation', () => {
+    const count = RULES['unanimated-conditional'].ast.count;
+    assert.equal(count(`'use client';
+        function Button({ text }: { text?: string }) {
+            const label = text || undefined;
+            const hasLabel = !!label;
+            return <Flex>{label && (<Text>{label}</Text>)}{hasLabel && <Text>Label exists</Text>}</Flex>;
+        }`, 'Button.tsx').length, 0);
+});
+
+test('reactive and controlled conditional JSX is detected regardless of formatting', () => {
+    const count = RULES['unanimated-conditional'].ast.count;
+    for (const child of ['visible && (<Text>Panel</Text>)', 'visible && <Text>Panel</Text>', 'visible ? <Text>Panel</Text> : null']) {
+        assert.equal(count(`import { useState as state } from 'react';
+            function Panel() { const [open] = state(false); const visible = open; return <Flex>{${child}}</Flex>; }
+        `, 'Panel.tsx').length, 1);
+    }
+    assert.equal(count('function Panel({ open }: { open: boolean }) { return <Flex>{open && <Text>Panel</Text>}</Flex>; }', 'Panel.tsx').length, 1);
+});
+
+test('thin line sizes are allowed while spacing still follows the four-unit rhythm', () => {
+    const count = RULES['off-grid-number'].count;
+    assert.equal(count('<Box h={[1, 1, 1]} w={[2, 2, 2]} />'), 0);
+    assert.equal(count('<Flex p={[1, 1, 1]} gap={[2, 2, 2]} />'), 2);
+    assert.equal(count('<Box h={[3, 3, 3]} />'), 1);
+});
+
 test('проп раньше SCSS: нулевые поля, flex: none, переопределение токена темы', () => {
     assert.equal(hit('scss-zero-spacing', '    margin: 0;'), true);
     assert.equal(hit('scss-zero-spacing', '    padding-top: 0;'), true);

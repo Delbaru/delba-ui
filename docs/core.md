@@ -135,6 +135,29 @@ placeholder })` — все решения двери в одной чистой 
 
 ## Прокрутка окна
 
+`useScroll(options, select?)` наблюдает нативную прокрутку через общую подписку.
+`direction: { down, up }` задаёт допуски смены направления в CSS px,
+`threshold: { enter, exit }` — порог с гистерезисом. Снимок содержит `y`, `travel`,
+`direction`, `pastThreshold` и проверки `down(distance)/up(distance)`. Они возвращают boolean
+по накопленному пути в CSS px с последнего разворота; `useScroll()` не требует конфигурации. Примитивный результат `select` обновляет React только
+при смене выбранного состояния; политика компонента остаётся у потребителя.
+Диапазон страницы кешируется по resize/ResizeObserver; выход за края clamp-ится.
+
+`Flex trackInteraction` добавляет `interacting` к переданному `state`, пока указатель или фокус
+находится в области либо открыт дочерний Dropdown/декларативная Modal. Порталы учитываются
+автоматически; закрытие и unmount освобождают область. Действие состояния выбирает SCSS
+потребителя, например `[state~="hide"]:not([state~="interacting"])`. Нового DOM-узла нет.
+`onInteractionChange(active)` при необходимости сообщает тот же boolean владельцу.
+Fixed/sticky-панель с top=0 сохраняет зону возврата у верхнего края viewport; высота
+кешируется через ResizeObserver. Прежний `InteractionScope target={ref} edge="top"` совместим,
+но для обычной поверхности отдельная render-обёртка не нужна.
+
+`@delba/ui/url` — чистая дверь без компонентов и SCSS. `createUrl(pathname)` создаёт
+независимый API маршрута для SSR/адаптера роутера. `installBrowserUrl(window)` устанавливает
+глобальный `url.current()/href()/query(key)/hash()/isCurrent()/isActive()/props()`;
+методы читают живой location, но не подписывают React. Сервис существует только в браузере;
+на сервере передавайте pathname текущего запроса, не храните его в глобальном объекте.
+
 `SmoothScroll` (`src/components/SmoothScroll`) — плавная прокрутка без зависимостей, замена `LenisScroll`
 (тот остаётся ради проектов на нём). Пишет в НАСТОЯЩИЙ скролл окна, поэтому sticky, поиск, фокус и
 клавиатура живы. Один конфиг — пропы провайдера (`lerp`, `wheelMultiplier`, `duration`, `easing`,
@@ -405,3 +428,6 @@ DOM-узле. Это сохраняет ref и фокус; `prefers-reduced-moti
 `theme/tokens.default.scss` — стартовые значения всего, что библиотека берёт у проекта, с нулевой
 специфичностью. Добавил в код `var(--новый-токен)` — добавь его и сюда, иначе у потребителя молча
 пропадёт цвет или отступ. Проверка — `tools/check-tokens.mjs`.
+
+`useUrl()` из @delba/ui — реактивный адаптер Next App Router на usePathname. Он возвращает
+API createUrl текущего маршрута и сохраняет SSR; потребителям не нужен локальный re-export.

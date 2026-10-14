@@ -59,7 +59,8 @@ export interface TextProps
 
   color?: string;
   textTransform?: ResponsiveValue<string>;
-  letterSpacing?: ResponsiveValue<number>;
+  /** Межбуквенный интервал: число в rpx либо CSS-длина, например '-0.03em'. */
+  letterSpacing?: ResponsiveValue<number | string>;
   textAlign?: ResponsiveValue<TextAlignValue>;
   whiteSpace?: ResponsiveValue<WhiteSpaceValue>;
   rows?: ResponsiveValue<number>;

@@ -11,6 +11,7 @@ import { Box, type BoxProps } from '../Box';
 import { CollapseWrap, type CollapseSettings } from '../Collapse/CollapseWrap';
 import { composeDropdownTriggerClick } from './trigger';
 import styles from './Dropdown.module.scss';
+import { useInteractionActivity } from '../../core/InteractionScope';
 
 export interface DropdownTriggerProps {
   onClick?: MouseEventHandler<HTMLElement>;
@@ -95,6 +96,7 @@ export function Dropdown({
   const disabled = trigger.props.disabled || trigger.props['aria-disabled'] === true || trigger.props['aria-disabled'] === 'true';
   const blocked = disabled || !rootCollapse.open;
   const open = requestedOpen && !blocked;
+  useInteractionActivity(open);
   const rootRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);

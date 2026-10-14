@@ -12,6 +12,12 @@ const u = (name: string): Utility => {
   return utility;
 };
 
+test('letter spacing accepts font-relative lengths and preserves numeric rpx values', () => {
+  assert.equal(exactRules(u('letterSpacing'), ['-0.03em', '-0.03em', '-0.03em'])[0]?.declaration, 'letter-spacing: -0.03em');
+  assert.equal(exactRules(u('letterSpacing'), [2, 2, 2])[0]?.declaration, 'letter-spacing: calc(var(--rpx) * 2)');
+  assert.equal(u('letterSpacing').declare('invalid'), null);
+});
+
 test('одинаковое значение на всех брейкпоинтах — один базовый класс', () => {
   assert.deepEqual(utilityClasses(u('gap'), [8, 8, 8]), ['gap_8']);
   assert.deepEqual(utilityClasses(u('gap'), [8]), ['gap_8']);

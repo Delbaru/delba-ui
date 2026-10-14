@@ -5,6 +5,47 @@ async function openFixture(page: Page) {
   await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
 }
 
+test('interaction scope holds portal controls and releases them on close and unmount', async ({ page }) => {
+  await openFixture(page);
+  const active = page.getByTestId('interaction-scope-state');
+  const root = page.getByTestId('interaction-scope-root');
+  await page.mouse.move(1, 1);
+  await expect(active).toHaveText('false');
+  await expect(root).toHaveAttribute('state', 'compact hide');
+  await page.getByRole('button', { name: 'Outside interaction scope', exact: true }).click();
+  await page.mouse.move(1, 1);
+  await page.keyboard.press('Tab');
+  await expect(active).toHaveText('false');
+  await page.keyboard.press('Tab');
+  await expect(active).toHaveText('true');
+  await expect(root).toHaveAttribute('state', 'compact hide interacting');
+  await page.keyboard.press('Shift+Tab');
+  await expect(active).toHaveText('false');
+  await page.getByRole('button', { name: 'Open scoped dropdown', exact: true }).click();
+  await page.mouse.move(1, 1);
+  await expect(page.getByRole('button', { name: 'Close scoped dropdown', exact: true })).toBeVisible();
+  await expect(active).toHaveText('true');
+  await page.getByRole('button', { name: 'Close scoped dropdown', exact: true }).click();
+  await expect(active).toHaveText('true');
+  await page.getByRole('button', { name: 'Outside interaction scope', exact: true }).click();
+  await page.mouse.move(1, 1);
+  await expect(active).toHaveText('false');
+  await page.getByRole('button', { name: 'Open scoped modal', exact: true }).click();
+  await page.mouse.move(1, 1);
+  await expect(page.getByRole('dialog', { name: 'Scoped modal', exact: true })).toBeVisible();
+  await expect(active).toHaveText('true');
+  await page.keyboard.press('Escape');
+  await expect(active).toHaveText('true');
+  await page.getByRole('button', { name: 'Outside interaction scope', exact: true }).click();
+  await page.mouse.move(1, 1);
+  await expect(active).toHaveText('false');
+  await page.getByRole('button', { name: 'Open scoped dropdown', exact: true }).click();
+  await page.getByRole('button', { name: 'Toggle scoped controls', exact: true }).click();
+  await page.mouse.move(1, 1);
+  await expect(active).toHaveText('false');
+  await expect(page.getByRole('button', { name: 'Close scoped dropdown', exact: true })).toHaveCount(0);
+});
+
 test('smooth scroll caches the range and refreshes it when page content grows', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/?smooth');

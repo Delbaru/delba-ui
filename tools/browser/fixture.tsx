@@ -26,6 +26,7 @@ import { Select } from '../../src/components/Select/Select';
 import { Text } from '../../src/components/Text/Text';
 import { Section } from '../../src/components/Section';
 import { Textarea } from '../../src/components/Textarea/Textarea';
+import { InteractionScopeFixture } from './interaction-scope.fixture';
 import { VideoPlayer } from '../../src/components/VideoPlayer/VideoPlayer';
 import { Checkbox } from '../../src/components/Checkbox/Checkbox';
 import { Radio } from '../../src/components/Radio/Radio';
@@ -1177,6 +1178,7 @@ export function BrowserFixture() {
   return (
     <main className="fixture">
       <h1>Delba UI browser regression fixture</h1>
+      <InteractionScopeFixture />
       <button
         type="button"
         data-testid="toggle-reveal-skip"

@@ -19,6 +19,7 @@ import { Flex } from '../Flex';
 import { useModalRegistry, useModalRuntime } from './ModalProvider';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useInteractionActivity } from '../../core/InteractionScope';
 import { isOpenAnimate, type OpenAnimate } from '../../core/reveal/reveal';
 
 type PresetKey = 'default' | 'fullWidth';
@@ -59,6 +60,9 @@ interface ModalSurfaceProps extends BoxLayoutProps, SharedMotionProps<OpenAnimat
   rootStyle?: CSSProperties;
   overlayStyle?: CSSProperties;
 
+  /** Геометрия панели. Проектные наборы оформления задаются компонентом потребителя. */
+  layout?: ResponsiveValue<PresetKey>;
+  /** @deprecated Используйте layout; оставлен для существующих потребителей. */
   preset?: ResponsiveValue<PresetKey>;
   animation?: ResponsiveInput<'fadeInUp' | 'fadeInDown'>;
 
@@ -131,6 +135,7 @@ function ModalSurface({
   rootStyle,
   overlayStyle,
   preset = ['default', 'default', 'default'],
+  layout = preset,
   animation,
   closeOnOverlayClick = true,
   closeOn,
@@ -317,7 +322,7 @@ function ModalSurface({
         className={cx(
           styles.Panel,
           overflowVisible && styles.overflowVisible,
-          ...c.value('preset', preset),
+          ...c.value('preset', layout),
           ...panel,
           ...c.value('color', color),
           className
@@ -349,6 +354,7 @@ function DeclarativeModal({ ref, trigger, open: controlledOpen, defaultOpen = fa
   const requestedOpen = controlledOpen ?? internalOpen;
   const breakpointMatches = useMediaQuery(props.closeOn?.breakpoint ? MEDIA_QUERY[props.closeOn.breakpoint] : 'not all');
   const open = requestedOpen && !breakpointMatches;
+  useInteractionActivity(open);
   const changeOpenRef = useRef<(next: boolean) => void>(() => {});
   changeOpenRef.current = (next) => {
     if (requestedOpen === next) return;
