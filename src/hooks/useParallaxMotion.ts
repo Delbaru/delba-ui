@@ -337,7 +337,9 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
         }
         const config = configRef.current;
         if (!config || reducedMotionRef.current) return;
-        targetRef.current = targetFromViewport(entry.boundingClientRect, config, currentRef.current.translateY);
+        // IO доставляет сохранённый rect позже scroll/rAF. Координата и текущий translate
+        // должны относиться к одному моменту, иначе поздний callback вернёт старую цель.
+        targetRef.current = targetFromViewport(wanted.getBoundingClientRect(), config, currentRef.current.translateY);
         scheduleAnimation();
       },
       { rootMargin: '100px' }

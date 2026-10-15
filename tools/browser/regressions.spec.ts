@@ -154,8 +154,10 @@ test('parallax settles without feedback, skips offscreen geometry and resets on 
   await expect.poll(() => target.evaluate((node) => Math.abs(parseFloat(node.style.getPropertyValue('--parallax-translate-y'))))).toBeGreaterThan(1);
   await page.waitForTimeout(1000);
   const settled = await target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y')));
+  const scrollY = await page.evaluate(() => window.scrollY);
   await page.evaluate(() => { for (let i = 0; i < 10; i++) window.dispatchEvent(new Event('scroll')); });
   await page.waitForTimeout(400);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
   expect(await target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y')))).toBeCloseTo(settled, 1);
 
   await target.evaluate((node) => {
