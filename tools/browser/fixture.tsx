@@ -1187,7 +1187,13 @@ export function BrowserFixture() {
         style={{ position: 'fixed', top: 8, left: 8, zIndex: 1000 }}
         onClick={() => setSkipDecoration((value) => !value)}
       >Toggle in-view decorative marker</button>
-      <output data-testid="react-profile" />
+      {/* Лог профайлера растёт на каждый коммит React. В потоке он менял высоту страницы ВЫШЕ
+          текущей прокрутки, и scroll anchoring Chrome подкручивал window.scrollY — тесты, которые
+          сверяют прокрутку и геометрию, падали мимо своей темы. Держим его вне потока. */}
+      <output
+        data-testid="react-profile"
+        style={{ position: 'absolute', top: 0, left: 0, width: 1, height: 1, overflow: 'hidden' }}
+      />
       <ContractFields />
       <InViewContracts />
       <InputPartsField />
