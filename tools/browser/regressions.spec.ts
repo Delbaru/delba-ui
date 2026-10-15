@@ -1775,3 +1775,36 @@ test('date calendar inside Modal stays in its focus scope and Escape restores th
   await expect(date).toBeFocused();
   await expect(modal).toBeVisible();
 });
+
+
+test('scroll selector recomputes changed closures without another scroll event', async ({ page }) => {
+  await openFixture(page);
+  const result = page.getByTestId('scroll-selector-result');
+  await page.evaluate(() => window.scrollTo(0, 500));
+  await expect(result).toHaveText('true');
+  const y = await page.evaluate(() => window.scrollY);
+  await page.getByTestId('scroll-selector-limit').click();
+  await expect(result).toHaveText('false');
+  expect(await page.evaluate(() => window.scrollY)).toBe(y);
+  await page.getByTestId('scroll-selector-limit').click();
+  await expect(result).toHaveText('true');
+  expect(await page.evaluate(() => window.scrollY)).toBe(y);
+});
+
+test('button appearance composes hover and idle on the same DOM node', async ({ page }) => {
+  await openFixture(page);
+  const button = page.getByTestId('button-composed-motion');
+  await expect(button).toHaveAttribute('data-reveal', 'up');
+  await expect(button).toHaveAttribute('data-button-hover', 'rise');
+  await expect(button).toHaveAttribute('data-button-idle', 'glow');
+});
+
+test('Lexical renderer validates unknown nodes and preserves valid formatted neighbors', async ({ page }) => {
+  await openFixture(page);
+  const content = page.getByTestId('lexical-unknown-nodes');
+  await expect(content.getByRole('heading', { level: 2 })).toHaveText('Validated heading');
+  await expect(content.locator('h2 em')).toHaveText('Validated heading');
+  await expect(content.locator('p')).toHaveText('Valid neighbor');
+  await expect(content).not.toContainText('Invalid tag');
+  await expect(content.locator('script')).toHaveCount(0);
+});

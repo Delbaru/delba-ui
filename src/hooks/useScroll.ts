@@ -1,24 +1,47 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { subscribeWindowScroll } from '../components/SmoothScroll/scroll-events';
 import { advanceScroll, createScrollState, initialScroll, type ScrollState, type ScrollWatchOptions } from '../core/base/scroll-direction';
 
-/** Нативная прокрутка: один общий listener, один снимок за кадр, без знания о компонентах сайта. */
+const initialState = createScrollState(initialScroll);
+const identity = (snapshot: ScrollState) => snapshot;
+
+/** Нативная прокрутка: общий listener, один снимок за кадр, без проектных состояний. */
 export function useScroll(options?: ScrollWatchOptions): ScrollState;
-/** Выбор примитивного состояния: компонент обновляется только когда результат select меняется. */
+/** Короткий selector; обновляет компонент только при смене выбранного результата. */
+export function useScroll<T>(select: (snapshot: ScrollState) => T): T;
+/** Совместимая форма с настройками порога и направления. */
 export function useScroll<T>(options: ScrollWatchOptions, select: (snapshot: ScrollState) => T): T;
-export function useScroll(options: ScrollWatchOptions = {}, select: (snapshot: ScrollState) => unknown = (snapshot) => snapshot) {
+export function useScroll<T>(optionsOrSelect: ScrollWatchOptions | ((snapshot: ScrollState) => T) = {}, selector?: (snapshot: ScrollState) => T) {
+  const options = typeof optionsOrSelect === 'function' ? {} : optionsOrSelect;
+  const select = typeof optionsOrSelect === 'function' ? optionsOrSelect : selector ?? identity;
   const optionsRef = useRef(options);
   optionsRef.current = options;
-  const selectRef = useRef(select);
-  selectRef.current = select;
-  const [snapshot, setSnapshot] = useState(() => select(createScrollState(initialScroll)));
+  const [store] = useState(() => ({ value: initialState, listeners: new Set<() => void>() }));
+  const subscribe = useCallback((listener: () => void) => {
+    store.listeners.add(listener);
+    return () => { store.listeners.delete(listener); };
+  }, [store]);
+  const selection = useMemo(() => {
+    let source = store.value;
+    let value = select(source);
+    const serverValue = select(initialState);
+    return {
+      getSnapshot() {
+        if (source !== store.value) {
+          source = store.value;
+          value = select(source);
+        }
+        return value;
+      },
+      getServerSnapshot: () => serverValue,
+    };
+  }, [select, store]);
 
   useEffect(() => {
     let state = initialScroll;
-    let selected = selectRef.current(createScrollState(state));
     let frame = 0;
     let position = window.scrollY;
     let max = 0;
@@ -26,12 +49,9 @@ export function useScroll(options: ScrollWatchOptions = {}, select: (snapshot: S
       frame = 0;
       const next = advanceScroll(state, Math.min(max, Math.max(0, position)), optionsRef.current);
       if (next.y === state.y && next.travel === state.travel && next.direction === state.direction && next.pastThreshold === state.pastThreshold) return;
-      const nextSelected = selectRef.current(createScrollState(next));
-      if (!Object.is(nextSelected, selected)) {
-        selected = nextSelected;
-        setSnapshot(() => nextSelected);
-      }
       state = next;
+      store.value = createScrollState(next);
+      store.listeners.forEach((listener) => listener());
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(sync); };
     const dimensions = () => {
@@ -50,7 +70,7 @@ export function useScroll(options: ScrollWatchOptions = {}, select: (snapshot: S
       observer.disconnect();
       window.removeEventListener('resize', dimensions);
     };
-  }, []);
+  }, [store]);
 
-  return snapshot;
+  return useSyncExternalStore(subscribe, selection.getSnapshot, selection.getServerSnapshot);
 }

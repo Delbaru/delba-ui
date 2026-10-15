@@ -5,6 +5,7 @@ import styles from './RichText.module.scss';
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { boxLayout, splitBoxLayout, composeInteractionHandlers, cx, createLayoutClasses, getBreakpointIndex, prefersReducedMotion, resolveResponsiveAtBreakpoint, buildClampStyle, decodeHtmlEntities, sanitizeRichTextHtml, stripHtmlTags, stateLinkProps, resolveRadiusInput, type BoxLayoutProps, type StateLinkInput, type ResponsiveInput, type ResponsiveValue, } from '../../core';
+import type { LexicalDocument } from './types';
 import { renderLexicalContent } from './LexicalRenderer';
 import type { RevealProps } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
@@ -214,8 +215,9 @@ function extractLexicalPlainText(node: unknown): string {
 /** `plain` — без типографики варианта: блоки наследуют шрифт окружения, роль (`role-*`) по-прежнему красит блок. */
 export type LexicalTextVariant = 'default' | 'plain' | 'style-1' | 'style-2' | 'style-3' | 'style-4' | 'style-5';
 
-export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color'>, BoxLayoutProps, SharedMotionProps, RevealProps {
-  content?: string | any; // string for HTML, object for Lexical JSON
+export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color' | 'content'>, BoxLayoutProps, SharedMotionProps, RevealProps {
+  /** Безопасная HTML-строка либо документ Lexical с проверяемыми узлами. */
+  content?: string | LexicalDocument | null;
   variant?: ResponsiveValue<LexicalTextVariant>;
   animation?: ResponsiveInput<AnimationInput>;
   rows?: ResponsiveValue<number>;
@@ -337,10 +339,10 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
   }, [clipStep, clipDurationMs]);
 
   // Detect if content is Lexical JSON (object with root.children) vs HTML string
-  const isLexicalJSON = content && typeof content === 'object' && content.root?.children;
+  const isLexicalJSON = content && typeof content === 'object' && Array.isArray(content.root?.children);
 
   // If Lexical JSON, render it directly without animation support
-  if (isLexicalJSON) {
+  if (isLexicalJSON && content && typeof content === 'object') {
     if (!content.root.children.length) return null;
     const previewText = extractLexicalPlainText(content).replace(/\s+/g, ' ').trim();
 
@@ -495,4 +497,3 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
     </div>
   );
 }
-

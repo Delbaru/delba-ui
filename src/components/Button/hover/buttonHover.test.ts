@@ -31,7 +31,7 @@ test('rise CSS supports focus, linked states, disabled controls and reduced moti
 test('idle glow can compose rise hover without changing hover-only or idle-only behavior', () => {
   assert.deepEqual(buttonHoverProps({ when: 'idle', effect: 'glow' }), {});
   assert.deepEqual(buttonHoverProps({ when: 'idle', effect: 'glow', hover: { effect: 'circle' } }), {});
-  assert.deepEqual(buttonHoverProps({ when: 'load', effect: 'up', hover: { effect: 'rise' } }), {});
+  assert.deepEqual(buttonHoverProps({ when: 'load', effect: 'up', hover: { effect: 'rise' } }), { 'data-button-hover': 'rise', style: {} });
   assert.deepEqual(buttonHoverProps({
     when: 'idle', effect: 'glow', color: 'var(--secondary)',
     hover: { effect: 'rise', fill: 'var(--partner-hover-gradient)', duration: 'normal' },
@@ -39,4 +39,12 @@ test('idle glow can compose rise hover without changing hover-only or idle-only 
     'data-button-hover': 'rise',
     style: { '--button-hover-fill': 'var(--partner-hover-gradient)', '--button-hover-duration': 'var(--t-d-normal)' },
   });
+});
+
+
+test('appearance retains configured hover and can explicitly disable it', () => {
+  assert.deepEqual(buttonHoverProps({ when: 'inView', effect: 'up', hover: { effect: 'rise', fill: 'var(--secondary)' } }), {
+    'data-button-hover': 'rise', style: { '--button-hover-fill': 'var(--secondary)' },
+  });
+  assert.deepEqual(buttonHoverProps({ when: 'inView', effect: 'up', hover: false }), {});
 });

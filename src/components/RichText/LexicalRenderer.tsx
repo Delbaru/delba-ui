@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 
+import type { LexicalDocument } from './types';
+
 import { cx } from '../../core';
 import { bindShortWords } from '../Text/nonBreaking';
 
@@ -129,16 +131,47 @@ type LexicalNode =
   | LexicalQuoteNode
   | LexicalLinkNode;
 
-type LexicalRoot = {
-  root: {
-    type: 'root';
-    children: LexicalNode[];
-    format?: string;
-    indent?: number;
-    version?: number;
-    direction?: string | null;
-  };
-};
+function record(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+}
+
+/** Неподдерживаемые/повреждённые узлы пропускаются, соседний корректный контент сохраняется. */
+function readNode(value: unknown): LexicalNode | null {
+  const node = record(value);
+  if (!node) return null;
+  const type = node.type;
+  const string = (key: string): string | undefined => { const value = node[key]; return typeof value === 'string' ? value : undefined; };
+  if (type === 'text' || type === 'variable') {
+    if (typeof node.text !== 'string') return null;
+    const text = { text: node.text, format: typeof node.format === 'number' ? node.format : undefined, style: string('style') };
+    return type === 'text' ? { type, ...text } : { type, ...text, label: string('label'), variableKey: string('variableKey'), color: string('color') };
+  }
+  if (type === 'linebreak') return { type };
+  if (!Array.isArray(node.children)) return null;
+  const children = node.children.flatMap((child) => { const parsed = readNode(child); return parsed ? [parsed] : []; });
+  const roles = { role: string('role'), roleM: string('roleM'), roleT: string('roleT') };
+  if (type === 'paragraph' || type === 'rich-paragraph') return { type, children, ...roles };
+  if (type === 'heading' || type === 'rich-heading') {
+    const tag = node.tag;
+    if (tag !== 'h1' && tag !== 'h2' && tag !== 'h3' && tag !== 'h4' && tag !== 'h5' && tag !== 'h6') return null;
+    return { type, tag, children, ...roles };
+  }
+  if (type === 'list') return { type, children, listType: node.listType === 'number' ? 'number' : 'bullet', tag: node.tag === 'ol' ? 'ol' : 'ul' };
+  if (type === 'listitem' || type === 'quote') return { type, children };
+  if (type === 'link' || type === 'autolink') {
+    const fields = record(node.fields), doc = record(fields?.doc), entry = record(doc?.value);
+    return {
+      type, children, url: string('url'), target: string('target'), rel: string('rel'), title: string('title'),
+      fields: fields ? {
+        url: typeof fields.url === 'string' ? fields.url : undefined,
+        linkType: fields.linkType === 'internal' ? 'internal' : 'custom',
+        newTab: fields.newTab === true,
+        doc: entry ? { value: { slug: typeof entry.slug === 'string' ? entry.slug : undefined } } : undefined,
+      } : undefined,
+    };
+  }
+  return null;
+}
 
 function parseInlineStyle(styleText?: string): CSSProperties | undefined {
   if (!styleText) {
@@ -316,12 +349,12 @@ function renderNode(node: LexicalNode, index: number): ReactNode {
   return null;
 }
 
-export function renderLexicalContent(content: LexicalRoot | null | undefined): ReactNode {
-  if (!content?.root?.children) return null;
+export function renderLexicalContent(content: LexicalDocument | null | undefined): ReactNode {
+  if (!Array.isArray(content?.root?.children)) return null;
   
   return (
     <>
-      {content.root.children.map((node, index) => renderNode(node, index))}
+      {content.root.children.map((value, index) => { const node = readNode(value); return node ? renderNode(node, index) : null; })}
     </>
   );
 }

@@ -94,3 +94,5 @@ export type { AppearanceAnimate, InViewAnimate, OpenAnimate, RevealConfig, Revea
 export type { MotionTime, MotionTimingName } from './core/base/timing';
 export type { MotionDistance, MotionDistanceName } from './core/base/distance';
 export * from './components/PhoneField';
+
+export { useScrollProgress, type ScrollProgressOptions } from './hooks/useScrollProgress';

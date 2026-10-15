@@ -10,3 +10,5 @@ export { RICH_ROLES, isRichRole, resolveRole, roleClassKeys, isTextVariantName, 
  * медиазапроса — превью устройства при любой ширине окна.
  */
 export { default as richTextClasses } from './RichText.module.scss';
+
+export type { LexicalDocument } from './types';

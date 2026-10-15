@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import { motionTimeCss, type MotionTime } from '../../../core/base/timing';
+import type { ButtonAnimate } from '../Button';
 import type { ButtonHoverAnimate } from '../hover/buttonHover';
 
 /** Перелив оттенков свечения неподвижной кнопки с постоянным размером ореола. */
@@ -23,8 +24,9 @@ export interface ButtonIdleAnimate {
 
 export function buttonIdleProps(animate: unknown): { 'data-button-idle'?: 'glow'; style?: CSSProperties } {
   if (!animate || typeof animate !== 'object') return {};
-  const config = animate as ButtonIdleAnimate;
-  if (config.when !== 'idle' || config.effect !== 'glow') return {};
+  const input = animate as ButtonAnimate;
+  const config = input.when === 'idle' ? input : input.when === 'inView' || input.when === 'load' ? input.idle : undefined;
+  if (!config || config.effect !== 'glow') return {};
   return {
     'data-button-idle': config.effect,
     style: {

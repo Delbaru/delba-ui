@@ -25,3 +25,10 @@ test('idle glow accepts a second color and brightness without consuming its hove
     },
   });
 });
+
+
+test('appearance retains independent idle without consuming its own effect', () => {
+  assert.deepEqual(buttonIdleProps({ when: 'inView', effect: 'up', idle: { effect: 'glow', duration: 8 } }), {
+    'data-button-idle': 'glow', style: { '--button-glow-duration': '8s' },
+  });
+});

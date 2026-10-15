@@ -334,3 +334,16 @@ AST-правило `jsx-format` проверяет компактные коро
 даже если элемент сдвинут вверх. При необходимости onInteractionChange сообщает boolean.
 Проектные состояния вроде compact/hide не принадлежат ядру. React useState/useEffect и if
 не заменяются отдельной системой команд только ради более короткой записи.
+
+
+### Независимые эффекты кнопки и документ Lexical
+
+Button принимает появление вместе с независимыми настройками:
+`animate={{ when: 'inView', effect: 'up', hover: { effect: 'rise', fill: 'var(--primary)' }, idle: { effect: 'glow' } }}`.
+Прежние `when: 'hover'/'idle'` совместимы. У проектной D-кнопки появление сохраняет эффекты роли;
+явный hover/idle заменяет её motion, `hover: false` отключает hover поверх появления. Все эффекты
+остаются на том же DOM-узле и сохраняют общие ref/events/reduced motion.
+
+LexicalText.content — HTML-строка или публичный `LexicalDocument` с `root.children: unknown[]`.
+Редактор/CMS владеет тегом, ролью, marks и цветом. Renderer проверяет каждый узел; повреждённый
+узел пропускает, корректных соседей сохраняет. Зависимости библиотеки от CMS нет.

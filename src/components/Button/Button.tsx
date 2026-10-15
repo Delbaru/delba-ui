@@ -10,6 +10,7 @@ import styles from './Button.module.scss';
 import { boxLayout, composeEventHandlers, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
 import { useTooltip } from '../../hooks/useTooltip';
 import { useAnimationVisibility } from '../../hooks/useAnimationVisibility';
+import type { AppearanceAnimate } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { buttonHoverProps, type ButtonHoverAnimate } from './hover/buttonHover';
@@ -23,11 +24,21 @@ type JustifyContentKey = 'start' | 'end' | 'center' | 'space_between' | 'space_a
 
 const c = createLayoutClasses(styles);
 
+/** Появление сочетается с независимыми эффектами наведения и покоя. Legacy when остаётся поддержан. */
+export type ButtonAnimate = ButtonHoverAnimate | ButtonIdleAnimate | (AppearanceAnimate & {
+  /** Наведение поверх появления; false явно отключает эффект роли. */
+  hover?: Omit<ButtonHoverAnimate, 'when'> | false;
+  /** Эффект в покое поверх появления. */
+  idle?: Omit<ButtonIdleAnimate, 'when'>;
+});
+
 export interface ButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'color' | 'href' | 'target' | 'rel'>,
     Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
     Omit<BoxLayoutProps, 'aspectRatio'>,
-    SharedMotionProps<ButtonHoverAnimate | ButtonIdleAnimate> {
+    Omit<SharedMotionProps, 'animate'> {
+  /** Появление, hover/idle или их совместная настройка. */
+  animate?: ButtonAnimate;
   children?: React.ReactNode;
   style?: CSSProperties;
   /** Сворачивает кнопку целиком; для ширины укажите `axis: 'column'`. */

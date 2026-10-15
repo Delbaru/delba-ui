@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import { motionTimeCss, type MotionTime } from '../../../core/base/timing';
-import type { ButtonIdleAnimate } from '../idle/buttonIdle';
+import type { ButtonAnimate } from '../Button';
 
 /** Заливка кнопки снизу вверх; цвет подписи и рамки остаётся у skin. */
 export interface ButtonHoverAnimate {
@@ -17,8 +17,8 @@ export interface ButtonHoverAnimate {
 
 export function buttonHoverProps(animate: unknown): { 'data-button-hover'?: 'rise'; style?: CSSProperties } {
   if (!animate || typeof animate !== 'object') return {};
-  const input = animate as ButtonHoverAnimate | ButtonIdleAnimate;
-  const config = input.when === 'idle' && input.effect === 'glow' ? input.hover : input.when === 'hover' ? input : undefined;
+  const input = animate as ButtonAnimate;
+  const config = input.when === 'hover' ? input : input.hover;
   if (!config || config.effect !== 'rise') return {};
   return {
     'data-button-hover': config.effect,
