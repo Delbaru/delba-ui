@@ -23,6 +23,8 @@ type MotionTarget = HTMLElement | SVGElement;
 export type Perspective3dConfig = {
   perspective: number | string;
   follow?: 'element' | 'viewport';
+  /** Closest ancestor selector owning pointer and keyboard interaction in element mode. */
+  scope?: string;
   maxRotateX?: number;
   maxRotateY?: number;
   maxTranslateX?: number;
@@ -38,6 +40,7 @@ export type Perspective3dInput = number | string | Perspective3dConfig;
 type NormalizedPerspective3dConfig = {
   perspective: string;
   follow: 'element' | 'viewport';
+  scope?: string;
   maxRotateX: number;
   maxRotateY: number;
   maxTranslateX: number;
@@ -93,6 +96,7 @@ function normalizePerspective3dConfig(input: Perspective3dInput | undefined): No
   return {
     perspective: formatPerspective(input.perspective),
     follow: input.follow ?? DEFAULT_CONFIG.follow,
+    scope: input.scope,
     maxRotateX: input.maxRotateX ?? DEFAULT_CONFIG.maxRotateX,
     maxRotateY: input.maxRotateY ?? DEFAULT_CONFIG.maxRotateY,
     maxTranslateX: input.maxTranslateX ?? DEFAULT_CONFIG.maxTranslateX,
@@ -352,7 +356,8 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       ratioX = (clientX / viewportWidth) * 2 - 1;
       ratioY = (clientY / viewportHeight) * 2 - 1;
     } else {
-      const rect = pointerRectRef.current ?? node.getBoundingClientRect();
+      const surface = nextConfig.scope ? node.closest(nextConfig.scope) ?? node : node;
+      const rect = pointerRectRef.current ?? surface.getBoundingClientRect();
       pointerRectRef.current = rect;
       if (!rect.width || !rect.height) return;
 
@@ -370,7 +375,61 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     };
   }, []);
 
-  const motionHandlers = config && config.follow === 'element'
+  const scope = config?.follow === 'element' ? config.scope : undefined;
+  useEffect(() => {
+    const node = nodeRef.current;
+    const surface = scope && node?.closest<HTMLElement>(scope);
+    if (!node || !surface) return;
+    const move = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || reducedMotionRef.current || isMobileRef.current || !isVisibleRef.current) return;
+      activeRef.current = true;
+      updateTargetFromPointer(node, event.clientX, event.clientY, 'element');
+      scheduleAnimation();
+    };
+    const reset = () => {
+      activeRef.current = false;
+      pointerRectRef.current = null;
+      targetRef.current = { ...INITIAL_VALUES };
+      scheduleAnimation();
+    };
+    const focus = () => {
+      if (reducedMotionRef.current || isMobileRef.current || !isVisibleRef.current) return;
+      const rect = surface.getBoundingClientRect();
+      activeRef.current = true;
+      updateTargetFromPointer(node, rect.left + rect.width * 0.65, rect.top + rect.height * 0.35, 'element');
+      scheduleAnimation();
+    };
+    const blur = (event: FocusEvent) => {
+      if (!(event.relatedTarget instanceof Node) || !surface.contains(event.relatedTarget)) reset();
+    };
+    const invalidate = () => { pointerRectRef.current = null; };
+    const resize = new ResizeObserver(invalidate);
+    resize.observe(surface);
+    surface.addEventListener('pointermove', move, { passive: true });
+    surface.addEventListener('pointerleave', reset);
+    surface.addEventListener('focusin', focus);
+    surface.addEventListener('focusout', blur);
+    window.addEventListener('blur', reset);
+    return () => {
+      resize.disconnect();
+      surface.removeEventListener('pointermove', move);
+      surface.removeEventListener('pointerleave', reset);
+      surface.removeEventListener('focusin', focus);
+      surface.removeEventListener('focusout', blur);
+      window.removeEventListener('blur', reset);
+      activeRef.current = false;
+      pointerRectRef.current = null;
+      targetRef.current = { ...INITIAL_VALUES };
+      smoothedTargetRef.current = { ...INITIAL_VALUES };
+      currentRef.current = { ...INITIAL_VALUES };
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+      lastFrameRef.current = null;
+      if (node.isConnected) applyMotionValues(node, INITIAL_VALUES);
+    };
+  }, [scope, scheduleAnimation, updateTargetFromPointer]);
+
+  const motionHandlers = config && config.follow === 'element' && !config.scope
     ? {
         onMouseEnter: (event: React.MouseEvent<MotionTarget>) => {
           if (reducedMotionRef.current || isMobileRef.current) return;

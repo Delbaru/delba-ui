@@ -115,6 +115,48 @@ test('gradient frame keeps a transparent center, radius and live button across b
   expect((await geometry()).sameRadius).toBe(true);
 });
 
+test('ancestor perspective follows a stretched link, resets outside, and supports keyboard and reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const scope = page.getByTestId('perspective-scope');
+  const photo = page.getByTestId('perspective-scoped-photo');
+  const link = page.getByTestId('perspective-scope-link');
+  await scope.scrollIntoViewIfNeeded();
+  const box = await link.boundingBox();
+  if (!box) throw new Error('Missing scoped link');
+  const position = { x: box.width * 0.85, y: box.height * 0.2 };
+  await link.hover({ position });
+  const rotation = () => photo.evaluate((node) => Math.abs(parseFloat(node.style.getPropertyValue('--perspective3d-rotate-y'))));
+  await expect.poll(rotation).toBeGreaterThan(1);
+  await page.mouse.move(1, 1);
+  await expect.poll(rotation).toBeLessThan(0.01);
+  await link.focus();
+  await expect.poll(rotation).toBeGreaterThan(1);
+  await page.keyboard.press('Tab');
+  await expect.poll(rotation).toBeLessThan(0.01);
+  await link.hover({ position });
+  await expect.poll(rotation).toBeGreaterThan(1);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect.poll(rotation).toBe(0);
+  await expect(scope.locator('.ui-gradient-border')).toHaveCSS('animation-name', 'none');
+});
+
+test('border trace advances only while visible and leaves its center clickable', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const scope = page.getByTestId('perspective-scope');
+  const border = scope.locator('.ui-gradient-border');
+  await scope.scrollIntoViewIfNeeded();
+  await expect(border).toHaveCSS('animation-play-state', 'running');
+  await expect(border).toHaveCSS('background-image', /conic-gradient/);
+  const angle = await border.evaluate((node) => getComputedStyle(node).getPropertyValue('--ui-border-angle'));
+  await expect.poll(() => border.evaluate((node) => getComputedStyle(node).getPropertyValue('--ui-border-angle'))).not.toBe(angle);
+  await page.getByTestId('perspective-scope-link').click();
+  await expect(page.getByTestId('perspective-scope-link')).toBeFocused();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(border).toHaveCSS('animation-play-state', 'paused');
+});
+
 test('perspective caches pointer geometry and keeps frame variables local to its root', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
