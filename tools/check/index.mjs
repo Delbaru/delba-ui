@@ -30,8 +30,11 @@ export function projectSteps(root, config, { update = false, strict = false, fix
   ];
 }
 
-export function uiCheckSteps({ project, config = {}, configArg = 'ui.config.ts', fix = false, suite = 'all', shard } = {}) {
+export function uiCheckSteps({ project, config = {}, configArg = 'ui.config.ts', fix = false, suite = 'all', shard, typecheckCache } = {}) {
   if (!['all', 'library', 'project', 'browser'].includes(suite)) throw new Error(`Unknown UI suite: ${suite}`);
+  if (typecheckCache !== undefined && (!project || suite !== 'project' || !typecheckCache)) {
+    throw new Error('--typecheck-cache requires a consumer and --suite project');
+  }
   if (fix && suite !== 'all') throw new Error('--fix requires the complete UI suite');
   if (shard !== undefined) {
     const match = /^(\d+)\/(\d+)$/.exec(shard);
@@ -51,7 +54,7 @@ export function uiCheckSteps({ project, config = {}, configArg = 'ui.config.ts',
     ...(fix ? [astStep('Архитектура', undefined, { fix: true })] : []),
     ...(fix ? projectChecks.slice(0, 1) : []),
     { ...nodeStep('Типы', [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json', '--noEmit', '--incremental', 'false']), suite: 'library' },
-    ...(project ? [{ ...nodeStep('Типы проекта', [require.resolve('typescript/bin/tsc'), '--noEmit', '--incremental', 'false'], project), suite: 'project' }] : []),
+    ...(project ? [{ ...nodeStep('Типы проекта', [require.resolve('typescript/bin/tsc'), '--noEmit', '--incremental', typecheckCache ? 'true' : 'false', ...(typecheckCache ? ['--tsBuildInfoFile', typecheckCache] : [])], project), suite: 'project' }] : []),
     ...(!fix ? [{ ...astStep('Архитектура'), suite: 'library' }] : []),
     { ...nodeStep('Границы', [script('check-boundary.mjs')]), suite: 'library' },
     { ...nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']), suite: 'library' },

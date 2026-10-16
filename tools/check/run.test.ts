@@ -28,6 +28,40 @@ test('CI suites cover the complete gate without dropping checks; each starts wit
     assert.deepEqual(uiCheckSteps({ project, suite: 'browser', shard: '1/4' }).map((step: { name: string }) => step.name), ['Генерация', 'Браузер']);
 });
 
+test('opt-in incremental consumer types still reject changed source and global declarations', async () => {
+    assert.throws(() => uiCheckSteps({ suite: 'all', typecheckCache: 'cache.tsbuildinfo' }), /--suite project/);
+    assert.throws(() => uiCheckSteps({ suite: 'project', typecheckCache: '' }), /--suite project/);
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'ui incremental types '));
+    const files = ['tsconfig.json', 'source.ts', 'globals.d.ts', 'cache.tsbuildinfo'];
+    try {
+        fs.writeFileSync(path.join(fixture, 'tsconfig.json'), JSON.stringify({
+            compilerOptions: { strict: true, noEmit: true, types: [], skipLibCheck: true, target: 'ES2022' },
+            files: ['source.ts', 'globals.d.ts'],
+        }));
+        const source = path.join(fixture, 'source.ts');
+        const globals = path.join(fixture, 'globals.d.ts');
+        fs.writeFileSync(source, 'const result: SharedResult = { value: 1 };');
+        fs.writeFileSync(globals, 'interface SharedResult { value: number }');
+        const check = uiCheckSteps({ project: fixture, suite: 'project', typecheckCache: 'cache.tsbuildinfo' })
+            .find((step: { name: string }) => step.name === 'Типы проекта');
+        assert.ok(check);
+        assert.equal((await check.run()).ok, true);
+        assert.ok(fs.existsSync(path.join(fixture, 'cache.tsbuildinfo')));
+        assert.equal((await check.run()).ok, true);
+        fs.writeFileSync(source, 'const result: SharedResult = { value: "invalid" };');
+        assert.equal((await check.run()).ok, false);
+        fs.writeFileSync(source, 'const result: SharedResult = { value: 1 };');
+        assert.equal((await check.run()).ok, true);
+        fs.writeFileSync(globals, 'interface SharedResult { value: string }');
+        const failure = await check.run();
+        assert.equal(failure.ok, false);
+        assert.match(failure.output, /source.ts/);
+    } finally {
+        for (const file of files) fs.rmSync(path.join(fixture, file), { force: true });
+        fs.rmdirSync(fixture);
+    }
+});
+
 test('ошибка и исключение не скрывают остальные результаты и делают общий итог красным', async () => {
     const output: string[] = [];
     const ok = await runSteps([

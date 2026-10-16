@@ -126,6 +126,7 @@ async function test() {
     project: root, config, configArg, fix: argv.includes('--fix'),
     suite: argv.includes('--suite') ? argv[argv.indexOf('--suite') + 1] : 'all',
     shard: argv.includes('--shard') ? argv[argv.indexOf('--shard') + 1] : undefined,
+    typecheckCache: argv.includes('--typecheck-cache') ? argv[argv.indexOf('--typecheck-cache') + 1] || '' : undefined,
   });
 }
 
@@ -137,7 +138,7 @@ const commands = {
 };
 
 if (!commands[command]) {
-  console.error('Usage: delba-ui <build|watch|check|test> [--update] [--fix] [--config ui.config.ts] [--suite all|library|project|browser] [--shard index/total]');
+  console.error('Usage: delba-ui <build|watch|check|test> [--update] [--fix] [--config ui.config.ts] [--suite all|library|project|browser] [--shard index/total] [--typecheck-cache file]');
   process.exit(1);
 }
 try {
