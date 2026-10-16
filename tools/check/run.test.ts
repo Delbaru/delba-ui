@@ -7,8 +7,26 @@ import os from 'node:os';
 
 import { formatProgress, formatStep } from './format.mjs';
 import { startProgress } from './progress.mjs';
-import { projectSteps } from './index.mjs';
+import { projectSteps, uiCheckSteps } from './index.mjs';
 import { runNode, runSteps } from './run.mjs';
+
+test('CI suites cover the complete gate without dropping checks; each starts with generation', () => {
+    const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../site');
+    const complete = uiCheckSteps({ project }).map((step: { name: string }) => step.name);
+    const partitioned = ['library', 'project', 'browser'].flatMap((suite) => {
+        const steps = uiCheckSteps({ project, suite });
+        assert.equal(steps[0]?.name, 'Генерация');
+        return steps.filter((step: { name: string }) => step.name !== 'Генерация').map((step: { name: string }) => step.name);
+    });
+    assert.deepEqual(partitioned.sort(), complete.filter((name: string) => name !== 'Генерация').sort());
+    assert.throws(() => uiCheckSteps({ suite: 'typo' }), /Unknown UI suite/);
+    assert.throws(() => uiCheckSteps({ suite: 'project', fix: true }), /complete UI suite/);
+    for (const shard of ['0/4', '5/4', '1/0', 'oops']) {
+        assert.throws(() => uiCheckSteps({ suite: 'browser', shard }), /valid index\/total/);
+    }
+    assert.throws(() => uiCheckSteps({ suite: 'all', shard: '1/4' }), /--suite browser/);
+    assert.deepEqual(uiCheckSteps({ project, suite: 'browser', shard: '1/4' }).map((step: { name: string }) => step.name), ['Генерация', 'Браузер']);
+});
 
 test('ошибка и исключение не скрывают остальные результаты и делают общий итог красным', async () => {
     const output: string[] = [];

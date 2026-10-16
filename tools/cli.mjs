@@ -122,7 +122,11 @@ async function check() {
 async function test() {
   await loadConfig();
   const { runUiChecks } = await import('./check/index.mjs');
-  return runUiChecks({ project: root, config, configArg, fix: argv.includes('--fix') });
+  return runUiChecks({
+    project: root, config, configArg, fix: argv.includes('--fix'),
+    suite: argv.includes('--suite') ? argv[argv.indexOf('--suite') + 1] : 'all',
+    shard: argv.includes('--shard') ? argv[argv.indexOf('--shard') + 1] : undefined,
+  });
 }
 
 const commands = {
@@ -133,7 +137,7 @@ const commands = {
 };
 
 if (!commands[command]) {
-  console.error('Usage: delba-ui <build|watch|check|test> [--update] [--fix] [--config ui.config.ts]');
+  console.error('Usage: delba-ui <build|watch|check|test> [--update] [--fix] [--config ui.config.ts] [--suite all|library|project|browser] [--shard index/total]');
   process.exit(1);
 }
 try {

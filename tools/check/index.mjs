@@ -30,7 +30,15 @@ export function projectSteps(root, config, { update = false, strict = false, fix
   ];
 }
 
-export function runUiChecks({ project, config = {}, configArg = 'ui.config.ts', fix = false } = {}) {
+export function uiCheckSteps({ project, config = {}, configArg = 'ui.config.ts', fix = false, suite = 'all', shard } = {}) {
+  if (!['all', 'library', 'project', 'browser'].includes(suite)) throw new Error(`Unknown UI suite: ${suite}`);
+  if (fix && suite !== 'all') throw new Error('--fix requires the complete UI suite');
+  if (shard !== undefined) {
+    const match = /^(\d+)\/(\d+)$/.exec(shard);
+    if (suite !== 'browser' || !match || Number(match[1]) < 1 || Number(match[1]) > Number(match[2])) {
+      throw new Error('--shard requires --suite browser and a valid index/total');
+    }
+  }
   const source = project ? path.join(project, 'src') : undefined;
   const projectTests = source && existsSync(source)
     ? readdirSync(source, { recursive: true })
@@ -42,17 +50,22 @@ export function runUiChecks({ project, config = {}, configArg = 'ui.config.ts', 
     ...(project ? [{ ...nodeStep('Генерация', [script('cli.mjs'), 'build', '--config', configArg], project), required: true }] : []),
     ...(fix ? [astStep('Архитектура', undefined, { fix: true })] : []),
     ...(fix ? projectChecks.slice(0, 1) : []),
-    nodeStep('Типы', [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json', '--noEmit', '--incremental', 'false']),
-    ...(project ? [nodeStep('Типы проекта', [require.resolve('typescript/bin/tsc'), '--noEmit', '--incremental', 'false'], project)] : []),
-    ...(!fix ? [astStep('Архитектура')] : []),
-    nodeStep('Границы', [script('check-boundary.mjs')]),
-    nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']),
-    nodeStep('Тесты', ['--import', 'tsx', '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, 'src/**/*.test.ts', 'tools/**/*.test.ts']),
-    ...(projectTests.length ? [nodeStep('Тесты проекта', ['--import', pathToFileURL(require.resolve('tsx')).href, '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, ...projectTests], project)] : []),
-    nodeStep('Браузер', [require.resolve('@playwright/test/cli'), 'test', '--config', 'tools/browser/playwright.config.ts']),
-    ...(fix ? projectChecks.slice(1) : projectChecks),
+    { ...nodeStep('Типы', [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json', '--noEmit', '--incremental', 'false']), suite: 'library' },
+    ...(project ? [{ ...nodeStep('Типы проекта', [require.resolve('typescript/bin/tsc'), '--noEmit', '--incremental', 'false'], project), suite: 'project' }] : []),
+    ...(!fix ? [{ ...astStep('Архитектура'), suite: 'library' }] : []),
+    { ...nodeStep('Границы', [script('check-boundary.mjs')]), suite: 'library' },
+    { ...nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']), suite: 'library' },
+    { ...nodeStep('Тесты', ['--import', 'tsx', '--test', ...(process.env.CI ? ['--test-concurrency=2'] : []), '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, 'src/**/*.test.ts', 'tools/**/*.test.ts']), suite: 'library' },
+    ...(projectTests.length ? [{ ...nodeStep('Тесты проекта', ['--import', pathToFileURL(require.resolve('tsx')).href, '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, ...projectTests], project), suite: 'project' }] : []),
+    { ...nodeStep('Браузер', [require.resolve('@playwright/test/cli'), 'test', '--config', 'tools/browser/playwright.config.ts', ...(shard ? ['--shard', shard] : [])]), suite: 'browser' },
+    ...(fix ? projectChecks.slice(1) : projectChecks).map((step) => ({ ...step, suite: 'project' })),
   ];
-  return runSteps(steps);
+  return steps.filter((step) => suite === 'all' || step.required || step.suite === suite);
+}
+
+export function runUiChecks(options = {}) {
+  const suite = options.suite ?? 'all';
+  return runSteps(uiCheckSteps(options), { label: suite === 'all' ? 'UI' : `UI (${suite})` });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
