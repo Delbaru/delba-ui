@@ -9,13 +9,14 @@ export function formatProgress(name, frame, { color = false } = {}) {
 }
 
 /** Успех — одна строка; подробности появляются при ошибке или предупреждении. */
-export function formatStep(name, { ok, output = '', warnings = '', diagnostics = [] }, { color = false } = {}) {
-  if (diagnostics.length) return formatCheck(name, diagnostics, { color });
+export function formatStep(name, { ok, output = '', warnings = '', diagnostics = [], durationMs }, { color = false } = {}) {
+  const label = durationMs === undefined ? name : `${name} (${(durationMs / 1000).toFixed(1)} с)`;
+  if (diagnostics.length) return formatCheck(label, diagnostics, { color });
   const code = !ok ? 31 : warnings ? 33 : 32;
   const symbol = !ok ? '✗' : warnings ? '⚠' : '✓';
   const mark = paint(code, symbol, color);
   const details = (!ok ? output : warnings).trim();
-  return `${mark} ${name}${details ? `\n${details.split('\n').map((line) => `  ${line}`).join('\n')}` : ''}`;
+  return `${mark} ${label}${details ? `\n${details.split('\n').map((line) => `  ${line}`).join('\n')}` : ''}`;
 }
 
 /** Оформление общее; правила возвращают данные и ничего не печатают. */

@@ -39,8 +39,10 @@ export async function runSteps(steps, {
   progress = (name) => startProgress(name, { color }),
 } = {}) {
   let ok = true;
+  const started = performance.now();
   for (const step of steps) {
     let result;
+    const stepStarted = performance.now();
     const stopProgress = progress(step.name);
     try {
       result = await step.run();
@@ -49,10 +51,10 @@ export async function runSteps(steps, {
     } finally {
       stopProgress();
     }
-    write(formatStep(step.name, result, { color }));
+    write(formatStep(step.name, { ...result, durationMs: performance.now() - stepStarted }, { color }));
     ok = result.ok && ok;
     if (result.signal || (!result.ok && step.required)) break;
   }
-  write(`\n${formatStep(ok ? 'UI — все проверки прошли' : 'UI — проверка не пройдена', { ok }, { color })}`);
+  write(`\n${formatStep(ok ? 'UI — все проверки прошли' : 'UI — проверка не пройдена', { ok, durationMs: performance.now() - started }, { color })}`);
   return ok;
 }

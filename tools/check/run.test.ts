@@ -20,8 +20,8 @@ test('ошибка и исключение не скрывают остальн�
     assert.equal(ok, false);
     assert.match(output.join('\n'), /Panel.tsx:4: ошибка типов/);
     assert.match(output.join('\n'), /Файл недоступен/);
-    assert.equal(output[2], '✓ Тесты');
-    assert.equal(output[3], '\n✗ UI — проверка не пройдена');
+    assert.match(output[2] ?? '', /^✓ Тесты \(\d+\.\d с\)$/);
+    assert.match(output[3] ?? '', /^\n✗ UI — проверка не пройдена \(\d+\.\d с\)$/);
 });
 
 test('неудачная подготовка и остановленный процесс прекращают следующие шаги', async () => {
@@ -55,6 +55,8 @@ test('дочерний процесс: stdout успеха скрыт, пред�
 
 test('короткие статусы: зелёный успех, красная ошибка, жёлтое предупреждение; без цвета по умолчанию', () => {
     assert.equal(formatStep('Типы', { ok: true }), '✓ Типы');
+    assert.equal(formatStep('Браузер', { ok: true, durationMs: 12345 }), '✓ Браузер (12.3 с)');
+    assert.equal(formatStep('Типы', { ok: false, output: 'ошибка', durationMs: 0 }), '✗ Типы (0.0 с)\n  ошибка');
     assert.equal(formatStep('Типы', { ok: false, output: 'ошибка' }), '✗ Типы\n  ошибка');
     assert.equal(formatStep('Типы', { ok: true }, { color: true }), '\u001b[32m✓\u001b[0m Типы');
     assert.equal(formatStep('Типы', { ok: false }, { color: true }), '\u001b[31m✗\u001b[0m Типы');
@@ -71,7 +73,7 @@ test('индикатор очищается перед результатом п
     });
     assert.equal(events[0], 'start: Типы');
     assert.equal(events[1], 'stop');
-    assert.equal(events[2], '✗ Типы\n  ошибка');
+    assert.match(events[2] ?? '', /^✗ Типы \(\d+\.\d с\)\n  ошибка$/);
     const chunks: string[] = [];
     startProgress('Типы', { stream: { isTTY: false, write: (chunk: string) => chunks.push(chunk) } })();
     assert.deepEqual(chunks, []);

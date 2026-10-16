@@ -12,7 +12,7 @@ export default defineConfig({
   testMatch: ['regressions.spec.ts', 'ssr.spec.ts', 'phone-picker.spec.ts', 'collapse-controls.spec.ts', 'text-timeline.spec.ts'],
   fullyParallel: true,
   // Local Windows browsers share the desktop resources; keep the complete gate stable there.
-  workers: process.platform === 'win32' && !process.env.CI ? 1 : 2,
+  workers: process.env.CI ? 4 : process.platform === 'win32' ? 1 : 2,
   reporter: 'line',
   outputDir: '.test-results',
   use: {
