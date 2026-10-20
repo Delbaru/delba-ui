@@ -1,0 +1,7 @@
+// Закрытый покой должен перебивать layout-пропы из ui.utilities, оставаясь слабее WAAPI.
+// Иначе padding остаётся в конечном кадре и исчезает скачком только вместе с hidden.
+.ui-collapse[data-axis='row']:not([data-open]) > .ui-collapse-inner:not(.ui-collapse-clip) > .ui-flex {
+  height: 0;
+  padding-block: 0;
+  border-block-width: 0;
+}

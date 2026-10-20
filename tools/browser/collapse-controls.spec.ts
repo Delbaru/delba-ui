@@ -1,5 +1,22 @@
 import { expect, test } from '@playwright/test';
 
+test('accordion animates layout padding and borders all the way to zero', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+  const trigger = page.getByRole('button', { name: 'Padded answer', exact: true });
+  await trigger.click();
+  const target = await page.locator('.fixture-accordion-panel').evaluate((panel) => {
+    const animation = panel.getAnimations().find((item) => item.id === 'ui-collapse');
+    const frames = animation?.effect instanceof KeyframeEffect ? animation.effect.getKeyframes() : [];
+    return frames.at(-1);
+  });
+  expect(target).toMatchObject({ height: '0px', paddingTop: '0px', paddingBottom: '0px', borderTopWidth: '0px', borderBottomWidth: '0px' });
+  await expect(page.locator('.fixture-accordion-panel').locator('xpath=../..')).toHaveAttribute('hidden', /.*/);
+  await trigger.click();
+  await expect(page.locator('.fixture-accordion-panel')).toBeVisible();
+  await expect.poll(() => page.locator('.fixture-accordion-panel').evaluate((panel) => getComputedStyle(panel).paddingBottom)).toBe('28px');
+});
+
 for (const reducedMotion of ['reduce', 'no-preference'] as const) {
   test(`direct Input commands await DOM and survive reversals (${reducedMotion})`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion });

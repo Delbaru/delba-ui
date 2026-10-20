@@ -57,6 +57,7 @@
 
 // Появление по скроллу (`reveal` у Flex, Grid, Box, Img) — состояние узла, его ставит наблюдатель.
 @layer ui.states {
+  @include meta.load-css('../components/Flex/flex-states');
   @include meta.load-css('./reveal/reveal');
 }
 

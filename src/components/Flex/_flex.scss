@@ -113,13 +113,6 @@
   }
 }
 
-// Закрытый покой по высоте: Flex не бывает ниже своих padding+border, поэтому в ноль идут и они.
-.ui-collapse[data-axis='row']:not([data-open]) > .ui-collapse-inner:not(.ui-collapse-clip) > .ui-flex {
-  height: 0;
-  padding-block: 0;
-  border-block-width: 0;
-}
-
 // minH сжаться Flex'у не даст — тогда в ноль идёт внутренний слой, он же и клипает.
 .ui-collapse[data-axis='row']:not([data-open]) > .ui-collapse-clip {
   height: 0;
