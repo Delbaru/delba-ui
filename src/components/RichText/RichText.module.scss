@@ -85,6 +85,7 @@
   }
 
   .RichText {
+    li::marker { color: var(--rich-list-marker-color, currentColor); }
     @media (max-width: 767px) {
       &.default {
         h1 { font: var(--font-h1,); text-transform: var(--tt-h1,); letter-spacing: var(--ls-h1,); &:not(:last-child) { margin-bottom: var(--s-20); } }

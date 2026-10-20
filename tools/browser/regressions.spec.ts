@@ -5,6 +5,29 @@ async function openFixture(page: Page) {
   await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
 }
 
+test('Lexical lists restore markers after reset and honor editor marker color and ordered start', async ({ page }) => {
+  await openFixture(page);
+  const rich = page.getByTestId('lexical-markers');
+  await rich.scrollIntoViewIfNeeded();
+  await expect(rich.locator('ul').nth(0)).toHaveCSS('list-style-type', 'disc');
+  await expect(rich.locator('ul').nth(1)).toHaveCSS('list-style-type', '"—  "');
+  const marker = await rich.locator('ul').nth(1).locator('li').evaluate((node) => ({
+    actual: getComputedStyle(node, '::marker').color,
+    expected: getComputedStyle(node).getPropertyValue('--primary').trim(),
+  }));
+  const tokenColor = await page.evaluate((color) => {
+    const probe = document.createElement('span');
+    probe.style.color = color;
+    document.body.append(probe);
+    const resolved = getComputedStyle(probe).color;
+    probe.remove();
+    return resolved;
+  }, marker.expected);
+  expect(marker.actual).toBe(tokenColor);
+  await expect(rich.locator('ol')).toHaveAttribute('start', '4');
+  await expect(rich.locator('ol')).toHaveCSS('list-style-type', 'decimal');
+});
+
 test('interaction scope holds portal controls and releases them on close and unmount', async ({ page }) => {
   await openFixture(page);
   const active = page.getByTestId('interaction-scope-state');

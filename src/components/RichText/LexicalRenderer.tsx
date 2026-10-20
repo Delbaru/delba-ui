@@ -68,7 +68,9 @@ type LexicalHeadingNode = LexicalRoleFields & {
 };
 
 type LexicalListNode = {
-  type: 'list';
+  type: 'list' | 'rich-list';
+  marker?: string;
+  markerColor?: string;
   listType: 'bullet' | 'number';
   children: LexicalNode[];
   start?: number;
@@ -156,7 +158,7 @@ function readNode(value: unknown): LexicalNode | null {
     if (tag !== 'h1' && tag !== 'h2' && tag !== 'h3' && tag !== 'h4' && tag !== 'h5' && tag !== 'h6') return null;
     return { type, tag, children, ...roles };
   }
-  if (type === 'list') return { type, children, listType: node.listType === 'number' ? 'number' : 'bullet', tag: node.tag === 'ol' ? 'ol' : 'ul' };
+  if (type === 'list' || type === 'rich-list') return { type, children, marker: string('marker'), markerColor: string('markerColor'), start: typeof node.start === 'number' ? node.start : undefined, listType: node.listType === 'number' ? 'number' : 'bullet', tag: node.tag === 'ol' ? 'ol' : 'ul' };
   if (type === 'listitem' || type === 'quote') return { type, children };
   if (type === 'link' || type === 'autolink') {
     const fields = record(node.fields), doc = record(fields?.doc), entry = record(doc?.value);
@@ -304,10 +306,17 @@ function renderNode(node: LexicalNode, index: number): ReactNode {
     );
   }
 
-  if (node.type === 'list') {
+  if (node.type === 'list' || node.type === 'rich-list') {
     const Tag = node.listType === 'number' || node.tag === 'ol' ? 'ol' : 'ul';
     return (
-      <Tag key={key}>
+      <Tag
+        key={key}
+        start={Tag === 'ol' ? node.start : undefined}
+        style={{
+          listStyleType: Tag === 'ol' ? 'decimal' : node.marker === 'dash' ? '"—  "' : 'disc',
+          '--rich-list-marker-color': node.markerColor || 'currentColor',
+        } as CSSProperties}
+      >
         {node.children?.map((child, i) => renderNode(child, i))}
       </Tag>
     );

@@ -1210,6 +1210,11 @@ export function BrowserFixture() {
       <IconTooltipField />
       <ContentSwapField />
       <LexicalRevealField />
+      <LexicalText data-testid="lexical-markers" content={{ root: { children: [
+        { type: 'list', listType: 'bullet', children: [{ type: 'listitem', children: [{ type: 'text', text: 'Legacy bullet' }] }] },
+        { type: 'list', listType: 'bullet', marker: 'dash', markerColor: 'var(--primary)', children: [{ type: 'listitem', children: [{ type: 'text', text: 'Colored dash' }] }] },
+        { type: 'list', listType: 'number', start: 4, children: [{ type: 'listitem', children: [{ type: 'text', text: 'Fourth item' }] }] },
+      ] } }} />
       <DropdownContracts />
       <DropdownSizingContracts />
       <SelectPanelContracts />
