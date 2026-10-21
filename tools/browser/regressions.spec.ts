@@ -1589,6 +1589,8 @@ test('Modal scroll lock keeps independent provider leases through provider unmou
 });
 
 test('Modal scroll lock stays while stacked dialogs exit and releases after the final DOM removal', async ({ page }) => {
+  // This scenario inspects the exit phase; reduced motion intentionally removes that phase.
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   await page.getByRole('button', { name: 'Open stacked modal', exact: true }).click();
   await page.getByTestId('open-top-modal').click();
