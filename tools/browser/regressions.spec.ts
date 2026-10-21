@@ -648,6 +648,32 @@ test('object and legacy Accordion triggers keep keyboard behavior, ARIA and opti
   await expect(page.getByText('Legacy panel', { exact: true })).toBeVisible();
 });
 
+test('Input and Textarea preserve native decoration, refs and opt-in required form validation', async ({ page }) => {
+  await openFixture(page);
+  const input = page.getByRole('textbox', { name: 'Decorated native input', exact: true });
+  const textarea = page.getByRole('textbox', { name: 'Decorated native textarea', exact: true });
+  await expect(input).toHaveClass(/native-input-contract/);
+  await expect(input).toHaveCSS('padding-left', '13px');
+  await expect(textarea).toHaveClass(/native-textarea-contract/);
+  await expect(textarea).toHaveCSS('padding-left', '17px');
+  expect(await input.evaluate((node: HTMLInputElement) => node.required)).toBe(true);
+  expect(await textarea.evaluate((node: HTMLTextAreaElement) => node.required)).toBe(true);
+  expect(await page.getByRole('textbox', { name: 'Default custom required input', exact: true })
+    .evaluate((node: HTMLInputElement) => node.required)).toBe(false);
+  const submit = page.getByRole('button', { name: 'Submit decorated native fields', exact: true });
+  await submit.click();
+  await expect(page.getByTestId('native-field-submits')).toHaveText('0');
+  await input.pressSequentially('abc');
+  await textarea.pressSequentially('body');
+  await expect(input).toHaveValue('abc');
+  await expect(textarea).toHaveValue('body');
+  await page.getByRole('button', { name: 'Verify decorated native refs', exact: true }).click();
+  await expect(page.getByTestId('native-field-refs')).toHaveText('INPUT:TEXTAREA');
+  await expect(textarea).toBeFocused();
+  await submit.click();
+  await expect(page.getByTestId('native-field-submits')).toHaveText('1');
+});
+
 test('Input and Textarea keep native events separate from normalized value changes', async ({ page }) => {
   await openFixture(page);
 
@@ -1272,6 +1298,105 @@ test('Select preserves panel styling, grouped options and opening guards through
   await disabled.dispatchEvent('click');
   await expect(disabled).toHaveAttribute('aria-expanded', 'false');
   await expect(disabled).toHaveAttribute('aria-disabled', 'true');
+});
+
+test('Dropdown arrow keys enter its portal directly from the focused trigger', async ({ page }) => {
+  await openFixture(page);
+  const trigger = page.getByRole('button', { name: 'Outer choices', exact: true });
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('button', { name: 'First outer choice', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowUp');
+  await expect(page.getByRole('button', { name: 'Inner choices', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('closed nested Dropdown consumes arrows, opens and focuses its first or last item', async ({ page }) => {
+  await openFixture(page);
+  const outer = page.getByRole('button', { name: 'Keyboard filters', exact: true });
+  const inner = page.getByRole('button', { name: 'Keyboard status', exact: true });
+  await outer.click();
+  await inner.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(inner).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', { name: 'First keyboard status', exact: true })).toBeFocused();
+  await expect(outer).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await expect(inner).toBeFocused();
+  await expect(inner).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('ArrowUp');
+  await expect(page.getByRole('button', { name: 'Last keyboard status', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  const disabled = page.getByRole('button', { name: 'Unavailable keyboard status', exact: true });
+  await disabled.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(disabled).toBeFocused();
+  await expect(disabled).toHaveAttribute('aria-expanded', 'false');
+  const native = page.getByRole('textbox', { name: 'Native input dropdown trigger', exact: true });
+  await native.focus();
+  await native.fill('abc');
+  await page.keyboard.press('ArrowDown');
+  await expect(native).toBeFocused();
+  await expect(native).toHaveAttribute('aria-expanded', 'false');
+  await expect(native).toHaveValue('abc');
+  await page.keyboard.press('Escape');
+  await expect(outer).toHaveAttribute('aria-expanded', 'false');
+  await outer.press('ArrowUp');
+  await expect(native).toBeFocused();
+});
+
+test('Modal keeps a drag started inside its content open when released on the backdrop', async ({ page }) => {
+  await openFixture(page);
+  const opener = page.getByRole('button', { name: 'Open context dialog', exact: true });
+  await opener.click();
+  const dialog = page.getByRole('dialog', { name: 'Context outer dialog', exact: true });
+  const content = page.getByTestId('outer-dialog-context');
+  await expect(content).toHaveText('alpha');
+  const dialogBox = await dialog.boundingBox();
+  const contentBox = await content.boundingBox();
+  if (!dialogBox || !contentBox) throw new Error('Modal content must have visible bounds');
+  const outside = { x: Math.max(1, dialogBox.x - 16), y: dialogBox.y + 8 };
+  await page.mouse.move(contentBox.x + contentBox.width / 2, contentBox.y + contentBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(outside.x, outside.y, { steps: 8 });
+  await page.mouse.up();
+  await expect(dialog).toBeVisible();
+  await expect(opener).toHaveAttribute('aria-expanded', 'true');
+  await page.mouse.click(outside.x, outside.y);
+  await expect(dialog).toHaveCount(0);
+  await expect(opener).toBeFocused();
+});
+
+test('declarative Modal preserves live declaration context through nested portals', async ({ page }) => {
+  await openFixture(page);
+  const opener = page.getByRole('button', { name: 'Open context dialog', exact: true });
+  await opener.click();
+  const outer = page.getByRole('dialog', { name: 'Context outer dialog', exact: true });
+  await expect(outer).toBeVisible();
+  await expect(page.getByTestId('outer-dialog-context')).toHaveText('alpha');
+  await outer.getByRole('button', { name: 'Update declaration context', exact: true }).click();
+  await expect(page.getByTestId('outer-dialog-context')).toHaveText('beta');
+  const nestedOpener = outer.getByRole('button', { name: 'Open nested context dialog', exact: true });
+  await nestedOpener.click();
+  const nested = page.getByRole('dialog', { name: 'Context nested dialog', exact: true });
+  await expect(nested).toBeVisible();
+  await expect(page.getByTestId('nested-dialog-context')).toHaveText('nested:beta');
+  await nested.getByRole('button', { name: 'Update nested declaration context', exact: true }).click();
+  await expect(page.getByTestId('nested-dialog-context')).toHaveText('nested:gamma');
+  await expect(page.getByTestId('outer-dialog-context')).toHaveText('gamma');
+  await page.keyboard.press('Escape');
+  await expect(nested).toHaveCount(0);
+  await expect(outer).toBeVisible();
+  await expect(nestedOpener).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(outer).toHaveCount(0);
+  await expect(opener).toBeFocused();
 });
 
 test('nested Dropdown consumes the first Escape inside a scrolling Modal', async ({ page }) => {

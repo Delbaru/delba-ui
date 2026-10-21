@@ -75,6 +75,8 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
         state,
         linkState,
         rowClassName,
+        field,
+        nativeValidation = false,
         'data-point-events': dataPointEvents,
         ...rest
     } = fieldProps;
@@ -267,8 +269,10 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
                             ) : (
                                 <input
                                     ref={setFieldRef}
-                                    className={fieldClassName}
                                     {...inputProps}
+                                    className={cx(fieldClassName, field?.className)}
+                                    style={field?.style}
+                                    required={nativeValidation && required}
                                     // ПОСЛЕ спреда: `inputProps` несёт свой `type`, и переопределять
                                     // его надо здесь — иначе показ пароля молча не сработает (§12 про
                                     // пропы, которые атом выставляет после спреда).

@@ -25,6 +25,7 @@ type StackItem = {
   node: ReactNode;
   options: PresentModalOptions & { requestClose?: () => void };
   open: boolean;
+  declarative: boolean;
 };
 
 type ModalContextValue = {
@@ -33,7 +34,7 @@ type ModalContextValue = {
 };
 
 type ModalRegistryValue = ModalContextValue & {
-  sync: (id: string, node: ReactNode, open: boolean, requestClose: () => void) => void;
+  sync: (id: string, open: boolean, requestClose: () => void) => void;
   remove: (id: string) => void;
 };
 
@@ -41,6 +42,19 @@ const ModalContext = createContext<ModalRegistryValue | null>(null);
 
 type ModalRuntime = { open: boolean; active: boolean; closing: boolean; dismiss: () => void; exitAfter: (duration: number) => void };
 const ModalRuntimeContext = createContext<ModalRuntime | null>(null);
+const ModalDeclarationsContext = createContext<ReadonlyMap<string, { target: HTMLElement | null; runtime: ModalRuntime }>>(new Map());
+
+function DeclarationSlot({ id, attach }: { id: string; attach: (id: string, node: HTMLElement | null) => void }) {
+  const ref = useCallback((node: HTMLDivElement | null) => attach(id, node), [attach, id]);
+  return <div ref={ref} style={{ display: 'contents' }} />;
+}
+
+/** Internal portal: rendering stays in the declaration's React subtree and retains all its contexts. */
+export function ModalDeclarationPortal({ id, children }: { id: string; children: ReactNode }) {
+  const entry = useContext(ModalDeclarationsContext).get(id);
+  if (!entry?.target) return null;
+  return createPortal(<ModalRuntimeContext.Provider value={entry.runtime}>{children}</ModalRuntimeContext.Provider>, entry.target);
+}
 
 const CLOSE_DELAY_MS = 500;
 
@@ -52,6 +66,16 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   const idRef = useRef(0);
   const baseId = useId();
   const hasModals = stack.length > 0;
+  const [targets, setTargets] = useState<ReadonlyMap<string, HTMLElement>>(new Map());
+  const attach = useCallback((id: string, node: HTMLElement | null) => {
+    setTargets((current) => {
+      if ((current.get(id) ?? null) === node) return current;
+      const next = new Map(current);
+      if (node) next.set(id, node);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
 
   // Closing windows stay in the stack until their exit finishes, so their lock stays too.
   useLayoutEffect(() => {
@@ -100,14 +124,14 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     else closeById(id);
   }, [closeById]);
 
-  const show = useCallback((id: string, node: ReactNode, options: StackItem['options']) => {
+  const show = useCallback((id: string, node: ReactNode, options: StackItem['options'], declarative = false) => {
     const timer = timersRef.current.get(id);
     if (timer) clearTimeout(timer);
     timersRef.current.delete(id);
     closingRef.current.delete(id);
     updateStack((current) => options.stackBehavior === 'replace'
-      ? [{ id, node, options, open: false }]
-      : [...current, { id, node, options, open: false }]);
+      ? [{ id, node, options, open: false, declarative }]
+      : [...current, { id, node, options, open: false, declarative }]);
     requestAnimationFrame(() => requestAnimationFrame(() => {
       updateStack((current) => current.map((item) => item.id === id && !closingRef.current.has(id) ? { ...item, open: true } : item));
     }));
@@ -122,17 +146,17 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     [baseId, dismissById, show]
   );
 
-  const sync = useCallback((id: string, node: ReactNode, open: boolean, requestClose: () => void) => {
+  const sync = useCallback((id: string, open: boolean, requestClose: () => void) => {
     if (!open) { closeById(id); return; }
     const item = stackRef.current.find((entry) => entry.id === id);
-    if (!item) { show(id, node, { requestClose }); return; }
-    if (item.node === node && item.options.requestClose === requestClose && !closingRef.current.has(id)) return;
+    if (!item) { show(id, null, { requestClose }, true); return; }
+    if (item.options.requestClose === requestClose && !closingRef.current.has(id)) return;
     const timer = timersRef.current.get(id);
     if (timer) clearTimeout(timer);
     timersRef.current.delete(id);
     const reopening = closingRef.current.delete(id);
     updateStack((current) => current.map((item) => item.id === id
-      ? { ...item, node, options: { requestClose }, open: reopening || item.open }
+      ? { ...item, options: { requestClose }, open: reopening || item.open }
       : item));
   }, [closeById, show, updateStack]);
 
@@ -142,25 +166,23 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   }, [dismissById]);
 
   const value = useMemo(() => ({ present, dismiss, sync, remove }), [present, dismiss, sync, remove]);
+  const runtime = (item: StackItem): ModalRuntime => ({
+    open: item.open,
+    active: stack.filter((entry) => entry.open).at(-1)?.id === item.id,
+    closing: closingRef.current.has(item.id),
+    dismiss: () => dismissById(item.id),
+    exitAfter: (duration) => exitAfter(item.id, duration),
+  });
+  const declarations = new Map(stack.filter((item) => item.declarative).map((item) =>
+    [item.id, { target: targets.get(item.id) ?? null, runtime: runtime(item) }]));
 
   const portalContent =
     stack.length > 0 &&
     (typeof document !== 'undefined'
       ? createPortal(
           <>
-            {stack.map((item) => (
-              <ModalRuntimeContext.Provider
-                key={item.id}
-                value={{
-                  open: item.open,
-                  active: stack.filter((entry) => entry.open).at(-1)?.id === item.id,
-                  closing: closingRef.current.has(item.id),
-                  dismiss: () => dismissById(item.id),
-                  exitAfter: (duration) => exitAfter(item.id, duration),
-                }}
-              >
-                {item.node}
-              </ModalRuntimeContext.Provider>
+            {stack.map((item) => item.declarative ? <DeclarationSlot key={item.id} id={item.id} attach={attach} /> : (
+              <ModalRuntimeContext.Provider key={item.id} value={runtime(item)}>{item.node}</ModalRuntimeContext.Provider>
             ))}
           </>,
           document.body
@@ -169,8 +191,10 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 
   return (
     <ModalContext.Provider value={value}>
+    <ModalDeclarationsContext.Provider value={declarations}>
       {children}
       {portalContent}
+    </ModalDeclarationsContext.Provider>
     </ModalContext.Provider>
   );
 }

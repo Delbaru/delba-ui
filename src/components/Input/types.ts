@@ -95,6 +95,10 @@ export interface InputProps
     // Нужен пресетам-обёрткам (SharedInput), чтобы вешать классы-оси из _axes.scss: обычный
     // className уезжает на wrapper, а он включает label/comment и красить его нельзя.
     rowClassName?: string;
+    /** Оформление нативного input; className/style корня по-прежнему относятся ко всему полю. */
+    field?: { className?: string; style?: CSSProperties };
+    /** Сохранить нативный required для форм с браузерной валидацией. По умолчанию обязательность проверяет кит. */
+    nativeValidation?: boolean;
 
     required?: boolean;
     emptyMessage?: string;

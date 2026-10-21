@@ -74,6 +74,11 @@ const NO_VARIABLES: readonly `--${string}`[] = [];
 const VIEWPORT_PADDING = 8;
 const DropdownAncestors = createContext<readonly string[]>([]);
 
+function focusableItems(panel: HTMLElement | null) {
+  return [...(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])') ?? [])]
+    .filter((node) => !node.closest('[hidden], [inert]') && node.getClientRects().length > 0);
+}
+
 export function Dropdown({
   ref,
   trigger,
@@ -106,6 +111,7 @@ export function Dropdown({
   const rootRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const focusOnOpen = useRef<'first' | 'last' | null>(null);
   const scopeRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLDivElement>(null);
   const [rootNode, setRootNode] = useState<HTMLDivElement | null>(null);
@@ -130,6 +136,7 @@ export function Dropdown({
     onOpenChange?.(next);
   };
   const close = () => {
+    focusOnOpen.current = null;
     if (!open) return;
     if (panelRef.current?.contains(document.activeElement)) {
       anchorRef.current?.focus();
@@ -154,6 +161,32 @@ export function Dropdown({
     const modal = rootRef.current?.closest<HTMLElement>('[role="dialog"][aria-modal="true"]');
     setPortalNode(portal ? modal?.parentElement ?? document.body : null);
   }, [portal, rootNode]);
+
+  useEffect(() => {
+    if (!open || !focusOnOpen.current) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focus = () => {
+      const direction = focusOnOpen.current;
+      if (!direction) return;
+      if (!anchorRef.current?.contains(document.activeElement)) {
+        focusOnOpen.current = null;
+        observer.disconnect();
+        return;
+      }
+      const items = focusableItems(panel);
+      const next = direction === 'first' ? items[0] : items.at(-1);
+      if (!next) return;
+      focusOnOpen.current = null;
+      observer.disconnect();
+      next.focus();
+    };
+    // Collapse may mount its children or remove hidden after the opening commit.
+    const observer = new MutationObserver(focus);
+    observer.observe(panel, { childList: true, subtree: true, attributes: true });
+    const frame = requestAnimationFrame(focus);
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+  }, [open, portalNode]);
 
   useLayoutEffect(() => {
     const sync = () => {
@@ -193,6 +226,7 @@ export function Dropdown({
   }, [rootNode, portal, portalNode, offset, matchTriggerWidth, inheritVariables, className, style]);
 
   const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
+    focusOnOpen.current = null;
     const next = event.relatedTarget;
     if (next instanceof Element && next.closest('[data-dropdown-ancestors]')?.getAttribute('data-dropdown-ancestors')?.split(' ').includes(id)) return;
     if (next instanceof Node && !rootRef.current?.contains(next) && !panelRef.current?.contains(next)) close();
@@ -203,12 +237,24 @@ export function Dropdown({
     const atTrigger = !!anchorRef.current?.contains(target);
     const inPanel = !!panelRef.current?.contains(target);
     if (!(atTrigger || inPanel)) return;
-    const items = [...(panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])') ?? [])]
-      .filter((node) => !node.closest('[hidden], [inert]') && node.getClientRects().length > 0);
+    const items = focusableItems(panelRef.current);
     if (open && event.key === 'Tab' && atTrigger && !event.shiftKey && items[0]) {
       event.preventDefault();
       event.stopPropagation();
       items[0].focus();
+      return;
+    }
+    if (atTrigger && !target.matches('input, textarea, select, [contenteditable="true"]') && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (blocked) return;
+      if (!open) {
+        focusOnOpen.current = event.key === 'ArrowDown' ? 'first' : 'last';
+        changeOpen(true);
+        return;
+      }
+      const next = event.key === 'ArrowDown' ? items[0] : items.at(-1);
+      next?.focus();
       return;
     }
     if (open && inPanel && !target.matches('input, textarea, select, [contenteditable="true"]') && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
@@ -279,7 +325,10 @@ export function Dropdown({
       onBlur={composeEventHandlers(onBlur, handleBlur, { cancelable: true })}
     >
       {cloneElement(trigger, {
-        onClick: composeDropdownTriggerClick(trigger.props.onClick, disabled, () => changeOpen(!open)),
+        onClick: composeDropdownTriggerClick(trigger.props.onClick, disabled, () => {
+          focusOnOpen.current = null;
+          changeOpen(!open);
+        }),
         'aria-expanded': open,
         'aria-controls': trigger.props['aria-controls'] ?? id,
       })}

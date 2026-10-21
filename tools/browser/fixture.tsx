@@ -20,6 +20,8 @@ import { CarouselNav } from '../../src/components/Carousel/CarouselNav/CarouselN
 import { Dropdown } from '../../src/components/Dropdown/Dropdown';
 import { Modal } from '../../src/components/Modal/Modal';
 import { ModalProvider, useModal } from '../../src/components/Modal/ModalProvider';
+import { ModalContextFixture } from './modal-context.fixture';
+import { NativeFieldFixture } from './native-field.fixture';
 import { LexicalText } from '../../src/components/RichText/RichText';
 import { PhoneField } from '../../src/components/PhoneField/PhoneField';
 import { Select } from '../../src/components/Select/Select';
@@ -700,6 +702,24 @@ function DropdownSizingContracts() {
   );
 }
 
+function DropdownClosedArrowContracts() {
+  return <section aria-label="Closed dropdown arrow contracts" className="fixture">
+    <Dropdown panel={{ portal: true }} trigger={<button type="button">Keyboard filters</button>}>
+      <Dropdown panel={{ portal: true, keepMounted: false }} trigger={<button type="button">Keyboard status</button>}>
+        <button type="button">First keyboard status</button>
+        <button type="button">Last keyboard status</button>
+      </Dropdown>
+      <input aria-label="Keyboard slug" />
+      <Dropdown panel={{ portal: true }} trigger={<button type="button" aria-disabled="true">Unavailable keyboard status</button>}>
+        <button type="button">Unavailable status choice</button>
+      </Dropdown>
+      <Dropdown panel={{ portal: true }} trigger={<input aria-label="Native input dropdown trigger" />}>
+        <button type="button">Native trigger choice</button>
+      </Dropdown>
+    </Dropdown>
+  </section>;
+}
+
 function DeclarativeModalContracts() {
   const [controlledOpen, setControlledOpen] = useState(false);
   const [allowClose, setAllowClose] = useState(false);
@@ -1236,12 +1256,15 @@ export function BrowserFixture() {
         { type: 'list', listType: 'number', start: 4, children: [{ type: 'listitem', children: [{ type: 'text', text: 'Fourth item' }] }] },
       ] } }} />
       <DropdownContracts />
+      <DropdownClosedArrowContracts />
       <DropdownNestedContracts />
       <DropdownSizingContracts />
       <SelectPanelContracts />
       <ModalDropdownField />
       <ModalScrollLockContracts />
       <DeclarativeModalContracts />
+      <ModalContextFixture />
+      <NativeFieldFixture />
       <ModalSelectField />
       <ModalStackField />
       <ModalCalendarField />

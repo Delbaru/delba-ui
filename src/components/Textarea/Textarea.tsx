@@ -34,6 +34,8 @@ export interface TextareaProps
     BoxLayoutProps,
     SharedMotionProps {
     style?: CSSProperties;
+    /** Оформление нативного textarea; style корня относится ко всему полю. */
+    field?: { className?: string; style?: CSSProperties };
     /** Настоящее событие ввода нативного textarea. */
     onChange?: React.ChangeEventHandler<HTMLTextAreaElement>;
     /** Значение модели после ввода или восстановления seed. */
@@ -140,6 +142,7 @@ export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
         linkState,
         'data-point-events': dataPointEvents,
         fieldClassName,
+        field,
         ...rest
     } = fieldProps;
     const lengthValidate = useCallback(
@@ -310,7 +313,12 @@ export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
                     // ждало тремя полосами в поле высотой в одну.
                     <Skeleton rows={rows} h={[16, 16, 16]} />
                 ) : (
-                    <textarea ref={fieldRef} className={styles.TextareaField} {...textareaProps} />
+                    <textarea
+                        ref={fieldRef}
+                        {...textareaProps}
+                        className={cx(styles.TextareaField, field?.className)}
+                        style={field?.style}
+                    />
                 )}
                 </Flex>
                 {inlineError && (

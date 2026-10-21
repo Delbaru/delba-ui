@@ -78,6 +78,7 @@ export { LenisScroll, LenisScrollProvider, useLenisScroll, useLenisScrollOptiona
 export * from './components/SmoothScroll';
 export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
 export { useAnchoredFloating, type FloatingAlign, type FloatingPlacement } from './hooks/useAnchoredFloating';
+export { useTooltip, type UseTooltipOptions, type UseTooltipResult, type TooltipBubbleProps } from './hooks/useTooltip';
 export { useMediaQuery } from './hooks/useMediaQuery';
 export { useScroll } from './hooks/useScroll';
 export { useUrl } from './hooks/useUrl';
