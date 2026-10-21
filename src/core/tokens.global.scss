@@ -41,6 +41,7 @@
   @include meta.load-css('../components/Button/button');
   @include meta.load-css('./layout/container');
   @include meta.load-css('../components/Flex/flex');
+  @include meta.load-css('../components/ScrollArea/scroll-area');
   @include meta.load-css('../components/Grid/grid');
   @include meta.load-css('../components/GradientBorder/gradient-border');
   @include meta.load-css('../components/Icon/icon');

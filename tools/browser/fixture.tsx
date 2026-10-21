@@ -27,6 +27,7 @@ import { Text } from '../../src/components/Text/Text';
 import { Section } from '../../src/components/Section';
 import { Textarea } from '../../src/components/Textarea/Textarea';
 import { RefactorContractsFixture } from './refactor-contracts.fixture';
+import { ScrollAreaFixture } from './scroll-area.fixture';
 import { InteractionScopeFixture } from './interaction-scope.fixture';
 import { VideoPlayer } from '../../src/components/VideoPlayer/VideoPlayer';
 import { Checkbox } from '../../src/components/Checkbox/Checkbox';
@@ -647,6 +648,21 @@ function DropdownContracts() {
   );
 }
 
+function DropdownNestedContracts() {
+  const [clicks, setClicks] = useState(0);
+  return <section aria-label="Nested dropdown contracts" className="fixture">
+    <Dropdown blockOutsideClick panel={{ portal: true }} trigger={<button type="button">Outer choices</button>}>
+      <button type="button">First outer choice</button>
+      <Dropdown blockOutsideClick panel={{ portal: true }} trigger={<button type="button">Inner choices</button>}>
+        <input aria-label="Inner choice input" />
+        <button type="button">Inner choice action</button>
+      </Dropdown>
+    </Dropdown>
+    <button type="button" onClick={() => setClicks((count) => count + 1)}>Outside dropdown target</button>
+    <output data-testid="dropdown-outside-clicks">{clicks}</output>
+  </section>;
+}
+
 function DropdownSizingContracts() {
   return (
     <section aria-label="Dropdown intrinsic sizing" className="fixture">
@@ -905,12 +921,15 @@ function VideoTimelineField() {
 }
 
 function NativeFocusFields() {
+  const [chip, setChip] = useState(false);
   return (
     <section aria-label="Native focus visibility contracts" className="fixture">
       <button type="button" data-testid="focus-sequence-start">Start focus sequence</button>
       <Checkbox aria-label="Keyboard checkbox">Keyboard checkbox</Checkbox>
       <Radio aria-label="Keyboard radio" name="keyboard-radio" value="one">Keyboard radio</Radio>
       <SwitchButton aria-label="Keyboard switch">Keyboard switch</SwitchButton>
+      <Checkbox indicator={false} aria-label="Chip checkbox" checked={chip} onChange={event => setChip(event.target.checked)}>Chip checkbox</Checkbox>
+      <Radio indicator={false} aria-label="Chip radio" name="chip-radio" value="chip" checked={chip} aria-invalid onChange={() => setChip(true)}>Chip radio</Radio>
       <div data-testid="calendar-control">
         <Input type="date" aria-label="Keyboard date" data-testid="keyboard-date" defaultValue="2025-01-15" />
       </div>
@@ -1181,6 +1200,7 @@ export function BrowserFixture() {
       <h1>Delba UI browser regression fixture</h1>
       <InteractionScopeFixture />
       <RefactorContractsFixture />
+      <ScrollAreaFixture />
       <button
         type="button"
         data-testid="toggle-reveal-skip"
@@ -1216,6 +1236,7 @@ export function BrowserFixture() {
         { type: 'list', listType: 'number', start: 4, children: [{ type: 'listitem', children: [{ type: 'text', text: 'Fourth item' }] }] },
       ] } }} />
       <DropdownContracts />
+      <DropdownNestedContracts />
       <DropdownSizingContracts />
       <SelectPanelContracts />
       <ModalDropdownField />

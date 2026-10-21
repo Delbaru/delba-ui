@@ -25,6 +25,7 @@ export * from './components/Radio';
 export * from './components/RichText';
 export * from './components/RichTextarea';
 export * from './components/Section';
+export * from './components/ScrollArea';
 export * from './components/Skeleton';
 export * from './components/Select';
 export type { FieldValueChangeDetails, FieldValueChangeHandler, FieldValueChangeReason } from './core/base/field-value';

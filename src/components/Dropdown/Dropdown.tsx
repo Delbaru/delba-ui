@@ -1,6 +1,6 @@
 'use client';
 
-import { cloneElement, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent, type MouseEventHandler, type ReactElement, type ReactNode } from 'react';
+import { cloneElement, createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent, type MouseEventHandler, type ReactElement, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { composeEventHandlers, cx, stateProps, useMergedRefs, type ComponentStateValue, type WithRef } from '../../core';
@@ -22,6 +22,8 @@ export interface DropdownTriggerProps {
 }
 
 export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'collapse'> {
+  /** DOM data-атрибуты поверхности панели, включая проектные маркеры портала. */
+  [attribute: `data-${string}`]: string | number | boolean | undefined;
   /** Край триггера, к которому прижата панель. */
   side?: 'start' | 'center' | 'end';
   /** Зазор от триггера в дизайн-единицах. */
@@ -39,6 +41,8 @@ export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'colla
 }
 
 interface DropdownBaseProps extends Omit<BoxProps, 'children'> {
+  /** Закрывающий клик не активирует содержимое страницы под панелью. */
+  blockOutsideClick?: boolean;
   /** Пользовательский onClick выполняется первым; preventDefault отменяет переключение. */
   trigger: ReactElement<DropdownTriggerProps>;
   /** Содержимое панели; функция получает команду закрытия. */
@@ -68,6 +72,7 @@ export type DropdownProps = DropdownBaseProps & (
 
 const NO_VARIABLES: readonly `--${string}`[] = [];
 const VIEWPORT_PADDING = 8;
+const DropdownAncestors = createContext<readonly string[]>([]);
 
 export function Dropdown({
   ref,
@@ -83,6 +88,7 @@ export function Dropdown({
   state,
   onKeyDown,
   onBlur,
+  blockOutsideClick = false,
   ...rootProps
 }: WithRef<DropdownProps, HTMLDivElement>) {
   const {
@@ -107,10 +113,15 @@ export function Dropdown({
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [gapPixels, setGapPixels] = useState(0);
   const id = useId();
+  const parentIds = useContext(DropdownAncestors);
+  const ownIds = [...parentIds, id];
 
   useLayoutEffect(() => {
     const triggerNode = rootRef.current?.firstElementChild;
-    anchorRef.current = triggerNode instanceof HTMLElement ? triggerNode : null;
+    anchorRef.current = triggerNode instanceof HTMLElement
+      ? triggerNode.matches('button, a[href], [tabindex]') ? triggerNode
+        : triggerNode.querySelector<HTMLElement>('button, a[href], [tabindex]') ?? triggerNode
+      : null;
   });
 
   const changeOpen = (next: boolean) => {
@@ -125,7 +136,7 @@ export function Dropdown({
     }
     changeOpen(false);
   };
-  const dismissProps = useOutsideDismiss([rootRef, panelRef], close, { enabled: open, escape: false });
+  const dismissProps = useOutsideDismiss([rootRef, panelRef], close, { enabled: open, escape: false, blockOutsideClick });
   const { style: floatingStyle, updatePosition } = useAnchoredFloating({
     anchorRef, floatingRef: panelRef, isActive: portal && open,
     placement: 'bottom', align: side, gap: gapPixels, viewportPadding: VIEWPORT_PADDING,
@@ -183,9 +194,30 @@ export function Dropdown({
 
   const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
     const next = event.relatedTarget;
+    if (next instanceof Element && next.closest('[data-dropdown-ancestors]')?.getAttribute('data-dropdown-ancestors')?.split(' ').includes(id)) return;
     if (next instanceof Node && !rootRef.current?.contains(next) && !panelRef.current?.contains(next)) close();
   };
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const atTrigger = !!anchorRef.current?.contains(target);
+    const inPanel = !!panelRef.current?.contains(target);
+    if (!(atTrigger || inPanel)) return;
+    const items = [...(panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])') ?? [])]
+      .filter((node) => !node.closest('[hidden], [inert]') && node.getClientRects().length > 0);
+    if (open && event.key === 'Tab' && atTrigger && !event.shiftKey && items[0]) {
+      event.preventDefault();
+      event.stopPropagation();
+      items[0].focus();
+      return;
+    }
+    if (open && inPanel && !target.matches('input, textarea, select, [contenteditable="true"]') && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      const at = items.indexOf(target);
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+        : event.key === 'ArrowDown' ? (at + 1) % items.length : (at - 1 + items.length) % items.length;
+      if (items[next]) { event.preventDefault(); event.stopPropagation(); items[next].focus(); }
+      return;
+    }
     if (event.key !== 'Escape' || !open) return;
     event.preventDefault();
     event.stopPropagation();
@@ -198,6 +230,7 @@ export function Dropdown({
     <Box
       ref={panelRef}
       id={id}
+      data-dropdown-ancestors={ownIds.join(' ')}
       className={cx(styles.panel, portal && styles.portalPanel)}
       style={{
         '--dropdown-offset': `calc(${offset} * var(--rpx))`,
@@ -230,6 +263,7 @@ export function Dropdown({
   );
 
   return (
+    <DropdownAncestors.Provider value={ownIds}>
     <Box
       {...rootProps}
       ref={setRootRef}
@@ -254,5 +288,6 @@ export function Dropdown({
         <Box ref={scopeRef} className={cx(styles.PortalRoot, className)} style={style} {...stateProps(state)}>{content}</Box>, portalNode,
       ) : content}
     </Box>
+    </DropdownAncestors.Provider>
   );
 }

@@ -10,6 +10,8 @@ import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMo
 const c = createLayoutClasses(styles);
 
 export interface RadioProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>, LayoutSpaceProps, RadiusPropsShort, GrowProps, SharedMotionProps {
+    /** Show the decorative radio indicator; the native input remains accessible. */
+    indicator?: boolean;
     style?: CSSProperties;
     children?: React.ReactNode;
     gap?: ResponsiveValue<number>;
@@ -58,6 +60,7 @@ export function Radio({
     tone,
     size,
     dotSize,
+    indicator = true,
     linkState,
     'data-point-events': dataPointEvents,
     ...props
@@ -86,13 +89,13 @@ export function Radio({
                 className
             )}
             style={{ ...(motionStyle ?? null), ...(size != null ? { ['--radio-box']: size } : null), ...(dotSize != null ? { ['--radio-dot']: dotSize } : null), ...style }}
-            {...stateProps(state, isDisabled && 'disabled')}
+            {...stateProps(state, Boolean(props.checked) && 'active', Boolean(props['aria-invalid']) && 'error', isDisabled && 'disabled')}
         >
             <Flex gap={gap ?? [8, null, null]} align={["center", null, null]}>
                 <input ref={ref} id={id} type="radio" className={styles.Input} {...props} />
-                <div className={styles.Box}>
+                {indicator && <div className={styles.Box}>
                     <span className={styles.Dot} aria-hidden />
-                </div>
+                </div>}
                 {children}
             </Flex>
         </label>

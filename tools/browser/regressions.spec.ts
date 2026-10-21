@@ -5,6 +5,39 @@ async function openFixture(page: Page) {
   await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
 }
 
+test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport ref/events', async ({ page }) => {
+  await openFixture(page);
+  const viewport = page.getByTestId('scroll-area');
+  const search = page.getByRole('textbox', { name: 'Pinned scroll search' });
+  await viewport.scrollIntoViewIfNeeded();
+  const before = await search.boundingBox();
+  await viewport.hover();
+  await page.mouse.wheel(0, 360);
+  await expect.poll(() => viewport.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  expect(await search.boundingBox()).toEqual(before);
+  await expect.poll(async () => Number(await page.getByTestId('scroll-area-events').textContent())).toBeGreaterThan(0);
+  const scrollbar = await viewport.evaluate((node) => {
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;width:var(--ui-scrollbar-width)';
+    node.append(probe);
+    const expectedWidth = getComputedStyle(probe).width;
+    probe.remove();
+    return {
+    width: getComputedStyle(node, '::-webkit-scrollbar').width,
+    color: getComputedStyle(node, '::-webkit-scrollbar-thumb').backgroundColor,
+    buttons: getComputedStyle(node, '::-webkit-scrollbar-button').display,
+    nativeWidth: getComputedStyle(node).scrollbarWidth,
+    nativeColor: getComputedStyle(node).scrollbarColor,
+    expectedWidth,
+  }; });
+  expect(Math.abs(parseFloat(scrollbar.width) - parseFloat(scrollbar.expectedWidth))).toBeLessThan(0.02);
+  expect(scrollbar).toMatchObject({ color: 'rgb(120, 120, 120)', buttons: 'none', nativeWidth: 'auto', nativeColor: 'auto' });
+  await viewport.focus();
+  await page.keyboard.press('Control+End');
+  await expect.poll(() => viewport.evaluate((node) => node.scrollTop + node.clientHeight >= node.scrollHeight - 1)).toBe(true);
+  await expect(search).toHaveValue('Search');
+});
+
 test('Lexical lists restore markers after reset and honor editor marker color and ordered start', async ({ page }) => {
   await openFixture(page);
   const rich = page.getByTestId('lexical-markers');
@@ -1121,6 +1154,31 @@ test('LexicalText mounted from empty content attaches reveal observation and set
   await expect(lexical).toContainText('Revealed lexical content');
 });
 
+test('Dropdown keeps nested portal focus, bridges keyboard navigation and blocks the dismissing click', async ({ page }) => {
+  await openFixture(page);
+  const outer = page.getByRole('button', { name: 'Outer choices', exact: true });
+  const inner = page.getByRole('button', { name: 'Inner choices', exact: true });
+  await outer.click();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'First outer choice' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(inner).toBeFocused();
+  await inner.press('Enter');
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('textbox', { name: 'Inner choice input' })).toBeFocused();
+  await expect(outer).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await expect(inner).toHaveAttribute('aria-expanded', 'false');
+  await expect(outer).toHaveAttribute('aria-expanded', 'true');
+  await expect(inner).toBeFocused();
+  const outside = page.getByRole('button', { name: 'Outside dropdown target' });
+  await outside.click();
+  await expect(outer).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByTestId('dropdown-outside-clicks')).toHaveText('0');
+  await outside.click();
+  await expect(page.getByTestId('dropdown-outside-clicks')).toHaveText('1');
+});
+
 test('Dropdown keeps controlled state with its owner and honors cancellation, disabled and defaultOpen', async ({ page }) => {
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Dropdown state contracts' });
@@ -1742,6 +1800,26 @@ test('Checkbox, Radio, and SwitchButton show focus-visible state through native 
   expect(switchOutline).not.toBe('none');
   await toggle.press('Space');
   await expect(toggle).toBeChecked();
+});
+
+test('Indicatorless choices keep native keyboard input and expose active/error states', async ({ page }) => {
+  await openFixture(page);
+  const checkbox = page.getByRole('checkbox', { name: 'Chip checkbox' });
+  const radio = page.getByRole('radio', { name: 'Chip radio' });
+  await expect(checkbox.locator('..').locator(':scope > div')).toHaveCount(0);
+  await expect(radio.locator('..').locator(':scope > div')).toHaveCount(0);
+  await checkbox.focus();
+  await checkbox.press('Space');
+  await expect(checkbox).toBeChecked();
+  await expect(radio).toBeChecked();
+  await expect(radio.locator('..').locator('..')).toHaveAttribute('state', /active/);
+  await expect(radio.locator('..').locator('..')).toHaveAttribute('state', /error/);
+  await checkbox.press('Space');
+  await expect(checkbox).not.toBeChecked();
+  await checkbox.press('Tab');
+  await expect(radio).toBeFocused();
+  await radio.press('Space');
+  await expect(radio).toBeChecked();
 });
 
 test('Input calendar month and year controls are keyboard-operable', async ({ page }) => {
