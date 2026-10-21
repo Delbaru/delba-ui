@@ -1635,12 +1635,16 @@ test('Modal scroll lock preserves body padding when a stable scrollbar gutter re
   await openFixture(page);
   await page.evaluate(() => {
     document.documentElement.style.setProperty('scrollbar-gutter', 'stable');
+    document.documentElement.style.setProperty('scrollbar-color', 'gold black');
     document.body.style.setProperty('padding-right', '36px', 'important');
   });
   const before = await page.evaluate(() => document.documentElement.clientWidth);
   await page.getByRole('button', { name: 'Open First independent lease', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'First independent lease', exact: true });
   await expect(dialog).toBeVisible();
+  const viewport = dialog.locator('.ui-scrollbar');
+  await expect(viewport).toHaveCSS('scrollbar-color', 'auto');
+  expect(await viewport.evaluate((node) => getComputedStyle(node, '::-webkit-scrollbar-button').display)).toBe('none');
   expect(await page.evaluate(() => document.documentElement.clientWidth)).toBe(before);
   await expect(page.locator('body')).toHaveCSS('padding-right', '36px');
   await dialog.getByRole('button', { name: 'Unmount First independent lease', exact: true }).click();

@@ -16,6 +16,7 @@ import {
 import styles from './Modal.module.scss';
 import { boxLayout, composeEventHandlers, createLayoutClasses, cx, MEDIA_QUERY, MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs, useMergedRefs, type BoxLayoutProps, type LayoutSpaceProps, type ResponsiveInput, type ResponsiveValue, type SpaceValue, type StateLinkInput, type WithRef } from '../../core';
 import { Flex } from '../Flex';
+import { scrollbarProps, type ScrollbarOptions } from '../ScrollArea/scrollbar';
 import { useModalRegistry, useModalRuntime } from './ModalProvider';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -37,6 +38,8 @@ export interface ModalCloseOptions {
 }
 
 export interface ModalScrollOptions extends LayoutSpaceProps {
+  /** Native scrollbar appearance, shared with ScrollArea. Does not add a scroll container. */
+  scrollbar?: ScrollbarOptions;
   /** Reserve the legacy scrollbar padding. Set false for a panel with its own padding. */
   gutter?: boolean;
 }
@@ -337,7 +340,8 @@ function ModalSurface({
         onKeyDown={handleKeyDown}
       >
         <div
-            className={cx(styles.inner, overflowVisible && styles.innerOverflowVisible, scroll?.gutter === false && styles.noGutter, ...boxLayout(c, scroll ?? {}))}
+            {...scrollbarProps({ width: 4, color: 'var(--primary)', inset: 8, gutter: 'auto', ...scroll?.scrollbar })}
+            className={cx('ui-scrollbar', styles.inner, overflowVisible && styles.innerOverflowVisible, scroll?.gutter === false && styles.noGutter, ...boxLayout(c, scroll ?? {}))}
         >
           {typeof children === 'function' ? children(onClose) : children}
         </div>

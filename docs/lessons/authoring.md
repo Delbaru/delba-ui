@@ -532,3 +532,12 @@ animate для разных событий. Лечение: appearance/hover/idl
 list-style, а LexicalRenderer его не восстанавливал. Лечение: list-style-type задаёт
 рендерер, цвет ::marker берётся из markerColor документа. Проверять обычный список,
 тире с цветом из редактора и ol со start в настоящем браузере после reset.
+
+## Нативный цвет отменяет геометрию scrollbar — 2026-10-21
+
+Симптом: в меню Chromium видна широкая полоса со стрелками вместо тонкой полосы кита.
+Причина: унаследованный scrollbar-color страницы отключает WebKit-оформление Modal.
+Лечение: ScrollArea, Modal и корневой viewport используют общий scrollbarProps и
+одни стили; Chromium сбрасывает стандартный цвет в auto, Firefox сохраняет thin/auto.
+Не добавляйте контейнер прокрутки вокруг страницы ради оформления: это меняет
+владельца window scroll и нарушает SmoothScroll и sticky.

@@ -2,6 +2,11 @@
     min-height: 0;
     min-width: 0;
     overscroll-behavior: contain;
+    &[data-scroll-axis='y'] { overflow-y: auto; overflow-x: hidden; }
+    &[data-scroll-axis='x'] { overflow-x: auto; overflow-y: hidden; }
+}
+
+.ui-scrollbar {
     scrollbar-color: var(--ui-scrollbar-color) var(--ui-scrollbar-track);
     scrollbar-width: var(--ui-scrollbar-native-width);
 
@@ -11,9 +16,6 @@
         scrollbar-width: auto;
         scrollbar-color: auto;
     }
-
-    &[data-scroll-axis='y'] { overflow-y: auto; overflow-x: hidden; }
-    &[data-scroll-axis='x'] { overflow-x: auto; overflow-y: hidden; }
 
     &::-webkit-scrollbar {
         width: var(--ui-scrollbar-width);
