@@ -21,8 +21,27 @@ const LENIS_OPTIONS = {
 };
 
 /**
- * Stops any in-flight Lenis animation and resets scroll to top on route change.
- * Must live inside <ReactLenis> so useLenis() can grab the instance.
+ * Начало новой страницы: якорь из адреса (`/page#id`), если узел уже в DOM, иначе верх.
+ * `scrollIntoView` сам учитывает `scroll-padding-top` и `scroll-margin-top` — отступ под шапку
+ * задаёт потребитель. Сброс в 0 без этой проверки перебивал прокрутку Next к якорю: переход
+ * `/a` → `/b#id` всегда открывал `/b` сверху.
+ */
+function scrollToRouteStart() {
+  let id = '';
+  try {
+    id = decodeURIComponent(window.location.hash.slice(1));
+  } catch {
+    // Битая %-последовательность в адресе — якоря нет, встаём в начало.
+  }
+  const target = id ? document.getElementById(id) : null;
+
+  if (target) target.scrollIntoView({ block: 'start', behavior: 'instant' });
+  else window.scrollTo(0, 0);
+}
+
+/**
+ * Stops any in-flight Lenis animation and moves to the route start (hash target or top) on
+ * route change. Must live inside <ReactLenis> so useLenis() can grab the instance.
  */
 function LenisResetOnNavigate() {
   const pathname = usePathname();
@@ -35,13 +54,12 @@ function LenisResetOnNavigate() {
     if (prevPathnameRef.current === pathname) return;
     prevPathnameRef.current = pathname;
 
+    // Остановленный Lenis не принимает scrollTo; start() сам берёт позицию окна (reset), поэтому
+    // окно двигаем нативно между stop и start — недоехавший ход не утащит страницу назад.
     const reset = () => {
-      if (lenis) {
-        lenis.stop();
-        lenis.scrollTo(0, { immediate: true });
-        lenis.start();
-      }
-      window.scrollTo(0, 0);
+      lenis?.stop();
+      scrollToRouteStart();
+      lenis?.start();
     };
 
     // Multiple attempts: immediate, double-RAF, and a delayed fallback so navigation
@@ -65,7 +83,7 @@ function NativeResetOnNavigate() {
     if (typeof window === 'undefined') return;
     if (prevPathnameRef.current === pathname) return;
     prevPathnameRef.current = pathname;
-    window.scrollTo(0, 0);
+    scrollToRouteStart();
   }, [pathname]);
 
   return null;
