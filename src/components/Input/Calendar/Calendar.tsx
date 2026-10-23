@@ -133,10 +133,19 @@ export function Calendar({
             onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, -1))}
             className={cx(styles.btn, styles.prev)}
         >
-          <Icon src={assetUrl(arrowIcon)} w={[18, null, null]} h={[18, null, null]} aria-hidden='true' />
+          <Icon
+              src={assetUrl(arrowIcon)}
+              w={[18, null, null]}
+              h={[18, null, null]}
+              aria-hidden='true'
+          />
         </Button>
 
-        <Flex dir={['row', 'row', 'row']} align={['center', 'center', 'center']} gap={[16, null, null]}>
+        <Flex
+            dir={['row', 'row', 'row']}
+            align={['center', 'center', 'center']}
+            gap={[16, null, null]}
+        >
           <Button
               type='button'
               aria-label='Choose month'
@@ -158,7 +167,12 @@ export function Calendar({
             />
           </Button>
 
-          <Flex dir={['row', 'row', 'row']} align={['center', 'center', 'center']} gap={[4, null, null]} className={styles.yearPick}>
+          <Flex
+              dir={['row', 'row', 'row']}
+              align={['center', 'center', 'center']}
+              gap={[4, null, null]}
+              className={styles.yearPick}
+          >
             <Text variant={['inherit', null, null]}>{visibleYear}</Text>
 
             {/* Глиф прежний, растёт только зона попадания: при корне 12×8 в стрелку года целились
@@ -172,7 +186,12 @@ export function Calendar({
                   className={cx(styles.btn, styles.prev)}
                   onClick={() => changeVisibleYear(1)}
               >
-                <Icon src={assetUrl(chevronIcon)} w={[16, null, null]} h={['auto', null, null]} aria-hidden='true' />
+                <Icon
+                    src={assetUrl(chevronIcon)}
+                    w={[16, null, null]}
+                    h={['auto', null, null]}
+                    aria-hidden='true'
+                />
               </Button>
 
               <Button
@@ -183,7 +202,12 @@ export function Calendar({
                   className={cx(styles.btn, styles.next)}
                   onClick={() => changeVisibleYear(-1)}
               >
-                <Icon src={assetUrl(chevronIcon)} w={[16, null, null]} h={['auto', null, null]} aria-hidden='true' />
+                <Icon
+                    src={assetUrl(chevronIcon)}
+                    w={[16, null, null]}
+                    h={['auto', null, null]}
+                    aria-hidden='true'
+                />
               </Button>
             </Flex>
           </Flex>
@@ -200,7 +224,12 @@ export function Calendar({
             onClick={() => setVisibleMonth((currentMonth) => datePicker.addMonth(currentMonth, 1))}
             className={cx(styles.btn, styles.next)}
         >
-          <Icon src={assetUrl(arrowIcon)} w={[18, null, null]} h={[18, null, null]} aria-hidden='true' />
+          <Icon
+              src={assetUrl(arrowIcon)}
+              w={[18, null, null]}
+              h={[18, null, null]}
+              aria-hidden='true'
+          />
         </Button>
       </Flex>
 
@@ -231,7 +260,10 @@ export function Calendar({
                     bg={isCurrentVisibleMonth ? ['var(--primary)', 'var(--primary)', 'var(--primary)'] : ['var(--background)', 'var(--background)', 'var(--background)']}
                     onClick={() => handleMonthSelect(monthIndex)}
                 >
-                  <Text variant={['caption', 'caption', 'caption']} color={isCurrentVisibleMonth ? 'var(--white-100)' : undefined}>
+                  <Text
+                      variant={['caption', 'caption', 'caption']}
+                      color={isCurrentVisibleMonth ? 'var(--white-100)' : undefined}
+                  >
                     {monthLabel.slice(0, 3)}
                   </Text>
                 </Button>
@@ -296,7 +328,11 @@ export function Calendar({
                     ]}
                     onClick={() => onDateSelect(day)}
                   >
-                    <Text className={styles.dayText} variant={['caption', 'caption', 'caption']} color={dayTextColor}>
+                    <Text
+                        className={styles.dayText}
+                        variant={['caption', 'caption', 'caption']}
+                        color={dayTextColor}
+                    >
                       {day.getDate()}
                     </Text>
                   </Button>

@@ -154,7 +154,12 @@ export const CountryPicker = memo(function CountryPicker({ countries, country, d
                                 </Flex>
                             ))
                         ) : (
-                            <Text as="div" variant={['body', 'body', 'body']} p={[12, 12, 12]} color="var(--text-muted)">{words.empty}</Text>
+                            <Text
+                                as="div"
+                                variant={['body', 'body', 'body']}
+                                p={[12, 12, 12]}
+                                color="var(--text-muted)"
+                            >{words.empty}</Text>
                         )}
                     </Flex>
                 </Flex>

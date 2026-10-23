@@ -248,7 +248,12 @@ export function Marquee({
             minW={[0, 0, 0]}
             {...props}
         >
-            <Flex ref={trackRef} gap={gap} w={['max-content', 'max-content', 'max-content']} className={styles.track}>
+            <Flex
+                ref={trackRef}
+                gap={gap}
+                w={['max-content', 'max-content', 'max-content']}
+                className={styles.track}
+            >
                 {Array.from({ length: copies }, (_, i) => (
                     <Flex
                         key={i}

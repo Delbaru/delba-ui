@@ -158,7 +158,10 @@ function renderBlocks(blocks: Block[]): ReactNode[] {
   return blocks.flatMap((block, blockIndex) => {
     if (block.type === 'heading') {
       const Tag = `h${block.level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
-      return [<Tag key={`heading-${block.level}-${blockIndex}`} dangerouslySetInnerHTML={{ __html: block.content }} />];
+      return [<Tag
+          key={`heading-${block.level}-${blockIndex}`}
+          dangerouslySetInnerHTML={{ __html: block.content }}
+      />];
     }
 
     if (block.type === 'list') {
@@ -166,7 +169,10 @@ function renderBlocks(blocks: Block[]): ReactNode[] {
       return [
         <Tag key={`list-${block.tag}-${blockIndex}`}>
           {block.items.map((item, itemIndex) => (
-            <li key={`list-item-${blockIndex}-${itemIndex}`} dangerouslySetInnerHTML={{ __html: item }} />
+            <li
+                key={`list-item-${blockIndex}-${itemIndex}`}
+                dangerouslySetInnerHTML={{ __html: item }}
+            />
           ))}
         </Tag>,
       ];
@@ -175,7 +181,10 @@ function renderBlocks(blocks: Block[]): ReactNode[] {
     // Строки внутри одного абзаца (split по <br>) рендерим единым <p> с <br/> между ними:
     // перенос строки остаётся «тесным», а отступ между абзацами даёт margin самого <p>.
     return [
-      <p key={`paragraph-${blockIndex}`} dangerouslySetInnerHTML={{ __html: block.parts.join('<br/>') }} />,
+      <p
+          key={`paragraph-${blockIndex}`}
+          dangerouslySetInnerHTML={{ __html: block.parts.join('<br/>') }}
+      />,
     ];
   });
 }
@@ -356,7 +365,10 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
             {...props}
             {...linkedHandlers}
         >
-          <p className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)} style={clampStyle}>
+          <p
+              className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)}
+              style={clampStyle}
+          >
             {previewText}
           </p>
         </div>
@@ -477,7 +489,10 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
           {...props}
           {...linkedHandlers}
       >
-        <p className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)} style={clampStyle}>
+        <p
+            className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)}
+            style={clampStyle}
+        >
           {previewText}
         </p>
       </div>

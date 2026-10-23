@@ -349,7 +349,11 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
                 {/* Скелетон и значение подменяют друг друга на одном месте — значит
                     `transitionKey` (§8.4), а не голое условие: иначе полоса исчезает
                     кадром. Шеврон при этом снаружи обёртки и не мигает. */}
-                <Flex transitionKey={loading ? 'skeleton' : 'value'} animation="fadeIn" w={['100%', null, null]}>
+                <Flex
+                    transitionKey={loading ? 'skeleton' : 'value'}
+                    animation="fadeIn"
+                    w={['100%', null, null]}
+                >
                     {loading ? (
                         <Skeleton h={[16, null, null]} />
                     ) : showInlineError ? (
@@ -367,7 +371,14 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
                 </Flex>
             </Box>
 
-            <Icon aria-hidden src={assetUrl(arrowIcon)} fill="transparent" w={[20, 20, 20]} h={[20, 20, 20]} className={styles.Chevron} />
+            <Icon
+                aria-hidden
+                src={assetUrl(arrowIcon)}
+                fill="transparent"
+                w={[20, 20, 20]}
+                h={[20, 20, 20]}
+                className={styles.Chevron}
+            />
         </Flex>
     );
 
@@ -428,7 +439,13 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
             </Dropdown>
 
             {name && !disabled && selectFormValues(formValue, multiple === true).map((itemValue, index) => (
-                <input key={`${itemValue}-${index}`} type="hidden" name={name} form={form} value={itemValue} />
+                <input
+                    key={`${itemValue}-${index}`}
+                    type="hidden"
+                    name={name}
+                    form={form}
+                    value={itemValue}
+                />
             ))}
 
             {!displayError && comment && (

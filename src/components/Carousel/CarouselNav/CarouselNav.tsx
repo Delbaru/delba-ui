@@ -44,7 +44,12 @@ export function CarouselNav({ className, carouselId }: CarouselNavProps) {
                         aria-label='Предыдущий слайд'
                         data-carousel-nav-button='prev'
                     >
-                        <Icon src='./ui/arrows/arrow_gold.svg' w={[70, 36, null]} h={[40, 20, null]} aria-hidden />
+                        <Icon
+                            src='./ui/arrows/arrow_gold.svg'
+                            w={[70, 36, null]}
+                            h={[40, 20, null]}
+                            aria-hidden
+                        />
                     </Button>
 
                     <Button
@@ -60,7 +65,12 @@ export function CarouselNav({ className, carouselId }: CarouselNavProps) {
                         aria-label='Следующий слайд'
                         data-carousel-nav-button='next'
                     >
-                        <Icon src='./ui/arrows/arrow_gold.svg' w={[70, 36, null]} h={[40, 20, null]} aria-hidden />
+                        <Icon
+                            src='./ui/arrows/arrow_gold.svg'
+                            w={[70, 36, null]}
+                            h={[40, 20, null]}
+                            aria-hidden
+                        />
                     </Button>
                 </>
             ) : null}

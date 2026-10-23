@@ -187,7 +187,12 @@ function TextSlideSwap({ content, options }: TextAnimationContext<TextSlideOptio
   // перезапускались на каждом свопе (сама ячейка по позиции переиспользуется).
   const swapCellNode = (key: string, outStr: string, inStr: string): ReactNode => (
     <span key={key} data-swap-cell="" className={'ui-slide-swap-cell'}>
-      <span key={`out-${generation}`} data-swap-out="" className={'ui-slide-swap-out'} aria-hidden="true">{nbsp(outStr)}</span>
+      <span
+          key={`out-${generation}`}
+          data-swap-out=""
+          className={'ui-slide-swap-out'}
+          aria-hidden="true"
+      >{nbsp(outStr)}</span>
 
       <span key={`in-${generation}`} data-swap-in="" className={'ui-slide-swap-in'}>{nbsp(inStr)}</span>
     </span>
