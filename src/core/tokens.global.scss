@@ -63,6 +63,7 @@
 }
 
 @include meta.load-css('../components/Button/hover/button-hover');
+@include meta.load-css('./base/hover-motion');
 @include meta.load-css('../components/Button/idle/button-idle');
 
 // ── Краевой fade скролл-контейнеров (mask + scroll-driven animations) ─────────────────────────

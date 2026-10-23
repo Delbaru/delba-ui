@@ -95,6 +95,8 @@ export { isAppearanceAnimate, isInViewAnimate, isOpenAnimate, resolveRevealInput
 export type { AppearanceAnimate, InViewAnimate, OpenAnimate, RevealConfig, RevealInput, RevealKey, RevealOptions, RevealProps } from './core/reveal/reveal';
 export type { MotionTime, MotionTimingName } from './core/base/timing';
 export type { MotionDistance, MotionDistanceName } from './core/base/distance';
+export type { HoverTransformAnimate, HoverTransformOptions, HoverTransformValues } from './core/base/hover-motion';
+export type { SharedAnimate } from './hooks/useSharedMotion';
 export * from './components/PhoneField';
 
 export { useScrollProgress, type ScrollProgressOptions } from './hooks/useScrollProgress';

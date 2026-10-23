@@ -1,16 +1,20 @@
 'use client';
 
-import { cloneElement, createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent, type MouseEventHandler, type ReactElement, type ReactNode } from 'react';
+import { cloneElement, createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent, type MouseEventHandler, type ReactElement, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 
 import { composeEventHandlers, cx, stateProps, useMergedRefs, type ComponentStateValue, type WithRef } from '../../core';
 import { useAnchoredFloating } from '../../hooks/useAnchoredFloating';
 import { useOutsideDismiss } from '../../hooks/useOutsideDismiss';
 import { useCollapseState } from '../../hooks/useCollapseState';
+import { useSharedMotion } from '../../hooks/useSharedMotion';
+import { useOpenPresence } from '../../hooks/useOpenPresence';
+import { isOpenAnimate, type OpenAnimate } from '../../core/reveal/reveal';
 import { Box, type BoxProps } from '../Box';
 import { CollapseWrap, type CollapseSettings } from '../Collapse/CollapseWrap';
 import { composeDropdownTriggerClick } from './trigger';
 import styles from './Dropdown.module.scss';
+import { DropdownBackdrop, type DropdownBackdropOptions } from './DropdownBackdrop';
 import { useInteractionActivity } from '../../core/InteractionScope';
 
 export interface DropdownTriggerProps {
@@ -21,7 +25,13 @@ export interface DropdownTriggerProps {
   'aria-controls'?: string;
 }
 
-export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'collapse'> {
+export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'collapse' | 'animate'> {
+  /** An owner's open drives enter/exit; without it the existing collapse behavior is preserved. */
+  animate?: BoxProps['animate'] | OpenAnimate;
+  /** Geometry anchor; keyboard focus and trigger semantics remain attached to trigger. */
+  anchorRef?: RefObject<HTMLElement | null>;
+  /** Minimum distance from viewport edges in native pixels. Default 8. */
+  viewportPadding?: number;
   /** DOM data-атрибуты поверхности панели, включая проектные маркеры портала. */
   [attribute: `data-${string}`]: string | number | boolean | undefined;
   /** Край триггера, к которому прижата панель. */
@@ -49,6 +59,8 @@ interface DropdownBaseProps extends Omit<BoxProps, 'children'> {
   children: ReactNode | ((close: () => void) => ReactNode);
   /** Размещение, оформление и раскрытие выпадающей панели. */
   panel?: DropdownPanelOptions;
+  /** Optional non-focusable scrim; uses the same portal and outside-dismiss owner as the panel. */
+  backdrop?: DropdownBackdropOptions;
   /** Состояния оформления корня и его портальной области. */
   state?: ComponentStateValue;
 }
@@ -84,6 +96,7 @@ export function Dropdown({
   trigger,
   children,
   panel = {},
+  backdrop,
   open: controlledOpen,
   defaultOpen = false,
   onOpenChange,
@@ -98,7 +111,7 @@ export function Dropdown({
 }: WithRef<DropdownProps, HTMLDivElement>) {
   const {
     side = 'start', offset = 8, portal = false, matchTriggerWidth = false, keepMounted = true,
-    inheritVariables = NO_VARIABLES, collapse: panelCollapse, ...panelProps
+    inheritVariables = NO_VARIABLES, collapse: panelCollapse, animate: panelAnimate, anchorRef: geometryAnchorRef, viewportPadding = VIEWPORT_PADDING, ...panelProps
   } = panel;
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const requestedOpen = controlledOpen ?? internalOpen;
@@ -111,6 +124,11 @@ export function Dropdown({
   const rootRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const openAnimate = isOpenAnimate(panelAnimate) ? panelAnimate : undefined;
+  const { motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ animate: openAnimate, open });
+  const presence = useOpenPresence(open, Boolean(openAnimate));
+  const setSurfaceRef = useMergedRefs(presence.ref, setMotionNode);
+  const geometryRef = geometryAnchorRef ?? anchorRef;
   const focusOnOpen = useRef<'first' | 'last' | null>(null);
   const scopeRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLDivElement>(null);
@@ -138,15 +156,12 @@ export function Dropdown({
   const close = () => {
     focusOnOpen.current = null;
     if (!open) return;
-    if (panelRef.current?.contains(document.activeElement)) {
-      anchorRef.current?.focus();
-    }
     changeOpen(false);
   };
   const dismissProps = useOutsideDismiss([rootRef, panelRef], close, { enabled: open, escape: false, blockOutsideClick });
   const { style: floatingStyle, updatePosition } = useAnchoredFloating({
-    anchorRef, floatingRef: panelRef, isActive: portal && open,
-    placement: 'bottom', align: side, gap: gapPixels, viewportPadding: VIEWPORT_PADDING,
+    anchorRef: geometryRef, floatingRef: panelRef, isActive: portal && open,
+    placement: 'bottom', align: side, gap: gapPixels, viewportPadding,
     keepPositionWhenInactive: true,
   });
 
@@ -193,16 +208,21 @@ export function Dropdown({
       const width = probeRef.current?.getBoundingClientRect().width;
       if (width !== undefined) setGapPixels(Math.sign(offset) * width);
       const root = rootRef.current;
-      const anchor = anchorRef.current;
+      const anchor = geometryRef.current;
       const panel = panelRef.current;
       if (root && anchor && panel) {
         const triggerRect = anchor.getBoundingClientRect();
-        const rootRect = root.getBoundingClientRect();
-        const left = triggerRect.left - rootRect.left - root.clientLeft;
+        const parent = panel.offsetParent;
+        const parentRect = parent instanceof HTMLElement ? parent.getBoundingClientRect() : { left: 0, top: 0 };
+        const borderLeft = parent instanceof HTMLElement ? parent.clientLeft : 0;
+        const borderTop = parent instanceof HTMLElement ? parent.clientTop : 0;
+        const scrollLeft = parent instanceof HTMLElement ? parent.scrollLeft : 0;
+        const scrollTop = parent instanceof HTMLElement ? parent.scrollTop : 0;
+        const left = triggerRect.left - parentRect.left - borderLeft + scrollLeft;
         panel.style.setProperty('--dropdown-anchor-start', `${left}px`);
         panel.style.setProperty('--dropdown-anchor-center', `${left + triggerRect.width / 2}px`);
         panel.style.setProperty('--dropdown-anchor-end', `${left + triggerRect.width}px`);
-        panel.style.setProperty('--dropdown-anchor-bottom', `${triggerRect.bottom - rootRect.top - root.clientTop}px`);
+        panel.style.setProperty('--dropdown-anchor-bottom', `${triggerRect.bottom - parentRect.top - borderTop + scrollTop}px`);
         panel.style.setProperty('--dropdown-anchor-width', `${triggerRect.width}px`);
       }
       const scope = scopeRef.current;
@@ -217,13 +237,31 @@ export function Dropdown({
     sync();
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(sync) : null;
     if (rootRef.current) observer?.observe(rootRef.current);
-    if (anchorRef.current) observer?.observe(anchorRef.current);
+    if (geometryRef.current) observer?.observe(geometryRef.current);
     window.addEventListener('resize', sync);
     return () => {
       observer?.disconnect();
       window.removeEventListener('resize', sync);
     };
-  }, [rootNode, portal, portalNode, offset, matchTriggerWidth, inheritVariables, className, style]);
+  }, [rootNode, portal, portalNode, offset, matchTriggerWidth, inheritVariables, className, style, geometryRef]);
+
+  useLayoutEffect(() => {
+    if (!open && panelRef.current?.contains(document.activeElement)) anchorRef.current?.focus();
+  }, [open]);
+
+  const surface = (
+    <Box
+        {...panelProps}
+        ref={setSurfaceRef}
+        animate={isOpenAnimate(panelAnimate) ? undefined : panelAnimate}
+        className={cx(styles.surface, panelProps.className)}
+        style={{ ...motionStyle, ...panelProps.style }}
+        {...revealAttrs}
+        hidden={openAnimate ? !presence.present : panelProps.hidden}
+    >
+      {typeof children === 'function' ? children(close) : children}
+    </Box>
+  );
 
   const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
     focusOnOpen.current = null;
@@ -273,6 +311,8 @@ export function Dropdown({
     if (event.target instanceof Element && event.target.closest('a[href]')) close();
   };
   const content = (
+    <>
+    {backdrop && <DropdownBackdrop {...backdrop} open={open} />}
     <Box
       ref={panelRef}
       id={id}
@@ -280,7 +320,7 @@ export function Dropdown({
       className={cx(styles.panel, portal && styles.portalPanel)}
       style={{
         '--dropdown-offset': `calc(${offset} * var(--rpx))`,
-        '--dropdown-viewport-padding': `${VIEWPORT_PADDING}px`,
+        '--dropdown-viewport-padding': `${viewportPadding}px`,
         ...(portal ? floatingStyle : null),
       } as CSSProperties}
       data-side={side}
@@ -291,7 +331,7 @@ export function Dropdown({
       onMouseDownCapture={dismissProps.onMouseDownCapture}
       onClick={handlePanelClick}
     >
-      <CollapseWrap
+      {openAnimate ? ((presence.present || keepMounted) && surface) : <CollapseWrap
         {...panelCollapse}
         open={open}
         fade={panelCollapse?.fade ?? true}
@@ -301,11 +341,10 @@ export function Dropdown({
           panelCollapse?.onTransition?.(transition);
         }}
       >
-        <Box {...panelProps} className={cx(styles.surface, panelProps.className)}>
-          {typeof children === 'function' ? children(close) : children}
-        </Box>
-      </CollapseWrap>
+        {surface}
+      </CollapseWrap>}
     </Box>
+    </>
   );
 
   return (
@@ -332,9 +371,19 @@ export function Dropdown({
         'aria-expanded': open,
         'aria-controls': trigger.props['aria-controls'] ?? id,
       })}
-      <Box ref={probeRef} className={styles.gapProbe} aria-hidden style={{ width: `calc(${Math.abs(offset)} * var(--rpx))` }} />
+      <Box
+          ref={probeRef}
+          className={styles.gapProbe}
+          aria-hidden
+          style={{ width: `calc(${Math.abs(offset)} * var(--rpx))` }}
+      />
       {portal && portalNode ? createPortal(
-        <Box ref={scopeRef} className={cx(styles.PortalRoot, className)} style={style} {...stateProps(state)}>{content}</Box>, portalNode,
+        <Box
+            ref={scopeRef}
+            className={cx(styles.PortalRoot, className)}
+            style={style}
+            {...stateProps(state)}
+        >{content}</Box>, portalNode,
       ) : content}
     </Box>
     </DropdownAncestors.Provider>

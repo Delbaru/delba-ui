@@ -6,8 +6,7 @@ import type React from 'react';
 import { boxLayout, cx, createLayoutClasses, resolveRadiusInput, resolveResponsive, shouldUseNextLink, splitBoxLayout, splitRootDomProps, stateProps as buildStateProps, stateLinkProps, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef, composeEventHandlers, useMergedRefs } from '../../core';
 import { Flex } from '../Flex';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
-import { isAppearanceAnimate, type AppearanceAnimate } from '../../core/reveal/reveal';
-import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useIconTooltip, type IconTooltipDirection } from './IconTooltip';
 import { hasIconSource, parseAspectRatio, resolveIconSource, type IconComponent, type IconSource, type ResolvedIconSource } from './svg';
 import { useIconSwap, componentSwapKey, type IconAnimate } from './swap';
@@ -97,7 +96,7 @@ export interface IconProps extends Omit<IconBaseSvgProps, keyof BoxLayoutProps>,
    * старая уходит (opacity+scale), затем въезжает новая из scale→1.
    * Опции: animate={['swap', { duration, scale }]}.
    */
-  animate?: AppearanceAnimate | IconAnimate;
+  animate?: SharedMotionProps<IconAnimate>['animate'];
 }
 
 /**
@@ -322,7 +321,7 @@ export function Icon({
   const svgHtml = useMemo(() => ({ __html: svgContent ?? '' }), [svgContent]);
   const hoverSvgHtml = useMemo(() => ({ __html: hoverSvgContent ?? '' }), [hoverSvgContent]);
   const rootStateProps = buildStateProps(state);
-  const contentAnimate = isAppearanceAnimate(animate) ? undefined : animate;
+  const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
   // Пользовательский обработчик первым, внутренние (моушен, подсказка) — следом и без отмены:
   // preventDefault снаружи не должен оставить подсказку висеть или моушен недоигранным.
@@ -360,7 +359,7 @@ export function Icon({
     resolvedRootRadius.blr,
     resolvedRootBg,
     resolvedRootClassName,
-  ].some((value) => value !== undefined) || isAppearanceAnimate(animate);
+  ].some((value) => value !== undefined) || isSharedMotionAnimate(animate);
   const contentHandlers = needsRootWrapper ? undefined : linkedHandlers;
   // motionStyle уже собран useSharedMotion (transform + preserve-3d + willChange) — когда есть
   // root-обёртка, моушен живёт на ней, иначе вешаем его прямо на контент.

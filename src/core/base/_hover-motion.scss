@@ -1,0 +1,22 @@
+@layer ui.states {
+  [data-hover-motion] {
+    --hover-motion-transform: var(--hover-motion-from);
+    transition: transform var(--hover-motion-duration) var(--hover-motion-easing);
+  }
+
+  [data-hover-motion][data-hover-active] {
+    --hover-motion-transform: var(--hover-motion-to);
+  }
+
+  [data-hover-motion]:is(:disabled, [aria-disabled='true']),
+  :is(:disabled, [aria-disabled='true'], [inert]) [data-hover-motion] {
+    --hover-motion-transform: var(--hover-motion-from);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-hover-motion][data-hover-motion] {
+      --hover-motion-transform: var(--hover-motion-from);
+      transition: none;
+    }
+  }
+}

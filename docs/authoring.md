@@ -258,6 +258,12 @@ AST-правило `jsx-format` проверяет компактные коро
 `{ when: 'inView', effect: 'counter', duration: 'slow' }` у Text,
 `{ when: 'change', effect: 'textSlide', duration: 'fast' }` у Text,
 `{ when: 'change', effect: 'veil', direction: 1, duration: 'slow' }` у Img.
+Hover transform задаётся `{ when: 'hover', effect: 'transform', source: 'closest', scale: 1.025, duration: 'slow' }`;
+область карточки отмечается `Flex motionScope`. Hover можно вложить в объект появления.
+Открытие Dropdown задаётся `panel.animate={{ when: 'open', effect: 'down', duration: 'normal' }}`;
+подложка, dismiss и ожидание exit принадлежат Dropdown, а не проектным слушателям/таймерам.
+У Icon смена глифа задаётся `{ when: 'change', effect: 'swap', duration: 'fast', scale: 1, rotate: 0 }`;
+duration относится к каждой из двух последовательных фаз, прежние string/tuple формы совместимы.
 В новых объектах время — секунды или ключ `ui.config.motion.timing`. Старые формы сохраняют
 единицы: legacy `CounterOptions.duration` — миллисекунды. CSS и JS читают один токен на одном узле
 через `motionTimeCss` / `readMotionTimeMs`, а не отдельный список имён или таймер с копией значения.
