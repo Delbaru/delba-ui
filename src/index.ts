@@ -7,6 +7,7 @@ export * from './components/Carousel/CarouselNav';
 export * from './components/Checkbox';
 export * from './components/ChoiceButtons';
 export * from './components/Dropdown';
+export * from './components/DurationPicker';
 export * from './components/Flex';
 export * from './components/Grid';
 export * from './components/GradientBorder';

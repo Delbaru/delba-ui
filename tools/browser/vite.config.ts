@@ -26,6 +26,7 @@ const fixtureUtilities: Plugin = {
       { file: ssrFixtureFile, text: fs.readFileSync(ssrFixtureFile, 'utf8') },
       { file: path.join(fixtureRoot, 'refactor-contracts.fixture.tsx'), text: fs.readFileSync(path.join(fixtureRoot, 'refactor-contracts.fixture.tsx'), 'utf8') },
       { file: path.join(kitRoot, 'src/components/GradientBorder/GradientBorder.tsx'), text: fs.readFileSync(path.join(kitRoot, 'src/components/GradientBorder/GradientBorder.tsx'), 'utf8') },
+      { file: path.join(kitRoot, 'src/components/DurationPicker/DurationPicker.tsx'), text: fs.readFileSync(path.join(kitRoot, 'src/components/DurationPicker/DurationPicker.tsx'), 'utf8') },
     ]);
     return `${renderRules(rules)}\n${scaleCss(resolveScale())}`;
   },

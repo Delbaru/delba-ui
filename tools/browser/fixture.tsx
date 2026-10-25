@@ -35,6 +35,7 @@ import { VideoPlayer } from '../../src/components/VideoPlayer/VideoPlayer';
 import { Checkbox } from '../../src/components/Checkbox/Checkbox';
 import { Radio } from '../../src/components/Radio/Radio';
 import { SwitchButton } from '../../src/components/SwitchButton/SwitchButton';
+import { DurationPicker } from '../../src/components/DurationPicker';
 import type { CollapseHandle } from '../../src/hooks/useCollapseMotion';
 
 type FieldEvent =
@@ -1214,10 +1215,14 @@ function BoxLayoutContracts() {
 export function BrowserFixture() {
   if (typeof window !== 'undefined' && !window.__fieldLogs) initWindowState();
   const [skipDecoration, setSkipDecoration] = useState(false);
+  const [duration, setDuration] = useState(90);
 
   return (
     <main className="fixture">
       <h1>Delba UI browser regression fixture</h1>
+      <DurationPicker value={duration} onValueChange={setDuration} />
+      <DurationPicker value={60} onValueChange={setDuration} disabled aria-label="Disabled duration" />
+      <output data-testid="duration-value">{duration}</output>
       <InteractionScopeFixture />
       <RefactorContractsFixture />
       <ScrollAreaFixture />

@@ -1,0 +1,39 @@
+@use '../../core/mixins' as m;
+
+@layer ui.components {
+  .ui-duration-selected-band {
+    transform: translateY(-50%);
+    pointer-events: none;
+    background: var(--line);
+  }
+  @keyframes ui-duration-enter {
+    from { transform: translateY(calc(var(--duration-direction) * 24 * var(--rpx))); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes ui-duration-exit {
+    from { transform: translateY(0); opacity: 1; }
+    to { transform: translateY(calc(var(--duration-direction) * -24 * var(--rpx))); opacity: 0; }
+  }
+  .ui-duration-wheel {
+    position: relative;
+    cursor: ns-resize;
+    touch-action: none;
+    user-select: none;
+    overflow: hidden;
+    .ui-duration-wheel-layer {
+      pointer-events: none;
+      & > [aria-hidden='true']:not([state~='selected']) { opacity: .45; }
+      &[data-motion='in'] { animation: ui-duration-enter var(--t-d-fast) var(--t-t-f-ease) both; }
+      &[data-motion='out'] { animation: ui-duration-exit var(--t-d-fast) var(--t-t-f-ease) both; }
+    }
+    &:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    &[aria-disabled='true'] { cursor: default; opacity: .5; }
+  }
+}
+
+@layer ui.states {
+  @include m.reduced-motion {
+    .ui-duration-wheel-layer[data-motion='in'] { animation: none; }
+    .ui-duration-wheel-layer[data-motion='out'] { display: none; }
+  }
+}
