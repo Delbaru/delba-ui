@@ -4,7 +4,16 @@ import { Flex } from '../../src/components/Flex/Flex';
 
 export function TextTimelineFixture() {
   const [version, setVersion] = useState(0);
+  const [labelIndex, setLabelIndex] = useState(0);
+  const labels = ['Подвески', 'Подвески новые', 'Все украшения', 'Серьги'];
   return <section data-testid="text-timelines">
+    <button data-testid="slide-label-update" onClick={() => setLabelIndex(index => (index + 1) % labels.length)}>Change label</button>
+    <Text data-testid="slide-label" as="h2" fontSize={[72, 72, 72]} lineHeight={[1, 1, 1]} animate={{ when: 'change', effect: 'textSlide', by: 'text', duration: 0.35 }}>
+      {labels[labelIndex]}
+    </Text>
+    <Text as="p" data-testid="slide-inline">Найдено{' '}
+      <Text as="span" variant={['inherit', 'inherit', 'inherit']} animate={{ when: 'change', effect: 'textSlide', by: 'text' }}>изделий</Text>
+    </Text>
     <button onClick={() => setVersion(version + 1)} data-testid="timeline-rerender">Rerender {version}</button>
     {[0, 0.5, 1].map(progress => <Text key={progress} data-testid={`timeline-${progress}`} animate={{
       when: 'inView', delay: 0.2, effect: {

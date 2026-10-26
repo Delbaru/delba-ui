@@ -126,6 +126,46 @@
   }
 }
 
+// Whole labels keep their natural kerning and wrapping, including in rest. The clip includes
+// ascenders/descenders outside a tight heading line box; travel includes that extra ink space.
+.ui-slide-swap-value {
+  max-width: 100%;
+
+  .ui-slide-value-viewport {
+    display: block;
+    position: relative;
+    // clip-path preserves the text baseline; overflow:hidden makes an inline-block
+    // use its bottom edge as the baseline and raises the label next to plain text.
+    clip-path: inset(-0.16em 0);
+  }
+
+  .ui-slide-value-static,
+  .ui-slide-value-in {
+    display: block;
+  }
+
+  .ui-slide-value-in {
+    animation: ui-slide-value-enter var(--slide-swap-dur, 0.4s) var(--t-t-f-cubic-bezier) both;
+  }
+
+  .ui-slide-value-out {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    animation: ui-slide-value-leave var(--slide-swap-dur, 0.4s) var(--t-t-f-cubic-bezier) both;
+  }
+}
+
+@keyframes ui-slide-value-enter {
+  from { transform: translateY(calc(100% + 0.32em)); }
+  to { transform: translateY(0); }
+}
+
+@keyframes ui-slide-value-leave {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(-100% - 0.32em)); }
+}
+
 // Чистый слайд без opacity: ячейка клипует вынос, поэтому цифра остаётся чёткой (полная непрозрачность),
 // а не полупрозрачно-мыльной. Старая уезжает вверх за край клипа, новая въезжает снизу.
 @keyframes ui-slide-enter {
@@ -165,7 +205,9 @@
     }
 
     .ui-slide-swap-in,
-    .ui-slide-swap-out {
+    .ui-slide-swap-out,
+    .ui-slide-value-in,
+    .ui-slide-value-out {
       animation: none;
     }
   }

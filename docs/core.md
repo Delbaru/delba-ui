@@ -360,8 +360,14 @@ hidden. Общий `useOpenPresence` отменяет ожидание при п
 <Img animate={{ when: 'change', effect: 'veil', direction, duration: 'slow' }} … />
 <Icon name={open ? 'minus' : 'plus'} animate={{ when: 'change', effect: 'swap', duration: 'fast', scale: 1, rotate: 0 }} />
 <Text animate={{ when: 'change', effect: 'textSlide', duration: 'fast' }}>{title}</Text>
+<Text animate={{ when: 'change', effect: 'textSlide', by: 'text', duration: 'normal' }}>{category}</Text>
 <Text animate={{ when: 'inView', effect: 'counter', duration: 'slow' }}>70%</Text>
 ```
+
+У `textSlide` режим `by: 'text'` сменяет всю подпись, включая совпадающие буквы.
+Он сохраняет обычный кернинг и переносы слов; область обрезки учитывает выносные
+элементы шрифта. По умолчанию `by: 'character'` анимирует только различающиеся
+символы, что подходит для счётчиков. Первый показ и reduced motion — без свопа.
 
 `IconChangeAnimate` экспортируется из корня кита. У Icon `swap` и `spin` запускаются при смене
 глифа после его загрузки: сначала уходит прежний, затем появляется новый. `duration` задаёт время

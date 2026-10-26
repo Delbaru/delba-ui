@@ -164,6 +164,34 @@ function TextSlideSwap({ content, options }: TextAnimationContext<TextSlideOptio
 
   const vars = { '--slide-swap-dur': durationTime === undefined ? `${fallbackSeconds}s` : motionTimeCss(durationTime) } as CSSProperties;
 
+  // A single viewport keeps the whole label moving together and preserves normal word wrapping.
+  // Keep its structure in rest too: switching back to per-character spans changes font kerning.
+  if (options?.by === 'text') {
+    return (
+      <span ref={viewportRef} className="ui-slide-swap ui-slide-swap-value" style={vars}>
+        <span className="ui-slide-value-viewport">
+          {previous !== null && (
+            <span
+                key={`out-${generation}`}
+                data-swap-out=""
+                aria-hidden="true"
+                className="ui-slide-value-out"
+            >
+              {previous}
+            </span>
+          )}
+          <span
+              key={`in-${generation}`}
+              data-swap-in=""
+              className={previous === null ? 'ui-slide-value-static' : 'ui-slide-value-in'}
+          >
+            {current}
+          </span>
+        </span>
+      </span>
+    );
+  }
+
   const currentChars = Array.from(current);
   const previousChars = previous === null ? null : Array.from(previous);
   const nbsp = (ch: string) => (ch === ' ' ? ' ' : ch);
