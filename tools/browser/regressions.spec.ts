@@ -1281,7 +1281,7 @@ test('Select preserves panel styling, grouped options and opening guards through
     await expect(surface).toHaveCSS('border-top-left-radius', '6px');
     const sizes = await trigger.evaluate((node) => {
       const list = document.getElementById(node.getAttribute('aria-controls') ?? '');
-      return { trigger: node.getBoundingClientRect().width, surface: list?.parentElement?.getBoundingClientRect().width };
+      return { trigger: node.parentElement?.getBoundingClientRect().width ?? 0, surface: list?.parentElement?.getBoundingClientRect().width };
     });
     expect(sizes.surface).toBeDefined();
     expect(Math.abs((sizes.surface ?? 0) - sizes.trigger)).toBeLessThan(1);
@@ -1762,17 +1762,18 @@ test('Modal scroll lock preserves body padding when a stable scrollbar gutter re
   await openFixture(page);
   await page.evaluate(() => {
     document.documentElement.style.setProperty('scrollbar-gutter', 'stable');
+    document.documentElement.style.setProperty('scrollbar-width', 'thin');
     document.documentElement.style.setProperty('scrollbar-color', 'gold black');
     document.body.style.setProperty('padding-right', '36px', 'important');
   });
-  const before = await page.evaluate(() => document.documentElement.clientWidth);
+  const before = await page.evaluate(() => document.documentElement.getBoundingClientRect().width);
   await page.getByRole('button', { name: 'Open First independent lease', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'First independent lease', exact: true });
   await expect(dialog).toBeVisible();
   const viewport = dialog.locator('.ui-scrollbar');
   await expect(viewport).toHaveCSS('scrollbar-color', 'auto');
   expect(await viewport.evaluate((node) => getComputedStyle(node, '::-webkit-scrollbar-button').display)).toBe('none');
-  expect(await page.evaluate(() => document.documentElement.clientWidth)).toBe(before);
+  expect(await page.evaluate(() => document.documentElement.getBoundingClientRect().width)).toBe(before);
   await expect(page.locator('body')).toHaveCSS('padding-right', '36px');
   await dialog.getByRole('button', { name: 'Unmount First independent lease', exact: true }).click();
   await expect(dialog).toHaveCount(0);

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Dropdown } from '../../src/components/Dropdown';
+import { Select } from '../../src/components/Select';
 
 export function DropdownOpenFixture() {
   const anchor = useRef<HTMLDivElement>(null);
@@ -7,6 +8,14 @@ export function DropdownOpenFixture() {
   const [accept, setAccept] = useState(true);
   const [mounted, setMounted] = useState(true);
   return <section aria-label="Animated dropdown contracts" style={{ padding: 20 }}>
+    <Select
+      aria-label="Animated select"
+      options={[{ value: 'one', label: 'First option' }, { value: 'two', label: 'Second option' }]}
+      defaultValue="one"
+      w={[240, 240, 240]}
+      h={[44, 44, 44]}
+      panel={{ r: [0, 0, 0], animate: { when: 'open', effect: 'down', distance: 8, duration: 0.2 } }}
+    />
     <label><input
         type="checkbox"
         checked={accept}

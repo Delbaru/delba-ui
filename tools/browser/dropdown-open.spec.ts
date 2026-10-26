@@ -1,6 +1,42 @@
 import { expect, test } from '@playwright/test';
 
 for (const reducedMotion of ['reduce', 'no-preference'] as const) {
+  test(`select delegates panel motion and preserves selection and focus (${reducedMotion})`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion });
+    await page.goto('/?dropdown-open');
+    const trigger = page.getByRole('button', { name: 'Animated select', exact: true });
+    await trigger.locator('..').click({ position: { x: 2, y: 2 } });
+    await expect(trigger).toBeFocused();
+    const list = page.getByRole('listbox');
+    const surface = list.locator('..');
+    await expect(surface).toHaveAttribute('data-reveal', 'down');
+    await expect(surface).toHaveCSS('border-radius', '0px');
+    // A padded field is the geometry anchor; the inner focus target is smaller.
+    await expect.poll(async () => {
+      const field = await trigger.locator('..').boundingBox();
+      const panel = await surface.boundingBox();
+      return field && panel ? Math.max(
+        Math.abs(field.x - panel.x), Math.abs(field.width - panel.width),
+        Math.abs(field.y + field.height - panel.y),
+      ) : Infinity;
+    }).toBeLessThan(2);
+    expect(await list.evaluate(node => node.closest('.ui-collapse'))).toBeNull();
+    await page.keyboard.press('Escape');
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await trigger.click();
+    await page.getByRole('option', { name: 'Second option', exact: true }).click();
+    await expect(trigger).toHaveText('Second option');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(surface).toBeHidden();
+    const field = await trigger.locator('..').boundingBox();
+    expect(field).not.toBeNull();
+    // Дизайн-единицы масштабируются темой fixture; проверяем пропорцию w/h.
+    expect((field?.height ?? 0) / (field?.width ?? 1)).toBeCloseTo(44 / 240, 2);
+  });
+}
+
+for (const reducedMotion of ['reduce', 'no-preference'] as const) {
   test(`dropdown open animation retains exit, restores focus and survives reversal (${reducedMotion})`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion });
     await page.goto('/?dropdown-open');

@@ -13,19 +13,30 @@ function inlineStyle() {
   };
 }
 
-function fixture(gutter = 16) {
+function fixture(gutter = 16, stable = false) {
   const rootStyle = inlineStyle();
   const bodyStyle = inlineStyle();
   const document = {
     documentElement: {
       style: rootStyle,
       get clientWidth() { return rootStyle.getPropertyValue('overflow') === 'hidden' ? 1000 : 1000 - gutter; },
+      getBoundingClientRect() {
+        return { width: !stable && rootStyle.getPropertyValue('overflow') === 'hidden' ? 1000 : 1000 - gutter };
+      },
     },
     body: { style: bodyStyle },
     defaultView: { getComputedStyle: () => ({ paddingRight: '12px' }) },
   } as unknown as Document;
   return { document, rootStyle, bodyStyle };
 }
+
+test('stable gutter keeps its layout width even when clientWidth reports the viewport', () => {
+  const { document, bodyStyle } = fixture(16, true);
+  const release = acquireScrollLock(document);
+  assert.equal(document.documentElement.clientWidth, 1000);
+  assert.equal(bodyStyle.getPropertyValue('padding-right'), '');
+  release();
+});
 
 test('overlapping providers keep their document locked until the last lease ends', () => {
   const { document, rootStyle, bodyStyle } = fixture();
