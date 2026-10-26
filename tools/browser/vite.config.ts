@@ -24,7 +24,7 @@ const fixtureUtilities: Plugin = {
     const rules = extractUtilityRules([
       { file: fixtureFile, text: fs.readFileSync(fixtureFile, 'utf8') },
       { file: ssrFixtureFile, text: fs.readFileSync(ssrFixtureFile, 'utf8') },
-      ...['hover-motion.fixture.tsx', 'dropdown-open.fixture.tsx'].map((name) => {
+      ...['hover-motion.fixture.tsx', 'dropdown-open.fixture.tsx', 'grid-layout.fixture.tsx'].map((name) => {
         const file = path.join(fixtureRoot, name);
         return { file, text: fs.readFileSync(file, 'utf8') };
       }),

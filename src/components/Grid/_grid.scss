@@ -6,3 +6,10 @@
 .ui-grid-item-flex {
   display: flex;
 }
+
+.ui-grid-layout {
+  position: relative;
+
+  > [data-grid-layout-key] { transform-origin: top left; }
+  > [data-grid-layout-exit] { position: absolute; pointer-events: none; opacity: 0; }
+}

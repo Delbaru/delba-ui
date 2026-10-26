@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useLinkPrefetch, type LinkPrefetchProps } from '../../hooks/useLinkPrefetch';
 import { useRef, type CSSProperties } from 'react';
 import type React from 'react';
 import { boxLayout, composeEventHandlers, containerClass, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ContainerProp, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
@@ -32,7 +33,7 @@ export interface FlexProps
     BoxLayoutProps,
     ContainerProp,
     SharedMotionProps<ContentAnimate>,
-    RevealProps {
+    RevealProps, LinkPrefetchProps {
   children?: React.ReactNode;
   style?: CSSProperties;
   state?: ComponentStateValue;
@@ -139,16 +140,18 @@ export function Flex({
   onInteractionChange,
   onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp,
   onClick, onFocus, onBlur,
-  href, target, rel, download, newTab, nofollow, noreferrer,
+  href, target, rel, download, newTab, nofollow, noreferrer, prefetch,
   linkState,
   ...props
 }: WithRef<FlexProps, HTMLElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
   const isLink = Boolean(href);
-  const Comp = (isLink ? (shouldUseNextLink(href, target, download) ? Link : 'a') : as) as React.ElementType;
+  const useNextLink = isLink && shouldUseNextLink(href, target, download);
+  const prepare = useLinkPrefetch(prefetch, href, useNextLink && !newTab);
+  const Comp = (isLink ? (useNextLink ? Link : 'a') : as) as React.ElementType;
   const resolved = resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer });
-  const anchorProps = isLink ? { ...rest, ...resolved } : rest;
+  const anchorProps = isLink ? { ...rest, ...resolved, ...(useNextLink ? { prefetch: prepare.prefetch } : null) } : rest;
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal, animate });
   const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
   const motionInput = contentAnimate !== undefined ? resolveContentAnimate(contentAnimate) : { animation, key: transitionKey };
@@ -184,13 +187,13 @@ export function Flex({
       {...stateProps(state, trackInteraction && active && 'interacting')}
       {...anchorProps}
       {...stateLinkProps(linkState, {
-        onMouseEnter: composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter),
+        onMouseEnter: composeEventHandlers(composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter), prepare.onIntent),
         onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),
         onMouseLeave: composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave),
         onMouseDown,
         onMouseUp,
         onClick,
-        onFocus,
+        onFocus: composeEventHandlers(onFocus, prepare.onIntent),
         onBlur,
       })}
       onAnimationEnd={contentMotion.onAnimationEnd}

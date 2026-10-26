@@ -9,7 +9,7 @@ const channel = process.env.PLAYWRIGHT_CHANNEL
 
 export default defineConfig({
   testDir: '.',
-  testMatch: ['regressions.spec.ts', 'ssr.spec.ts', 'phone-picker.spec.ts', 'collapse-controls.spec.ts', 'text-timeline.spec.ts', 'dropdown-open.spec.ts', 'hover-motion.spec.ts'],
+  testMatch: ['regressions.spec.ts', 'ssr.spec.ts', 'phone-picker.spec.ts', 'collapse-controls.spec.ts', 'text-timeline.spec.ts', 'dropdown-open.spec.ts', 'hover-motion.spec.ts', 'grid-layout.spec.ts', 'link-prefetch.spec.ts'],
   fullyParallel: true,
   // Local Windows browsers share the desktop resources; keep the complete gate stable there.
   workers: process.platform === 'win32' && !process.env.CI ? 1 : 2,

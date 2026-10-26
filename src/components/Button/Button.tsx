@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useLinkPrefetch, type LinkPrefetchProps } from '../../hooks/useLinkPrefetch';
 import { createPortal } from 'react-dom';
 import { useId, type CSSProperties } from 'react';
 import type React from 'react';
@@ -37,7 +38,7 @@ export interface ButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'color' | 'href' | 'target' | 'rel'>,
     Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
     Omit<BoxLayoutProps, 'aspectRatio'>,
-    Omit<SharedMotionProps, 'animate'> {
+    Omit<SharedMotionProps, 'animate'>, LinkPrefetchProps {
   /** Появление, hover/idle или их совместная настройка. */
   animate?: ButtonAnimate;
   children?: React.ReactNode;
@@ -92,6 +93,7 @@ export function Button({
   rel,
   download,
   newTab,
+  prefetch,
   nofollow,
   noreferrer,
   onMouseEnter,
@@ -113,6 +115,7 @@ export function Button({
   const layout = boxLayout(c, box);
   const isLink = Boolean(href);
   const useNextLink = isLink && shouldUseNextLink(href, target, download);
+  const prepare = useLinkPrefetch(prefetch, href, useNextLink && !newTab && !disabled);
   const Comp = (useNextLink ? Link : isLink ? 'a' : 'button') as React.ElementType;
   const linkProps = resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer });
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
@@ -136,6 +139,7 @@ export function Button({
     ? {
         ...rest,
         ...linkProps,
+        ...(useNextLink ? { prefetch: prepare.prefetch } : null),
         ...(!useNextLink && disabled ? { href: undefined } : null),
         tabIndex: disabled ? -1 : rest.tabIndex,
         'aria-disabled': disabled ? true : rest['aria-disabled'],
@@ -179,13 +183,13 @@ export function Button({
       data-button-idle={idle['data-button-idle']}
       aria-describedby={describedBy}
       {...stateLinkProps(disabled ? undefined : linkState, {
-        onMouseEnter: composeEventHandlers(composeEventHandlers(anchorHandlers.onMouseEnter, motionHandlers?.onMouseEnter), onMouseEnter),
+        onMouseEnter: composeEventHandlers(composeEventHandlers(composeEventHandlers(anchorHandlers.onMouseEnter, motionHandlers?.onMouseEnter), onMouseEnter), prepare.onIntent),
         onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),
         onMouseLeave: composeEventHandlers(composeEventHandlers(anchorHandlers.onMouseLeave, motionHandlers?.onMouseLeave), onMouseLeave),
         onMouseDown,
         onMouseUp,
         onClick: handleClick,
-        onFocus: composeEventHandlers(anchorHandlers.onFocus, onFocus),
+        onFocus: composeEventHandlers(composeEventHandlers(anchorHandlers.onFocus, onFocus), prepare.onIntent),
         onBlur: composeEventHandlers(anchorHandlers.onBlur, onBlur),
       })}
     >
