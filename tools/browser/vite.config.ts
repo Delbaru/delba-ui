@@ -24,6 +24,10 @@ const fixtureUtilities: Plugin = {
     const rules = extractUtilityRules([
       { file: fixtureFile, text: fs.readFileSync(fixtureFile, 'utf8') },
       { file: ssrFixtureFile, text: fs.readFileSync(ssrFixtureFile, 'utf8') },
+      ...['hover-motion.fixture.tsx', 'dropdown-open.fixture.tsx'].map((name) => {
+        const file = path.join(fixtureRoot, name);
+        return { file, text: fs.readFileSync(file, 'utf8') };
+      }),
       { file: path.join(fixtureRoot, 'refactor-contracts.fixture.tsx'), text: fs.readFileSync(path.join(fixtureRoot, 'refactor-contracts.fixture.tsx'), 'utf8') },
       { file: path.join(kitRoot, 'src/components/GradientBorder/GradientBorder.tsx'), text: fs.readFileSync(path.join(kitRoot, 'src/components/GradientBorder/GradientBorder.tsx'), 'utf8') },
     ]);

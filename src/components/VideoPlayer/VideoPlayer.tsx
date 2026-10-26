@@ -195,7 +195,12 @@ function TimelinePreview({ ref, source }: WithRef<{ source?: VideoPlayerPreviewS
     }, []);
 
     return (
-        <div ref={boxRef} className={styles.preview} data-visible={visible ? 'true' : 'false'} aria-hidden='true'>
+        <div
+            ref={boxRef}
+            className={styles.preview}
+            data-visible={visible ? 'true' : 'false'}
+            aria-hidden='true'
+        >
             {source ? <video
                 ref={videoRef}
                 className={styles.previewVideo}
@@ -206,7 +211,11 @@ function TimelinePreview({ ref, source }: WithRef<{ source?: VideoPlayerPreviewS
                 playsInline
             /> : null}
 
-            <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{formatClock(sec)}</Text>
+            <Text
+                variant={['micro', null, null]}
+                color='var(--white-100)'
+                whiteSpace={['nowrap', null, null]}
+            >{formatClock(sec)}</Text>
 
             <span ref={caretRef} className={styles.previewCaret} aria-hidden='true' />
         </div>
@@ -526,18 +535,33 @@ export function VideoPlayer({
             onPointerEnter={interactive ? revealControls : undefined}
             onPointerLeave={interactive ? handleRootLeave : undefined}
         >
-            <Video ref={setVideoNode} src={src} poster={poster} objectFit={objectFit} className={styles.media} />
+            <Video
+                ref={setVideoNode}
+                src={src}
+                poster={poster}
+                objectFit={objectFit}
+                className={styles.media}
+            />
 
             {/* Захват кликов по видео: одиночный = play/pause, двойной = фуллскрин */}
             {interactive ? (
-                <div className={styles.clickLayer} onClick={handleMediaClick} onDoubleClick={handleMediaDoubleClick} aria-hidden='true' />
+                <div
+                    className={styles.clickLayer}
+                    onClick={handleMediaClick}
+                    onDoubleClick={handleMediaDoubleClick}
+                    aria-hidden='true'
+                />
             ) : null}
 
             {label ? (
                 <div className={cx(styles.overlay, styles.labelBar)}>
                     {labelIcon ? <BarIcon src={labelIcon} withStroke /> : null}
 
-                    <Text variant={['body', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{label}</Text>
+                    <Text
+                        variant={['body', null, null]}
+                        color='var(--white-100)'
+                        whiteSpace={['nowrap', null, null]}
+                    >{label}</Text>
                 </div>
             ) : null}
 
@@ -591,7 +615,11 @@ export function VideoPlayer({
                     ) : null}
 
                     {show('time') ? (
-                        <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>
+                        <Text
+                            variant={['micro', null, null]}
+                            color='var(--white-100)'
+                            whiteSpace={['nowrap', null, null]}
+                        >
                             {formatClock(currentSec)} / {formatClock(durationSec)}
                         </Text>
                     ) : null}
@@ -603,7 +631,11 @@ export function VideoPlayer({
                             aria-label={`Скорость ${formatRate(state.rate)}`}
                             onClick={() => player.setRate(nextRate(rates, state.rate))}
                         >
-                            <Text variant={['micro', null, null]} color='var(--white-100)' whiteSpace={['nowrap', null, null]}>{formatRate(state.rate)}</Text>
+                            <Text
+                                variant={['micro', null, null]}
+                                color='var(--white-100)'
+                                whiteSpace={['nowrap', null, null]}
+                            >{formatRate(state.rate)}</Text>
                         </button>
                     ) : null}
 
@@ -645,7 +677,11 @@ export function VideoPlayer({
                             aria-label={state.fullscreen ? 'Выйти из полного экрана' : 'Полный экран'}
                             onClick={() => player.toggleFullscreen()}
                         >
-                            <IconSwap active={state.fullscreen} a={ICON.fullscreen} b={ICON.fullscreenQuit} />
+                            <IconSwap
+                                active={state.fullscreen}
+                                a={ICON.fullscreen}
+                                b={ICON.fullscreenQuit}
+                            />
                         </button>
                     ) : null}
                 </div>

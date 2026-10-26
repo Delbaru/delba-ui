@@ -137,7 +137,11 @@ export function LexicalTextareaCounter({
   maxLength?: number;
 }) {
   return (
-    <Text variant={['caption', null, null]} color='var(--text-muted)' style={{ whiteSpace: 'nowrap', lineHeight: 1 }}>
+    <Text
+        variant={['caption', null, null]}
+        color='var(--text-muted)'
+        style={{ whiteSpace: 'nowrap', lineHeight: 1 }}
+    >
       {maxLength != null ? `${characters} / ${maxLength}` : `${characters}`}
     </Text>
   );
@@ -268,7 +272,13 @@ export function LexicalTextareaToolbar({ hasVariables, allowLink = true }: { has
   ] as const;
 
   return (
-    <Flex dir={['row', null, null]} wrap={['wrap', 'wrap', 'wrap']} align={['center', null, null]} gap={[16, null, null]} grow={[1, 1, 1]}>
+    <Flex
+        dir={['row', null, null]}
+        wrap={['wrap', 'wrap', 'wrap']}
+        align={['center', null, null]}
+        gap={[16, null, null]}
+        grow={[1, 1, 1]}
+    >
       {toolbarGroups.map((group, groupIndex) => (
         <Fragment key={groupIndex}>
           {group.map((action) => (

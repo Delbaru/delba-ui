@@ -30,7 +30,7 @@ function parse(input: ResponsiveInput<AnimationInput> | TextAnimate | undefined)
       };
     }
     if (input.effect === 'textSlide') {
-      return { key: 'textSlide', options: { mode: 'swap', durationTime: input.duration } };
+      return { key: 'textSlide', options: { mode: 'swap', durationTime: input.duration, ...(input.by ? { by: input.by } : {}) } };
     }
   }
 

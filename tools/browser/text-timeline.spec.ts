@@ -1,5 +1,41 @@
 import { expect, test } from '@playwright/test';
 
+test('whole text slide moves matching letters too and settles after rapid changes', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+  const baselineDelta = await page.getByTestId('slide-inline').evaluate(node => {
+    const plain = node.firstChild;
+    const animated = node.querySelector('.ui-slide-value-static')?.firstChild;
+    if (!plain || !animated) throw new Error('Missing inline label');
+    const top = (text: Node) => {
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      return range.getBoundingClientRect().top;
+    };
+    return Math.abs(top(plain) - top(animated));
+  });
+  expect(baselineDelta).toBeLessThan(0.5);
+  const label = page.getByTestId('slide-label');
+  await label.scrollIntoViewIfNeeded();
+  await label.evaluate(node => node.setAttribute('data-identity', 'same-heading'));
+  await page.getByTestId('slide-label-update').click();
+  await expect(label.locator('[data-swap-out]')).toHaveText('Подвески');
+  await expect(label.locator('[data-swap-in]')).toHaveText('Подвески новые');
+  await expect(label.locator('.ui-slide-swap-static')).toHaveCount(0);
+  await expect(label.locator('.ui-slide-value-viewport')).not.toHaveCSS('clip-path', 'none');
+  await page.getByTestId('slide-label-update').click();
+  await page.getByTestId('slide-label-update').click();
+  await expect(label).toHaveText('Серьги');
+  await expect(label.locator('[data-swap-out]')).toHaveCount(0);
+  await expect(label).toHaveAttribute('data-identity', 'same-heading');
+  const resting = await label.boundingBox();
+  expect(resting?.height).toBeGreaterThan(0);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByTestId('slide-label-update').click();
+  await expect(label).toHaveText('Подвески');
+  await expect(label.locator('[data-swap-out]')).toHaveCount(0);
+});
+
 test('compound Text starts counting at 0%, 50% and 100% of the appearance duration', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');

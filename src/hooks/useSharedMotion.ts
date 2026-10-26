@@ -6,15 +6,24 @@ import { isOpenAnimate, resolveRevealInput, type AppearanceAnimate, type RevealP
 import { useParallaxMotion, type ParallaxInput } from './useParallaxMotion';
 import { usePerspective3dMotion, type Perspective3dInput } from './usePerspective3dMotion';
 import { useReveal } from './useReveal';
+import { hoverMotionStyle, isHoverTransformAnimate, resolveHoverTransform, type HoverTransformAnimate, type HoverTransformOptions } from '../core/base/hover-motion';
+import { isAppearanceAnimate } from '../core/reveal/reveal';
+import { useHoverTransform } from './useHoverTransform';
 
 type MotionTarget = HTMLElement | SVGElement;
+
+export type SharedAnimate<LegacyAnimate = never> = (AppearanceAnimate & { hover?: HoverTransformOptions | false }) | HoverTransformAnimate | LegacyAnimate;
+
+export function isSharedMotionAnimate(value: unknown): value is AppearanceAnimate | HoverTransformAnimate {
+  return isAppearanceAnimate(value) || isHoverTransformAnimate(value);
+}
 
 export interface SharedMotionProps<LegacyAnimate = never> {
   perspective3d?: Perspective3dInput;
   parallax?: ParallaxInput;
   /** Общий эффект появления: `{ effect: 'up', when: 'inView', delay: 0.16 }`.
    * `when: 'load'` запускает CSS-эффект с первого кадра; прежние эффекты компонента сохраняются. */
-  animate?: AppearanceAnimate | LegacyAnimate;
+  animate?: SharedAnimate<LegacyAnimate>;
 }
 
 // `reveal` — не в SharedMotionProps: его принимают только примитивы раскладки и Img, остальные
@@ -39,8 +48,11 @@ export function useSharedMotion<LegacyAnimate>({ perspective3d, parallax, reveal
   const input = openAnimation ? { ...animate, stagger: 0, start: 'view' as const } : resolveRevealInput(animate, reveal);
   const { revealAttrs, revealStyle, setRevealNode } = useReveal(input, openAnimation ? Boolean(open) : undefined);
 
-  const motionTransform = [parallaxTransform, perspectiveTransform].filter(Boolean).join(' ');
-  const hasMotion = hasPerspective3d || hasParallax;
+  const hover = resolveHoverTransform(animate);
+  const setHoverNode = useHoverTransform(hover);
+
+  const motionTransform = [parallaxTransform, perspectiveTransform, hover && 'var(--hover-motion-transform)'].filter(Boolean).join(' ');
+  const hasMotion = hasPerspective3d || hasParallax || Boolean(hover);
 
   // Ход появления — отдельными `translate`/`scale`/`opacity`/`filter`, поэтому складывается с
   // `transform` параллакса и наклона на том же узле, а не затирает его.
@@ -49,11 +61,12 @@ export function useSharedMotion<LegacyAnimate>({ perspective3d, parallax, reveal
         ...(revealStyle ?? null),
         ...(perspectiveStyle ?? null),
         ...(parallaxStyle ?? null),
+        ...(hover ? hoverMotionStyle(hover) : null),
         ...(motionTransform
           ? {
               transform: motionTransform,
               ...(hasPerspective3d ? { transformStyle: 'preserve-3d' } : null),
-              willChange: 'transform',
+              ...(hasPerspective3d || hasParallax ? { willChange: 'transform' } : null),
             }
           : null),
       } as CSSProperties)
@@ -65,14 +78,15 @@ export function useSharedMotion<LegacyAnimate>({ perspective3d, parallax, reveal
     setPerspectiveNode(node);
     setParallaxNode(node);
     setRevealNode(node);
-  }, [setPerspectiveNode, setParallaxNode, setRevealNode]);
+    setHoverNode(node);
+  }, [setPerspectiveNode, setParallaxNode, setRevealNode, setHoverNode]);
 
   return {
     hasMotion,
     motionHandlers,
     motionStyle,
     /** Атрибуты `data-reveal*` для корня: по ним CSS прячет элемент ещё в серверном HTML. */
-    revealAttrs,
+    revealAttrs: hover ? { ...revealAttrs, 'data-hover-motion': '' } : revealAttrs,
     setMotionNode,
   };
 }

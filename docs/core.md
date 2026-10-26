@@ -36,6 +36,12 @@
 
 ## Полосы и медиазапросы
 
+`@use '@delba/ui/mixins' as m` предоставляет `m.breakpoint(m|t|d)` для непропсовых
+эффектов (transform, opacity, pointer-events) на полосе кита. Миксин читает существующий
+SCSS-словарь `$breakpoints`, неизвестное имя останавливает Sass. Он позволяет задать
+начальное состояние эффекта до гидратации без `useMediaQuery` и копирования границ.
+Геометрия, фон и остальные поддерживаемые значения остаются responsive-пропсами.
+
 `@delba/ui/validation` — чистый вход без React и стилей: `EMAIL_REGEX`, `EMAIL_PATTERN`,
 `phoneMask`. Его можно использовать в серверных обработчиках и Node-тестах. У
 `phoneMask.validate` успех — `undefined`, ошибка — строка; обязательность и допустимые
@@ -297,6 +303,43 @@ CollapseWrap получает принятую цель, без второго �
 Где `until-found` нет (и в серверном HTML) — `hidden` + `inert`, текст в разметке всё равно есть.
 На нём построен `Accordion`. Грабли — `lessons/authoring.md`, «`hidden="until-found"`».
 
+## Hover transform и открытие Dropdown
+
+Общий `animate` у Box, Flex, Img, Icon, Text и Button принимает
+`{ when: 'hover', effect: 'transform', x: 4, y: -2, rotate: 45, scale: 1.025,
+duration: 'normal', easing: 'cubic-bezier' }`. Все значения необязательны,
+кроме `when` и `effect`. `x/y` используют `MotionDistance`, `duration` —
+`MotionTime`, `easing` — суффикс токена `--t-t-f-*`. `from` задаёт исходные
+transform-значения. Источник `source: 'self'` — сам узел, `parent` — его
+родитель, `closest` — ближайший предок `[data-motion-scope], a[href], button`.
+Flex с `motionScope` отмечает такую область без дополнительного DOM-узла.
+
+У появления hover задаётся вложенным объектом:
+`animate={{ when: 'inView', effect: 'up', hover: { effect: 'transform', scale: 1.025 } }}`.
+Появление сохраняет отдельные CSS translate/scale, hover компонуется с transform
+параллакса и perspective3d. `useHoverTransform` управляет только состоянием,
+CSS интерполирует движение и возвращает исходную геометрию при reduced motion.
+Учитываются focus-within, вложенные области, disabled/inert и cleanup ref.
+Прежние Button rise и Icon/Img/Text change-эффекты сохраняются.
+
+Dropdown принимает `panel.animate: OpenAnimate`, например
+`{ when: 'open', effect: 'down', distance: 24, duration: 'normal' }`.
+Без него сохраняется прежний collapse. `panel.anchorRef` задаёт отдельный
+геометрический якорь, оставляя клавиатуру и фокус на trigger;
+`viewportPadding` задаёт отступ от окна в нативных px (по умолчанию 8).
+Непортальная панель учитывает фактический offsetParent, его границы и прокрутку.
+
+При закрытии панель сразу inert, но сохраняется до завершения exit.
+`keepMounted: false` удаляет содержимое после выхода, `true` скрывает его через
+hidden. Общий `useOpenPresence` отменяет ожидание при повторном открытии и
+размонтировании. Controlled-отказ закрыть панель сохраняет её фокус.
+`useReveal` продолжает обратный ход с текущей позиции при смене open.
+
+`backdrop={{ bg: [...], animate: { when: 'open', effect: 'fade', duration: 'fast' } }}`
+добавляет декоративную подложку в тот же портал. Она использует общий dismiss,
+не входит в Tab и имеет собственное ожидание exit; по умолчанию — fast fade.
+`DropdownBackdropOptions` экспортируется для типизации настроек.
+
 ## Смена картинки
 
 `Img animate` (`src/components/Img/swap`) — анимация смены картинки при смене `src`, пропом, без
@@ -315,9 +358,22 @@ CollapseWrap получает принятую цель, без второго �
 
 ```tsx
 <Img animate={{ when: 'change', effect: 'veil', direction, duration: 'slow' }} … />
+<Icon name={open ? 'minus' : 'plus'} animate={{ when: 'change', effect: 'swap', duration: 'fast', scale: 1, rotate: 0 }} />
 <Text animate={{ when: 'change', effect: 'textSlide', duration: 'fast' }}>{title}</Text>
+<Text animate={{ when: 'change', effect: 'textSlide', by: 'text', duration: 'normal' }}>{category}</Text>
 <Text animate={{ when: 'inView', effect: 'counter', duration: 'slow' }}>70%</Text>
 ```
+
+У `textSlide` режим `by: 'text'` сменяет всю подпись, включая совпадающие буквы.
+Он сохраняет обычный кернинг и переносы слов; область обрезки учитывает выносные
+элементы шрифта. По умолчанию `by: 'character'` анимирует только различающиеся
+символы, что подходит для счётчиков. Первый показ и reduced motion — без свопа.
+
+`IconChangeAnimate` экспортируется из корня кита. У Icon `swap` и `spin` запускаются при смене
+глифа после его загрузки: сначала уходит прежний, затем появляется новый. `duration` задаёт время
+одной фазы, полный ход занимает две фазы. Без опций сохранены прежние настройки: swap — 0.3 с,
+scale 0.8, rotate 0; spin — 0.18 с, scale 0.5, rotate 45. Первый показ без движения,
+reduced motion переключает мгновенно. Старые строки и кортежи (duration в секундах) поддержаны.
 
 `Text` также принимает составной `effect`: одно появление (`up`, `fade`, `scale` и т. д.) и
 `counter`. Без `startAt` они начинаются одновременно; зависимости не зависят от порядка ключей:

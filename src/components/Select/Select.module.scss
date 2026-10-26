@@ -48,6 +48,7 @@
       }
 
       .Dropdown {
+          box-sizing: border-box;
           background: var(--white-100);
           border: calc(1 * var(--rpx)) solid var(--line);
           border-top: none;

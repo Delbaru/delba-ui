@@ -128,7 +128,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const stack = items.length > 0 && host
     ? createPortal(
-      <Flex dir={['column', null, null]} align={['center', null, null]} role='status' aria-live='polite' className={styles.Toast}>
+      <Flex
+          dir={['column', null, null]}
+          align={['center', null, null]}
+          role='status'
+          aria-live='polite'
+          className={styles.Toast}
+      >
         {items.map((item) => (
           // `collapseAppear` обязателен: узел монтируется УЖЕ раскрытым, и без опт-ина
           // enter-анимации не будет вовсе (§8.4).

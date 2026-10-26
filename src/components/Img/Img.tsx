@@ -9,8 +9,8 @@ import { MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveLinkProps, reso
 import { imageSizes } from '../../core/base/scale';
 import { SCALE } from '../../core/scale';
 import { useFancybox } from '../../hooks/useFancybox';
-import { isAppearanceAnimate, withoutStagger, type AppearanceAnimate, type RevealInput, type RevealOptions } from '../../core/reveal/reveal';
-import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { isAppearanceAnimate, withoutStagger, type RevealInput, type RevealOptions } from '../../core/reveal/reveal';
+import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useImgSwap } from './swap/useImgSwap';
 import type { ImgAnimate } from './swap/types';
 
@@ -81,7 +81,7 @@ export interface ImgProps extends ImgBaseProps, BoxLayoutProps, ImgRootSizeProps
    * Прежняя картинка держится слоем, пока новая не загрузится и не доедет; первый показ — без хода,
    * «меньше движения» — мгновенно. Legacy ключи и tuple остаются поддержаны. См. `ImgAnimate`.
    */
-  animate?: AppearanceAnimate | ImgAnimate;
+  animate?: SharedMotionProps<ImgAnimate>['animate'];
 
   /**
    * Появление при прокрутке: `{ effect: 'blur', delay: 0.1 }` — как у Flex, но без каскада:
@@ -287,8 +287,8 @@ export function Img({
   const layout = boxLayout(c, { ...box, r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, bg, aspectRatio, grow });
   const [isLoaded, setIsLoaded] = useState(false);
   // Каскад у картинки означал бы её внутренние слои — снимаем.
-  const appearanceAnimate = isAppearanceAnimate(animate) ? { ...animate, stagger: 0 } : undefined;
-  const contentAnimate = isAppearanceAnimate(animate) ? undefined : animate;
+  const appearanceAnimate = isAppearanceAnimate(animate) ? { ...animate, stagger: 0 } : isSharedMotionAnimate(animate) ? animate : undefined;
+  const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal: withoutStagger(reveal), animate: appearanceAnimate });
   const imageSizeProps = {
     w,
@@ -395,10 +395,18 @@ export function Img({
   const mainImage = hasArtDirection ? (
     <picture>
       {sources.mobile !== null && (
-        <source media={MEDIA_QUERY.mobile} srcSet={pictureProps(sources.mobile).srcSet} sizes={computedSizes} />
+        <source
+            media={MEDIA_QUERY.mobile}
+            srcSet={pictureProps(sources.mobile).srcSet}
+            sizes={computedSizes}
+        />
       )}
       {sources.tablet !== null && (
-        <source media={MEDIA_QUERY.below} srcSet={pictureProps(sources.tablet).srcSet} sizes={computedSizes} />
+        <source
+            media={MEDIA_QUERY.below}
+            srcSet={pictureProps(sources.tablet).srcSet}
+            sizes={computedSizes}
+        />
       )}
       <img
           {...pictureProps(sources.desktop)}

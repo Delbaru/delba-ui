@@ -399,7 +399,9 @@ function DeclarativeModal({ ref, trigger, open: controlledOpen, defaultOpen = fa
 }
 
 export function Modal(props: WithRef<ModalProps, HTMLDivElement>) {
-  if (props.trigger || props.open !== undefined || props.defaultOpen !== undefined) return <DeclarativeModal {...props} />;
+  if (props.trigger || props.open !== undefined || props.defaultOpen !== undefined) return <DeclarativeModal
+      {...props}
+  />;
   const { trigger: _trigger, open: _open, defaultOpen: _defaultOpen, onOpenChange: _onOpenChange, ...surface } = props;
   return <ModalSurface {...surface} />;
 }

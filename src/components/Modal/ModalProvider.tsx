@@ -181,7 +181,11 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     (typeof document !== 'undefined'
       ? createPortal(
           <>
-            {stack.map((item) => item.declarative ? <DeclarationSlot key={item.id} id={item.id} attach={attach} /> : (
+            {stack.map((item) => item.declarative ? <DeclarationSlot
+                key={item.id}
+                id={item.id}
+                attach={attach}
+            /> : (
               <ModalRuntimeContext.Provider key={item.id} value={runtime(item)}>{item.node}</ModalRuntimeContext.Provider>
             ))}
           </>,

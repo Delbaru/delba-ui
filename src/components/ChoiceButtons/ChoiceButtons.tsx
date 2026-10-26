@@ -79,7 +79,13 @@ function ChoiceInfoTooltip({
                     <Text variant={['caption', null, null]}>{description}</Text>
                 </Flex>
 
-                <Icon src={tooltipArrowIconSrc} w={[24, null, null]} h={[24, null, null]} aria-hidden='true' className={styles.tail} />
+                <Icon
+                    src={tooltipArrowIconSrc}
+                    w={[24, null, null]}
+                    h={[24, null, null]}
+                    aria-hidden='true'
+                    className={styles.tail}
+                />
             </Tooltip>
         </Flex>
     );
@@ -192,7 +198,11 @@ export function ChoiceButtons<T extends string = string>({
                     const tooltipId = `${baseId}-tooltip-${index}`;
 
                     return (
-                        <Flex key={item.value} w={['100%', null, null]} className={cx(styles.item, itemClassName)}>
+                        <Flex
+                            key={item.value}
+                            w={['100%', null, null]}
+                            className={cx(styles.item, itemClassName)}
+                        >
                             <Button
                                 h={[48, null, null]}
                                 w={['100%', null, null]}
@@ -206,7 +216,11 @@ export function ChoiceButtons<T extends string = string>({
                                 onClick={() => selectItem(item)}
                                 className={cx(styles.button, buttonClassName)}
                             >
-                                <Flex dir={['row', null, null]} align={['center', null, null]} gap={[8, null, null]}>
+                                <Flex
+                                    dir={['row', null, null]}
+                                    align={['center', null, null]}
+                                    gap={[8, null, null]}
+                                >
                                     <Text
                                         variant={['body', null, null]}
                                         color='var(--text-muted)'

@@ -16,6 +16,14 @@
     pointer-events: none;
   }
 
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-under-floating);
+    pointer-events: none;
+    &[data-open] { pointer-events: auto; }
+  }
+
   .panel {
     position: absolute;
     // The collapse grid must size to its content, not shrink to the trigger.
@@ -42,6 +50,7 @@
   }
 
   .surface { min-width: 0; max-width: 100%; }
+  .surface[hidden] { display: none; }
 }
 
 // Collapse's structural column rule is unlayered. This single surface must shrink horizontally.

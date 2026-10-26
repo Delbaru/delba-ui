@@ -2,7 +2,7 @@
 
 import styles from './Select.module.scss';
 
-import { useEffect, type CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import type React from 'react';
 import { assetUrl, composeEventHandlers, cx, createLayoutClasses, stateProps, stateLinkProps, fieldHelperPaddingLeft, type BoxLayoutProps, type ComponentStateValue, type StateLinkInput, type ResponsiveValue, type WithRef, fieldLayoutClasses, fieldRootLayoutClasses, resolveFieldLayout, splitBoxLayout } from '../../core';
 import { Icon } from '../Icon';
@@ -13,7 +13,7 @@ import type { CollapseOptions } from '../Collapse/CollapseWrap';
 import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useCollapseState } from '../../hooks/useCollapseState';
 import { Box } from '../Box';
-import { Dropdown } from '../Dropdown';
+import { Dropdown, type DropdownPanelOptions } from '../Dropdown';
 import { isValueArray, selectFormValues, type SelectItem } from './options';
 import { useSelect, type SelectRenderValuePayload } from './useSelect';
 
@@ -100,6 +100,9 @@ export interface SelectBaseProps<T extends string = string>
     emptyMessage?: string;
     visibleOptions?: number;
 
+    /** Оформление и движение списка через общий API панели Dropdown; состоянием управляет Select. */
+    panel?: Pick<DropdownPanelOptions, 'animate' | 'collapse' | 'offset' | 'r'>;
+
     state?: ComponentStateValue;
 
     linkState?: StateLinkInput;
@@ -146,6 +149,7 @@ function renderSelectNode(node: React.ReactNode, textClassName: string | undefin
 }
 
 export function Select<T extends string = string>(props: WithRef<SelectProps<T>, HTMLDivElement>) {
+    const geometryRef = useRef<HTMLDivElement>(null);
     const { box, rest: fieldProps } = splitBoxLayout(props);
     const {
         ref,
@@ -180,6 +184,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
         required,
         emptyMessage = DEFAULT_EMPTY_MESSAGE,
         visibleOptions = DEFAULT_VISIBLE_OPTIONS,
+        panel,
         validate: validateProp,
         id: idProp,
         state,
@@ -349,7 +354,11 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
                 {/* Скелетон и значение подменяют друг друга на одном месте — значит
                     `transitionKey` (§8.4), а не голое условие: иначе полоса исчезает
                     кадром. Шеврон при этом снаружи обёртки и не мигает. */}
-                <Flex transitionKey={loading ? 'skeleton' : 'value'} animation="fadeIn" w={['100%', null, null]}>
+                <Flex
+                    transitionKey={loading ? 'skeleton' : 'value'}
+                    animation="fadeIn"
+                    w={['100%', null, null]}
+                >
                     {loading ? (
                         <Skeleton h={[16, null, null]} />
                     ) : showInlineError ? (
@@ -367,7 +376,14 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
                 </Flex>
             </Box>
 
-            <Icon aria-hidden src={assetUrl(arrowIcon)} fill="transparent" w={[20, 20, 20]} h={[20, 20, 20]} className={styles.Chevron} />
+            <Icon
+                aria-hidden
+                src={assetUrl(arrowIcon)}
+                fill="transparent"
+                w={[20, 20, 20]}
+                h={[20, 20, 20]}
+                className={styles.Chevron}
+            />
         </Flex>
     );
 
@@ -409,8 +425,13 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
             )}
 
             <Dropdown
+                ref={geometryRef}
                 open={open}
                 onOpenChange={handleOpenChange}
+                onClick={(event) => {
+                    if (event.target === event.currentTarget && !event.defaultPrevented && !disabled && !loading)
+                        handleOpenChange(!open);
+                }}
                 trigger={trigger}
                 className={cx(styles.Select, ...fieldClasses, fieldClassName)}
                 style={{ '--select-visible-options': String(normalizedVisibleOptions) } as CSSProperties}
@@ -418,7 +439,9 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
                 panel={{
                     portal: true,
                     offset: -1,
+                    ...panel,
                     matchTriggerWidth: true,
+                    anchorRef: geometryRef,
                     inheritVariables: PANEL_VARIABLES,
                     className: styles.Dropdown,
                     onKeyDown: handleKeyDown,
@@ -428,7 +451,13 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
             </Dropdown>
 
             {name && !disabled && selectFormValues(formValue, multiple === true).map((itemValue, index) => (
-                <input key={`${itemValue}-${index}`} type="hidden" name={name} form={form} value={itemValue} />
+                <input
+                    key={`${itemValue}-${index}`}
+                    type="hidden"
+                    name={name}
+                    form={form}
+                    value={itemValue}
+                />
             ))}
 
             {!displayError && comment && (

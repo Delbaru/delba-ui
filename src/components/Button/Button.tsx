@@ -11,6 +11,7 @@ import { boxLayout, composeEventHandlers, createLayoutClasses, cx, resolveLinkPr
 import { useTooltip } from '../../hooks/useTooltip';
 import { useAnimationVisibility } from '../../hooks/useAnimationVisibility';
 import type { AppearanceAnimate } from '../../core/reveal/reveal';
+import type { HoverTransformAnimate } from '../../core/base/hover-motion';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { buttonHoverProps, type ButtonHoverAnimate } from './hover/buttonHover';
@@ -25,7 +26,7 @@ type JustifyContentKey = 'start' | 'end' | 'center' | 'space_between' | 'space_a
 const c = createLayoutClasses(styles);
 
 /** Появление сочетается с независимыми эффектами наведения и покоя. Legacy when остаётся поддержан. */
-export type ButtonAnimate = ButtonHoverAnimate | ButtonIdleAnimate | (AppearanceAnimate & {
+export type ButtonAnimate = HoverTransformAnimate | ButtonHoverAnimate | ButtonIdleAnimate | (AppearanceAnimate & {
   /** Наведение поверх появления; false явно отключает эффект роли. */
   hover?: Omit<ButtonHoverAnimate, 'when'> | false;
   /** Эффект в покое поверх появления. */
