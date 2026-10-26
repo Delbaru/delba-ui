@@ -1,20 +1,31 @@
 'use client';
 
-import { useId } from 'react';
+import { Fragment, useId, type ReactNode } from 'react';
 
 import styles from './CarouselDots.module.scss';
 
 import { useNearestCarouselControls } from '../controls';
 import { Button } from '../../Button';
-import { Flex } from '../../Flex';
+import { Flex, type FlexProps } from '../../Flex';
 import { cx } from '../../../core';
 
-export interface CarouselDotsProps {
-  className?: string;
-  carouselId?: string;
+export interface CarouselDotItem {
+  /** Zero-based page index from the carousel, including grouped slides. */
+  index: number;
+  /** Current page; also updates after dragging or arrow navigation. */
+  isActive: boolean;
+  /** Navigate through the carousel's own API. */
+  onSelect: () => void;
 }
 
-export function CarouselDots({ className, carouselId }: CarouselDotsProps) {
+export interface CarouselDotsProps extends Omit<FlexProps, 'children'> {
+  /** Connect to a carousel outside the nearest enclosing element. */
+  carouselId?: string;
+  /** Replace a dot with a thumbnail or label. The renderer owns the accessible button and its styling. */
+  renderItem?: (item: CarouselDotItem) => ReactNode;
+}
+
+export function CarouselDots({ className, carouselId, renderItem, ...props }: CarouselDotsProps) {
   const baseId = useId().replace(/:/g, '');
   const { setRootRef, snapshot } = useNearestCarouselControls(carouselId);
   const shouldRender = snapshot.showDots && snapshot.pageCount > 1;
@@ -28,11 +39,14 @@ export function CarouselDots({ className, carouselId }: CarouselDotsProps) {
         gap={[8, null, null]}
         className={cx(styles.CarouselDots, snapshot.paginationClassName, className)}
         data-carousel-dots
+        {...props}
     >
       {shouldRender
         ? Array.from({ length: snapshot.pageCount }, (_, index) => {
           const isActive = index === snapshot.pageIndex;
           const dotId = `${baseId}-dot-${index}`;
+
+          if (renderItem) return <Fragment key={dotId}>{renderItem({ index, isActive, onSelect: () => snapshot.api?.goTo(index) })}</Fragment>;
 
           return (
             <Button

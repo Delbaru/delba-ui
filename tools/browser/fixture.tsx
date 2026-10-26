@@ -17,6 +17,7 @@ import { Input } from '../../src/components/Input/Input';
 import { Icon } from '../../src/components/Icon/Icon';
 import { Carousel } from '../../src/components/Carousel/Carousel';
 import { CarouselNav } from '../../src/components/Carousel/CarouselNav/CarouselNav';
+import { CarouselDots } from '../../src/components/Carousel/CarouselDots';
 import { Dropdown } from '../../src/components/Dropdown/Dropdown';
 import { Modal } from '../../src/components/Modal/Modal';
 import { ModalProvider, useModal } from '../../src/components/Modal/ModalProvider';
@@ -922,12 +923,17 @@ function CarouselEffectsField() {
 function CarouselNavField() {
   return (
     <section aria-label="Carousel navigation keyboard contracts" className="fixture">
-      <Carousel carouselId="nav-fixture" navigation="arrows" slidesPerView={1} speed={0} drag={false}>
+      <Carousel carouselId="nav-fixture" navigation="both" slidesPerView={1} speed={0} drag={false}>
         <div>Navigation slide one</div>
         <div>Navigation slide two</div>
         <div>Navigation slide three</div>
       </Carousel>
       <CarouselNav carouselId="nav-fixture" className="fixture-carousel-nav" />
+      <CarouselDots carouselId="nav-fixture" renderItem={({ index, isActive, onSelect }) => <Button
+          aria-label={`Thumbnail ${index + 1}`}
+          aria-pressed={isActive}
+          onClick={onSelect}
+      >{index + 1}</Button>} />
     </section>
   );
 }

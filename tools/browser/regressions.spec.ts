@@ -1125,6 +1125,20 @@ test('CarouselNav supports keyboard activation and disabled endpoints', async ({
   await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText('Navigation slide two');
 });
 
+test('CarouselDots custom controls share page selection with arrows and keyboard', async ({ page }) => {
+  await openFixture(page);
+  const first = page.getByRole('button', { name: 'Thumbnail 1', exact: true });
+  const third = page.getByRole('button', { name: 'Thumbnail 3', exact: true });
+  await expect(first).toHaveAttribute('aria-pressed', 'true');
+  await third.focus();
+  await third.press('Enter');
+  await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText('Navigation slide three');
+  await expect(third).toHaveAttribute('aria-pressed', 'true');
+  await expect(first).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('.fixture-carousel-nav').getByRole('button', { name: 'Предыдущий слайд' }).click();
+  await expect(page.getByRole('button', { name: 'Thumbnail 2', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('Box and Flex swap content through real exit and enter animation completion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
