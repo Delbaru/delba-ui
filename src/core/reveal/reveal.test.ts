@@ -37,6 +37,16 @@ test('resolveReveal: ключ — умолчания, опции — в мс', (
   assert.equal(resolveReveal(['scale'])?.key, 'scale');
 });
 
+test('horizontal expansion is an appearance effect and keeps an observable starting extent', () => {
+  const reveal = resolveReveal({ effect: 'expandX', fade: false });
+  assert.equal(reveal?.key, 'expandX');
+  assert.deepEqual(revealAttrs(reveal), { 'data-reveal': 'expandX' });
+  const css = compile(path.join(import.meta.dirname, '_reveal.scss')).css;
+  assert.match(css, /data-reveal=expandX/);
+  assert.match(css, /--reveal-s: 0\.001 1/);
+  assert.match(css, /transform-origin: left center/);
+});
+
 test('resolveReveal: object API normalizes effect and preserves option semantics', () => {
   const input = { effect: 'up', delay: 0.16, stagger: 0.08, duration: 0.6, fade: false, start: 'load' } satisfies RevealInput;
   assert.deepEqual(resolveReveal(input), {
