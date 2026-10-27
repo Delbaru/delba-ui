@@ -36,6 +36,7 @@
 }
 
 @layer ui.components {
+  @include meta.load-css('./scrollbar');
   @include motion.styles;
   @include meta.load-css('../components/Box/box');
   @include meta.load-css('../components/Button/button');

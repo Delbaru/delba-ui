@@ -1,3 +1,11 @@
 .ui-box {
   display: block;
+
+  &[data-scroll] {
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  &[data-scroll='x'] { overflow-y: hidden; }
+  &[data-scroll='y'] { overflow-x: hidden; }
 }

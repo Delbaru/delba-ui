@@ -20,6 +20,9 @@ export interface BoxProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayou
   /** Сворачивает весь Box по высоте; `open` управляется состоянием снаружи. */
   collapse?: CollapseOptions;
 
+  /** Native scroll surface with the kit scrollbar; constrain its size using layout props. */
+  scroll?: 'x' | 'y' | 'both';
+
   /** Появление и смена содержимого: `animate="fadeIn"` — вход при монтировании,
    *  `animate={['fadeIn', { key: tab }]}` — при смене `key` старое уходит зеркальным ходом, затем
    *  входит новое. Узел тот же (ref и фокус сохраняются), reduced-motion меняет сразу. */
@@ -35,6 +38,7 @@ export function Box({
   className = '',
   style,
   collapse,
+  scroll,
   animate,
   perspective3d,
   parallax,
@@ -63,6 +67,7 @@ export function Box({
   const content = (
     <div
       ref={setRefs}
+      data-scroll={scroll}
       className={cx('ui-box', containerClass(container), ...layout, ...c.value('justify', justify), contentMotion.className, className)}
       style={{ ...(motionStyle ?? null), ...style }}
       {...revealAttrs}

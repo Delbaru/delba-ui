@@ -1,0 +1,30 @@
+// One scrollbar policy, including nested native scroll surfaces.
+:where(*) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+
+// Chromium ignores webkit scrollbar parts when standard styling is active.
+@supports selector(::-webkit-scrollbar) {
+  :where(*) {
+    scrollbar-width: auto !important;
+    scrollbar-color: auto !important;
+  }
+
+  :where(*)::-webkit-scrollbar {
+    width: calc(4 * var(--rpx));
+    height: calc(4 * var(--rpx));
+  }
+  :where(*)::-webkit-scrollbar-track { background: transparent; }
+  :where(*)::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 999px;
+  }
+  :where(*)::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+  :where(*)::-webkit-scrollbar-button {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    -webkit-appearance: none !important;
+  }
+}
