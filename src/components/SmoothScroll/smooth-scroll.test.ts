@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { scrollEasing } from '../../motion';
 
 import {
     anchorTop,
@@ -46,6 +47,18 @@ test('tweenPosition идёт по функции хода и приходит р
     assert.deepEqual(tweenPosition(100, 0, 0, 0, linear), { y: 0, done: true });
     assert.equal(easeOutExpo(0), 0);
     assert.equal(easeOutExpo(1), 1);
+});
+
+test('scroll presets preserve endpoints, monotonic motion and the symmetric curve', () => {
+    for (const curve of Object.values(scrollEasing)) {
+        const samples = Array.from({ length: 101 }, (_, i) => curve(i / 100));
+        assert.equal(samples[0], 0);
+        assert.equal(samples[100], 1);
+        assert.ok(samples.every((value, i) => value >= (samples[i - 1] ?? 0) && value <= 1));
+    }
+    assert.equal(scrollEasing.ease(0.25), 0.0625);
+    assert.equal(scrollEasing.ease(0.75), 0.9375);
+    assert.deepEqual(tweenPosition(0, 100, 250, 1000, scrollEasing.ease), { y: 6.25, done: false });
 });
 
 test('autoDurationMs растёт с расстоянием в пределах 400–1200 мс', () => {

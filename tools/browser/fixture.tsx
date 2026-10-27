@@ -982,7 +982,7 @@ function MotionFixtures() {
       <Box data-testid="parallax-target" parallax={{ distance: 40, scroll: 'native' }} style={{ width: 240, height: 160 }}><span>Parallax photo surface</span></Box>
       <button data-testid="toggle-scroll-parallax" onClick={() => setScrollParallax((value) => !value)}>Toggle scroll parallax</button>
       {scrollParallax && <Box data-testid="parallax-scroll-target" parallax={{ distance: 40, mode: 'scroll' }} perspective3d={{ perspective: 1600, follow: 'viewport' }} animate={{ when: 'inView', effect: 'up', duration: 0.3 }} style={{ width: 240, height: 160 }}>Native parallax with reveal and tilt</Box>}
-      <Button data-testid="idle-visibility" animate={{ when: 'idle', effect: 'glow', duration: 2 }}>Idle visibility</Button>
+      <Button data-testid="idle-visibility" style={{ '--t-m-visibility-root-margin': '0px' } as CSSProperties} animate={{ when: 'idle', effect: 'glow', duration: 2 }}>Idle visibility</Button>
       <div id="motion-state" data-testid="motion-state" />
       <Text data-testid="motion-text" {...interactionProps('text')}>Text motion</Text>
       <Grid data-testid="motion-grid" columns={[1, 1, 1]} {...interactionProps('grid')}>

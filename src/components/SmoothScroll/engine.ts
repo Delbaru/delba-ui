@@ -43,7 +43,7 @@ export type SmoothScrollToOptions = {
   offset?: SmoothScrollOffset;
   /** Длительность, секунды; по умолчанию — `duration` провайдера. */
   duration?: number;
-  /** Функция хода для этого вызова. */
+  /** Готовая кривая из scrollEasing либо собственная функция хода. */
   easing?: SmoothScrollEasing;
   /** Без анимации — сразу на место. */
   immediate?: boolean;

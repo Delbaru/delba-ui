@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'rea
 import { useLenisScrollOptional } from '../components/LenisScroll';
 import { MEDIA_QUERY } from '../core/base/breakpoints';
 import { clamp } from '../core/utils';
+import { animationVisibilityMargin } from '../core/base/animation-visibility';
 
 const PARALLAX_STYLE_PROPS = [
   '--parallax-translate-x',
@@ -342,7 +343,7 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
         targetRef.current = targetFromViewport(wanted.getBoundingClientRect(), config, currentRef.current.translateY);
         scheduleAnimation();
       },
-      { rootMargin: '100px' }
+      { rootMargin: animationVisibilityMargin(wanted) }
     );
     observer.observe(wanted);
     observerRef.current = observer;

@@ -348,6 +348,17 @@ test('idle glow pauses offscreen and in a hidden document, then resumes the same
   await expect.poll(() => button.evaluate((node) => getComputedStyle(node.querySelector('.ui-button-glow') ?? node, '::before').animationName)).toBe('none');
 });
 
+test('idle visibility respects the configured preparation margin', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const button = page.getByTestId('idle-visibility');
+  await button.evaluate(node => window.scrollTo(0, window.scrollY + node.getBoundingClientRect().top - window.innerHeight - 40));
+  const state = () => button.evaluate(node => getComputedStyle(node).getPropertyValue('--idle-animation-state'));
+  await expect.poll(state).toBe('paused');
+  await button.scrollIntoViewIfNeeded();
+  await expect.poll(state).toBe('running');
+});
+
 test('shared box CSS switches background, coordinates and dynamic visibility without DOM prop leakage', async ({ page }) => {
   await openFixture(page);
   const box = page.getByTestId('responsive-box');
