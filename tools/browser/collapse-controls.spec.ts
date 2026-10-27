@@ -4,12 +4,26 @@ test('accordion animates layout padding and borders all the way to zero', async 
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
   const trigger = page.getByRole('button', { name: 'Padded answer', exact: true });
-  await trigger.click();
-  const target = await page.locator('.fixture-accordion-panel').evaluate((panel) => {
-    const animation = panel.getAnimations().find((item) => item.id === 'ui-collapse');
-    const frames = animation?.effect instanceof KeyframeEffect ? animation.effect.getKeyframes() : [];
-    return frames.at(-1);
+  const panel = page.locator('.fixture-accordion-panel');
+  // Capture the real WAAPI effect when it is created: after click() returns, a
+  // short completed animation may already have been removed from getAnimations().
+  await panel.evaluate(element => {
+    const target = element as HTMLElement & { collapseFrames?: ComputedKeyframe[] };
+    const ownAnimate = Object.getOwnPropertyDescriptor(target, 'animate');
+    const animate = target.animate;
+    target.animate = function (...args: Parameters<Element['animate']>) {
+      const animation = animate.apply(this, args);
+      if (animation.id === 'ui-collapse') {
+        target.collapseFrames = animation.effect instanceof KeyframeEffect ? animation.effect.getKeyframes() : [];
+        if (ownAnimate) Object.defineProperty(target, 'animate', ownAnimate);
+        else Reflect.deleteProperty(target, 'animate');
+      }
+      return animation;
+    };
   });
+  await trigger.click();
+  const target = await panel.evaluate(element =>
+    (element as HTMLElement & { collapseFrames?: ComputedKeyframe[] }).collapseFrames?.at(-1));
   expect(target).toMatchObject({ height: '0px', paddingTop: '0px', paddingBottom: '0px', borderTopWidth: '0px', borderBottomWidth: '0px' });
   await expect(page.locator('.fixture-accordion-panel').locator('xpath=../..')).toHaveAttribute('hidden', /.*/);
   await trigger.click();
