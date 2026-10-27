@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { isMotionTimingName, motionTimingVariable } from '../src/core/base/timing';
 import { isMotionDistanceName, motionDistanceVariable, normalizeMotionDistance } from '../src/core/base/distance';
 import type { UiMotion } from './config';
+import { isVisibilityMargin } from '../src/core/base/animation-visibility';
 
 const KIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = path.join(KIT, 'src', 'core', '_motion.scss');
@@ -25,7 +26,12 @@ function assertOnlyKeys(value: Record<string, unknown>, allowed: readonly string
 export function validateMotion(value: unknown): asserts value is UiMotion | undefined {
   if (value === undefined) return;
   if (!isRecord(value)) throw new Error('motion must be an object');
-  assertOnlyKeys(value, ['timing', 'distance'], 'motion');
+  assertOnlyKeys(value, ['timing', 'distance', 'visibility'], 'motion');
+  if ('visibility' in value) {
+    if (!isRecord(value.visibility)) throw new Error('motion.visibility must be an object');
+    assertOnlyKeys(value.visibility, ['rootMargin'], 'motion.visibility');
+    if (!isVisibilityMargin(value.visibility.rootMargin)) throw new Error('motion.visibility.rootMargin must contain one to four px/% margins');
+  }
 
   if (!('timing' in value)) throw new Error('motion.timing is required');
   const timing = value.timing;
@@ -59,6 +65,7 @@ export function motionScss(motion?: UiMotion): string {
   if (!motion) return EMPTY_MOTION;
 
   const declarations = Object.entries(motion.timing).map(([name, seconds]) => `  ${motionTimingVariable(name)}: ${seconds}s;`);
+  if (motion.visibility) declarations.push(`  --t-m-visibility-root-margin: ${motion.visibility.rootMargin.trim()};`);
   for (const [name, value] of Object.entries(motion.distance ?? {})) {
     declarations.push(`  ${motionDistanceVariable(name)}: ${typeof value === 'number' ? `calc(var(--rpx) * ${value})` : value};`);
   }

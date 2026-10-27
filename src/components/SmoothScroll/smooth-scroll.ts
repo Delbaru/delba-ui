@@ -1,4 +1,5 @@
 import { clamp } from '../../core/utils';
+import { scrollEasing } from '../../motion';
 
 /** Функция хода: доля времени 0–1 → доля пути 0–1. */
 export type SmoothScrollEasing = (t: number) => number;
@@ -11,7 +12,7 @@ export type SmoothScrollEasing = (t: number) => number;
 export type SmoothScrollOffset = number | string | (() => number);
 
 /** easeOutExpo: быстрый старт и долгое мягкое торможение. */
-export const easeOutExpo: SmoothScrollEasing = (t) => (t >= 1 ? 1 : 1 - 2 ** (-10 * t));
+export const easeOutExpo: SmoothScrollEasing = scrollEasing.easeOutExpo;
 
 const FRAME_MS = 1000 / 60;
 const LINE_PX = 16;

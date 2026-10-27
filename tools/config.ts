@@ -9,6 +9,8 @@ export interface UiMotion {
   readonly timing: MotionTiming;
   /** Named reveal distances: numbers are rpx, percentages are relative to the element. */
   readonly distance?: MotionDistances;
+  /** Preparation area for idle, parallax and perspective observers; px/% IntersectionObserver syntax. */
+  readonly visibility?: { readonly rootMargin: string };
 }
 
 /** Словари осей шкур и папка компонентов проекта (см. `skin/`). */

@@ -5,6 +5,7 @@ import type React from 'react';
 
 import { MEDIA_QUERY } from '../core/base/breakpoints';
 import { clamp } from '../core/utils';
+import { animationVisibilityMargin } from '../core/base/animation-visibility';
 import { isPerspective3dSettled, perspectiveFrameEase, type Perspective3dValues as MotionValues } from './perspective3d';
 
 const MOTION_STYLE_PROPS = [
@@ -497,7 +498,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
         isVisibleRef.current = entry.isIntersecting;
         if (entry.isIntersecting) scheduleAnimation();
       },
-      { rootMargin: '100px' }
+      { rootMargin: animationVisibilityMargin(wanted) }
     );
     observer.observe(wanted);
     observerRef.current = observer;

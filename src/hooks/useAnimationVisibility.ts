@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import { animationVisibilityMargin } from '../core/base/animation-visibility';
 
 type AnimationNode = HTMLElement | SVGElement;
 const PROPERTY = '--idle-animation-state';
@@ -24,7 +25,7 @@ export function useAnimationVisibility(enabled = true) {
     const observer = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(([entry]) => {
       visible = Boolean(entry?.isIntersecting);
       update();
-    }, { rootMargin: '100px' });
+    }, { rootMargin: animationVisibilityMargin(node) });
     observer?.observe(node);
     document.addEventListener('visibilitychange', update);
     update();

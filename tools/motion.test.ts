@@ -117,3 +117,13 @@ test('writeMotionScss writes only on content changes', (t) => {
   assert.equal(writeMotionScss(output), true);
   assert.equal(fs.readFileSync(output, 'utf8'), motionScss(undefined));
 });
+
+test('continuous motion visibility is validated and emitted without changing reveal options', () => {
+  const motion = { timing: { normal: 0.5 }, visibility: { rootMargin: '0px 0px 15% 0px' } };
+  assert.doesNotThrow(() => validateMotion(motion));
+  assert.match(motionScss(motion), /--t-m-visibility-root-margin: 0px 0px 15% 0px;/);
+  for (const rootMargin of ['100vh', 'var(--margin)', '0px; color:red', '0px 0px 0px 0px 0px', '']) {
+    assert.throws(() => validateMotion({ ...motion, visibility: { rootMargin } }), /rootMargin/);
+  }
+  assert.throws(() => validateMotion({ ...motion, visibility: { rootMargin: '0px', typo: true } }), /visibility.typo/);
+});
