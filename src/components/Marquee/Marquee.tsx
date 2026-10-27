@@ -6,6 +6,8 @@ import { Flex } from '../Flex';
 import { cx, MEDIA_QUERY, type ResponsiveValue } from '../../core';
 import { useInView } from '../../core/useInView';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { motionDefaults, readMotionDefaultMs } from '../../core/base/motion-config';
+import { timeResponse } from '../../core/base/damping';
 
 import styles from './Marquee.module.scss';
 
@@ -30,9 +32,6 @@ export type MarqueeProps = Omit<ComponentProps<typeof Flex>, 'ref' | 'as' | 'dir
     fade?: boolean;
 };
 
-// Постоянная времени, за которую скорость подтягивается к целевой, с. Одна на всё: бросок гаснет,
-// пауза тормозит, продолжение разгоняется — по одной и той же экспоненте, без рывков.
-const EASE_S = 0.7;
 // Длинный кадр (вкладка в фоне, затык главного потока) не должен отбрасывать ленту скачком.
 const MAX_DT_S = 0.1;
 // Пока палец сдвинулся меньше — это клик по ссылке внутри, а не перетаскивание.
@@ -61,7 +60,7 @@ export function Marquee({
     children,
     as = 'div',
     gap,
-    speed = 40,
+    speed = motionDefaults.marquee.speed,
     reverse = false,
     paused = false,
     draggable = true,
@@ -87,6 +86,8 @@ export function Marquee({
         const root = rootRef.current;
         const track = trackRef.current;
         if (!root || !track || reduced) return;
+        // Бросок, пауза и разгон следуют одной настроенной постоянной времени.
+        const easeSeconds = readMotionDefaultMs('marquee', 'easeDuration', root) / 1000;
 
         let offset = 0;
         let velocity = 0;
@@ -120,7 +121,7 @@ export function Marquee({
             const goal = target();
 
             if (!drag.active) {
-                velocity += (goal - velocity) * (1 - Math.exp(-dt / EASE_S));
+                velocity += (goal - velocity) * timeResponse(easeSeconds, dt * 1000);
                 offset += velocity * dt;
             }
 

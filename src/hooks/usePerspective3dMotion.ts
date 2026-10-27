@@ -6,6 +6,7 @@ import type React from 'react';
 import { MEDIA_QUERY } from '../core/base/breakpoints';
 import { clamp } from '../core/utils';
 import { animationVisibilityMargin } from '../core/base/animation-visibility';
+import { motionDefaults } from '../core/base/motion-config';
 import { isPerspective3dSettled, perspectiveFrameEase, type Perspective3dValues as MotionValues } from './perspective3d';
 
 const MOTION_STYLE_PROPS = [
@@ -54,14 +55,7 @@ type NormalizedPerspective3dConfig = {
 
 const DEFAULT_CONFIG = {
   follow: 'element',
-  maxRotateX: 10,
-  maxRotateY: 12,
-  maxTranslateX: 10,
-  maxTranslateY: 10,
-  scale: 1.02,
-  translateZ: 0,
-  ease: 0.16,
-  restEase: 0.1,
+  ...motionDefaults.perspective,
 } as const satisfies Omit<NormalizedPerspective3dConfig, 'perspective'>;
 
 const INITIAL_VALUES: MotionValues = {
@@ -143,6 +137,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
   const observedRef = useRef<MotionTarget | null>(null);
   const pointerRectRef = useRef<DOMRect | null>(null);
   const pointerResizeRef = useRef<ResizeObserver | null>(null);
+  const syncScopeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     configRef.current = config;
@@ -377,7 +372,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
   }, []);
 
   const scope = config?.follow === 'element' ? config.scope : undefined;
-  useEffect(() => {
+  const bindScope = useCallback(() => {
     const node = nodeRef.current;
     const surface = scope && node?.closest<HTMLElement>(scope);
     if (!node || !surface) return;
@@ -429,6 +424,21 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       if (node.isConnected) applyMotionValues(node, INITIAL_VALUES);
     };
   }, [scope, scheduleAnimation, updateTargetFromPointer]);
+
+  useEffect(() => {
+    if (!scope) return;
+    let detach: (() => void) | undefined;
+    const sync = () => {
+      detach?.();
+      detach = bindScope();
+    };
+    syncScopeRef.current = sync;
+    sync();
+    return () => {
+      syncScopeRef.current = null;
+      detach?.();
+    };
+  }, [scope, bindScope]);
 
   const motionHandlers = config && config.follow === 'element' && !config.scope
     ? {
@@ -516,6 +526,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       if (node) pointerResizeRef.current?.observe(node);
     }
     nodeRef.current = node;
+    syncScopeRef.current?.();
     syncObserver();
 
     if (!node) {

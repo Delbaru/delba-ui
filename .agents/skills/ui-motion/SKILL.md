@@ -27,9 +27,14 @@ description: 'Общая механика анимаций @delba/ui: appearance
 - Пользовательские события компонуются; отмена действия не отменяет обязательный cleanup.
 - Обратная команда, cancel и unmount корректно завершают ожидающий результат.
 - Reduced motion сохраняет результат и lifecycle; первый SSR и hydration согласованы.
+  Initial state времени читает generated runtime без DOM; scoped CSS уточняется после commit.
 - Пауза вне экрана/скрытого документа и снятие слушателей/observer/rAF обязательны
   там, где механика их создаёт. Не дублируй движок в компоненте.
 - Сглаживание учитывает время кадра, а не число кадров; на разных Hz длительность одинакова.
+- Все публичные motion duration/delay, включая legacy counter и Carousel, — секунды или timing name.
+  Defaults эффектов берутся из motion.defaults; прокруткой целиком владеет motion.scroll.
+  Кривые берутся из motionEasing, damping — из frameResponse/timeResponse.
+  Observer margins — явные top/right/bottom/left; legacy % не подменяют единицами vh. Lenis удалён.
 - --t-fast/normal/slow — полный transition с all. Для списка свойств используй
   transition-property отдельно; `height var(--t-normal)` — некорректный CSS.
 

@@ -74,7 +74,6 @@ export { pad, pluralize, type PluralForms } from './core/base/text-format';
 export { createUrl, createBrowserUrl, installBrowserUrl, type BrowserUrl } from './core/base/url';
 
 // Хуки и типы, которые нужны D-компонентам и страницам проекта.
-export { LenisScroll, LenisScrollProvider, useLenisScroll, useLenisScrollOptional, type LenisScrollContextValue } from './components/LenisScroll';
 export * from './components/SmoothScroll';
 export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
 export { useAnchoredFloating, type FloatingAlign, type FloatingPlacement } from './hooks/useAnchoredFloating';

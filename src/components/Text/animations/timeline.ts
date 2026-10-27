@@ -1,5 +1,6 @@
 import type { MotionTime } from '../../../core/base/timing';
 import { isRevealKey, type RevealKey, type RevealOptions } from '../../../core/reveal/reveal';
+import { motionDefaults } from '../../../core/base/motion-config';
 
 export type TextEffectKey = RevealKey | 'counter';
 export interface EffectStartAt {
@@ -58,7 +59,7 @@ export function resolveTextTimeline(input: TextTimelineAnimate, readTime: (time:
       start = dependency.start + dependency.duration * progress;
     }
     start += readTime(options.delay ?? 0);
-    const duration = readTime(options.duration ?? (key === 'counter' ? 'counter' : 'slow'));
+    const duration = readTime(options.duration ?? (key === 'counter' ? motionDefaults.counter.duration : motionDefaults.reveal.duration));
     const window = { start, duration, end: start + duration };
     effects[key] = window;
     visiting.delete(key);

@@ -96,6 +96,18 @@ export interface ParsedSvg {
   rootFill?: string;
 }
 
+/** Remote URLs are untrusted. Keep the DOM-based sanitizer in a lazy chunk, outside common Icon rendering. */
+export async function parseRemoteSvg(text: string, normalizeContent = false): Promise<ParsedSvg> {
+  const { default: DOMPurify } = await import('isomorphic-dompurify');
+  const safe = DOMPurify.sanitize(text, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    FORBID_TAGS: ['style', 'foreignObject', 'animate', 'animateMotion', 'animateTransform', 'set'],
+    FORBID_ATTR: ['style'],
+    ALLOW_DATA_ATTR: false,
+  });
+  return parseSvg(safe, normalizeContent);
+}
+
 // Тип для SVG компонента, который возвращает SVGR
 export type IconComponent = React.FC<React.SVGProps<SVGSVGElement>>;
 

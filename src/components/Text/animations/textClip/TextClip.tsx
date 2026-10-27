@@ -6,6 +6,8 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Flex } from '../../../Flex';
 import type { TextAnimationContext } from '../types';
 import type { TextClipOptions } from './types';
+import { useMotionTime } from '../../../../hooks/useMotionTime';
+import { prefersReducedMotion } from '../../../../core/base/motion';
 
 /**
  * Клип-смена шага: текущий шаг «срезается» сверху clip-path'ом, подменяется на новый и «открывается»
@@ -17,6 +19,11 @@ export function TextClip({ options }: TextAnimationContext<TextClipOptions>) {
   const [heights, setHeights] = useState<number[]>([]);
   const [displayedStep, setDisplayedStep] = useState(options?.currentStep ?? 0);
   const [clipPath, setClipPath] = useState('inset(0 0 0 0)');
+  const stageRef = useRef<HTMLElement | null>(null);
+  const durationMs = useMotionTime('textClip', 'duration', stageRef, options?.duration);
+  const requestedStep = options?.currentStep;
+  const displayedRef = useRef(displayedStep);
+  displayedRef.current = displayedStep;
 
   useEffect(() => {
     if (itemRefs.current.length === 0) return;
@@ -24,23 +31,27 @@ export function TextClip({ options }: TextAnimationContext<TextClipOptions>) {
   }, [options?.steps]);
 
   useEffect(() => {
-    if (!options || displayedStep === options.currentStep) return undefined;
-
-    const durationMs = (options.duration || 1) * 1000;
-    const opts = options;
-    const t = setTimeout(() => {
+    if (requestedStep === undefined) return;
+    if (requestedStep === displayedRef.current || durationMs === 0 || prefersReducedMotion()) {
+      setDisplayedStep(requestedStep);
+      setClipPath('inset(0 0 0 0)');
+      return;
+    }
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const later = (callback: () => void, delay: number) => { timers.push(setTimeout(callback, delay)); };
+    later(() => {
       setClipPath('inset(0 0 100% 0)');
-      setTimeout(() => {
-        setDisplayedStep(opts.currentStep);
+      later(() => {
+        setDisplayedStep(requestedStep);
         setClipPath('inset(100% 0 0 0)');
-        setTimeout(() => {
+        later(() => {
           setClipPath('inset(0 0 0 0)');
         }, 0);
       }, durationMs);
     }, 0);
 
-    return () => clearTimeout(t);
-  }, [options?.currentStep, displayedStep, options]);
+    return () => timers.forEach(clearTimeout);
+  }, [requestedStep, durationMs]);
 
   if (!options) return null;
 
@@ -49,11 +60,11 @@ export function TextClip({ options }: TextAnimationContext<TextClipOptions>) {
   const stageStyle = {
     height: maxHeight ? `${maxHeight}px` : options.clipHeight ?? 'auto',
     clipPath,
-    '--clip-dur': options.duration ? `${options.duration}s` : undefined,
+    '--clip-dur': `${durationMs}ms`,
   } as CSSProperties;
 
   return (
-    <Flex className={'ui-clip'} style={stageStyle}>
+    <Flex ref={stageRef} className={'ui-clip'} style={stageStyle}>
       {options.steps.map((step, index) => (
         <span
             key={step.slice(0, 60)}

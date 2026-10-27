@@ -46,7 +46,7 @@ export function Carousel({
   offsetAfter,
   peekStart,
   peekEnd,
-  speed = [300, 300, 300],
+  speed,
   inertia,
   padding,
   justify,

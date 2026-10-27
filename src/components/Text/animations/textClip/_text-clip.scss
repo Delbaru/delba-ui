@@ -3,7 +3,7 @@
 .ui-clip {
   position: relative;
   overflow: hidden;
-  transition: clip-path var(--clip-dur, var(--t-d-very-slow)) var(--t-t-f-ease);
+  transition: clip-path var(--clip-dur, var(--t-m-text-clip-duration)) var(--t-t-f-ease);
 
   .ui-clip-item {
     position: absolute;

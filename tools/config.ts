@@ -1,70 +1,93 @@
 import type { UiScale } from '../src/core/base/scale';
 import type { ExtractOptions } from './utilities/extract';
+import type { ObserverMargin } from '../src/core/base/observer-margin';
+import type { MotionDefaultOverrides } from '../src/core/base/motion-defaults';
+import type {
+    MotionEasingOverrides,
+    MotionEasingName,
+    MotionEasingPreset,
+} from '../src/core/base/easing';
 
 export type MotionTiming = Readonly<Record<string, number>>;
 export type MotionDistances = Readonly<Record<string, number | `${number}%`>>;
 
 export interface UiMotion {
-  /** Named motion durations in seconds. At least one camelCase name is required. */
-  readonly timing: MotionTiming;
-  /** Named reveal distances: numbers are rpx, percentages are relative to the element. */
-  readonly distance?: MotionDistances;
-  /** Preparation area for idle, parallax and perspective observers; px/% IntersectionObserver syntax. */
-  readonly visibility?: { readonly rootMargin: string };
+    /** Named motion durations in seconds. At least one camelCase name is required. */
+    readonly timing: MotionTiming;
+    /** Named reveal distances: numbers are rpx, percentages are relative to the element. */
+    readonly distance?: MotionDistances;
+    /** Preparation area for idle, parallax and perspective observers; px/% IntersectionObserver syntax. */
+    readonly visibility?: { readonly rootMargin: ObserverMargin };
+    /** Per-behavior defaults shared by CSS, JS and SSR. Durations are seconds or timing names. */
+    readonly defaults?: MotionDefaultOverrides;
+    /** Discoverable motionEasing presets share their curve between CSS and JS. */
+    readonly easing?: MotionEasingOverrides;
+    /** Default viewport-start behavior. Percentages retain IntersectionObserver's width-relative semantics. */
+    readonly inView?: { readonly rootMargin: ObserverMargin; readonly threshold: number };
+    /** Default native scroll behavior; seconds, 60 Hz response coefficient, CSS offset and shared easing. */
+    readonly scroll?: {
+        readonly duration?: number;
+        readonly minDuration?: number;
+        readonly maxDuration?: number;
+        readonly durationPerScreen?: number;
+        readonly lerp?: number;
+        readonly offset?: string | number;
+        readonly easing?: MotionEasingName | MotionEasingPreset;
+    };
 }
 
 /** Словари осей шкур и папка компонентов проекта (см. `skin/`). */
 export interface UiSkins {
-  /**
-   * Папка компонентов: в её подпапках ищутся `*.skin.ts`, рядом пишется `_states.scss`.
-   * Не задана — генерируются только словари (`_tokens.scss`, `_classes.scss`): проект,
-   * который печатает состояния сам, берёт у кита карты и движок, но не кодоген.
-   */
-  readonly dir?: string;
-  readonly fills: Readonly<Record<string, string>>;
-  /** Линия — [толщина в rpx, цвет]. */
-  readonly lines: Readonly<Record<string, readonly [number, string]>>;
-  readonly texts: Readonly<Record<string, string>>;
-  /**
-   * Свои словари проекта рядом с осями кита: имя карты → значения. Попадают в `_tokens.scss`
-   * как `$<имя>` и доступны через `@use '@delba/ui/skin-states'` — ими проект красит СВОИ
-   * глаголы (глиф, тень), которых в движке кита нет и быть не должно.
-   */
-  readonly maps?: Readonly<Record<string, Readonly<Record<string, string>>>>;
-  /** Модуль движка состояний в шапке `_states.scss`. По умолчанию `@delba/ui/skin-states`. */
-  readonly states?: string;
-  /** Ключи пресета, которые генератор печатает как эффекты покоя. По умолчанию глаголы кита. */
-  readonly effects?: readonly string[];
+    /**
+     * Папка компонентов: в её подпапках ищутся `*.skin.ts`, рядом пишется `_states.scss`.
+     * Не задана — генерируются только словари (`_tokens.scss`, `_classes.scss`): проект,
+     * который печатает состояния сам, берёт у кита карты и движок, но не кодоген.
+     */
+    readonly dir?: string;
+    readonly fills: Readonly<Record<string, string>>;
+    /** Линия — [толщина в rpx, цвет]. */
+    readonly lines: Readonly<Record<string, readonly [number, string]>>;
+    readonly texts: Readonly<Record<string, string>>;
+    /**
+     * Свои словари проекта рядом с осями кита: имя карты → значения. Попадают в `_tokens.scss`
+     * как `$<имя>` и доступны через `@use '@delba/ui/skin-states'` — ими проект красит СВОИ
+     * глаголы (глиф, тень), которых в движке кита нет и быть не должно.
+     */
+    readonly maps?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+    /** Модуль движка состояний в шапке `_states.scss`. По умолчанию `@delba/ui/skin-states`. */
+    readonly states?: string;
+    /** Ключи пресета, которые генератор печатает как эффекты покоя. По умолчанию глаголы кита. */
+    readonly effects?: readonly string[];
 }
 
 /** Конфиг проекта для CLI `delba-ui` и плагина `withUi` (default export `ui.config.ts`). Пути — от папки проекта. */
 export interface UiConfig {
-  /** Исходники для генератора утилит; сам кит сканируется всегда. По умолчанию `['src']`. */
-  readonly scan?: readonly string[];
-  /** Значения, которые на вызовах пишут именем (`size='lg'`), а скан видит только литералы. */
-  readonly seeds?: ExtractOptions['seeds'];
-  /**
-   * Варианты типографики проекта: `['h1', 'p1']` → классы `text_h1`, `text_p1` на токенах
-   * `--font-h1`, `--tt-h1`, `--ls-h1`. Не задан — прежний набор кита. `UiTypography` проекта
-   * выводится из этого же списка (README, «Типографика»), второго нет.
-   */
-  readonly typography?: ExtractOptions['typography'];
-  /** Стили темы для договора токенов. По умолчанию `theme`. */
-  readonly theme?: string | readonly string[];
-  /** Include the starter theme in token checks when global SCSS imports @delba/ui/theme. */
-  readonly themeDefaults?: boolean;
-  /** Папки под счётчик красных линий. По умолчанию `['src']`. */
-  readonly rules?: readonly string[];
-  /** Планка красных линий. По умолчанию `.rules-baseline.json`. */
-  readonly baseline?: string;
-  /** Node export conditions for consumer tests only, e.g. react-server for server-only imports. */
-  readonly testConditions?: readonly string[];
-  readonly skins?: UiSkins;
-  /**
-   * Базовые ширины макета, px: `1rpx = окно / база` на своей полосе, десктоп шире `max` не растёт.
-   * Из них генерируются `--rpx` и `sizes` у `Img`. Умолчания: 320 / 768 / 1920, потолок 2560.
-   */
-  readonly scale?: Partial<UiScale>;
-  /** Motion duration tokens in seconds; names and values are defined together here. */
-  readonly motion?: UiMotion;
+    /** Исходники для генератора утилит; сам кит сканируется всегда. По умолчанию `['src']`. */
+    readonly scan?: readonly string[];
+    /** Значения, которые на вызовах пишут именем (`size='lg'`), а скан видит только литералы. */
+    readonly seeds?: ExtractOptions['seeds'];
+    /**
+     * Варианты типографики проекта: `['h1', 'p1']` → классы `text_h1`, `text_p1` на токенах
+     * `--font-h1`, `--tt-h1`, `--ls-h1`. Не задан — прежний набор кита. `UiTypography` проекта
+     * выводится из этого же списка (README, «Типографика»), второго нет.
+     */
+    readonly typography?: ExtractOptions['typography'];
+    /** Стили темы для договора токенов. По умолчанию `theme`. */
+    readonly theme?: string | readonly string[];
+    /** Include the starter theme in token checks when global SCSS imports @delba/ui/theme. */
+    readonly themeDefaults?: boolean;
+    /** Папки под счётчик красных линий. По умолчанию `['src']`. */
+    readonly rules?: readonly string[];
+    /** Планка красных линий. По умолчанию `.rules-baseline.json`. */
+    readonly baseline?: string;
+    /** Node export conditions for consumer tests only, e.g. react-server for server-only imports. */
+    readonly testConditions?: readonly string[];
+    readonly skins?: UiSkins;
+    /**
+     * Базовые ширины макета, px: `1rpx = окно / база` на своей полосе, десктоп шире `max` не растёт.
+     * Из них генерируются `--rpx` и `sizes` у `Img`. Умолчания: 320 / 768 / 1920, потолок 2560.
+     */
+    readonly scale?: Partial<UiScale>;
+    /** Motion duration tokens in seconds; names and values are defined together here. */
+    readonly motion?: UiMotion;
 }

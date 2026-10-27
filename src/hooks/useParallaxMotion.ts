@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 
-import { useLenisScrollOptional } from '../components/LenisScroll';
 import { MEDIA_QUERY } from '../core/base/breakpoints';
 import { clamp } from '../core/utils';
 import { animationVisibilityMargin } from '../core/base/animation-visibility';
+import { motionDefaults } from '../core/base/motion-config';
+import { frameResponse } from '../core/base/damping';
 
 const PARALLAX_STYLE_PROPS = [
   '--parallax-translate-x',
@@ -21,12 +22,10 @@ type MotionValues = {
 };
 
 export type ParallaxDirection = 'up' | 'down' | 'left' | 'right';
-export type ParallaxScrollSource = 'auto' | 'lenis' | 'native';
 
 export type ParallaxConfig = {
   direction?: ParallaxDirection;
   distance?: number;
-  scroll?: ParallaxScrollSource;
   ease?: number;
   /** spring — прежнее догоняющее движение; scroll — привязка к view timeline браузера, с fallback. */
   mode?: 'spring' | 'scroll';
@@ -37,16 +36,14 @@ export type ParallaxInput = number | ParallaxConfig;
 type NormalizedParallaxConfig = {
   direction: ParallaxDirection;
   distance: number;
-  scroll: ParallaxScrollSource;
   ease: number;
   mode: 'spring' | 'scroll';
 };
 
 const DEFAULT_CONFIG: NormalizedParallaxConfig = {
   direction: 'up',
-  distance: 72,
-  scroll: 'auto',
-  ease: 0.14,
+  distance: motionDefaults.parallax.distance,
+  ease: motionDefaults.parallax.ease,
   mode: 'spring',
 };
 
@@ -70,7 +67,6 @@ function normalizeParallaxConfig(input: ParallaxInput | undefined): NormalizedPa
   return {
     direction: input.direction ?? DEFAULT_CONFIG.direction,
     distance: Math.abs(input.distance ?? DEFAULT_CONFIG.distance),
-    scroll: input.scroll ?? DEFAULT_CONFIG.scroll,
     ease: input.ease ?? DEFAULT_CONFIG.ease,
     mode: input.mode ?? DEFAULT_CONFIG.mode,
   };
@@ -112,12 +108,11 @@ function targetFromViewport(rect: Pick<DOMRectReadOnly, 'top' | 'height'>, confi
 }
 
 export function useParallaxMotion(parallax: ParallaxInput | undefined) {
-  const lenisCtx = useLenisScrollOptional();
   const resolved = useMemo(() => normalizeParallaxConfig(parallax), [parallax]);
   const ViewTimeline = typeof window === 'undefined' ? undefined : (window as Window & {
     ViewTimeline?: new (options: { subject: Element; axis: 'block'; inset: string }) => AnimationTimeline;
   }).ViewTimeline;
-  const native = resolved?.mode === 'scroll' && ViewTimeline !== undefined && CSS.supports('animation-composition', 'add') && !lenisCtx;
+  const native = resolved?.mode === 'scroll' && ViewTimeline !== undefined && CSS.supports('animation-composition', 'add');
   const config = native ? null : resolved;
   const configRef = useRef(config);
   const nodeRef = useRef<MotionTarget | null>(null);
@@ -242,26 +237,13 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
     window.addEventListener('resize', handleViewportChange);
     syncTargetFromViewport();
 
-    const shouldUseLenis = config.scroll !== 'native' && Boolean(lenisCtx);
-
-    if (shouldUseLenis && lenisCtx) {
-      const unregister = lenisCtx.registerScrollListener(() => {
-        syncTargetFromViewport();
-      });
-
-      return () => {
-        unregister();
-        window.removeEventListener('resize', handleViewportChange);
-      };
-    }
-
-    window.addEventListener('scroll', handleViewportChange, { passive: true });
+    window.addEventListener('scroll', handleViewportChange, { passive: true, capture: true });
 
     return () => {
       window.removeEventListener('resize', handleViewportChange);
-      window.removeEventListener('scroll', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
     };
-  }, [config, lenisCtx]);
+  }, [config]);
 
   // Стабильна по идентичности (deps: []) — работает только через ref'ы. От этого зависит
   // стабильность setMotionNode, см. комментарий там.
@@ -282,7 +264,7 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
 
       const elapsed = lastFrameRef.current === null ? 1 : clamp((timestamp - lastFrameRef.current) / (1000 / 60), 0, 3);
       lastFrameRef.current = timestamp;
-      const ease = 1 - Math.pow(1 - clamp(nextConfig.ease, 0.001, 1), elapsed);
+      const ease = frameResponse(nextConfig.ease, elapsed * (1000 / 60));
 
       const nextValues: MotionValues = {
         translateX:

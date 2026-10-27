@@ -5,6 +5,7 @@ import { createElement, useEffect, useRef, useState, type CSSProperties, type Re
 import { cx, MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../core';
 import { motionTimeCss, readMotionTimeMs, type MotionTime } from '../../../core/base/timing';
 import { normalizeImgAnimate, type ImgAnimate } from './types';
+import { readMotionDefaultMs } from '../../../core/base/motion-config';
 
 interface SwapState {
   /** Снимок прежней картинки, пока идёт смена; null — смены нет. */
@@ -55,13 +56,13 @@ export function useImgSwap(animate: ImgAnimate | undefined, identity: string, co
   const current = busy && swap.incoming != null ? swap.incoming : content;
   if (!busy && identity === committedRef.current) shownRef.current = content;
 
-  const duration: MotionTime = config?.duration ?? 'slow';
+  const duration: MotionTime | undefined = config?.duration;
   const running = busy && !swap.pending;
 
   // Ход доехал — снимаем прежний слой. Длительность — из опций или токена, вдвое у вуали.
   useEffect(() => {
     if (!running) return undefined;
-    const base = readMotionTimeMs(duration, scopeRef.current ?? undefined, 0.7);
+    const base = duration === undefined ? readMotionDefaultMs('imgSwap', 'duration', scopeRef.current ?? undefined) : readMotionTimeMs(duration, scopeRef.current ?? undefined);
     const timer = window.setTimeout(() => setSwap((s) => ({ ...s, outgoing: null })), base * (effect === 'veil' ? 2 : 1) + MOTION_END_BUFFER_MS);
     return () => window.clearTimeout(timer);
   }, [running, swap.turn, duration, effect]);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, 
 import type React from 'react';
 
 import { useFieldControl } from '../../core';
+import { useFormReset } from '../../core/useFormReset';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { defaultEqual, flattenSelectItems, getFocusedOptionIndex, isValueArray, visibleDropdownItems, type SelectItem, type SelectOption } from './options';
 
@@ -31,6 +32,7 @@ export interface SelectConfig<T extends string> extends SharedMotionProps {
     visibleOptions: number;
     validate: (value: T | null | T[]) => string | undefined;
     id?: string;
+    form?: string;
     error?: string;
     label?: string;
     comment?: string;
@@ -103,6 +105,7 @@ export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined
 
     const {
         id,
+        innerRef,
         fieldRef,
         displayError,
         errorId,
@@ -119,6 +122,12 @@ export function useSelect<T extends string>(ref: Ref<HTMLDivElement> | undefined
 
     const [open, setOpen] = useState(false);
     const [focusedIndex, setFocusedIndex] = useState(-1);
+    useFormReset(innerRef, config.form, () => {
+        if (valueProp === undefined) setUncontrolledValue(defaultValue ?? (multiple ? [] : null));
+        setInternalError(undefined);
+        setOpen(false);
+        setFocusedIndex(-1);
+    });
     const showInlineError = Boolean(displayError) && !open;
 
     const dropdownRef = useRef<HTMLDivElement>(null);

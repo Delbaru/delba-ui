@@ -12,7 +12,7 @@
 // каскад — `:nth-child` × `--reveal-step`. Заливка `backwards`: после хода анимация не держит `translate`,
 // и собственные сдвиги узла (ховер стрелки) работают.
 
-$hold: 3s;
+$hold: var(--t-m-reveal-hold);
 // Узел, помеченный САМИМ китом: `revealAttrs` всегда пишет ОДИН ИЗ КЛЮЧЕЙ, поэтому сужение до
 // списка у кита ничего не отнимает. Нужно оно потому, что `data-reveal` — атрибут заманчивого
 // имени: проект вполне держит на нём свой рукописный каскад, и безусловный `[data-reveal]` прятал
@@ -41,7 +41,7 @@ $load-max: 24;
   --reveal-duration: initial;
   --reveal-step: 0s;
   --reveal-o: 0;
-  --reveal-shift: var(--reveal-distance, calc(var(--rpx) * 32));
+  --reveal-shift: var(--reveal-distance, var(--t-m-reveal-distance));
   --reveal-t: none;
   --reveal-s: none;
   --reveal-f: none;
@@ -83,7 +83,7 @@ $load-max: 24;
 @media screen {
   #{$load-self},
   #{$load-child} {
-    animation: ui-reveal var(--reveal-duration, var(--t-d-slow)) var(--t-t-f-cubic-bezier)
+    animation: ui-reveal var(--reveal-duration, var(--t-m-reveal-duration)) var(--t-t-f-cubic-bezier)
       calc(var(--reveal-delay, 0s) + var(--reveal-i, 0) * var(--reveal-step)) backwards;
   }
 
@@ -110,12 +110,12 @@ $load-max: 24;
   }
 
   [data-reveal-state='in'] {
-    animation: ui-reveal var(--reveal-duration, var(--t-d-slow)) var(--t-t-f-cubic-bezier) var(--reveal-delay, 0s) both;
+    animation: ui-reveal var(--reveal-duration, var(--t-m-reveal-duration)) var(--t-t-f-cubic-bezier) var(--reveal-delay, 0s) both;
     will-change: opacity, translate, scale, filter;
   }
 
   [data-reveal-state='out'] {
-    animation: ui-reveal-out var(--reveal-duration, var(--t-d-slow)) var(--t-t-f-cubic-bezier) var(--reveal-delay, 0s) reverse both;
+    animation: ui-reveal-out var(--reveal-duration, var(--t-m-reveal-duration)) var(--t-t-f-cubic-bezier) var(--reveal-delay, 0s) reverse both;
     will-change: opacity, translate, scale, filter;
   }
 

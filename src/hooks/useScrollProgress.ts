@@ -4,9 +4,10 @@ import { useEffect, type RefObject } from 'react';
 
 import { MEDIA_QUERY } from '../core/base/breakpoints';
 import { useSmoothScroll } from '../components/SmoothScroll';
+import { timeResponse } from '../core/base/damping';
 
 export interface ScrollProgressOptions {
-  /** Время догоняющего движения в ms; 0 привязывает полосу напрямую к прокрутке. */
+  /** Время догоняющего движения в секундах; 0 привязывает полосу напрямую к прокрутке. */
   lag?: number;
 }
 
@@ -28,7 +29,7 @@ export function useScrollProgress(surface: RefObject<HTMLElement | null>, { lag 
         const paint = () => { el.style.transform = `scaleX(${shown})`; };
 
         const tick = (now: number) => {
-            shown += (target - shown) * (1 - Math.exp(-(now - last) / Math.max(1, lag)));
+            shown += (target - shown) * timeResponse(lag, now - last);
             last = now;
             if (Math.abs(target - shown) < 0.0005) shown = target;
             paint();

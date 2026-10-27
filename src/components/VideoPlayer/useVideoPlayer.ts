@@ -91,7 +91,7 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
     }
 
     function isFullscreen(): boolean {
-        return typeof document !== 'undefined' && document.fullscreenElement != null;
+        return typeof document !== 'undefined' && root !== null && document.fullscreenElement === root;
     }
 
     //

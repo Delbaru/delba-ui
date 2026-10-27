@@ -3,6 +3,8 @@
 import { useLayoutEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { MEDIA_QUERY } from '../../../core/base/breakpoints';
 import { readMotionTimeMs } from '../../../core/base/timing';
+import { normalizeObserverMargin } from '../../../core/base/observer-margin';
+import { configuredMotionEasing, motionInView } from '../../../core/base/motion-config';
 import { isRevealKey, resolveReveal, revealAttrs, revealStyle } from '../../../core/reveal/reveal';
 import { parseCountContent } from './counter/parseContent';
 import { effectProgress, resolveTextTimeline, type TextTimelineAnimate } from './timeline';
@@ -40,7 +42,7 @@ export function useTextTimeline(input: TextTimelineAnimate | undefined, content:
   const attrs = revealAttrs(reveal);
   const style = revealStyle(reveal) as CSSProperties | undefined;
   if (style) {
-    Object.assign(style, { '--reveal-delay': 'var(--text-timeline-delay, 0ms)', '--reveal-duration': 'var(--text-timeline-duration, var(--t-d-slow))' });
+    Object.assign(style, { '--reveal-delay': 'var(--text-timeline-delay, 0ms)', '--reveal-duration': 'var(--text-timeline-duration, var(--t-m-reveal-duration))' });
   }
   // Семантически одинаковый литерал при ререндере не перезапускает ход.
   const signature = input ? JSON.stringify([input, to, start, prefix, suffix, grouped, hasCounter]) : '';
@@ -52,7 +54,8 @@ export function useTextTimeline(input: TextTimelineAnimate | undefined, content:
     const current = latest.current;
     const config = current.input;
     if (!node || !config) return undefined;
-    const timeline = resolveTextTimeline(config, (time) => readMotionTimeMs(time, node, time === 'counter' ? 2.5 : time === 'slow' ? 0.7 : 0));
+    const timeline = resolveTextTimeline(config, (time) => readMotionTimeMs(time, node));
+    const counterEasing = configuredMotionEasing('counter');
     const appearanceWindow = current.appearanceKey ? timeline.effects[current.appearanceKey] : undefined;
     if (appearanceWindow) {
       node.style.setProperty('--text-timeline-delay', `${appearanceWindow.start}ms`);
@@ -107,7 +110,7 @@ export function useTextTimeline(input: TextTimelineAnimate | undefined, content:
       const counter = timeline.effects.counter;
       if (counter && current.hasCounter) {
         const progress = effectProgress(counter, elapsed);
-        write(Math.round(current.start + (current.to - current.start) * (1 - (1 - progress) ** 4)));
+        write(Math.round(current.start + (current.to - current.start) * counterEasing(progress)));
       }
       if (elapsed >= timeline.end) { finish(); return; }
       frame = requestAnimationFrame(tick);
@@ -123,14 +126,14 @@ export function useTextTimeline(input: TextTimelineAnimate | undefined, content:
     if (mq.matches) finish();
     let observer: IntersectionObserver | undefined;
     if (config.when === 'inView' && typeof IntersectionObserver !== 'undefined') {
-      const threshold = Math.min(1, Math.max(0, config.threshold ?? 0));
+      const threshold = Math.min(1, Math.max(0, config.threshold ?? motionInView.threshold));
       observer = new IntersectionObserver(([entry]) => {
         if (!entry) return;
         visible = entry.isIntersecting && entry.intersectionRatio >= threshold;
         if (visible) play();
         else if (config.once === false && !mq.matches) reset();
         else if (!active) cancel();
-      }, { threshold, rootMargin: config.rootMargin ?? '0px' });
+      }, { threshold, rootMargin: normalizeObserverMargin(config.rootMargin ?? motionInView.rootMargin) ?? '0px' });
       observer.observe(node);
     } else {
       visible = true;

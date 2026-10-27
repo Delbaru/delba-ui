@@ -17,8 +17,7 @@ import {
 
 /** Атрибут-исключение: колесо над узлом с ним (и его потомками) и клик по ссылке внутри отдаются браузеру. */
 export const SMOOTH_SCROLL_IGNORE = 'data-smooth-scroll-ignore';
-// Модалки и слои, размеченные под Lenis, уже несут эти атрибуты — уважаем их, чтобы не размечать дважды.
-const IGNORE_ATTRS = [SMOOTH_SCROLL_IGNORE, 'data-lenis-prevent', 'data-lenis-prevent-wheel'];
+const IGNORE_ATTRS = [SMOOTH_SCROLL_IGNORE];
 const SCROLL_KEYS = new Set([' ', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab']);
 const SCROLLABLE = /(auto|scroll|overlay)/;
 // Вкладка в фоне копит время кадра; без потолка первый кадр после возврата прыгает к цели.

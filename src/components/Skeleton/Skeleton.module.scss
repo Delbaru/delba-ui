@@ -8,9 +8,8 @@
   //
 
   .Skeleton {
-      // Период — переменной блока, а не токеном: токены транзишнов описывают ОТКЛИК на действие
-      // (0.3–1 с), а это фоновое дыхание, у него своя длительность (§8.5).
-      --skeleton-period: 1600ms;
+      // Background period has its own configurable semantic token, separate from response transitions.
+      --skeleton-period: var(--t-m-skeleton-duration);
 
       position: relative;
       overflow: hidden;
@@ -30,7 +29,7 @@
               transparent 100%
           );
           opacity: 0.55;
-          animation: skeletonSweep var(--skeleton-period) ease-in-out infinite;
+          animation: skeletonSweep var(--skeleton-period) var(--t-t-f-ease-in-out) infinite;
       }
 
       // Бесконечное движение обязано выключаться настройкой ОС — это тот самый «конкретный случай»,

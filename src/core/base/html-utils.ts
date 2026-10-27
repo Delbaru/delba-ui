@@ -28,8 +28,8 @@ export const stripHtmlTags = (value: string): string =>
   value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 // Лёгкий синхронный санитайзер для НАШИХ СОБСТВЕННЫХ SVG-иконок (build-ассеты из public/icons и
-// инлайн-манифеста — не пользовательский ввод). Убирает то же, что прежний DOMPurify-профиль svg
-// (script/foreignObject, обработчики событий, style, javascript:-ссылки), но БЕЗ зависимости DOMPurify.
+// инлайн-манифеста — не пользовательский ввод). Это preprocessing доверенных ассетов, а НЕ граница
+// безопасности для произвольного SVG. Внешние URL проходят parseRemoteSvg с DOMPurify перед этим шагом.
 // Важно для веса: Icon рендерится почти на каждом экране, поэтому DOMPurify тянулся в общий чанк.
 // Пользовательский rich-text по-прежнему чистится DOMPurify — см. sanitizeRichTextHtml в ./html-sanitize.
 const SVG_SCRIPT_BLOCK = /<script\b[\s\S]*?<\/script\s*>/gi;

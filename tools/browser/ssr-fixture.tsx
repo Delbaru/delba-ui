@@ -25,6 +25,10 @@ export function SsrFixture() {
   return (
     <main className="fixture">
       <h1>SSR and hydration</h1>
+      <style>{':root { --t-d-fast: 190ms; }'}</style>
+      <Text data-testid="ssr-named-slide" animate={['textSlide', { mode: 'swap', duration: 'fast' }]}>Named slide</Text>
+      <Text data-testid="ssr-named-reveal" animate={['textReveal', { duration: 'fast' }]}>Named reveal</Text>
+      <Text data-testid="ssr-named-clip" animate={['textClip', { duration: 'fast', steps: ['Named clip', 'Next clip'], currentStep: 0 }]}>Named clip</Text>
       <ScrollArea fade maxH={[120, 120, 120]} aria-label="Server scroll area">Server scroll content</ScrollArea>
       <Flex position={['relative', 'relative', 'relative']} r={[24, 16, 20]}>
         <GradientBorder gradient={['var(--primary)', 'var(--primary)', 'var(--primary)']} />

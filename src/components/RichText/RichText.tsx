@@ -9,6 +9,9 @@ import type { LexicalDocument } from './types';
 import { renderLexicalContent } from './LexicalRenderer';
 import type { RevealProps } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import type { MotionTime } from '../../core/base/timing';
+import { motionTimeCss, readMotionTimeMs } from '../../core/base/timing';
+import { readMotionDefaultMs } from '../../core/base/motion-config';
 
 const c = createLayoutClasses(styles);
 
@@ -32,14 +35,14 @@ export type AnimationKey = 'counter' | 'textSlide' | 'textClip';
 export interface TextSlideOptions {
   steps: string[];
   currentStep: number;
-  duration?: number;
+  duration?: MotionTime;
   lineHeight?: string;
 }
 
 export interface TextClipOptions {
   steps: string[];
   currentStep: number;
-  duration?: number;
+  duration?: MotionTime;
   clipHeight?: string;
 }
 
@@ -321,7 +324,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
   // снимаются при новой смене и размонтировании; иначе запоздалый хвост старой цепочки ставил
   // устаревший шаг. Шаг, на который вернулись до конца хода, просто открывается.
   const clipStep = resolvedTextClipOpts?.currentStep;
-  const clipDurationMs = (resolvedTextClipOpts?.duration || 1) * 1000;
+  const clipDurationMs = resolvedTextClipOpts?.duration === undefined ? readMotionDefaultMs('textClip', 'duration') : readMotionTimeMs(resolvedTextClipOpts.duration);
   const displayedStepRef = useRef(displayedStep);
   displayedStepRef.current = displayedStep;
 
@@ -406,7 +409,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
             height: containerHeight,
             position: 'relative',
             transform: `translateY(-${translateY}px)`,
-            transition: `height ${resolvedTextSlideOpts.duration || 1}s ease, transform ${resolvedTextSlideOpts.duration || 1}s ease`,
+            transition: `height ${resolvedTextSlideOpts.duration === undefined ? 'var(--t-m-text-slide-sequence-duration)' : motionTimeCss(resolvedTextSlideOpts.duration)} var(--t-t-f-ease), transform ${resolvedTextSlideOpts.duration === undefined ? 'var(--t-m-text-slide-sequence-duration)' : motionTimeCss(resolvedTextSlideOpts.duration)} var(--t-t-f-ease)`,
           }}
         >
           {resolvedTextSlideOpts.steps.map((stepContent, index) => {
@@ -447,7 +450,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
           style={{
             height: maxHeight || resolvedTextClipOpts.clipHeight || 'auto',
             clipPath,
-            transition: `clip-path ${(resolvedTextClipOpts.duration || 1)}s ease`,
+            transition: `clip-path ${clipDurationMs}ms var(--t-t-f-ease)`,
           }}
         >
           {resolvedTextClipOpts.steps.map((stepContent, index) => {

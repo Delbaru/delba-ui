@@ -7,6 +7,7 @@ import { useCountUpNode } from './useCountUp';
 import { parseCountContent } from './parseContent';
 import type { TextAnimationContext } from '../types';
 import type { CounterOptions } from './types';
+import { motionDefaults } from '../../../../core/base/motion-config';
 
 /**
  * Анимация счётчика: число едет от start к to. trigger='onView' (по умолчанию) запускает анимацию,
@@ -24,7 +25,7 @@ import type { CounterOptions } from './types';
 export function Counter({ options, content }: TextAnimationContext<CounterOptions>) {
   const ref = useRef<HTMLSpanElement | null>(null);
   const valueRef = useRef<HTMLSpanElement | null>(null);
-  const { isInView } = useInView(ref, { threshold: 0.1 });
+  const { isInView } = useInView(ref, { threshold: motionDefaults.counter.threshold });
 
   const parsed = options?.to == null ? parseCountContent(content) : null;
   const to = options?.to ?? parsed?.to ?? 0;
@@ -38,7 +39,7 @@ export function Counter({ options, content }: TextAnimationContext<CounterOption
   const format = (value: number) => (grouped ? value.toLocaleString('ru-RU') : String(value));
   const text = (value: number) => `${prefix}${format(value)}${suffix}`;
 
-  useCountUpNode(valueRef, to, { duration: options?.duration, durationTime: options?.durationTime, start }, shouldStart, !isInView, text);
+  useCountUpNode(valueRef, to, { duration: options?.duration, start }, shouldStart, !isInView, text);
 
   return (
     <span ref={ref} className={'ui-counter'}>

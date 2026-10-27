@@ -1,7 +1,6 @@
 ﻿'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
-import { useLenisScrollOptional } from '../components/LenisScroll/LenisScrollContext';
 import { clamp } from '../core/utils';
 
 export type FloatingPlacement = 'top' | 'right' | 'bottom' | 'left';
@@ -158,8 +157,6 @@ export function useAnchoredFloating({
   viewportPadding = 8,
   keepPositionWhenInactive = false,
 }: UseAnchoredFloatingOptions) {
-  const lenisScroll = useLenisScrollOptional();
-  const registerScrollListener = lenisScroll?.registerScrollListener;
   const frameRef = useRef<number | null>(null);
   const hasEverPositionedRef = useRef(false);
   const [snapshot, setSnapshot] = useState<FloatingSnapshot>({
@@ -236,11 +233,7 @@ export function useAnchoredFloating({
     if (floatingNode) resizeObserver?.observe(floatingNode);
 
     window.addEventListener('resize', scheduleUpdatePosition);
-    const unregisterLenis = registerScrollListener?.(() => updatePosition());
-
-    // Нативный `scroll` слушаем ВСЕГДА, а не только без Lenis: Lenis везёт СТРАНИЦУ, а панель
-    // якорится и к содержимому внутренних скроллеров (тело формы окна входа, полотно таблицы) —
-    // их события доходят сюда только фазой перехвата. Двойной пересчёт безопасен: он через rAF.
+    // Capture includes nested native scrollers, not just the page viewport.
     window.addEventListener('scroll', scheduleUpdatePosition, true);
 
     return () => {
@@ -252,9 +245,8 @@ export function useAnchoredFloating({
       resizeObserver?.disconnect();
       window.removeEventListener('resize', scheduleUpdatePosition);
       window.removeEventListener('scroll', scheduleUpdatePosition, true);
-      unregisterLenis?.();
     };
-  }, [anchorRef, floatingRef, isActive, registerScrollListener, scheduleUpdatePosition, updatePosition]);
+  }, [anchorRef, floatingRef, isActive, scheduleUpdatePosition, updatePosition]);
 
   // При деактивации обычно прячем за экран (анти-флэш до первого замера). С keepPositionWhenInactive
   // оставляем последнюю позицию — чтобы был виден fade-out (но до первого замера всё равно прячем).

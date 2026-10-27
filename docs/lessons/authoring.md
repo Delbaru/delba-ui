@@ -566,7 +566,8 @@ provider и обновление значения при открытом окн
 pathname безусловно ставил `scrollTo(0, 0)` — сразу, через два кадра и через 120 мс — и
 перебивал прокрутку роутера к якорю. Лечение: сброс встаёт к `location.hash`, если узел уже в
 DOM (`scrollIntoView`, отступ — `scroll-padding`/`scroll-margin` потребителя), иначе в начало.
-Lenis при этом остановлен: остановленный не принимает `scrollTo`, а `start()` берёт позицию окна.
+Историческое исправление удалено вместе с LenisScroll в 2026-10-27. Сейчас навигация
+остаётся у роутера и нативной прокрутки; повторный контроллер сброса добавлять не нужно.
 
 ## Hover и owner open используют разные источники состояния — 2026-10-23
 
@@ -622,3 +623,77 @@ Scroll lock с `scrollbar-gutter: stable` нельзя компенсирова�
 потребителю не нужно угадывать строковые имена. Функция сохранена как расширенный API.
 Проверка — прежние точки кривой, монотонность, концы 0/1 и настоящий переход к якорю.
 Пресет выбирает намерение; простое значение без самостоятельной механики не требует обёртки.
+
+### Нативное состояние и жизненный цикл составных полей — 2026-10-27
+
+**Симптом.** Uncontrolled Checkbox отправлял согласие, но не рисовал отметку; Select и
+ChoiceButtons оставались изменёнными после reset. Readonly date менялась через Calendar,
+а после skeleton поле теряло наблюдение за переполнением.
+
+**Причина.** Checked рисовался из начального пропа; строковый field helper не владел
+состоянием Select; календарь проверял disabled только при открытии; ResizeObserver
+подключался к одному первоначальному ref.current. Дополнительно microtask reset может
+пройти раньше делегированного React onReset и пропустить отмену.
+
+**Лечение.** Checked следует реальному изменению и reset. Общая подписка useFormReset
+проверяет отмену после полной отправки события, а значения сбрасывают их собственные
+uncontrolled-владельцы. Picker проверяет разрешение редактирования при открытии и записи,
+закрывается при его утрате. Callback ref переподключает наблюдение к новому input.
+Checkbox/Section используют composeInteractionHandlers вместо перекрывающих spread.
+Fullscreen controller проверяет свой root, не наличие любого fullscreen в документе.
+
+**Проверка.** Три browser regression: визуальная галочка и значения FormData после
+reset/отмены; readonly/disabled calendar и callbacks при perspective; overflow после
+loading → input и отдельного resize контейнера. Unit fullscreen проверяет два плеера.
+
+### SVG: доверие источнику и поколение кэша — 2026-10-27
+
+**Симптом.** Unquoted и entity-encoded javascript href проходили asset preprocessing;
+поздний fetch заменял новую inline-иконку старым ответом.
+
+**Причина.** URL-путь Icon публично принимал произвольные SVG, но применял регулярки,
+предназначенные для собственных ассетов. Обновление manifest очищало resolved cache,
+но уже запущенный запрос записывал туда прежний результат.
+
+**Лечение.** Все fetched SVG проходят parser-safe DOMPurify в лениво загружаемом chunk;
+синхронный asset helper явно не считается security boundary. Поколение URL защищает
+cache и подписчика от устаревшего ответа; inline manifest остаётся синхронным.
+
+**Проверка.** Actual parseRemoteSvg: unquoted/entity URL и active nodes удалены,
+defs/gradient/mask/fragment сохранены. Deferred fetch после registerInlineIcons возвращает
+новую inline-иконку, не старую сеть. Браузерное исполнение вредоносной ссылки не требуется.
+
+### Одна конфигурация движения и одинаковый первый рендер — 2026-10-27
+
+**Дополнение: фактический вход примитива.** В Carousel старый default `speed=[300,300,300]`
+оставался после перехода на секунды: адаптер получал 300000 ms и не доходил до
+настроенного default. Autoplay запоминал корневое время до назначения DOM ref и не
+учитывал scoped CSS. Удалён старый default; обе длительности используют общий
+useMotionTime. Browser regression читает настоящий Swiper.params: scoped 120/170 ms.
+
+**Дополнение: замена DOM.** Scoped perspective подписывался в effect только по selector.
+При Flex `as="div" → "section"` хук сохранялся, а listeners оставались на прежнем узле.
+Стабильный callback ref теперь переподключает scoped binding и снимает прежние listeners,
+ResizeObserver и кадр. Browser regression проверяет наклон до/после замены и возврат в покой.
+
+**Причина.** Длительность counter tuple читалась как миллисекунды, остальные API —
+как секунды. TextSlide завершал JS swap по времени, отличному от CSS. Числа и easing
+дублировались между стилями и контроллерами; чтение computed style в initial state
+давало разные inline-длительности на сервере и при hydration.
+
+**Лечение.** Public motion time — секунды или имя шкалы; адаптер переводит в ms один
+раз. Генератор выпускает CSS и runtime из motion.timing/defaults/easing/inView/scroll.
+Начальное состояние времени использует только runtime; layout effect уточняет его
+по CSS на собственном узле. Общие easing presets хранят CSS и JS вместе, damping
+нормализует кадр общими frameResponse/timeResponse, включая Marquee и scroll progress.
+Скорость и время разгона Marquee принадлежат motion.defaults.marquee.
+Все параметры SmoothScroll принадлежат только motion.scroll: дублирующий lerp в
+defaults перекрывался сериализованным scroll.lerp. Регрессия генерирует непохожие
+на базу значения и проверяет настоящие autoDurationMs, lerpStep и tweenPosition.
+Lenis удалён, floating сохраняет native scroll capture.
+ObserverMargin требует четыре стороны, legacy string и width-relative % сохранены.
+
+**Проверка.** Unit проверяет единицы, кривые, генерацию и SSR fallback. Настоящий
+renderToString → hydrateRoot с named time и другим CSS time не выдаёт ошибок и
+обновляет clocks TextSlide/TextReveal/TextClip до CSS. Browser проверяет .6s tuple
+counter, scoped 220ms slide, -10% bottom при разной ширине/высоте и reduced motion.

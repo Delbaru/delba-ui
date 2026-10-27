@@ -85,7 +85,8 @@ interface FileFacts {
   readonly sf: ts.SourceFile;
   readonly consts: Map<string, ts.Expression[]>;
   readonly imports: Map<string, { readonly specifier: string; readonly name: string }>;
-  readonly reexports: { readonly specifier: string; readonly names: Set<string> | null }[];
+  readonly reexports: { readonly specifier: string; readonly names: Map<string, string> | null }[];
+  readonly exports: Map<string, string>;
   readonly components: Map<string, Forward[]>;
   readonly usages: Usage[];
   /** Ключ данных → куда он уходит: `fontSize={item.valueFontSize}` даёт `valueFontSize` → проп `fontSize` у `Text`. */
@@ -190,7 +191,7 @@ function paramBindings(fn: ts.FunctionLikeDeclaration, facts: FileFacts): Map<st
 function collectFacts(source: Source): FileFacts {
   const kind = source.file.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
   const sf = ts.createSourceFile(source.file, source.text, ts.ScriptTarget.Latest, true, kind);
-  const facts: FileFacts = { file: source.file, sf, consts: new Map(), imports: new Map(), reexports: [], components: new Map(), usages: [], dataKeys: [] };
+  const facts: FileFacts = { file: source.file, sf, consts: new Map(), imports: new Map(), reexports: [], exports: new Map(), components: new Map(), usages: [], dataKeys: [] };
 
   const visit = (node: ts.Node, jsxTag: string | null) => {
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
@@ -206,8 +207,12 @@ function collectFacts(source: Source): FileFacts {
     }
 
     if (ts.isExportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
-      const names = node.exportClause && ts.isNamedExports(node.exportClause) ? new Set(node.exportClause.elements.map((e) => e.name.text)) : null;
+      const names = node.exportClause && ts.isNamedExports(node.exportClause) ? new Map(node.exportClause.elements.map((e) => [e.name.text, (e.propertyName ?? e.name).text])) : null;
       facts.reexports.push({ specifier: node.moduleSpecifier.text, names });
+    }
+
+    if (ts.isExportDeclaration(node) && !node.moduleSpecifier && node.exportClause && ts.isNamedExports(node.exportClause)) {
+      for (const element of node.exportClause.elements) facts.exports.set(element.name.text, (element.propertyName ?? element.name).text);
     }
 
     if (ts.isJsxAttribute(node)) {
@@ -490,7 +495,7 @@ class Evaluator {
     if (inits) return { facts, inits };
     for (const reexport of facts.reexports) {
       if (reexport.names && !reexport.names.has(name)) continue;
-      const found = this.exportedConst(facts.file, reexport.specifier, name, hops + 1);
+      const found = this.exportedConst(facts.file, reexport.specifier, reexport.names?.get(name) ?? name, hops + 1);
       if (found) return found;
     }
     return undefined;
@@ -547,21 +552,64 @@ export function extractUtilityRules(sources: readonly Source[], options: Extract
   const files = sources.map(collectFacts);
   const evaluator = new Evaluator(files, options.resolveModule);
 
-  const components = new Map<string, Forward[]>();
+  const byFile = new Map(files.map((facts) => [facts.file.replace(/\\/g, '/'), facts]));
+  const componentNames = new Map<string, FileFacts[]>();
   for (const facts of files) {
-    for (const [name, forwards] of facts.components) components.set(name, [...(components.get(name) ?? []), ...forwards]);
+    for (const name of facts.components.keys()) componentNames.set(name, [...(componentNames.get(name) ?? []), facts]);
   }
+  const moduleFacts = (facts: FileFacts, specifier: string): FileFacts | undefined => {
+    const resolved = options.resolveModule?.(facts.file, specifier);
+    if (resolved) return byFile.get(resolved.replace(/\\/g, '/'));
+    if (!specifier.startsWith('.')) return undefined;
+    const parts = facts.file.replace(/\\/g, '/').split('/');
+    parts.pop();
+    for (const part of specifier.split('/')) {
+      if (part === '..') parts.pop();
+      else if (part !== '.') parts.push(part);
+    }
+    const base = parts.join('/');
+    return [base, `${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`].map((file) => byFile.get(file)).find(Boolean);
+  };
+  const component = (facts: FileFacts, name: string, seen = new Set<string>()): { facts: FileFacts; name: string } | undefined => {
+    const key = `${facts.file}\0${name}`;
+    if (seen.has(key)) return undefined;
+    const next = new Set(seen).add(key);
+    const local = facts.exports.get(name) ?? name;
+    if (facts.components.has(local)) return { facts, name: local };
+    const imported = facts.imports.get(local);
+    if (imported) {
+      const target = moduleFacts(facts, imported.specifier);
+      if (target) return component(target, imported.name, next);
+      // Package sources may be scanned without a package-aware resolver. Retain the
+      // previous named-component fallback, with aliases and without merging collisions.
+      const candidates = componentNames.get(imported.name);
+      const unique = candidates?.length === 1 ? candidates[0] : undefined;
+      return unique ? { facts: unique, name: imported.name } : undefined;
+    }
+    for (const reexport of facts.reexports) {
+      const exported = reexport.names ? reexport.names.get(name) : name;
+      if (!exported) continue;
+      const target = moduleFacts(facts, reexport.specifier);
+      const found = target ? component(target, exported, next) : undefined;
+      if (found) return found;
+    }
+    return undefined;
+  };
 
   const memo = new Map<string, Target[]>();
-  const targetsOf = (tag: string | null, prop: string, depth = 0): Target[] => {
-    const key = `${tag ?? ''} ${prop}`;
+  const targetsOf = (facts: FileFacts, tag: string | null, prop: string, depth = 0): Target[] => {
+    // Preserve unbound snippet tags only when their component is unambiguous.
+    const candidates = tag ? componentNames.get(tag) : undefined;
+    const unique = candidates?.length === 1 ? candidates[0] : undefined;
+    const resolved = tag ? component(facts, tag) ?? (!facts.imports.has(tag) && unique ? { facts: unique, name: tag } : undefined) : undefined;
+    const key = `${resolved?.facts.file ?? facts.file}\0${resolved?.name ?? tag ?? ''}\0${prop}`;
     const cached = memo.get(key);
     if (cached) return cached;
     memo.set(key, []);
     // Строчный тег — элемент DOM или SVG (`div`, `rect`, `motion.div`): классов утилит он не получает.
     if (tag && /^[a-z]/.test(tag)) return [];
 
-    const forwards = tag ? (components.get(tag) ?? []).filter((f) => f.param === prop) : [];
+    const forwards = tag ? (resolved?.facts.components.get(resolved.name) ?? []).filter((f) => f.param === prop) : [];
     const out: Target[] = [];
     if (forwards.length && depth < MAX_DEPTH) {
       for (const forward of forwards) {
@@ -570,7 +618,7 @@ export function extractUtilityRules(sources: readonly Source[], options: Extract
           if (utility) out.push({ utility, direct: forward.direct });
           continue;
         }
-        for (const inner of targetsOf(forward.tag, forward.to, depth + 1)) out.push({ utility: inner.utility, direct: forward.direct && inner.direct });
+        for (const inner of targetsOf(resolved?.facts ?? facts, forward.tag, forward.to, depth + 1)) out.push({ utility: inner.utility, direct: forward.direct && inner.direct });
       }
     } else {
       const utility = resolveUtility(prop);
@@ -581,15 +629,15 @@ export function extractUtilityRules(sources: readonly Source[], options: Extract
     return out;
   };
 
-  const dataKeys = new Map<string, { readonly tag: string | null; readonly prop: string }[]>();
-  for (const facts of files) for (const item of facts.dataKeys) dataKeys.set(item.key, [...(dataKeys.get(item.key) ?? []), item]);
+  const dataKeys = new Map<string, { readonly tag: string | null; readonly prop: string; readonly facts: FileFacts }[]>();
+  for (const facts of files) for (const item of facts.dataKeys) dataKeys.set(item.key, [...(dataKeys.get(item.key) ?? []), { ...item, facts }]);
   const dataMemo = new Map<string, Target[]>();
   const dataTargets = (key: string): Target[] => {
     const cached = dataMemo.get(key);
     if (cached) return cached;
-    const out = (dataKeys.get(key) ?? []).flatMap(({ tag, prop }) => {
+    const out = (dataKeys.get(key) ?? []).flatMap(({ tag, prop, facts }) => {
       const utility = resolveUtility(prop);
-      const targets = tag === null ? (utility ? [{ utility, direct: false }] : []) : targetsOf(tag, prop);
+      const targets = tag === null ? (utility ? [{ utility, direct: false }] : []) : targetsOf(facts, tag, prop);
       return targets.map((target) => ({ utility: target.utility, direct: false }));
     });
     dataMemo.set(key, out);
@@ -602,7 +650,7 @@ export function extractUtilityRules(sources: readonly Source[], options: Extract
   for (const facts of files) {
     for (const usage of facts.usages) {
       const own = usage.tag === null ? resolveUtility(usage.prop) : undefined;
-      const targets = usage.tag === null ? (own ? [{ utility: own, direct: false }] : []) : targetsOf(usage.tag, usage.prop);
+      const targets = usage.tag === null ? (own ? [{ utility: own, direct: false }] : []) : targetsOf(facts, usage.tag, usage.prop);
       const live = targets.filter((t) => !t.utility.domain);
       const viaData = usage.tag === null ? dataTargets(usage.prop).filter((t) => !t.utility.domain) : [];
       if (!live.length && !viaData.length) continue;

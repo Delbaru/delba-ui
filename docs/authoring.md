@@ -266,9 +266,14 @@ Select передаёт `panel.animate`, `panel.collapse`, `panel.offset` и `pa
 подложка, dismiss и ожидание exit принадлежат Dropdown, а не проектным слушателям/таймерам.
 У Icon смена глифа задаётся `{ when: 'change', effect: 'swap', duration: 'fast', scale: 1, rotate: 0 }`;
 duration относится к каждой из двух последовательных фаз, прежние string/tuple формы совместимы.
-В новых объектах время — секунды или ключ `ui.config.motion.timing`. Старые формы сохраняют
-единицы: legacy `CounterOptions.duration` — миллисекунды. CSS и JS читают один токен на одном узле
+В объектных и tuple-формах время — секунды или ключ `ui.config.motion.timing`; legacy counter
+мигрирует с миллисекунд на секунды (2500 → 2.5). CSS и JS читают один токен на одном узле
 через `motionTimeCss` / `readMotionTimeMs`, а не отдельный список имён или таймер с копией значения.
+Умолчания эффектов принадлежат `motion.defaults`, все параметры прокрутки — `motion.scroll`.
+Генератор переносит проектные значения в CSS/runtime; внутренние fallback кита нужны
+для standalone bootstrap, а не для spread в проектном конфиге. Easing —
+`motionEasing` с общей CSS/JS кривой. Observer margins называют top/right/bottom/left явно;
+проценты сохраняют width-relative договор IntersectionObserver. Lenis в ките отсутствует.
 Прямой ребёнок с `data-reveal-skip` исключён из родительского каскада и его индексов;
 собственная анимация ребёнка остаётся. Маркер подходит декоративным слоям, не всей aria-hidden разметке.
 

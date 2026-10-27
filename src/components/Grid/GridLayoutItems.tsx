@@ -4,6 +4,7 @@ import { Component, cloneElement, type ReactNode, type RefObject } from 'react';
 import { MEDIA_QUERY, MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../core';
 import { readMotionTimeMs } from '../../core/base/timing';
 import { motionDistanceCss } from '../../core/base/distance';
+import { motionDefaults, readMotionDefaultMs } from '../../core/base/motion-config';
 import { layoutEntries, retainLayoutExits, type GridLayoutAnimate, type LayoutEntry } from './layout';
 
 type Props = { children: ReactNode; host: RefObject<HTMLDivElement | null>; options: GridLayoutAnimate; layoutKey: string };
@@ -58,7 +59,7 @@ export class GridLayoutItems extends Component<Props, State, Snapshot> {
     if (!snapshot) return;
     const host = this.props.host.current;
     if (!host) return;
-    const duration = readMotionTimeMs(this.props.options.duration ?? 'normal', host, 0.4);
+    const duration = this.props.options.duration === undefined ? readMotionDefaultMs('grid', 'duration', host) : readMotionTimeMs(this.props.options.duration, host);
     if (!duration || typeof host.animate !== 'function') { this.settle(); return; }
     const nodes = this.nodes();
     const exiting = new Set(this.state.entries.filter((entry) => entry.exiting).map((entry) => entry.key));
@@ -68,8 +69,8 @@ export class GridLayoutItems extends Component<Props, State, Snapshot> {
     const root = host.getBoundingClientRect();
     const boxes = nodes.map(([key, node]) => ({ key, node, box: node.getBoundingClientRect() }));
     const easing = getComputedStyle(host).getPropertyValue('--t-t-f-cubic-bezier').trim() || 'ease';
-    const step = readMotionTimeMs(this.props.options.stagger ?? 0, host);
-    const distance = motionDistanceCss(this.props.options.distance ?? 12);
+    const step = this.props.options.stagger === undefined ? readMotionDefaultMs('grid', 'stagger', host) : readMotionTimeMs(this.props.options.stagger, host);
+    const distance = motionDistanceCss(this.props.options.distance ?? motionDefaults.grid.distance);
     let entering = 0;
     for (const { key, node, box } of boxes) {
       const old = snapshot.get(key);

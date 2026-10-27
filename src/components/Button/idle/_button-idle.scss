@@ -19,7 +19,7 @@
       transform: translateY(calc(var(--rpx) * 8));
       filter: blur(calc(var(--rpx) * 16));
       background: linear-gradient(105deg, var(--button-glow-color, var(--primary)), var(--button-glow-color-to, var(--button-glow-color, var(--primary))));
-      opacity: calc(0.35 * var(--button-glow-strength, 1));
+      opacity: calc(0.35 * var(--button-glow-strength, var(--t-m-button-idle-strength)));
       transition: opacity var(--button-hover-duration, var(--t-d-normal)) var(--t-t-f-ease);
 
       // Both gradients stay opaque, so blending changes color without breathing the halo.
@@ -29,7 +29,7 @@
         inset: 0;
         border-radius: inherit;
         background: linear-gradient(105deg, var(--button-glow-color-to, var(--button-glow-color, var(--primary))), var(--button-glow-color, var(--primary)));
-        animation: ui-button-glow-color var(--button-glow-duration, calc(var(--t-d-very-slow) * 8)) ease-in-out infinite alternate;
+        animation: ui-button-glow-color var(--button-glow-duration, var(--t-m-button-idle-duration)) var(--t-t-f-ease-in-out) infinite alternate;
         animation-play-state: var(--idle-animation-state, running);
         will-change: opacity;
       }
@@ -56,7 +56,7 @@
 
 @layer ui.states {
   .ui-button[data-button-idle='glow']:is(:hover, :focus-visible, [state~='hover'], [state~='focus-visible']):not(:disabled, [aria-disabled='true'], [state~='disabled']) > .ui-button-glow {
-    opacity: calc(0.5 * var(--button-glow-strength, 1));
+    opacity: calc(0.5 * var(--button-glow-strength, var(--t-m-button-idle-strength)));
   }
 
   .ui-button[data-button-idle='glow']:is(:disabled, [aria-disabled='true'], [state~='disabled']) > .ui-button-glow {

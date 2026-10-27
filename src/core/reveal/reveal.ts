@@ -13,6 +13,8 @@
  */
 import { isMotionTimingName, motionTimingVariable, type MotionTime, type MotionTimingName } from '../base/timing';
 import { motionDistanceCss, normalizeMotionDistance, type MotionDistance } from '../base/distance';
+import { normalizeObserverMargin, type ObserverMargin } from '../base/observer-margin';
+import { motionInView } from '../base/motion-config';
 
 export type RevealKey = 'fade' | 'up' | 'down' | 'left' | 'right' | 'scale' | 'expandX' | 'blur';
 
@@ -21,16 +23,16 @@ export interface RevealOptions {
   stagger?: MotionTime;
   /** Задержка перед ходом: имя motion.timing либо секунды. По умолчанию `0`. */
   delay?: MotionTime;
-  /** Длительность: имя motion.timing либо секунды. По умолчанию — `--t-d-slow`. */
+  /** Длительность: имя motion.timing либо секунды. По умолчанию motion.defaults.reveal.duration. */
   duration?: MotionTime;
   /** Сдвиг: число в rpx, процент собственного размера или имя motion.distance. По умолчанию 32rpx. */
   distance?: MotionDistance;
   /** Один раз (по умолчанию) или при каждом входе в экран: `false` снова прячет ушедший вниз элемент. */
   once?: boolean;
-  /** Доля площади в экране, с которой стартует ход. По умолчанию `0` — с первого пикселя. */
+  /** Доля площади в экране, с которой стартует ход. По умолчанию motion.inView.threshold (база 0). */
   threshold?: number;
-  /** Поля области наблюдения, как у `IntersectionObserver`. По умолчанию `'0px'`. */
-  rootMargin?: string;
+  /** Четыре поля области IntersectionObserver; legacy string допустим. По умолчанию motion.inView.rootMargin. */
+  rootMargin?: ObserverMargin;
   /**
    * Проявление прозрачностью. `false` — элемент виден с первого кадра и только доезжает сдвигом, зумом
    * или размытием: для первого экрана, где прозрачный узел не засчитывается в LCP. По умолчанию `true`.
@@ -158,11 +160,11 @@ export function resolveReveal(input: RevealInput | undefined | null): ResolvedRe
     key,
     stagger: toMs(options.stagger),
     delay: toMs(options.delay),
-    duration: duration !== 0 ? duration : null,
+    duration: options.duration === undefined ? null : duration,
     distance: normalizeMotionDistance(options.distance),
     once: options.once ?? true,
-    threshold: Math.min(1, Math.max(0, options.threshold ?? 0)),
-    rootMargin: options.rootMargin ?? '0px',
+    threshold: Math.min(1, Math.max(0, options.threshold ?? motionInView.threshold)),
+    rootMargin: normalizeObserverMargin(options.rootMargin ?? motionInView.rootMargin) ?? '0px',
     fade: options.fade ?? true,
     start: options.start === 'load' ? 'load' : 'view',
   };

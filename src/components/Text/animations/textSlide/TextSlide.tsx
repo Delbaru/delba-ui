@@ -4,7 +4,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 import { cx, MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../../core';
-import { motionTimeCss, readMotionTimeMs } from '../../../../core/base/timing';
+import { motionTimeCss } from '../../../../core/base/timing';
+import { useMotionTime } from '../../../../hooks/useMotionTime';
 import { Flex } from '../../../Flex';
 import { flattenAnimatableText } from '../flattenText';
 import { useTextSwap, commonAffixes } from '../textReveal/useTextSwap';
@@ -43,7 +44,7 @@ function TextSlideSequence({ options }: { options: SequenceOptions }) {
   const stageStyle = {
     height: `${containerHeight}px`,
     transform: `translateY(-${translateY}px)`,
-    '--slide-dur': options.durationTime !== undefined ? motionTimeCss(options.durationTime) : options.duration ? `${options.duration}s` : undefined,
+    '--slide-dur': options.duration !== undefined ? motionTimeCss(options.duration) : 'var(--t-m-text-slide-sequence-duration)',
   } as CSSProperties;
 
   return (
@@ -65,7 +66,7 @@ function TextSlideSequence({ options }: { options: SequenceOptions }) {
 /** Hover-слайд: два слоя (база + альт) разъезжаются по вертикали при наведении/фокусе. Полностью на CSS. */
 function TextSlideHover({ content, options }: TextAnimationContext<TextSlideOptions>) {
   const hoverStyle = {
-    '--text-slide-duration': options?.durationTime !== undefined ? motionTimeCss(options.durationTime) : `${options?.duration ?? 0.35}s`,
+    '--text-slide-duration': options?.duration !== undefined ? motionTimeCss(options.duration) : 'var(--t-m-text-slide-hover-duration)',
     '--text-slide-hover-color': options?.hoverColor ?? 'var(--primary)',
   } as CSSProperties;
 
@@ -88,16 +89,8 @@ function TextSlideHover({ content, options }: TextAnimationContext<TextSlideOpti
  */
 function TextSlideSwap({ content, options }: TextAnimationContext<TextSlideOptions>) {
   const text = flattenAnimatableText(content) ?? '';
-  const fallbackSeconds = options?.duration ?? 0.4;
-  const durationTime = options?.durationTime;
   const viewportRef = useRef<HTMLSpanElement | null>(null);
-  const [durationMs, setDurationMs] = useState(() => typeof durationTime === 'number' ? durationTime * 1000 : fallbackSeconds * 1000);
-  useLayoutEffect(() => {
-    const resolved = durationTime === undefined
-      ? fallbackSeconds * 1000
-      : readMotionTimeMs(durationTime, viewportRef.current ?? undefined, fallbackSeconds);
-    setDurationMs((current) => current === resolved ? current : resolved);
-  }, [durationTime, fallbackSeconds]);
+  const durationMs = useMotionTime('textSlide', 'duration', viewportRef, options?.duration);
 
   const { current, previous, generation } = useTextSwap(text, { durationMs, staggerMs: 0 });
 
@@ -162,7 +155,7 @@ function TextSlideSwap({ content, options }: TextAnimationContext<TextSlideOptio
     return () => window.clearTimeout(timer);
   }, [current, previous, durationMs]);
 
-  const vars = { '--slide-swap-dur': durationTime === undefined ? `${fallbackSeconds}s` : motionTimeCss(durationTime) } as CSSProperties;
+  const vars = { '--slide-swap-dur': `${durationMs}ms` } as CSSProperties;
 
   // A single viewport keeps the whole label moving together and preserves normal word wrapping.
   // Keep its structure in rest too: switching back to per-character spans changes font kerning.

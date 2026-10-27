@@ -7,6 +7,7 @@ import { clamp01, getBreakpointIndex, resolveResponsive, resolveResponsiveAtBrea
 import { useSharedMotion } from '../../hooks/useSharedMotion';
 import { DEFAULT_NAVIGATION_STATE, assignCarouselApiRef, buildLoopSlides, canEnableLoop, getLogicalSlideIndex, getPaginationState, getPeekOffsetPx, hasScrollableSlides } from './slides';
 import type { CarouselApi, CarouselNavigationState, CarouselProps, SlidesPerViewValue } from './types';
+import { useMotionTime } from '../../hooks/useMotionTime';
 
 export type CarouselConfig = Pick<
   CarouselProps,
@@ -119,7 +120,9 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
   const currentMousewheel = resolveResponsiveAtBreakpoint(mousewheel, false, breakpointIndex);
   const currentDrag = !scrollBased && resolveResponsiveAtBreakpoint(drag, true, breakpointIndex);
   const requestedInitialSlide = resolveResponsiveAtBreakpoint(initialSlide, 0, breakpointIndex);
-  const currentSpeed = resolveResponsiveAtBreakpoint(speed, 300, breakpointIndex);
+  const speedTime = resolveResponsiveAtBreakpoint(speed, undefined, breakpointIndex);
+  const currentSpeed = useMotionTime('carousel', 'duration', rootRef, speedTime);
+  const autoplayDelay = useMotionTime('carousel', 'autoplayDelay', rootRef, typeof autoplay === 'object' ? autoplay.delay : undefined);
   const requestedLoop = resolveResponsiveAtBreakpoint(loop, false, breakpointIndex);
   const currentCenteredSlides = resolveResponsiveAtBreakpoint(centeredSlides, false, breakpointIndex);
   const currentOffsetBefore = resolveResponsiveAtBreakpoint(offsetBefore, 0, breakpointIndex);
@@ -167,18 +170,18 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     if (!autoplay) return false;
     if (autoplay === true) {
       return {
-        delay: 3000,
+        delay: autoplayDelay,
         disableOnInteraction: true,
         pauseOnMouseEnter: true,
       };
     }
 
     return {
-      delay: autoplay.delay ?? 3000,
+      delay: autoplayDelay,
       disableOnInteraction: autoplay.disableOnInteraction ?? true,
       pauseOnMouseEnter: true,
     };
-  }, [autoplay]);
+  }, [autoplay, autoplayDelay]);
 
   const modules = useMemo(() => {
     const activeModules = [A11y];

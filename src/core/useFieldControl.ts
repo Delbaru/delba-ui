@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useId, useState, useRef, useCallback, type Ref } from 'react';
+import { useId, useState, useRef, useCallback, type Ref } from 'react';
 
 import { useMergedRefs } from './useMergedRefs';
+import { useFormReset } from './useFormReset';
 
 const DEFAULT_EMPTY_MESSAGE = 'Поле обязательно для заполнения';
 
@@ -51,21 +52,10 @@ export function useFieldControl<E extends HTMLElement>(
     const errorId = displayError ? `${id}-error` : undefined;
 
     // Ассоциация может поменяться через form= или при смене skeleton → field.
-    useEffect(() => {
-        const field = innerRef.current;
-        if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) return;
-        const form = field.form;
-        if (!form) return;
-        const reset = (event: Event) => {
-            queueMicrotask(() => {
-                if (event.defaultPrevented || innerRef.current !== field || field.form !== form) return;
-                if (!isControlled) setUncontrolledValue(String(defaultValue ?? ''));
-                setInternalError(undefined);
-                onReset?.();
-            });
-        };
-        form.addEventListener('reset', reset);
-        return () => form.removeEventListener('reset', reset);
+    useFormReset(innerRef, undefined, () => {
+        if (!isControlled) setUncontrolledValue(String(defaultValue ?? ''));
+        setInternalError(undefined);
+        onReset?.();
     });
 
     const isEmpty = useCallback(

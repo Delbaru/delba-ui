@@ -7,17 +7,15 @@ import { flattenAnimatableText } from '../flattenText';
 import { useTextSwap, commonAffixes } from './useTextSwap';
 import type { TextAnimationContext } from '../types';
 import type { TextRevealOptions } from './types';
+import { motionDefaults } from '../../../../core/base/motion-config';
+import { useMotionTime } from '../../../../hooks/useMotionTime';
 
-const DEFAULT_DURATION = 0.3;
-const DEFAULT_STAGGER = 0.014;
-const DEFAULT_SHIFT = 0.3;
-const DEFAULT_MAX_WAVE = 0.5; // потолок суммарной длительности волны (сек), чтобы длинный текст не тянулся
 // База задержки входящего слоя = доля от dur: на одной позиции старый/новый символ имеют ~равный --t, поэтому
 // маленького сдвига хватает, чтобы новый проявлялся ПОСЛЕ ухода старого (без наложения), не удлиняя переход.
-const IN_DELAY_FACTOR = 0.25;
+const IN_DELAY_FACTOR = motionDefaults.textReveal.inDelayFactor;
 // При схлопывании откладываем старт ресайза высоты (доля волны), чтобы уходящий текст успел погаснуть и его не
 // срезало снизу (в нормальной волне сверху-слева нижние строки гаснут последними).
-const COLLAPSE_SIZE_DELAY_FACTOR = 0.5;
+const COLLAPSE_SIZE_DELAY_FACTOR = motionDefaults.textReveal.collapseDelayFactor;
 
 // Разрывный пробел = любой whitespace, КРОМЕ nbsp ( ). По нему рвём строку на токены (между словами
 // перенос допустим). nbsp — неразрывный: остаётся ВНУТРИ слова и склеивает соседей в один nowrap-сегмент,
@@ -137,10 +135,11 @@ function Layer({ text, mode, staticPrefix, staticSuffix }: LayerProps) {
  */
 export function TextReveal({ content, options }: TextAnimationContext<TextRevealOptions>) {
   const text = flattenAnimatableText(content) ?? '';
-  const duration = options?.duration ?? DEFAULT_DURATION;
-  const stagger = options?.stagger ?? DEFAULT_STAGGER;
-  const shift = options?.shift ?? DEFAULT_SHIFT;
-  const maxDuration = options?.maxDuration ?? DEFAULT_MAX_WAVE;
+  const viewportRef = useRef<HTMLSpanElement | null>(null);
+  const duration = useMotionTime('textReveal', 'duration', viewportRef, options?.duration) / 1000;
+  const stagger = useMotionTime('textReveal', 'stagger', viewportRef, options?.stagger) / 1000;
+  const shift = options?.shift ?? motionDefaults.textReveal.shift;
+  const maxDuration = useMotionTime('textReveal', 'maxDuration', viewportRef, options?.maxDuration) / 1000;
 
   // Капнутый разброс задержек: базовый разброс = stagger·(N−1), но не длиннее (maxDuration − duration).
   // Эффективный stagger отдаём в useTextSwap, чтобы его таймер снятия ушедшего слоя совпал с реальной волной.
@@ -152,7 +151,6 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
     staggerMs: effStagger * 1000,
   });
 
-  const viewportRef = useRef<HTMLSpanElement | null>(null);
   // Последний натуральный размер вьюпорта (для старта FLIP при следующем свопе). В покое его пишет
   // ResizeObserver, во время свопа — сам своп (цель `to`).
   const lastSizeRef = useRef<{ w: number; h: number } | null>(null);

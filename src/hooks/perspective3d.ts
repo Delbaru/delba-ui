@@ -1,4 +1,4 @@
-import { clamp } from '../core/utils';
+import { frameResponse } from '../core/base/damping';
 
 export type Perspective3dValues = {
   rotateX: number;
@@ -11,7 +11,7 @@ export type Perspective3dValues = {
 
 /** Коэффициент 60 Hz, пересчитанный на фактическое время кадра. */
 export function perspectiveFrameEase(value: number, frames: number): number {
-  return 1 - Math.pow(1 - clamp(value, 0.001, 1), frames);
+  return frameResponse(value, frames * (1000 / 60));
 }
 
 /** Два фильтра должны остановиться: пересечение цели само по себе ещё не означает покой. */

@@ -5,6 +5,107 @@ async function openFixture(page: Page) {
   await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
 }
 
+test('uncontrolled checkbox visuals and custom form values follow native reset and cancellation', async ({ page }) => {
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
+  const checkbox = scope.getByRole('checkbox', { name: 'Uncontrolled visual checkbox', exact: true });
+  const initiallyChecked = scope.getByRole('checkbox', { name: 'Initially checked visual checkbox' });
+  const iconOpacity = () => checkbox.evaluate((input) => {
+    const icon = input.nextElementSibling?.querySelector('svg');
+    return icon ? getComputedStyle(icon).opacity : null;
+  });
+  await checkbox.locator('xpath=../..').click();
+  await expect(checkbox).toBeChecked();
+  await expect.poll(iconOpacity).toBe('1');
+  await initiallyChecked.locator('xpath=../..').click();
+  await expect(initiallyChecked).not.toBeChecked();
+  await expect(initiallyChecked.locator('xpath=../..')).not.toHaveAttribute('state', /active/);
+  await scope.getByRole('button', { name: 'Reset single select' }).click();
+  await page.getByRole('option', { name: 'Lifecycle alternate' }).click();
+  await scope.getByRole('button', { name: 'Reset multiple select' }).click();
+  await page.getByRole('option', { name: 'Lifecycle alternate' }).click();
+  await scope.getByRole('button', { name: 'Reset multiple select' }).press('Escape');
+  await scope.getByRole('button', { name: 'Lifecycle alternate', exact: true }).click();
+  const before = await scope.getByTestId('audit-change-count').textContent();
+  await scope.getByRole('button', { name: 'Toggle lifecycle reset cancellation' }).click();
+  await scope.getByRole('button', { name: 'Reset lifecycle form' }).click();
+  const values = () => scope.locator('#audit-reset-form').evaluate((form: HTMLFormElement) => [...new FormData(form).entries()]);
+  expect(await values()).toContainEqual(['single', 'two']);
+  await scope.getByRole('button', { name: 'Toggle lifecycle reset cancellation' }).click();
+  await scope.getByRole('button', { name: 'Reset lifecycle form' }).click();
+  await expect(checkbox).not.toBeChecked();
+  await expect(initiallyChecked).toBeChecked();
+  await expect.poll(iconOpacity).toBe('0');
+  await expect.poll(values).toEqual([['checked', 'on'], ['single', 'one'], ['multiple', 'one'], ['choice', 'one']]);
+  await expect(scope.getByTestId('audit-change-count')).toHaveText(before ?? '');
+});
+
+test('readonly date and disabled open calendar cannot mutate, and pointer callbacks compose with motion', async ({ page }) => {
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
+  const readonly = scope.getByRole('textbox', { name: 'Read only calendar' });
+  await readonly.click();
+  await readonly.press('ArrowDown');
+  await expect(page.getByRole('button', { name: 'Previous month' })).not.toBeVisible();
+  await expect(readonly).toHaveValue('15.01.2025');
+  const date = scope.getByRole('textbox', { name: 'Disable open calendar' });
+  await date.press('ArrowDown');
+  await expect(page.getByRole('button', { name: 'Previous month' })).toBeVisible();
+  await scope.getByRole('button', { name: 'Toggle lifecycle date disabled' }).click();
+  await expect(date).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Previous month' })).not.toBeVisible();
+  await scope.getByTestId('audit-event-section').hover();
+  await expect.poll(async () => Number(await scope.getByTestId('audit-pointer-count').textContent())).toBeGreaterThan(0);
+  const previous = Number(await scope.getByTestId('audit-pointer-count').textContent());
+  await scope.getByRole('checkbox', { name: 'Composed pointer checkbox' }).locator('xpath=../..').hover();
+  await expect.poll(async () => Number(await scope.getByTestId('audit-pointer-count').textContent())).toBeGreaterThan(previous);
+});
+
+test('replacement input continues observing overflow after skeleton exits and container resizes', async ({ page }) => {
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
+  await scope.getByRole('button', { name: 'Toggle replacement loading' }).click();
+  const input = scope.getByRole('textbox', { name: 'Replacement overflow field' });
+  await expect(input).toBeVisible();
+  await scope.getByRole('button', { name: 'Shrink overflow host' }).click();
+  await input.locator('xpath=../../..').hover();
+  await expect(page.getByRole('tooltip', { name: 'Overflow measurement follows the replacement input' })).toBeVisible();
+});
+
+test('tuple counter seconds and scoped text-slide CSS use the same completion clock', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
+  const counter = scope.getByTestId('audit-counter-seconds');
+  await expect(counter.locator('.ui-counter-value')).toHaveText('80');
+  await scope.getByRole('button', { name: 'Update seconds contracts' }).click();
+  await expect(scope.getByTestId('audit-slide-clock').locator('.ui-slide-swap')).toHaveCSS('--slide-swap-dur', '220ms');
+  await expect(scope.getByTestId('audit-slide-clock').locator('.ui-slide-swap-in').first()).toHaveCSS('animation-duration', '0.22s');
+  const during = Number(await counter.locator('.ui-counter-value').textContent());
+  expect(during).toBeGreaterThanOrEqual(0);
+  expect(during).toBeLessThan(160);
+  await expect(counter.locator('.ui-counter-value')).toHaveText('160');
+  await expect(scope.getByTestId('audit-slide-clock').locator('.ui-slide-swap-out')).toHaveCount(0);
+});
+
+test('four-sided negative percentage margins retain IntersectionObserver width semantics', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const target = page.getByTestId('audit-margin-object');
+  await target.evaluate((node) => {
+    let top = 0;
+    let current: HTMLElement | null = node;
+    while (current) { top += current.offsetTop; current = current.offsetParent as HTMLElement | null; }
+    // The waiting up-reveal is translated 32px: its observed top is 712px.
+    // Width-based -10% ends at 700px; height-based -10% would end at 720px.
+    window.scrollTo(0, top - 680);
+  });
+  await expect(target).toHaveAttribute('data-reveal-state', 'wait');
+  await page.evaluate(() => window.scrollBy(0, 30));
+  await expect(target).toHaveAttribute('data-reveal-state', /in|done/);
+});
+
 test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport ref/events', async ({ page }) => {
   await openFixture(page);
   const viewport = page.getByTestId('scroll-area');
@@ -195,6 +296,30 @@ test('ancestor perspective follows a stretched link, resets outside, and support
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(rotation).toBe(0);
   await expect(scope.locator('.ui-gradient-border')).toHaveCSS('animation-name', 'none');
+});
+
+test('carousel defaults reach Swiper through the public component and its scoped CSS', async ({ page }) => {
+  await openFixture(page);
+  const carousel = page.getByTestId('carousel-config-defaults').locator('.swiper');
+  await expect.poll(() => carousel.evaluate((node) => {
+    const swiper = (node as HTMLElement & { swiper?: { params: { speed?: number; autoplay?: { delay?: number } } } }).swiper;
+    return { speed: swiper?.params.speed, delay: swiper?.params.autoplay?.delay };
+  })).toEqual({ speed: 120, delay: 170 });
+});
+
+test('scoped perspective reconnects when the primitive replaces its DOM host', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openFixture(page);
+  const host = page.getByTestId('perspective-replacement');
+  const rotation = () => host.evaluate((node) => Math.abs(parseFloat(node.style.getPropertyValue('--perspective3d-rotate-y'))));
+  await host.hover({ position: { x: 210, y: 20 } });
+  await expect.poll(rotation).toBeGreaterThan(1);
+  await page.getByRole('button', { name: 'Replace tilt host' }).click();
+  await expect(host).toHaveJSProperty('tagName', 'SECTION');
+  await host.hover({ position: { x: 210, y: 20 } });
+  await expect.poll(rotation).toBeGreaterThan(1);
+  await page.mouse.move(1, 1);
+  await expect.poll(rotation).toBeLessThan(0.01);
 });
 
 test('border trace advances only while visible and leaves its center clickable', async ({ page }) => {

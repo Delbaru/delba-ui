@@ -5,6 +5,7 @@ import type React from 'react';
 import { type CSSProperties } from 'react';
 import { boxLayout, createLayoutClasses, cx, splitBoxLayout, stateLinkProps, useMergedRefs, type BoxLayoutProps, type StateLinkInput, type WithRef } from '../../core';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { composeInteractionHandlers } from '../../core/composeEventHandlers';
 
 const c = createLayoutClasses();
 
@@ -27,10 +28,10 @@ export function Section({ ref, children, className = '', style, perspective3d, p
   return (
     <section
         ref={setRefs}
-        {...stateLinkProps(linkState, { onMouseEnter, onMouseLeave, ...motionHandlers })}
         className={cx('ui-section', ...layout, className)}
         style={{ ...(motionStyle ?? null), ...style }}
         {...rest}
+        {...stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }))}
         {...revealAttrs}
     >
       {children}

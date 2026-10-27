@@ -50,15 +50,37 @@ export function walk(root: string, dir = root, out: string[] = []): string[] {
   return out;
 }
 
-// Алиасы: tsconfig.base.json монорепо, иначе tsconfig.json проекта (с комментариями — читает TypeScript).
-function readPaths(root: string): Record<string, string[]> {
-  for (const name of ['tsconfig.base.json', 'tsconfig.json']) {
-    const file = path.join(root, name);
-    if (!fs.existsSync(file)) continue;
-    const { config } = ts.readConfigFile(file, ts.sys.readFile) as { config?: { compilerOptions?: { paths?: Record<string, string[]> } } };
-    return config?.compilerOptions?.paths ?? {};
-  }
-  return {};
+/** Resolve extends/baseUrl using the same config parser as TypeScript, tracking config inputs for watch. */
+export function readPathAliases(root: string): { paths: Record<string, string[]>; files: Set<string> } {
+  const files = new Set(['tsconfig.json', 'tsconfig.base.json'].map((name) => path.join(root, name)));
+  const file = [...files].find((candidate) => fs.existsSync(candidate));
+  if (!file) return { paths: {}, files };
+  const parsed = ts.getParsedCommandLineOfConfigFile(file, {}, {
+    ...ts.sys,
+    readFile: (name) => {
+      if (name.endsWith('.json')) files.add(path.resolve(name));
+      return ts.sys.readFile(name);
+    },
+    onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+      throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+    },
+  });
+  const options = parsed?.options;
+  const pathsBase = options?.baseUrl ?? (typeof options?.pathsBasePath === 'string' ? options.pathsBasePath : root);
+  const paths = Object.fromEntries(Object.entries(options?.paths ?? {}).map(([pattern, targets]) =>
+    [pattern, targets.map((target) => path.resolve(pathsBase, target))]));
+  return { paths, files };
+}
+
+/** Config dependency edits need a fresh worker, not a build with the old resolver snapshot. */
+export function watchPathAliases(files: ReadonlySet<string>, onChange: () => void): () => void {
+  const watchers = [...new Set([...files].map((file) => path.dirname(file)))].flatMap((dir) => {
+    if (!fs.existsSync(dir)) return [];
+    return [fs.watch(dir, (_event, file) => {
+      if (file && files.has(path.join(dir, String(file)))) onChange();
+    })];
+  });
+  return () => watchers.forEach((watcher) => watcher.close());
 }
 
 const candidates = (base: string) => [base, `${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts'), path.join(base, 'index.tsx')];
@@ -71,7 +93,7 @@ function writeIfChanged(file: string, content: string): boolean {
 
 export function createUtilities(root: string, config: UtilitiesConfig) {
   const cache = new Map<string, { mtime: number; text: string }>();
-  const paths = readPaths(root);
+  const { paths, files: configFiles } = readPathAliases(root);
 
   function readSources(): Source[] {
     const files = config.scan.flatMap((dir) => walk(path.resolve(root, dir)));
@@ -92,10 +114,12 @@ export function createUtilities(root: string, config: UtilitiesConfig) {
       const bases: string[] = [];
       if (specifier.startsWith('.')) bases.push(path.resolve(path.dirname(fromFile), specifier));
       for (const [pattern, targets] of Object.entries(paths)) {
-        const star = pattern.endsWith('*') ? pattern.slice(0, -1) : null;
-        if (star !== null ? specifier.startsWith(star) : specifier === pattern) {
-          const rest = star !== null ? specifier.slice(star.length) : '';
-          for (const target of targets) bases.push(path.resolve(root, target.replace('*', rest)));
+        const star = pattern.indexOf('*');
+        const prefix = star < 0 ? pattern : pattern.slice(0, star);
+        const suffix = star < 0 ? '' : pattern.slice(star + 1);
+        if (star < 0 ? specifier === pattern : specifier.startsWith(prefix) && specifier.endsWith(suffix)) {
+          const rest = star < 0 ? '' : specifier.slice(prefix.length, specifier.length - suffix.length);
+          for (const target of targets) bases.push(target.replace('*', rest));
         }
       }
       for (const base of bases) for (const file of candidates(base)) if (known.has(file)) return file;
@@ -144,6 +168,8 @@ export function createUtilities(root: string, config: UtilitiesConfig) {
 
   /** Пересборка на правку исходников; `onOwnChange` — правка самого генератора. */
   function watch(onOwnChange: () => void): void {
+    // Config values are held by the worker, so edits (including inherited configs) restart it.
+    watchPathAliases(configFiles, onOwnChange);
     for (const dir of OWN_SOURCES) {
       fs.watch(dir, { recursive: true }, (_event, file) => {
         if (file && /\.(ts|mjs)$/.test(String(file))) onOwnChange();

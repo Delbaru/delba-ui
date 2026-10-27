@@ -219,7 +219,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
         closeDropdown,
         isOptionSelected, formValue,
     } = useSelect(ref, {
-        options, value: valueProp, defaultValue, onChange: emitChange, multiple: multiple === true, closeOnSelect,
+        options, form, value: valueProp, defaultValue, onChange: emitChange, multiple: multiple === true, closeOnSelect,
         showSelected, renderValue, placeholder, loading, disabled, required, emptyMessage, visibleOptions,
         validate: validateValue,
         id: idProp, error: errorProp, label, comment, ariaLabel, perspective3d, parallax, animate,
@@ -253,9 +253,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
                     ? `${id}-option-${focusedIndex}`
                     : undefined
             }
-            data-lenis-prevent
-            data-lenis-prevent-wheel
-            data-lenis-prevent-touch
+            data-smooth-scroll-ignore
             onWheelCapture={handleDropdownWheelCapture}
             onTouchMoveCapture={handleDropdownTouchMoveCapture}
         >

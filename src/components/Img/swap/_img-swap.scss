@@ -4,7 +4,7 @@
 // прежний внизу, новый поверх, вуаль — выше всех. Ход — ключевыми кадрами: сторона (`--img-swap-dir`)
 // меняется от смены к смене, а переход стартовал бы с позиции прошлой стороны.
 .ui-img-swap {
-  --img-swap-d: var(--t-d-slow);
+  --img-swap-d: var(--t-m-img-swap-duration);
   --img-swap-dir: 1;
   position: absolute;
   inset: 0;
@@ -134,7 +134,7 @@ $twice: calc(var(--img-swap-d) * 2);
 
 // Сторона вуали — через знак: при dir = 1 вуаль растёт от левого края и уходит за правый, при -1 — наоборот.
 @keyframes ui-img-swap-veil {
-  0% { clip-path: inset(0 calc(50% + var(--img-swap-dir) * 50%) 0 calc(50% - var(--img-swap-dir) * 50%)); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  0% { clip-path: inset(0 calc(50% + var(--img-swap-dir) * 50%) 0 calc(50% - var(--img-swap-dir) * 50%)); animation-timing-function: var(--t-t-f-veil); }
   42%, 52% { clip-path: inset(0); }
   100% { clip-path: inset(0 calc(50% - var(--img-swap-dir) * 50%) 0 calc(50% + var(--img-swap-dir) * 50%)); }
 }

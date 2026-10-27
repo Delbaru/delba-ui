@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 
 import { Button } from '../../src/components/Button';
 import { LexicalText } from '../../src/components/RichText';
 import { useScroll } from '../../src/hooks/useScroll';
 import { Flex } from '../../src/components/Flex';
 import { GradientBorder } from '../../src/components/GradientBorder';
+import { Carousel } from '../../src/components/Carousel';
 
 export function RefactorContractsFixture() {
   const [limit, setLimit] = useState(0);
+  const [replacement, setReplacement] = useState(false);
   const passed = useScroll((scroll) => scroll.y > limit);
   return (
     <section>
@@ -19,6 +21,16 @@ export function RefactorContractsFixture() {
         onClick={() => setLimit((current) => current === 0 ? 100000 : 0)}
       >Change selector limit</button>
       <output data-testid="scroll-selector-result">{String(passed)}</output>
+      <Carousel data-testid="carousel-config-defaults" autoplay
+        style={{ width: 240, '--t-m-carousel-duration': '0.12s', '--t-m-carousel-autoplay-delay': '0.17s' } as CSSProperties}>
+        <div>First default slide</div><div>Second default slide</div><div>Third default slide</div>
+      </Carousel>
+      <button type="button" onClick={() => setReplacement((current) => !current)}>Replace tilt host</button>
+      <Flex as={replacement ? 'section' : 'div'} data-testid="perspective-replacement" data-tilt-replacement
+        style={{ width: 240, height: 100 }}
+        perspective3d={{ perspective: 1600, scope: '[data-tilt-replacement]', scale: 1 }}>
+        Replacement tilt host
+      </Flex>
       <Flex data-testid="perspective-scope" data-tilt-scope position={['relative', 'relative', 'relative']} w={[400, 400, 400]} h={[200, 200, 200]}>
         <Flex
           data-testid="perspective-scoped-photo"

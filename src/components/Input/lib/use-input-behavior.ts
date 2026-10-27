@@ -336,7 +336,7 @@ export function useInputBehavior({
     handleDateSelect,
   } = useDatePicker({
     enabled: isDate,
-    disabled,
+    disabled: disabled || isReadOnly,
     value: dateDisplayValue,
     minValue: minConstraint,
     maxValue: maxConstraint,

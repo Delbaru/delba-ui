@@ -167,7 +167,7 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
         dateAnchorRef.current = node;
         overflowTooltip.anchorRef.current = node;
     }, [overflowTooltip.anchorRef]);
-    const setFieldRef = useMergedRefs(fieldRef, overflow.ref);
+    const setFieldRef = useMergedRefs(fieldRef, overflow.setNode);
     // Нажатие по «обёртке» поля (паддинги, префикс «+7»), а не по самому инпуту, не должно
     // забирать у него фокус: иначе на mousedown происходит blur → валидация помечает поле
     // ошибкой и на миг показывается оверлей ошибки, который исчезает на mouseup. Фокус ставим
@@ -314,7 +314,10 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
                     revealed={revealed}
                     onToggle={() => setRevealed((current) => !current)}
                 />
-                <DateToggle visible={isDate} onToggle={datePicker.onToggle} />
+                <DateToggle
+                    visible={isDate && !isReadOnly && !disabled}
+                    onToggle={datePicker.onToggle}
+                />
                 <NumberControls visible={showNumberArrows} onStep={handleNumberStep} />
             </Flex>
             {errorBelow && <InputBelowError id={inlineErrorId} message={belowError} />}

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { preloadIcon, registerInlineIcons } from './useFetchedSvg';
+import { fetchSvgCached, preloadIcon, registerInlineIcons } from './useFetchedSvg';
 
 const SVG = '<svg viewBox="0 0 24 24"><path fill="#fff" d="M0 0"/></svg>';
 
@@ -44,11 +44,43 @@ test('preloadIcon греет оба ключа одним запросом на 
         preloadIcon('/icons/warm.svg');
         preloadIcon('/icons/warm.svg');
         assert.deepEqual(stub.calls, ['/icons/warm.svg', '/icons/warm.svg']);
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.all([fetchSvgCached('/icons/warm.svg'), fetchSvgCached('/icons/warm.svg', true)]);
         preloadIcon('/icons/warm.svg');
         assert.equal(stub.calls.length, 2);
     } finally {
         stub.restore();
+    }
+});
+
+test('inline manifest generation wins over an already pending older request', async () => {
+    const g = globalThis as Record<string, unknown>;
+    const previousFetch = g.fetch;
+    let complete: ((response: Response) => void) | undefined;
+    g.fetch = () => new Promise<Response>((resolve) => { complete = resolve; });
+    try {
+        const pending = fetchSvgCached('/icons/generation-race.svg');
+        registerInlineIcons({ '/icons/generation-race.svg': '<svg><path d="M1 1"/></svg>' });
+        complete?.(new Response('<svg><path d="M0 0"/></svg>'));
+        const parsed = await pending;
+        assert.match(parsed.content, /M1 1/);
+        assert.doesNotMatch(parsed.content, /M0 0/);
+    } finally {
+        g.fetch = previousFetch;
+    }
+});
+
+test('a stale failed request does not hide a replacement inline icon', async () => {
+    const g = globalThis as Record<string, unknown>;
+    const previousFetch = g.fetch;
+    let fail: ((error: Error) => void) | undefined;
+    g.fetch = () => new Promise<Response>((_resolve, reject) => { fail = reject; });
+    try {
+        const pending = fetchSvgCached('/icons/generation-error.svg', true);
+        registerInlineIcons({ '/icons/generation-error.svg': SVG });
+        fail?.(new Error('Old request failed'));
+        assert.match((await pending).content, /--icon-fill/);
+    } finally {
+        g.fetch = previousFetch;
     }
 });
 

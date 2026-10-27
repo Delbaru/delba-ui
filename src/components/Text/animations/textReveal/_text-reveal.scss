@@ -13,8 +13,8 @@
   // ужимаем высоту — иначе контейнер срезал бы снизу буквы, которые в НОРМАЛЬНОЙ волне (сверху-слева) гаснут
   // последними. При росте delay=0 (растём сразу вместе с входящими буквами).
   transition:
-    width var(--reveal-width-dur, var(--reveal-dur, var(--t-d-fast))) var(--t-t-f-cubic-bezier) var(--reveal-size-delay, 0s),
-    height var(--reveal-width-dur, var(--reveal-dur, var(--t-d-fast))) var(--t-t-f-cubic-bezier) var(--reveal-size-delay, 0s);
+    width var(--reveal-width-dur, var(--reveal-dur, var(--t-m-text-reveal-duration))) var(--t-t-f-cubic-bezier) var(--reveal-size-delay, 0s),
+    height var(--reveal-width-dur, var(--reveal-dur, var(--t-m-text-reveal-duration))) var(--t-t-f-cubic-bezier) var(--reveal-size-delay, 0s);
   // Уходящий текст приколот слева и тянется до старой ширины — при сужении его хвост лежит правее нового края
   // весь период затухания. clip режет этот горизонтальный вынос по краю контейнера, а overflow-clip-margin
   // оставляет запас ровно под вертикальный reveal-сдвиг (--reveal-shift), чтобы буквы не срезало по высоте.
@@ -69,7 +69,7 @@
   .ui-reveal-in .ui-reveal-char[data-reveal-char] {
     will-change: transform, opacity;
     backface-visibility: hidden;
-    animation: ui-reveal-enter var(--reveal-dur, var(--t-d-fast)) var(--t-t-f-cubic-bezier) backwards;
+    animation: ui-reveal-enter var(--reveal-dur, var(--t-m-text-reveal-duration)) var(--t-t-f-cubic-bezier) backwards;
     animation-delay: calc(var(--reveal-in-delay, 0s) + var(--t, 0) * var(--reveal-span, 0s));
   }
 
@@ -77,7 +77,7 @@
   .ui-reveal-out .ui-reveal-char[data-reveal-char] {
     will-change: transform, opacity;
     backface-visibility: hidden;
-    animation: ui-reveal-leave var(--reveal-dur, var(--t-d-fast)) var(--t-t-f-cubic-bezier) forwards;
+    animation: ui-reveal-leave var(--reveal-dur, var(--t-m-text-reveal-duration)) var(--t-t-f-cubic-bezier) forwards;
     animation-delay: calc(var(--t, 0) * var(--reveal-span, 0s));
   }
 

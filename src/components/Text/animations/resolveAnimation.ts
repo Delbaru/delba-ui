@@ -25,12 +25,12 @@ function parse(input: ResponsiveInput<AnimationInput> | TextAnimate | undefined)
           suffix: input.suffix,
           grouped: input.grouped,
           trigger: input.when === 'load' ? 'onLoad' : 'onView',
-          durationTime: input.duration,
+          duration: input.duration,
         },
       };
     }
     if (input.effect === 'textSlide') {
-      return { key: 'textSlide', options: { mode: 'swap', durationTime: input.duration, ...(input.by ? { by: input.by } : {}) } };
+      return { key: 'textSlide', options: { mode: 'swap', duration: input.duration, ...(input.by ? { by: input.by } : {}) } };
     }
   }
 

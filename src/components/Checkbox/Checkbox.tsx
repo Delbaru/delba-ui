@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useId, useRef, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import type React from 'react';
 import styles from './Checkbox.module.scss';
 import { assetUrl, boxLayout, createLayoutClasses, cx, splitBoxLayout, splitRootDomProps, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
 import { Icon } from '../Icon';
 import { Flex } from '../Flex';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { composeInteractionHandlers, composeEventHandlers } from '../../core/composeEventHandlers';
+import { useFormReset } from '../../core/useFormReset';
 
 import checkIcon from '../../../assets/icons/ui/check/succsess_check_black.svg';
 
@@ -64,7 +66,8 @@ export function Checkbox({
     const { rootProps, elementProps } = splitRootDomProps(rest as typeof rest & Record<string, unknown>);
     const { 'data-error': dataError, ...inputProps } = elementProps;
     const isDisabled = Boolean(inputProps.disabled);
-    const isChecked = Boolean(inputProps.checked ?? inputProps.defaultChecked);
+    const [uncontrolledChecked, setUncontrolledChecked] = useState(Boolean(inputProps.defaultChecked));
+    const isChecked = inputProps.checked ?? uncontrolledChecked;
     const isPassiveReadOnly = Boolean(inputProps.readOnly)
         && !inputProps.onChange
         && !onClick
@@ -77,6 +80,9 @@ export function Checkbox({
     const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
     const inputRef = useRef<HTMLInputElement | null>(null);
     const setInputRef = useMergedRefs(inputRef, ref);
+    useFormReset(inputRef, undefined, () => {
+        if (inputProps.checked === undefined) setUncontrolledChecked(Boolean(inputProps.defaultChecked));
+    });
 
     useEffect(() => {
         if (inputRef.current) inputRef.current.indeterminate = indeterminate;
@@ -89,7 +95,7 @@ export function Checkbox({
             data-point-events={rootDataPointEvents}
             {...(rootProps as React.LabelHTMLAttributes<HTMLLabelElement>)}
             {...revealAttrs}
-            {...(!isDisabled ? stateLinkProps(linkState, { onMouseEnter, onMouseLeave, onClick, onFocus, onBlur, ...motionHandlers }) : {})}
+            {...(!isDisabled ? stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { onMouseEnter, onMouseLeave, onClick, onFocus, onBlur })) : {})}
             className={cx(styles.Checkbox, ...layout, className)}
             style={{ ...(motionStyle ?? null), ...style }}
             {...stateProps(state, isChecked && 'active', dataError && 'error', isDisabled && 'disabled')}
@@ -115,6 +121,9 @@ export function Checkbox({
                     type="checkbox"
                     className={styles.Input}
                     {...inputProps}
+                    onChange={composeEventHandlers(inputProps.onChange, (event) => {
+                        if (inputProps.checked === undefined) setUncontrolledChecked(event.currentTarget.checked);
+                    })}
                 />
 
                 {indicator && <Flex

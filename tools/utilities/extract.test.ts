@@ -7,6 +7,33 @@ import { extractUtilityRules, type Source } from './extract';
 const classesOf = (sources: Source[], options: Parameters<typeof extractUtilityRules>[1] = {}) =>
   new Set(extractUtilityRules(sources, options).map((rule) => rule.className));
 
+test('actual GradientBorder forwarding survives import and barrel aliases', () => {
+  for (const declaration of ["import { GradientBorder as Frame } from './border';", "import { Border as Frame } from './barrel';", "import { GradientBorder as Frame } from '@delba/ui';"]) {
+    const classes = classesOf([
+      { file: 'border.tsx', text: readFileSync(new URL('../../src/components/GradientBorder/GradientBorder.tsx', import.meta.url), 'utf8') },
+      { file: 'barrel.ts', text: "export { GradientBorder as Border } from './border';" },
+      { file: 'page.tsx', text: `${declaration} const Page = () => <Frame width={[37,37,37]} gradient={['var(--unique-frame)','var(--unique-frame)','var(--unique-frame)']} />;` },
+    ]);
+    assert.ok(classes.has('p_37'));
+    assert.ok(classes.has('bg_--unique-frame'));
+  }
+});
+
+test('same-name components and forwarded local bindings remain file scoped', () => {
+  const classes = classesOf([
+    { file: 'a.tsx', text: 'export const Shape = ({ measure }) => <Flex w={measure} />;' },
+    { file: 'b.tsx', text: 'export const Shape = ({ measure }) => <Flex h={measure} />;' },
+    { file: 'wrapper.tsx', text: "import { Shape as Inner } from './a'; const Wrapper = ({ span }) => <Inner measure={span} />; export { Wrapper as Outer };" },
+    { file: 'barrel.ts', text: "export * from './wrapper'; export * from './cycle';" },
+    { file: 'cycle.ts', text: "export * from './barrel';" },
+    { file: 'page.tsx', text: "import { Outer } from './barrel'; import { Shape } from './b'; const Page = () => <><Outer span={37} /><Shape measure={41} /></>;" },
+  ]);
+  assert.ok(classes.has('w_37'));
+  assert.ok(classes.has('h_41'));
+  assert.ok(!classes.has('h_37'));
+  assert.ok(!classes.has('w_41'));
+});
+
 test('GradientBorder generates its default thickness and forwarded gradient/width', () => {
   const classes = classesOf([
     { file: 'border.tsx', text: readFileSync(new URL('../../src/components/GradientBorder/GradientBorder.tsx', import.meta.url), 'utf8') },

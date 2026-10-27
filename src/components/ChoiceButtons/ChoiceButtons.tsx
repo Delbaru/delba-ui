@@ -1,6 +1,7 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { useFormReset } from '../../core/useFormReset';
 
 import { Button } from '../Button';
 import { Flex } from '../Flex';
@@ -143,6 +144,10 @@ export function ChoiceButtons<T extends string = string>({
     const [internalValue, setInternalValue] = useState<T | null>(defaultValue);
     const [hoveredValue, setHoveredValue] = useState<T | null>(null);
     const baseId = useId().replace(/:/g, '');
+    const fieldRef = useRef<HTMLDivElement>(null);
+    useFormReset(fieldRef, form, () => {
+        if (!isControlled) setInternalValue(defaultValue);
+    });
 
     const selectedValue = isControlled ? value ?? null : internalValue;
 
@@ -243,6 +248,7 @@ export function ChoiceButtons<T extends string = string>({
             </TabTrack>
 
             <Select
+                ref={fieldRef}
                 name={name}
                 form={form}
                 multiple={false}

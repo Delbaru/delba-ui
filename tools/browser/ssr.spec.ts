@@ -28,6 +28,9 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   });
   await page.goto('/ssr');
   await expect(page.getByRole('heading', { name: 'SSR and hydration' })).toBeVisible();
+  await expect(page.getByTestId('ssr-named-slide').locator('.ui-slide-swap')).toHaveCSS('--slide-swap-dur', '190ms');
+  await expect(page.getByTestId('ssr-named-reveal').locator('.ui-reveal')).toHaveCSS('--reveal-dur', '0.19s');
+  await expect(page.getByTestId('ssr-named-clip').locator('.ui-clip')).toHaveCSS('--clip-dur', '190ms');
   const button = page.getByTestId('ssr-button');
   await expect(page.getByTestId('ssr-counter').locator('.ui-counter-value')).toHaveText('125%');
   await expect(page.getByTestId('ssr-timeline').locator('.ui-counter-value')).toHaveText('250%');

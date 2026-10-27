@@ -106,7 +106,8 @@ export function readContract() {
   const families = new Map();
   const attributes = new Map();
   const internal = new Set();
-  const internalPrefixes = new Set();
+  // The motion generator now owns the starter scale, semantic defaults and easing roles.
+  const internalPrefixes = new Set(['--t-d-', '--t-m-', '--t-t-f-']);
 
   for (const file of walk(ROOT, /\.(ts|tsx|scss)$/)) {
     const code = stripComments(fs.readFileSync(file, 'utf8'));

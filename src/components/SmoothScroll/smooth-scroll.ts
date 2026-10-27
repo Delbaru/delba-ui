@@ -1,5 +1,7 @@
 import { clamp } from '../../core/utils';
 import { scrollEasing } from '../../motion';
+import { frameResponse } from '../../core/base/damping';
+import { motionScroll } from '../../core/base/motion-config';
 
 /** Функция хода: доля времени 0–1 → доля пути 0–1. */
 export type SmoothScrollEasing = (t: number) => number;
@@ -14,7 +16,6 @@ export type SmoothScrollOffset = number | string | (() => number);
 /** easeOutExpo: быстрый старт и долгое мягкое торможение. */
 export const easeOutExpo: SmoothScrollEasing = scrollEasing.easeOutExpo;
 
-const FRAME_MS = 1000 / 60;
 const LINE_PX = 16;
 /** Ближе этого позиция считается пришедшей: дальше лерп ползёт субпиксельно и цикл не гаснет. */
 const SETTLE_PX = 0.5;
@@ -24,8 +25,6 @@ const SETTLE_PX = 0.5;
  * позицию до пикселя устройства, и ход обрывался бы сам собой.
  */
 const DRIFT_PX = 1.5;
-const DURATION_MIN_MS = 400;
-const DURATION_MAX_MS = 1200;
 
 /** Дельта колеса в пикселях: строки и страницы (`deltaMode` 1 и 2) приводятся к px. */
 export function wheelDeltaPx(deltaY: number, deltaMode: number, viewportHeight: number): number {
@@ -43,7 +42,7 @@ export function clampScroll(y: number, max: number): number {
  * времени кадра, иначе на 120 Гц колесо ехало бы вдвое быстрее.
  */
 export function lerpStep(current: number, target: number, lerp: number, dtMs: number): number {
-  const share = 1 - (1 - clamp(lerp, 0.01, 1)) ** (Math.max(0, dtMs) / FRAME_MS);
+  const share = frameResponse(lerp, dtMs, 0.01);
   const next = current + (target - current) * share;
 
   return Math.abs(target - next) < SETTLE_PX ? target : next;
@@ -66,7 +65,9 @@ export function tweenPosition(
 export function autoDurationMs(distance: number, viewportHeight: number): number {
   const screens = Math.abs(distance) / Math.max(1, viewportHeight);
 
-  return clamp(DURATION_MIN_MS + 250 * Math.sqrt(screens), DURATION_MIN_MS, DURATION_MAX_MS);
+  const minimum = motionScroll.minDuration * 1000;
+  const maximum = motionScroll.maxDuration * 1000;
+  return clamp(minimum + motionScroll.durationPerScreen * 1000 * Math.sqrt(screens), minimum, maximum);
 }
 
 /** Строковый offset → значение CSS: голое имя переменной заворачивается в `var()`. */

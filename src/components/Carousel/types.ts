@@ -1,6 +1,7 @@
 import type { AspectRatioValue, GrowProps, ResponsiveValue, SizeValue, StateLinkInput } from '../../core';
 import type { CSSProperties, ReactNode } from 'react';
 import type { SharedMotionProps } from '../../hooks/useSharedMotion';
+import type { MotionTime } from '../../core/base/timing';
 
 export type OrientationKey = 'horizontal' | 'vertical';
 export type CarouselOrientation = OrientationKey;
@@ -9,7 +10,7 @@ export type CarouselScrollEffect = EffectKey;
 export type NavigationKey = 'dots' | 'arrows' | 'both' | 'none';
 export type CarouselNavigation = NavigationKey;
 export type SlidesPerViewValue = number | 'auto';
-export type CarouselAutoplay = boolean | { delay?: number; disableOnInteraction?: boolean };
+export type CarouselAutoplay = boolean | { delay?: MotionTime; disableOnInteraction?: boolean };
 export type AlignItemsKey = 'stretch' | 'center' | 'flex_start' | 'flex_end' | 'start' | 'end' | 'baseline';
 export type JustifyContentKey = 'flex_start' | 'flex_end' | 'start' | 'end' | 'center' | 'space_between' | 'space_around' | 'space_evenly';
 export type CarouselPeekValue = number;
@@ -56,7 +57,8 @@ export interface CarouselProps extends GrowProps, SharedMotionProps {
 
   pagination?: ResponsiveValue<boolean>;
 
-  autoplay?: boolean | { delay?: number; disableOnInteraction?: boolean };
+  /** Autoplay delay is seconds or a timing name. */
+  autoplay?: CarouselAutoplay;
 
   mousewheel?: ResponsiveValue<boolean>;
 
@@ -71,7 +73,8 @@ export interface CarouselProps extends GrowProps, SharedMotionProps {
   peekStart?: ResponsiveValue<CarouselPeekValue>;
   peekEnd?: ResponsiveValue<CarouselPeekValue>;
 
-  speed?: ResponsiveValue<number>;
+  /** Slide transition duration in seconds or a timing name. */
+  speed?: ResponsiveValue<MotionTime>;
   /** Инерция после броска: доля скорости, с которой лента докатывается, затем доводится к слайду. Не задано или 0 — листание по слайдам. */
   inertia?: number;
 

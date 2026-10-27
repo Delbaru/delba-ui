@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import path from 'node:path';
 import { compile } from 'sass';
+import { motionInView } from '../base/motion-config';
 
 import {
   resolveReveal,
@@ -24,7 +25,7 @@ import {
 
 test('resolveReveal: ключ — умолчания, опции — в мс', () => {
   assert.deepEqual(resolveReveal('up'), {
-    key: 'up', stagger: 0, delay: 0, duration: null, distance: null, once: true, threshold: 0, rootMargin: '0px', fade: true, start: 'view',
+    key: 'up', stagger: 0, delay: 0, duration: null, distance: null, once: true, threshold: motionInView.threshold, rootMargin: motionInView.rootMargin, fade: true, start: 'view',
   });
   assert.deepEqual(resolveReveal(['fade', { stagger: 0.08, delay: 0.1, duration: 0.6, distance: -48, once: false, threshold: 2, rootMargin: '0px 0px -10% 0px' }]), {
     key: 'fade', stagger: 80, delay: 100, duration: 600, distance: 48, once: false, threshold: 1, rootMargin: '0px 0px -10% 0px', fade: true, start: 'view',
@@ -50,8 +51,8 @@ test('horizontal expansion is an appearance effect and keeps an observable start
 test('resolveReveal: object API normalizes effect and preserves option semantics', () => {
   const input = { effect: 'up', delay: 0.16, stagger: 0.08, duration: 0.6, fade: false, start: 'load' } satisfies RevealInput;
   assert.deepEqual(resolveReveal(input), {
-    key: 'up', stagger: 80, delay: 160, duration: 600, distance: null, once: true, threshold: 0,
-    rootMargin: '0px', fade: false, start: 'load',
+    key: 'up', stagger: 80, delay: 160, duration: 600, distance: null, once: true, threshold: motionInView.threshold,
+    rootMargin: motionInView.rootMargin, fade: false, start: 'load',
   });
   assert.equal(resolveReveal({ effect: 'scale' })?.key, 'scale');
   const imageInput = { effect: 'blur', delay: 0.1 } satisfies RevealInput<Omit<RevealOptions, 'stagger'>>;
@@ -80,7 +81,7 @@ test('inView animate shares reveal normalization and wins over the legacy reveal
   assert.deepEqual(chosen, { ...animate, start: 'view' });
   assert.deepEqual(resolveReveal(chosen), {
     key: 'up', stagger: 80, delay: 160, duration: null, distance: null, once: true,
-    threshold: 0, rootMargin: '0px', fade: true, start: 'view',
+    threshold: motionInView.threshold, rootMargin: motionInView.rootMargin, fade: true, start: 'view',
   });
   assert.deepEqual(resolveReveal(resolveRevealInput('fadeIn', ['left', { delay: 0.1 }])), resolveReveal(['left', { delay: 0.1 }]));
   assert.deepEqual(resolveReveal(resolveRevealInput(undefined, 'scale')), resolveReveal('scale'));
@@ -97,7 +98,8 @@ test('resolveReveal: нет пропа, чужой ключ, мусор в чи�
   const r = resolveReveal(['up', { stagger: -1, delay: Number.NaN, duration: 0 }]);
   assert.equal(r?.stagger, 0);
   assert.equal(r?.delay, 0);
-  assert.equal(r?.duration, null);
+  assert.equal(r?.duration, 0);
+  assert.equal(revealStyle(r)?.['--reveal-duration'], '0ms');
 });
 
 test('revealAttrs: каскад помечается отдельным атрибутом', () => {

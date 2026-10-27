@@ -10,6 +10,9 @@ test('motion timing definitions belong to config; references and comments remain
   assert.deepEqual(motionTokenDuplicates(':root { --t-d-fast: 0.1s; }', '// no config'), []);
 });
 
-test('named timing resolver does not hide the existing theme duration contract', () => {
-  assert.ok(readContract().tokens.has('--t-d-slow'));
+test('generated motion scale and easing roles are kit-owned, while colors remain a theme contract', () => {
+  const contract = readContract();
+  assert.equal(contract.tokens.has('--t-d-slow'), false);
+  assert.equal(contract.tokens.has('--t-t-f-back'), false);
+  assert.ok(contract.tokens.has('--primary'));
 });

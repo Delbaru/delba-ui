@@ -215,12 +215,12 @@ Fixed/sticky-панель с top=0 сохраняет зону возврата 
 методы читают живой location, но не подписывают React. Сервис существует только в браузере;
 на сервере передавайте pathname текущего запроса, не храните его в глобальном объекте.
 
-`SmoothScroll` (`src/components/SmoothScroll`) — плавная прокрутка без зависимостей, замена `LenisScroll`
-(тот остаётся ради проектов на нём). Пишет в НАСТОЯЩИЙ скролл окна, поэтому sticky, поиск, фокус и
+`SmoothScroll` (`src/components/SmoothScroll`) — плавная прокрутка без зависимостей.
+Пишет в НАСТОЯЩИЙ скролл окна, поэтому sticky, поиск, фокус и
 клавиатура живы. Один конфиг — пропы провайдера (`lerp`, `wheelMultiplier`, `duration`, `easing`,
 `offset`, `mobile`, `anchors`, `updateHash`); API — `useSmoothScroll()` (`scrollTo`, `stop`, `scrollY`,
 `subscribe`). Колесо над прокручиваемым контейнером, открытой `aria-modal` или узлом с
-`data-smooth-scroll-ignore` (и `data-lenis-prevent`) — браузеру. Чистая математика хода, отступа и
+`data-smooth-scroll-ignore` — браузеру. Чистая математика хода, отступа и
 разбора якорей — `smooth-scroll.ts` с тестами; `MEDIA_QUERY.touch` — «главный ввод — палец».
 Кривые импортируются из лёгкого `@delba/ui/motion`: `easing={scrollEasing.ease}`.
 Автодополнение показывает `linear`, `ease`, `easeIn`, `easeOut`, `easeInOut`,
@@ -233,8 +233,8 @@ Fixed/sticky-панель с top=0 сохраняет зону возврата 
 
 `parallax={{ distance, direction, mode: 'scroll' }}` привязывает смещение от -distance
 до +distance к проходу узла через ближайший scroll-контейнер посредством ViewTimeline.
-Аддитивный `translate` сохраняет reveal и perspective. Без поддержки браузера или в
-Lenis-контексте работает прежний spring; `mode: 'spring'` остаётся значением по умолчанию,
+Аддитивный `translate` сохраняет reveal и perspective. Без поддержки браузера
+работает прежний spring; `mode: 'spring'` остаётся значением по умолчанию,
 `ease` управляет только им. Reduced motion отменяет timeline, смена узла/unmount очищает его.
 
 ## Сворачивание
@@ -362,7 +362,12 @@ hidden. Общий `useOpenPresence` отменяет ожидание при п
 
 `motionTimeCss` и `readMotionTimeMs` (`core/base/timing.ts`) переводят `MotionTime` в CSS и
 миллисекунды соответственно. DOM-чтение выполняется после mount на узле анимации, чтобы учитывать
-локальную тему. Число в новом API означает секунды. Имена задаёт конфиг проекта.
+локальную тему. Число в объектном и tuple API означает секунды. Имена задаёт конфиг проекта.
+В `core/base/motion-defaults.ts` находятся единые умолчания всех семейств движения;
+`motion.defaults` их уточняет. Генератор выпускает CSS tokens и нормализованный runtime config.
+`readMotionDefaultMs` и `useMotionTime` согласуют JS clocks с тем же semantic token в CSS.
+`motionEasing` (`@delba/ui/motion`) задаёт JS и CSS кривую одним пресетом; `frameResponse`
+объединяет лишь общий расчёт frame-independent damping scroll/parallax/perspective.
 
 Смена содержимого использует тот же объектный договор:
 
@@ -445,9 +450,10 @@ Observer отслеживает добавление/удаление детей
 
 Ключи: `fade`, `up` (снизу), `down` (сверху), `left` / `right` (слева / справа), `scale` (из 0.96), `expandX` (раскрытие слева направо), `blur`; все — с fade. Для линии задайте `effect: 'expandX', fade: false`: наблюдатель видит ненулевую исходную ширину, обрезка и отдельный обработчик скролла не нужны.
 Опции (`RevealOptions`): `stagger` (нет — ход у самого узла), `delay` (`0`), `duration`
-(токен `--t-d-slow`, кривая `--t-t-f-cubic-bezier`), `distance` (число rpx, процент собственного размера
+(токен `--t-m-reveal-duration`, кривая `--t-t-f-cubic-bezier`), `distance` (число rpx, процент собственного размера
 или имя из `ui.config.motion.distance`; по умолчанию `32`), `once` (`true`; `false` —
-прячет снова, когда элемент уходит вниз), `threshold` (`0`), `rootMargin` (`'0px'`).
+прячет снова, когда элемент уходит вниз), `threshold` и `rootMargin` из `motion.inView`
+(стартовые значения `0` и `'0px'`). Margin принимает объект с четырьмя сторонами или legacy string.
 `fade` (`true`; `false` — без прозрачности: узел виден с первого кадра и только доезжает), `start`
 (`'view'`; `'load'` — ход с первой отрисовки чистым CSS, без JS и наблюдателя).
 
@@ -461,8 +467,9 @@ Observer отслеживает добавление/удаление детей
 `motion.visibility.rootMargin` в `ui.config.ts` задаёт зону подготовки непрерывных
 idle/parallax/perspective-анимаций (по умолчанию `100px`). Генератор печатает
 `--t-m-visibility-root-margin`; наблюдатели читают его у своего узла при подключении.
-Допустимы 1–4 значения `px`/`%`, как у IntersectionObserver. Этот запас не меняет
-`rootMargin`/`threshold` появления: их по-прежнему задаёт `animate` потребителя.
+Новая запись именует top/right/bottom/left в `px`/`%`; legacy string поддерживается.
+Процент вертикальной стороны по-прежнему считается от ширины viewport — это не `vh`.
+Этот запас не меняет `motion.inView`/явные `animate.rootMargin` и `animate.threshold`.
 
 - **Первый экран — `{ effect: 'up', fade: false, start: 'load' }`.** Ход по экрану ждёт гидрации, а прозрачный
   узел не засчитывается в LCP: герой с `fade` показывал LCP на 2,2 с при готовом за 20 мс фото. С `'load'`
@@ -505,6 +512,10 @@ idle/parallax/perspective-анимаций (по умолчанию `100px`). Г
 
 `src/components/Icon/useFetchedSvg.ts` — `preloadIcon(url)`: прогрев кэша SVG (оба ключа — сырой и
 перекрашиваемый) до показа иконки. На сервере и для инлайн-иконок ничего не делает.
+Каждый fetched SVG проходит асинхронный `parseRemoteSvg` с DOMPurify в отдельном chunk,
+включая локальные URL. Синхронные `parseSvg`/`sanitizeSvgMarkup` — preprocessing доверенных
+build-ассетов и inline registry, не security boundary. Обновление manifest меняет поколение
+URL: поздний ответ прежнего запроса не заменяет актуальную inline-иконку.
 
 ## Хуки
 
@@ -515,6 +526,12 @@ idle/parallax/perspective-анимаций (по умолчанию `100px`). Г
 `ref={fieldRef}`; дополнительные ref'ы объединяются через `useMergedRefs`. Один callback
 используется во всех ветках поля, включая `TimeField`, чтобы загрузка, collapse и замена узла
 обновляли также внешний ref.
+
+Внутренний `useFormReset` подписывает нативные и составные поля на связанную форму,
+включая `form=`. Владелец сбрасывает только uncontrolled-значение и не вызывает onChange.
+Отмена проверяется в следующей задаче: microtask может выполниться раньше делегированного
+React onReset. `useTextOverflow.setNode` переподключает ResizeObserver при замене input;
+прежний object ref сохранён для совместимости.
 
 `assignRef` возвращает очистку callback-ref, если она есть. `useMergedRefs` сохраняет договор
 React 19: при отсоединении вызывает эту очистку; для ref'ов без неё передаёт `null`.

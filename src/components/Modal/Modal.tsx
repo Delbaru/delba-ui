@@ -327,9 +327,7 @@ function ModalSurface({
         aria-modal="true"
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledby}
-        data-lenis-prevent
-        data-lenis-prevent-wheel
-        data-lenis-prevent-touch
+        data-smooth-scroll-ignore
         tabIndex={-1}
         className={cx(
           styles.Panel,

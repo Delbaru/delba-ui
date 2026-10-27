@@ -4,9 +4,8 @@ export type CounterTrigger = 'onLoad' | 'onView';
 
 export interface CounterOptions {
   to?: number;
-  duration?: number;
-  /** Время новой объектной формы animate: секунды или имя шкалы; legacy duration остаётся в мс. */
-  durationTime?: MotionTime;
+  /** Seconds or a timing name in both object and tuple forms. */
+  duration?: MotionTime;
   start?: number;
   suffix?: string;
   trigger?: CounterTrigger;

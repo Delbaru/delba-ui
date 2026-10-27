@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { hasIconSource, parseAspectRatio, parseSvg, resolveIconSource } from './svg';
+import { hasIconSource, parseAspectRatio, parseRemoteSvg, parseSvg, resolveIconSource } from './svg';
 
 test('parseSvg: viewBox и заливка корня читаются, безопасный цвет остаётся', () => {
     const parsed = parseSvg('<svg viewBox="0 0 24 24" fill="#111"><path fill="#fff" d="M0 0"/></svg>');
@@ -24,6 +24,22 @@ test('parseSvg с перекраской: цвет уходит в переме�
 
 test('parseSvg: не SVG — ошибка, а не пустая иконка', () => {
     assert.throws(() => parseSvg('<div></div>'), /Invalid SVG/);
+});
+
+test('fetched SVG sanitizes parsed URL attributes and active SVG nodes', async () => {
+    for (const href of ['href=javascript:alert(1)', 'href="jav&#x61;script:alert(1)"', 'xlink:href="java&#9;script:alert(1)"']) {
+        const parsed = await parseRemoteSvg(`<svg><a ${href}><text>Open</text></a><animate attributeName="href" values="javascript:alert(1)"/><foreignObject><div>unsafe</div></foreignObject></svg>`);
+        assert.doesNotMatch(parsed.content, /href=|javascript|animate|foreignObject/i);
+        assert.match(parsed.content, /Open/);
+    }
+});
+
+test('fetched SVG retains masks, gradients and local fragment references', async () => {
+    const parsed = await parseRemoteSvg('<svg viewBox="0 0 24 24"><defs><linearGradient id="paint"><stop offset="0" stop-color="#fff"/></linearGradient><mask id="mask"><rect width="24" height="24" fill="#fff"/></mask></defs><path fill="url(#paint)" mask="url(#mask)" d="M0 0"/></svg>');
+    assert.equal(parsed.viewBox, '0 0 24 24');
+    assert.match(parsed.content, /linearGradient/);
+    assert.match(parsed.content, /fill="url\(#paint\)"/);
+    assert.match(parsed.content, /mask="url\(#mask\)"/);
 });
 
 test('resolveIconSource: имя, относительный путь, абсолютный адрес, объект', () => {

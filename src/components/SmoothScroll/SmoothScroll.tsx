@@ -4,18 +4,19 @@ import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode }
 
 import { registerScrollProvider, unregisterScrollProvider } from '../../core/base/scroll';
 import { createSmoothScroll, type SmoothScrollConfig, type SmoothScrollController, type SmoothScrollTarget, type SmoothScrollToOptions } from './engine';
-import { easeOutExpo, type SmoothScrollEasing, type SmoothScrollOffset } from './smooth-scroll';
+import { type SmoothScrollEasing, type SmoothScrollOffset } from './smooth-scroll';
+import { motionScroll } from '../../core/base/motion-config';
 import { subscribeWindowScroll } from './scroll-events';
 
 export type SmoothScrollProps = {
   children: ReactNode;
-  /** Инерция колеса: доля оставшегося пути за кадр 60 Гц, 0–1. Меньше — плавнее и дольше. По умолчанию `0.1`. */
+  /** Инерция колеса: доля оставшегося пути за кадр 60 Гц, 0–1. Меньше — плавнее и дольше. По умолчанию motion.scroll.lerp (база 0.08). */
   lerp?: number;
   /** Множитель шага колеса и тачпада. По умолчанию `1`. */
   wheelMultiplier?: number;
   /** Длительность перелёта `scrollTo` и якорей, секунды. По умолчанию — от расстояния, 0.4–1.2 с. */
   duration?: number;
-  /** Кривая из scrollEasing (@delba/ui/motion) либо функция. По умолчанию easeOutExpo. */
+  /** Кривая из motionEasing/scrollEasing (@delba/ui/motion) либо функция. По умолчанию motion.scroll.easing (база easeOutExpo). */
   easing?: SmoothScrollEasing;
   /**
    * Отступ под фиксированную шапку для якорей и `scrollTo(элемент)`: px, CSS-длина или имя
@@ -63,15 +64,15 @@ export function useSmoothScrollOptional(): SmoothScrollApi | null {
 /**
  * Плавная прокрутка окна без зависимостей: инерция колеса на десктопе, якоря с отступом под
  * шапку, API `scrollTo` через `useSmoothScroll`. Скролл остаётся нативным — sticky, поиск,
- * фокус и клавиатура работают как без него. Замена `LenisScroll`.
+ * фокус и клавиатура работают как без него.
  */
 export function SmoothScroll({
   children,
-  lerp = 0.1,
+  lerp = motionScroll.lerp,
   wheelMultiplier = 1,
-  duration,
-  easing = easeOutExpo,
-  offset = 0,
+  duration = motionScroll.duration,
+  easing = motionScroll.easing,
+  offset = motionScroll.offset,
   mobile = false,
   anchors = true,
   updateHash = true,

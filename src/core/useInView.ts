@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState, type RefObject } from 'react';
+import { normalizeObserverMargin, type ObserverMargin } from './base/observer-margin';
+import { motionInView } from './base/motion-config';
 
 export interface UseInViewOptions {
   threshold?: number | number[];
-  rootMargin?: string;
+  rootMargin?: ObserverMargin;
   root?: Element | null;
   /**
    * Что считать ДО первого отчёта наблюдателя. По умолчанию `false` — «ещё не видели»,
@@ -19,7 +21,8 @@ export function useInView<T extends Element>(
   ref: RefObject<T | null>,
   options: UseInViewOptions = {}
 ): { isInView: boolean; ratio: number } {
-  const { threshold = 0, rootMargin = '0px', root = null, initialInView = false } = options;
+  const { threshold = motionInView.threshold, rootMargin = motionInView.rootMargin, root = null, initialInView = false } = options;
+  const margin = normalizeObserverMargin(rootMargin) ?? '0px';
   const [state, setState] = useState({ isInView: initialInView, ratio: initialInView ? 1 : 0 });
 
   useEffect(() => {
@@ -34,12 +37,12 @@ export function useInView<T extends Element>(
           ratio: entry.intersectionRatio,
         });
       },
-      { threshold, rootMargin, root }
+      { threshold, rootMargin: margin, root }
     );
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [ref, threshold, rootMargin, root]);
+  }, [ref, threshold, margin, root]);
 
   return state;
 }

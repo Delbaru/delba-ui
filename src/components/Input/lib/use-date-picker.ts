@@ -31,6 +31,9 @@ export function useDatePicker({
   onCommit,
 }: UseDatePickerOptions) {
   const [isActive, setIsActive] = useState(false);
+  useEffect(() => {
+    if (!enabled || disabled) setIsActive(false);
+  }, [enabled, disabled]);
   const floatingRef = useRef<HTMLElement | null>(null);
   const [visibleMonth, setVisibleMonth] = useState(() => (
     enabled
@@ -99,7 +102,7 @@ export function useDatePicker({
   }, [activateDatePicker, deactivateDatePicker, isActive]);
 
   const handleDateSelect = useCallback((nextDate: Date) => {
-    if (isDateDisabled(nextDate)) {
+    if (!enabled || disabled || isDateDisabled(nextDate)) {
       return;
     }
 
@@ -108,7 +111,7 @@ export function useDatePicker({
     setVisibleMonth(datePicker.getMonthStart(nextDate));
     setIsActive(false);
     focusField();
-  }, [focusField, isDateDisabled, onCommit]);
+  }, [disabled, enabled, focusField, isDateDisabled, onCommit]);
 
   return {
     isDatePickerActive: isActive,

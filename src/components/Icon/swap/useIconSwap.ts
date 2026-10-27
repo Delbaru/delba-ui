@@ -5,11 +5,13 @@ import { createElement, useEffect, useRef, useState, type CSSProperties, type Re
 import { cx, MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../core';
 import { motionTimeCss, readMotionTimeMs } from '../../../core/base/timing';
 import { normalizeIconAnimate, type IconAnimate } from './types';
+import { MOTION_DEFAULTS } from '../../../core/base/motion-defaults';
+import { motionDefaults } from '../../../core/base/motion-config';
 
 // Дефолты по стилю. 'spin' — быстрее и с доворотом: глиф уходит вращаясь+сжимаясь, новый
 // доворачивает из того же угла в 0 (рецепт бейджа SolutionCard/BannerSlideCard как стиль Icon).
-const SWAP_DEFAULTS = { duration: 0.3, scale: 0.8, rotate: 0 } as const;
-const SPIN_DEFAULTS = { duration: 0.18, scale: 0.5, rotate: 45 } as const;
+const SWAP_DEFAULTS = motionDefaults.iconSwap;
+const SPIN_DEFAULTS = motionDefaults.iconSpin;
 
 // Стабильный id для компонент-иконок (SVGR): key свопа должен быть string|number, а компонент — объект.
 // WeakMap не держит ссылку и не течёт при размонтировании.
@@ -91,7 +93,7 @@ export function useIconSwap(
 
     const timer = window.setTimeout(() => {
       setSwap((s) => (s.outgoing == null ? s : { ...s, outgoing: null, entering: true }));
-    }, readMotionTimeMs(duration, scopeRef.current ?? undefined, defaults.duration) + MOTION_END_BUFFER_MS);
+    }, readMotionTimeMs(duration, scopeRef.current ?? undefined, kind === 'spin' ? MOTION_DEFAULTS.iconSpin.duration : MOTION_DEFAULTS.iconSwap.duration) + MOTION_END_BUFFER_MS);
 
     return () => clearTimeout(timer);
   }, [swap.generation, swap.outgoing, duration, defaults.duration]);

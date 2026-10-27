@@ -5,8 +5,8 @@
   position: relative;
   overflow: hidden;
   transition:
-    height var(--slide-dur, var(--t-d-very-slow)) var(--t-t-f-ease),
-    transform var(--slide-dur, var(--t-d-very-slow)) var(--t-t-f-ease);
+    height var(--slide-dur, var(--t-m-text-slide-sequence-duration)) var(--t-t-f-ease),
+    transform var(--slide-dur, var(--t-m-text-slide-sequence-duration)) var(--t-t-f-ease);
 
   .ui-slide-item {
     position: absolute;
@@ -30,8 +30,8 @@
     grid-area: 1 / 1;
     display: block;
     transition:
-      transform var(--text-slide-duration, 0.35s) var(--t-t-f-ease),
-      color var(--text-slide-duration, 0.35s) var(--t-t-f-ease);
+      transform var(--text-slide-duration, var(--t-m-text-slide-hover-duration)) var(--t-t-f-ease),
+      color var(--text-slide-duration, var(--t-m-text-slide-hover-duration)) var(--t-t-f-ease);
     will-change: transform;
   }
 
@@ -67,7 +67,7 @@
   // строк при переносе «N из M» в узком контейнере). Перенос наследуется от host-Text.
   display: inline-block;
   vertical-align: baseline;
-  transition: height var(--slide-swap-dur, 0.4s) var(--t-t-f-cubic-bezier);
+  transition: height var(--slide-swap-dur, var(--t-m-text-slide-duration)) var(--t-t-f-cubic-bezier);
 
   // Слово целиком не переносим по буквам (перенос допустим только между словами — по пробелам-ячейкам).
   // tabular-nums держим на словах (цифры одной ширины — таймер не прыгает 9→0); на пробелах-ячейках не нужно.
@@ -102,7 +102,7 @@
     position: relative;
     overflow: hidden;
     vertical-align: bottom;
-    transition: width var(--slide-swap-dur, 0.4s) var(--t-t-f-cubic-bezier);
+    transition: width var(--slide-swap-dur, var(--t-m-text-slide-duration)) var(--t-t-f-cubic-bezier);
   }
 
   // will-change — только на время свопа. В покое сменившийся символ снова становится статичным без слоя,
@@ -112,7 +112,7 @@
     display: inline-block;
     will-change: transform;
     backface-visibility: hidden;
-    animation: ui-slide-enter var(--slide-swap-dur, 0.4s) var(--t-t-f-cubic-bezier) backwards;
+    animation: ui-slide-enter var(--slide-swap-dur, var(--t-m-text-slide-duration)) var(--t-t-f-cubic-bezier) backwards;
   }
 
   // Старый символ — абсолют поверх нового (левый-верхний угол ячейки), уезжает вверх под клип.
@@ -122,7 +122,7 @@
     top: 0;
     will-change: transform;
     backface-visibility: hidden;
-    animation: ui-slide-leave var(--slide-swap-dur, 0.4s) var(--t-t-f-cubic-bezier) forwards;
+    animation: ui-slide-leave var(--slide-swap-dur, var(--t-m-text-slide-duration)) var(--t-t-f-cubic-bezier) forwards;
   }
 }
 
@@ -145,14 +145,14 @@
   }
 
   .ui-slide-value-in {
-    animation: ui-slide-value-enter var(--slide-swap-dur, 0.4s) var(--t-t-f-cubic-bezier) both;
+    animation: ui-slide-value-enter var(--slide-swap-dur, var(--t-m-text-slide-duration)) var(--t-t-f-cubic-bezier) both;
   }
 
   .ui-slide-value-out {
     position: absolute;
     inset-inline: 0;
     top: 0;
-    animation: ui-slide-value-leave var(--slide-swap-dur, 0.4s) var(--t-t-f-cubic-bezier) both;
+    animation: ui-slide-value-leave var(--slide-swap-dur, var(--t-m-text-slide-duration)) var(--t-t-f-cubic-bezier) both;
   }
 }
 

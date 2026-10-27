@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { parseSvg, type ParsedSvg } from './svg';
+import { parseRemoteSvg, parseSvg, type ParsedSvg } from './svg';
 
 const svgFetchCache = new Map<string, Promise<ParsedSvg>>();
 // Синхронный кэш уже разобранных SVG. Позволяет отрисовать иконку в первом же рендере
@@ -12,6 +12,7 @@ const svgResolvedCache = new Map<string, ParsedSvg>();
 // (см. tools/icons/generate-inline-manifest.mjs). Ключ — итоговый URL вида '/icons/...'.
 // Даёт синхронную отрисовку в первом кадре и в SSR, без рантайм-fetch.
 const inlineSvgRegistry = new Map<string, string>();
+const svgGenerations = new Map<string, number>();
 
 /**
  * Регистрирует инлайн-иконки (URL → сырой SVG-текст). Вызывается один раз при старте
@@ -22,10 +23,13 @@ export function registerInlineIcons(icons: Record<string, string>): void {
     if (inlineSvgRegistry.get(key) === svg) continue;
 
     inlineSvgRegistry.set(key, svg);
+    svgGenerations.set(key, (svgGenerations.get(key) ?? 0) + 1);
     // Модуль-реестр живёт дольше манифеста: dev-сервер перечитывает манифест горячо, и без сброса
     // разобранная копия старого SVG отдавалась бы до перезапуска процесса.
     svgResolvedCache.delete(svgCacheKey(key, true));
     svgResolvedCache.delete(svgCacheKey(key, false));
+    svgFetchCache.delete(svgCacheKey(key, true));
+    svgFetchCache.delete(svgCacheKey(key, false));
   }
 }
 
@@ -63,11 +67,13 @@ function getInlineSvg(url: string | null, normalizeContent: boolean): ParsedSvg 
   return getResolvedSvg(url, normalizeContent);
 }
 
-function fetchSvgCached(url: string, normalizeContent = false): Promise<ParsedSvg> {
+/** Internal shared request, exported here for deterministic cache lifecycle tests. */
+export function fetchSvgCached(url: string, normalizeContent = false): Promise<ParsedSvg> {
   const cacheKey = svgCacheKey(url, normalizeContent);
 
   const cached = svgFetchCache.get(cacheKey);
   if (cached) return cached;
+  const generation = svgGenerations.get(url) ?? 0;
 
   const request = fetch(url)
     .then((res) => {
@@ -77,13 +83,22 @@ function fetchSvgCached(url: string, normalizeContent = false): Promise<ParsedSv
 
       return res.text();
     })
-    .then((text) => {
-      const parsed = parseSvg(text, normalizeContent);
+    .then((text) => parseRemoteSvg(text, normalizeContent))
+    .then((parsed) => {
+      if ((svgGenerations.get(url) ?? 0) !== generation) {
+        const current = getResolvedSvg(url, normalizeContent);
+        if (current) return current;
+        return fetchSvgCached(url, normalizeContent);
+      }
       svgResolvedCache.set(cacheKey, parsed);
       return parsed;
     })
     .catch((error) => {
-      svgFetchCache.delete(cacheKey);
+      if ((svgGenerations.get(url) ?? 0) !== generation) {
+        const current = getResolvedSvg(url, normalizeContent);
+        if (current) return current;
+      }
+      if (svgFetchCache.get(cacheKey) === request) svgFetchCache.delete(cacheKey);
       throw error;
     });
 

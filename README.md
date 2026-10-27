@@ -113,8 +113,14 @@ delba-ui test    # типы, архитектура, границы, тесты,
 
 ```ts
 // ui.config.ts (фрагмент)
+// import { motionEasing } from '@delba/ui/motion';
 motion: {
   timing: { veryFast: 0.16, fast: 0.24, normal: 0.4, slow: 0.7, verySlow: 1, gentle: 0.9 },
+  inView: { rootMargin: { top: '0px', right: '0px', bottom: '-10%', left: '0px' }, threshold: 0 },
+  visibility: { rootMargin: { top: '100px', right: '100px', bottom: '100px', left: '100px' } },
+  scroll: { duration: 1.2, lerp: 0.08, offset: '--header-h', easing: motionEasing.easeInOutCubic },
+  defaults: { textSlide: { duration: 0.4 }, textReveal: { duration: 0.3, maxDuration: 0.5 } },
+  easing: { out: motionEasing.out, default: motionEasing.smooth, symmetric: motionEasing.symmetric },
 },
 ```
 
@@ -133,9 +139,42 @@ interface UiMotionTiming {
 ```
 
 Ручное `i * timing` не нужно: каскад вычисляет порядок сам. Числа в секундах остаются допустимы
-для точного времени. Конфиг не попадает в браузерный бандл через механизм motion.
+для точного времени. Runtime получает нормализованный генерат `core/motion-config.ts`,
+без импортов проектного конфига, D-компонентов и их зависимостей.
 CLI проверяет форму имён и значения, компилятор проекта — существование используемых имён.
-Без `motion` и декларации сохраняется прежний договор темы со строковыми именами.
+Без `motion` генератор выпускает стартовую шкалу и defaults кита; без декларации типы
+принимают строковые имена. Время, easing и defaults в SCSS темы повторно не объявляют.
+
+`motionEasing` — общий словарь callable-пресетов для JS с `.css` для CSS. Кривые
+`out`, `smooth`, `symmetric`, `back`, `spring` не требуют формул у потребителя.
+Для редкой настройки самого конфига есть `cubicBezier(x1,y1,x2,y2)`; генератор сохраняет
+контрольные точки и использует их в обоих движках. `scrollEasing` сохраняет прежние кривые.
+
+`defaults` имеет группы `reveal`, `textSlide`, `textReveal`, `textClip`, `counter`,
+`iconSwap`, `iconSpin`, `imgSwap`, `grid`, `skeleton`, `carousel`, `buttonIdle`,
+`parallax`, `marquee`, `perspective`. Поддерживаемые поля показывает
+`MotionDefaults` и `MotionDefaultOverrides`. Проект хранит свои значения явно в ui.config;
+генератор переносит их в CSS и runtime. Внутренние значения кита нужны для standalone
+bootstrap до первой генерации и не экспортируются как заготовка для spread в конфиге.
+`motionDefaults` — уже разрешённые runtime-значения, а не источник проектной конфигурации.
+Прокруткой целиком владеет `motion.scroll`: duration, lerp, offset, easing,
+minDuration, maxDuration и durationPerScreen. Дублирующих scroll-полей в defaults/easing нет.
+CSS и JS читают одни semantic tokens; числовые длительности везде означают секунды.
+
+### Миграция единиц и прокрутки (breaking)
+
+- Legacy counter tuple: `duration: 2500` → `duration: 2.5`.
+- Carousel `speed: 300` → `speed: 0.3`; `autoplay.delay: 3000` → `3`.
+- `useScrollProgress({ lag: 120 })` → `{ lag: 0.12 }`.
+- `LenisScroll`, его provider/hooks/context и peer dependency удалены. Используйте
+  `SmoothScroll`/`useSmoothScroll`; его scrollY и subscribe относятся к нативному окну.
+  `data-lenis-prevent*` заменены на `data-smooth-scroll-ignore`; у parallax удалён
+  выбор источника `scroll`, поскольку источник теперь один — нативная прокрутка.
+- Новые observer margins задаются четырьмя явными сторонами. Legacy string читается
+  без изменения смысла: `-10%` остаётся процентом ширины viewport согласно IntersectionObserver,
+  а не превращается в `vh`. Объект `{ all: ... }` не поддерживается.
+
+Явно названные технические API `durationMs`/timeout и время медиа сохраняют свои единицы.
 
 Кнопка поддерживает заливку снизу вверх при наведении и клавиатурном фокусе:
 
@@ -357,7 +396,7 @@ git add delba-ui pnpm-lock.yaml && git commit -m "UI: обновить библ�
 |---|---|
 | `import … from '<UI>'` / `'<UI>/Grid'` / `'<UI>/Modal'` / `'<UI>/Toast'` / `'<UI>/RichTextarea'` | `import … from '@delba/ui'` |
 | `'<UI>/core'`: `cx`, `MEDIA_QUERY`, `clamp`, `prefersReducedMotion`, `MOTION_END_BUFFER_MS`, `ResponsiveValue`… | `'@delba/ui'` (там же теперь `mergeComponentStates`, `ComponentStateValue`, `assetUrl`) |
-| `'<UI>/core/component-state'`, `'<UI>/core/utils'`, `'<UI>/hooks/…'`, `'<UI>/core/useInView'`, `'<UI>/LenisScroll'` | `'@delba/ui'` |
+| `'<UI>/core/component-state'`, `'<UI>/core/utils'`, `'<UI>/hooks/…'`, `'<UI>/core/useInView'` | `'@delba/ui'` |
 | `'<UI>/skin'` | `'@delba/ui/skin'` |
 | `import { withUi } from '<UI>/next.mjs'` | `import { withUi } from '@delba/ui/next'` |
 | `import type { UiConfig } from '<UI>/tools/config'` | `import type { UiConfig } from '@delba/ui/config'` |
