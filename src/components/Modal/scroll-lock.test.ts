@@ -13,19 +13,30 @@ function inlineStyle() {
   };
 }
 
-function fixture(gutter = 16) {
+function fixture(gutter = 16, stable = false) {
   const rootStyle = inlineStyle();
   const bodyStyle = inlineStyle();
   const document = {
     documentElement: {
       style: rootStyle,
       get clientWidth() { return rootStyle.getPropertyValue('overflow') === 'hidden' ? 1000 : 1000 - gutter; },
+      getBoundingClientRect() {
+        return { width: !stable && rootStyle.getPropertyValue('overflow') === 'hidden' ? 1000 : 1000 - gutter };
+      },
     },
     body: { style: bodyStyle },
     defaultView: { getComputedStyle: () => ({ paddingRight: '12px' }) },
   } as unknown as Document;
   return { document, rootStyle, bodyStyle };
 }
+
+test('stable gutter keeps its layout width even when clientWidth reports the viewport', () => {
+  const { document, bodyStyle } = fixture(16, true);
+  const release = acquireScrollLock(document);
+  assert.equal(document.documentElement.clientWidth, 1000);
+  assert.equal(bodyStyle.getPropertyValue('padding-right'), '');
+  release();
+});
 
 test('overlapping providers keep their document locked until the last lease ends', () => {
   const { document, rootStyle, bodyStyle } = fixture();
@@ -71,6 +82,25 @@ test('a stable or absent gutter does not replace existing padding', () => {
   assert.equal(bodyStyle.getPropertyValue('padding-right'), '3rem');
   release();
   assert.equal(bodyStyle.getPropertyValue('padding-right'), '3rem');
+});
+
+test('a stable gutter that clientWidth stops reporting still gets no compensation', () => {
+  // Chrome: под overflow:hidden корень держит место под полосу (раскладка 984), а clientWidth — 1000.
+  const rootStyle = inlineStyle();
+  const bodyStyle = inlineStyle();
+  const document = {
+    documentElement: {
+      style: rootStyle,
+      get clientWidth() { return rootStyle.getPropertyValue('overflow') === 'hidden' ? 1000 : 984; },
+      getBoundingClientRect: () => ({ width: 984 }),
+    },
+    body: { style: bodyStyle },
+    defaultView: { getComputedStyle: () => ({ paddingRight: '0px' }) },
+  } as unknown as Document;
+  const release = acquireScrollLock(document);
+
+  assert.equal(bodyStyle.getPropertyValue('padding-right'), '');
+  release();
 });
 
 test('documents have independent locks and can be locked again after cleanup', () => {

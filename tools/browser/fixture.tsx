@@ -17,9 +17,12 @@ import { Input } from '../../src/components/Input/Input';
 import { Icon } from '../../src/components/Icon/Icon';
 import { Carousel } from '../../src/components/Carousel/Carousel';
 import { CarouselNav } from '../../src/components/Carousel/CarouselNav/CarouselNav';
+import { CarouselDots } from '../../src/components/Carousel/CarouselDots';
 import { Dropdown } from '../../src/components/Dropdown/Dropdown';
 import { Modal } from '../../src/components/Modal/Modal';
 import { ModalProvider, useModal } from '../../src/components/Modal/ModalProvider';
+import { ModalContextFixture } from './modal-context.fixture';
+import { NativeFieldFixture } from './native-field.fixture';
 import { LexicalText } from '../../src/components/RichText/RichText';
 import { PhoneField } from '../../src/components/PhoneField/PhoneField';
 import { Select } from '../../src/components/Select/Select';
@@ -27,6 +30,7 @@ import { Text } from '../../src/components/Text/Text';
 import { Section } from '../../src/components/Section';
 import { Textarea } from '../../src/components/Textarea/Textarea';
 import { RefactorContractsFixture } from './refactor-contracts.fixture';
+import { ScrollAreaFixture } from './scroll-area.fixture';
 import { InteractionScopeFixture } from './interaction-scope.fixture';
 import { VideoPlayer } from '../../src/components/VideoPlayer/VideoPlayer';
 import { Checkbox } from '../../src/components/Checkbox/Checkbox';
@@ -647,6 +651,21 @@ function DropdownContracts() {
   );
 }
 
+function DropdownNestedContracts() {
+  const [clicks, setClicks] = useState(0);
+  return <section aria-label="Nested dropdown contracts" className="fixture">
+    <Dropdown blockOutsideClick panel={{ portal: true }} trigger={<button type="button">Outer choices</button>}>
+      <button type="button">First outer choice</button>
+      <Dropdown blockOutsideClick panel={{ portal: true }} trigger={<button type="button">Inner choices</button>}>
+        <input aria-label="Inner choice input" />
+        <button type="button">Inner choice action</button>
+      </Dropdown>
+    </Dropdown>
+    <button type="button" onClick={() => setClicks((count) => count + 1)}>Outside dropdown target</button>
+    <output data-testid="dropdown-outside-clicks">{clicks}</output>
+  </section>;
+}
+
 function DropdownSizingContracts() {
   return (
     <section aria-label="Dropdown intrinsic sizing" className="fixture">
@@ -682,6 +701,24 @@ function DropdownSizingContracts() {
       </Flex>
     </section>
   );
+}
+
+function DropdownClosedArrowContracts() {
+  return <section aria-label="Closed dropdown arrow contracts" className="fixture">
+    <Dropdown panel={{ portal: true }} trigger={<button type="button">Keyboard filters</button>}>
+      <Dropdown panel={{ portal: true, keepMounted: false }} trigger={<button type="button">Keyboard status</button>}>
+        <button type="button">First keyboard status</button>
+        <button type="button">Last keyboard status</button>
+      </Dropdown>
+      <input aria-label="Keyboard slug" />
+      <Dropdown panel={{ portal: true }} trigger={<button type="button" aria-disabled="true">Unavailable keyboard status</button>}>
+        <button type="button">Unavailable status choice</button>
+      </Dropdown>
+      <Dropdown panel={{ portal: true }} trigger={<input aria-label="Native input dropdown trigger" />}>
+        <button type="button">Native trigger choice</button>
+      </Dropdown>
+    </Dropdown>
+  </section>;
 }
 
 function DeclarativeModalContracts() {
@@ -886,12 +923,17 @@ function CarouselEffectsField() {
 function CarouselNavField() {
   return (
     <section aria-label="Carousel navigation keyboard contracts" className="fixture">
-      <Carousel carouselId="nav-fixture" navigation="arrows" slidesPerView={1} speed={0} drag={false}>
+      <Carousel carouselId="nav-fixture" navigation="both" slidesPerView={1} speed={0} drag={false}>
         <div>Navigation slide one</div>
         <div>Navigation slide two</div>
         <div>Navigation slide three</div>
       </Carousel>
       <CarouselNav carouselId="nav-fixture" className="fixture-carousel-nav" />
+      <CarouselDots carouselId="nav-fixture" renderItem={({ index, isActive, onSelect }) => <Button
+          aria-label={`Thumbnail ${index + 1}`}
+          aria-pressed={isActive}
+          onClick={onSelect}
+      >{index + 1}</Button>} />
     </section>
   );
 }
@@ -905,12 +947,15 @@ function VideoTimelineField() {
 }
 
 function NativeFocusFields() {
+  const [chip, setChip] = useState(false);
   return (
     <section aria-label="Native focus visibility contracts" className="fixture">
       <button type="button" data-testid="focus-sequence-start">Start focus sequence</button>
       <Checkbox aria-label="Keyboard checkbox">Keyboard checkbox</Checkbox>
       <Radio aria-label="Keyboard radio" name="keyboard-radio" value="one">Keyboard radio</Radio>
       <SwitchButton aria-label="Keyboard switch">Keyboard switch</SwitchButton>
+      <Checkbox indicator={false} aria-label="Chip checkbox" checked={chip} onChange={event => setChip(event.target.checked)}>Chip checkbox</Checkbox>
+      <Radio indicator={false} aria-label="Chip radio" name="chip-radio" value="chip" checked={chip} aria-invalid onChange={() => setChip(true)}>Chip radio</Radio>
       <div data-testid="calendar-control">
         <Input type="date" aria-label="Keyboard date" data-testid="keyboard-date" defaultValue="2025-01-15" />
       </div>
@@ -1181,6 +1226,7 @@ export function BrowserFixture() {
       <h1>Delba UI browser regression fixture</h1>
       <InteractionScopeFixture />
       <RefactorContractsFixture />
+      <ScrollAreaFixture />
       <button
         type="button"
         data-testid="toggle-reveal-skip"
@@ -1210,12 +1256,21 @@ export function BrowserFixture() {
       <IconTooltipField />
       <ContentSwapField />
       <LexicalRevealField />
+      <LexicalText data-testid="lexical-markers" content={{ root: { children: [
+        { type: 'list', listType: 'bullet', children: [{ type: 'listitem', children: [{ type: 'text', text: 'Legacy bullet' }] }] },
+        { type: 'list', listType: 'bullet', marker: 'dash', markerColor: 'var(--primary)', children: [{ type: 'listitem', children: [{ type: 'text', text: 'Colored dash' }] }] },
+        { type: 'list', listType: 'number', start: 4, children: [{ type: 'listitem', children: [{ type: 'text', text: 'Fourth item' }] }] },
+      ] } }} />
       <DropdownContracts />
+      <DropdownClosedArrowContracts />
+      <DropdownNestedContracts />
       <DropdownSizingContracts />
       <SelectPanelContracts />
       <ModalDropdownField />
       <ModalScrollLockContracts />
       <DeclarativeModalContracts />
+      <ModalContextFixture />
+      <NativeFieldFixture />
       <ModalSelectField />
       <ModalStackField />
       <ModalCalendarField />

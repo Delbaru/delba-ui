@@ -3,6 +3,13 @@
 @use '../../src/components/Flex/_flex.scss';
 @use '../../src/core/reveal/_reveal.scss';
 
+@layer ui.utilities {
+  .fixture-accordion-panel {
+    padding: 16px 24px 28px;
+    border-block: 2px solid transparent;
+  }
+}
+
 :root {
   font-family: var(--font-primary);
   color: var(--text);

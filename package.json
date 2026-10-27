@@ -14,6 +14,7 @@
     "./skin": "./src/skin/index.ts",
     "./rich-text": "./src/rich-text.ts",
     "./url": "./src/core/base/url.ts",
+    "./validation": "./src/validation.ts",
     "./icons/*": "./assets/icons/ui/*",
     "./next": {
       "types": "./tools/next.d.mts",

@@ -1,10 +1,13 @@
 'use client';
 
 import type React from 'react';
+import { useRef } from 'react';
 import { boxLayout, composeInteractionHandlers, containerClass, createLayoutClasses, cx, splitBoxLayout, stateLinkProps, useMergedRefs, type AspectRatioProps, type BoxLayoutProps, type ContainerProp, type GrowProps, type LayoutSpaceProps, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef } from '../../core';
 import type { RevealProps } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
+import { GridLayoutItems } from './GridLayoutItems';
+import { isGridLayoutAnimate, type GridLayoutAnimate } from './layout';
 
 type Track =
 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12|
@@ -39,8 +42,10 @@ type AutoFlowKey = 'row' | 'column' | 'dense' | 'row_dense' | 'column_dense';
 
 const c = createLayoutClasses();
 
-export interface GridProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayoutProps, ContainerProp, SharedMotionProps, RevealProps {
+export interface GridProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayoutProps, ContainerProp, Omit<SharedMotionProps, 'animate'>, RevealProps {
   children?: React.ReactNode;
+  /** Появление либо точечное перестроение: `{ when: 'change', effect: 'layout' }` для keyed GridItem. */
+  animate?: SharedMotionProps['animate'] | GridLayoutAnimate;
   /** Сворачивает весь Grid по высоте; `open` управляется состоянием снаружи. */
   collapse?: CollapseOptions;
 
@@ -92,14 +97,30 @@ export function Grid({
 }: WithRef<GridProps, HTMLDivElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate, reveal });
-  const setRefs = useMergedRefs(setMotionNode, ref);
+  const layoutMotion = isGridLayoutAnimate(animate) ? animate : undefined;
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate: layoutMotion ? undefined : animate as SharedMotionProps['animate'], reveal: layoutMotion ? undefined : reveal });
+  const setRefs = useMergedRefs(setMotionNode, ref, hostRef);
+  const gridChildren = renderItem && items ? items.map((item, index) => {
+    const { key, ...itemLayout } = item;
+    return <GridItem key={key ?? index} {...itemLayout}>{renderItem(item, index)}</GridItem>;
+  }) : children;
+  const displayed = layoutMotion ? (
+    <GridLayoutItems
+        host={hostRef}
+        options={layoutMotion}
+        layoutKey={JSON.stringify([columns, rows, gap, rowGap, columnGap, areas, className])}
+    >
+      {gridChildren}
+    </GridLayoutItems>
+  ) : gridChildren;
 
   const content = (
   <div
     ref={setRefs}
     className={cx(
       'ui-grid',
+      layoutMotion && 'ui-grid-layout',
       containerClass(container),
       ...layout,
       ...c.value('columns', columns),
@@ -122,28 +143,7 @@ export function Grid({
     {...rest}
     {...stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }))}
   >
-    {renderItem && items
-      ? items.map((item, index) => (
-          <GridItem
-              key={item.key ?? index}
-              area={item.area}
-              colSpan={item.colSpan}
-              rowSpan={item.rowSpan}
-              colStart={item.colStart}
-              colEnd={item.colEnd}
-              rowStart={item.rowStart}
-              rowEnd={item.rowEnd}
-              h={item.h}
-              w={item.w}
-              grow={item.grow}
-              aspectRatio={item.aspectRatio}
-              className={item.className}
-              style={item.style}
-          >
-            {renderItem(item, index)}
-          </GridItem>
-        ))
-      : children}
+    {displayed}
   </div>
   );
 

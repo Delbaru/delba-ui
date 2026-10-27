@@ -20,7 +20,7 @@ $hold: 3s;
 // приезжала с сервера готовой.
 // Проверять «значение непустое» НЕДОСТАТОЧНО: бареный JSX-атрибут React печатает как `="true"`,
 // а не пустой строкой, — под `:not([data-reveal=''])` чужая пометка пролезает целиком.
-$keys: 'fade', 'up', 'down', 'left', 'right', 'scale', 'blur';
+$keys: 'fade', 'up', 'down', 'left', 'right', 'scale', 'expandX', 'blur';
 $list: '';
 @each $key in $keys {
   $list: $list + "[data-reveal='" + $key + "'], ";
@@ -52,6 +52,8 @@ $load-max: 24;
 [data-reveal='left'] { --reveal-t: calc(var(--reveal-shift) * -1) 0; }
 [data-reveal='right'] { --reveal-t: var(--reveal-shift) 0; }
 [data-reveal='scale'] { --reveal-s: 0.96; }
+// A nonzero initial extent keeps the observer target intersectable, including thin rules.
+[data-reveal='expandX'] { --reveal-s: 0.001 1; transform-origin: left center; }
 [data-reveal='blur'] { --reveal-f: blur(calc(var(--rpx) * 8)); }
 
 @mixin hidden {

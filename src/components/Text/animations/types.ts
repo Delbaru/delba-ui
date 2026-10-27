@@ -51,6 +51,8 @@ export type TextAnimate =
       when: 'change';
       /** Посимвольный слайд только изменившихся символов. */
       effect: 'textSlide';
+      /** По умолчанию — различающиеся символы; 'text' меняет строку целиком. */
+      by?: 'character' | 'text';
       /** Секунды или имя шкалы motion.timing. */
       duration?: MotionTime;
     };

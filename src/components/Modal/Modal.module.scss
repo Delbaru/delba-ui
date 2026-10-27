@@ -55,19 +55,6 @@
         touch-action: pan-y;
         &:not(.noGutter) { padding-right: var(--s-8); }
 
-        &::-webkit-scrollbar {
-          width: calc(4 * var(--rpx));
-        }
-
-        &::-webkit-scrollbar-track {
-          background: transparent;
-          margin-block: var(--s-8);
-        }
-
-        &::-webkit-scrollbar-thumb {
-          background: var(--primary);
-          border-radius: 99px;
-        }
       }
     }
 

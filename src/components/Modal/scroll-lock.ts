@@ -33,13 +33,17 @@ export function acquireScrollLock(document: Document): () => void {
     const body = document.body;
     if (!view || !body) return () => {};
 
-    const originalWidth = root.clientWidth;
+    // Ширина РАСКЛАДКИ корня, а не clientWidth: при `scrollbar-gutter: stable` и overflow:hidden
+    // Chrome держит место под полосу (раскладка не меняется), но clientWidth корня уже отдаёт ширину
+    // без полосы — компенсация по нему сужала контент на ширину полосы, и страница прыгала вправо-влево.
+    const layoutWidth = () => root.getBoundingClientRect().width;
+    const originalWidth = layoutWidth();
     const padding = saveProperty(body.style, 'padding-right');
     const computedPadding = view.getComputedStyle(body).paddingRight;
     const restoreRoot = hideOverflow(root.style);
     const restoreBody = hideOverflow(body.style);
     // Measure the width actually reclaimed: stable scrollbar gutters need no compensation.
-    const compensation = Math.max(0, root.clientWidth - originalWidth);
+    const compensation = Math.max(0, Math.round(layoutWidth() - originalWidth));
     if (compensation) body.style.setProperty('padding-right', `calc(${computedPadding} + ${compensation}px)`, 'important');
 
     lock = {

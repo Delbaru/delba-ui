@@ -75,6 +75,8 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
         state,
         linkState,
         rowClassName,
+        field,
+        nativeValidation = false,
         'data-point-events': dataPointEvents,
         ...rest
     } = fieldProps;
@@ -203,9 +205,18 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
             {label && (
                 <Flex dir={['row', 'row', 'row']} gap={[4, null, null]}>
                     <label htmlFor={id}>
-                        <Text as="span" variant={['caption', 'caption', 'caption']} color={labelColor}>{label}</Text>
+                        <Text
+                            as="span"
+                            variant={['caption', 'caption', 'caption']}
+                            color={labelColor}
+                        >{label}</Text>
                     </label>
-                    {required && ( <Text as="span" aria-hidden="true" variant={['caption', 'caption', 'caption']} color="var(--error)">*</Text> )}
+                    {required && ( <Text
+                        as="span"
+                        aria-hidden="true"
+                        variant={['caption', 'caption', 'caption']}
+                        color="var(--error)"
+                    >*</Text> )}
                 </Flex>
             )}
             <Flex
@@ -231,12 +242,20 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
                     // и который разъезжался, стоило смениться кеглю или масштабу темы.
                     // Шрифт даёт модуль (`--field-font`), поэтому класса типографики у префикса нет:
                     // утилита стоит слоем выше и перебила бы его.
-                    <Text variant={[null, null, null]} color='var(--primary)' className={styles.phonePrefix}>{phoneFormat.dial}</Text>
+                    <Text
+                        variant={[null, null, null]}
+                        color='var(--primary)'
+                        className={styles.phonePrefix}
+                    >{phoneFormat.dial}</Text>
                 )}
 
                 <div className={styles.fieldSlot}>
                     {/* Скелетон занимает ту же ячейку; своп нужен только при появлении input. */}
-                    <Flex transitionKey={loading ? 'skeleton' : 'value'} animation='fadeIn' w={['100%', '100%', '100%']}>
+                    <Flex
+                        transitionKey={loading ? 'skeleton' : 'value'}
+                        animation='fadeIn'
+                        w={['100%', '100%', '100%']}
+                    >
                         {loading ? (
                             <Skeleton h={[16, null, null]} />
                         ) : (
@@ -247,7 +266,10 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
                                     {maskGroups(phoneFormat).map((group, groupIndex) => (
                                         <span key={groupIndex} className={styles.phoneMaskGroup}>
                                             {group.map((part, partIndex) => (
-                                                <span key={partIndex} className={part.dim ? styles.phoneMaskDim : undefined}>
+                                                <span
+                                                    key={partIndex}
+                                                    className={part.dim ? styles.phoneMaskDim : undefined}
+                                                >
                                                     {part.text}
                                                 </span>
                                             ))}
@@ -267,8 +289,10 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
                             ) : (
                                 <input
                                     ref={setFieldRef}
-                                    className={fieldClassName}
                                     {...inputProps}
+                                    className={cx(fieldClassName, field?.className)}
+                                    style={field?.style}
+                                    required={nativeValidation && required}
                                     // ПОСЛЕ спреда: `inputProps` несёт свой `type`, и переопределять
                                     // его надо здесь — иначе показ пароля молча не сработает (§12 про
                                     // пропы, которые атом выставляет после спреда).
@@ -285,7 +309,11 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
                     <InputInlineError id={inlineErrorId} message={inlineError} />
                 </div>
                 {slots?.end != null && <div data-input-action="true" className={styles.addon}>{slots.end}</div>}
-                <PasswordToggle visible={showReveal} revealed={revealed} onToggle={() => setRevealed((current) => !current)} />
+                <PasswordToggle
+                    visible={showReveal}
+                    revealed={revealed}
+                    onToggle={() => setRevealed((current) => !current)}
+                />
                 <DateToggle visible={isDate} onToggle={datePicker.onToggle} />
                 <NumberControls visible={showNumberArrows} onStep={handleNumberStep} />
             </Flex>

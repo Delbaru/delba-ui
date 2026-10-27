@@ -34,6 +34,8 @@ export interface TextareaProps
     BoxLayoutProps,
     SharedMotionProps {
     style?: CSSProperties;
+    /** Оформление нативного textarea; style корня относится ко всему полю. */
+    field?: { className?: string; style?: CSSProperties };
     /** Настоящее событие ввода нативного textarea. */
     onChange?: React.ChangeEventHandler<HTMLTextAreaElement>;
     /** Значение модели после ввода или восстановления seed. */
@@ -140,6 +142,7 @@ export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
         linkState,
         'data-point-events': dataPointEvents,
         fieldClassName,
+        field,
         ...rest
     } = fieldProps;
     const lengthValidate = useCallback(
@@ -284,7 +287,12 @@ export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
                     <label htmlFor={id}>
                         <Text as="span" className={styles.Label} color={labelColor}>{label}</Text>
                     </label>
-                    {required && ( <Text as="span" aria-hidden="true" className={styles.Label} color="var(--error)">*</Text> )}
+                    {required && ( <Text
+                        as="span"
+                        aria-hidden="true"
+                        className={styles.Label}
+                        color="var(--error)"
+                    >*</Text> )}
                 </Flex>
             )}
             <div
@@ -299,7 +307,11 @@ export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
                 {/* Подмена «скелетон ↔ значение» ЕДЕТ: `transitionKey` — тот самый ответ §8.4
                     для узла, который меняется другим узлом на том же месте. Голое условие
                     гасило скелетон кадром. */}
-                <Flex transitionKey={loading ? 'skeleton' : 'value'} animation='fadeIn' w={['100%', '100%', '100%']}>
+                <Flex
+                    transitionKey={loading ? 'skeleton' : 'value'}
+                    animation='fadeIn'
+                    w={['100%', '100%', '100%']}
+                >
                 {loading ? (
                     // Сам `<textarea>` не рендерим: печатать в поле, значение которого ещё
                     // едет, значит потерять набранное на первом же ответе.
@@ -310,7 +322,12 @@ export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
                     // ждало тремя полосами в поле высотой в одну.
                     <Skeleton rows={rows} h={[16, 16, 16]} />
                 ) : (
-                    <textarea ref={fieldRef} className={styles.TextareaField} {...textareaProps} />
+                    <textarea
+                        ref={fieldRef}
+                        {...textareaProps}
+                        className={cx(styles.TextareaField, field?.className)}
+                        style={field?.style}
+                    />
                 )}
                 </Flex>
                 {inlineError && (

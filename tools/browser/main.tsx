@@ -9,6 +9,10 @@ import 'virtual:browser-utilities.css';
 
 import './styles.scss';
 import { BrowserFixture } from './fixture';
+import { DropdownOpenFixture } from './dropdown-open.fixture';
+import { HoverMotionFixture } from './hover-motion.fixture';
+import { GridLayoutFixture } from './grid-layout.fixture';
+import { LinkPrefetchFixture } from './link-prefetch.fixture';
 import { ModalProvider } from '../../src/components/Modal/ModalProvider';
 import { createSmoothScroll } from '../../src/components/SmoothScroll/engine';
 
@@ -27,7 +31,10 @@ createRoot(root).render(
     <StrictMode>
       <ModalProvider>{location.search === '?smooth'
         ? <main style={{ height: 2000 }}><h1>Delba UI browser regression fixture</h1></main>
-        : <BrowserFixture />}</ModalProvider>
+        : location.search === '?dropdown-open' ? <DropdownOpenFixture />
+        : location.search === '?link-prefetch' ? <LinkPrefetchFixture />
+        : location.search === '?grid-layout' ? <GridLayoutFixture />
+        : location.search === '?hover-motion' ? <HoverMotionFixture /> : <BrowserFixture />}</ModalProvider>
     </StrictMode>
   </Profiler>,
 );

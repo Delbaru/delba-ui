@@ -6,6 +6,7 @@
  * - `up` — сдвиг снизу + fade;
  * - `left` / `right` — приход слева / справа + fade;
  * - `scale` — лёгкий зум из 0.96 + fade;
+ * - `expandX` — горизонтальное раскрытие слева направо;
  * - `blur` — размытие + fade.
  *
  * `fade: false` снимает прозрачность, `start: 'load'` запускает ход чистым CSS с первой отрисовки.
@@ -13,7 +14,7 @@
 import { isMotionTimingName, motionTimingVariable, type MotionTime, type MotionTimingName } from '../base/timing';
 import { motionDistanceCss, normalizeMotionDistance, type MotionDistance } from '../base/distance';
 
-export type RevealKey = 'fade' | 'up' | 'down' | 'left' | 'right' | 'scale' | 'blur';
+export type RevealKey = 'fade' | 'up' | 'down' | 'left' | 'right' | 'scale' | 'expandX' | 'blur';
 
 export interface RevealOptions {
   /** Интервал стартов прямых детей: имя motion.timing либо секунды. Нет или `0` — появляется корень целиком. */
@@ -119,7 +120,7 @@ export interface ResolvedReveal {
   start: 'view' | 'load';
 }
 
-const KEYS: readonly RevealKey[] = ['fade', 'up', 'down', 'left', 'right', 'scale', 'blur'];
+const KEYS: readonly RevealKey[] = ['fade', 'up', 'down', 'left', 'right', 'scale', 'expandX', 'blur'];
 
 /** Пометка кита, а не проекта: `data-reveal` — имя заманчивое, на нём держат и свои каскады. */
 export const isRevealKey = (value: string | null | undefined): value is RevealKey =>

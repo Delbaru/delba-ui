@@ -1,16 +1,20 @@
 'use client';
 
-import { cloneElement, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent, type MouseEventHandler, type ReactElement, type ReactNode } from 'react';
+import { cloneElement, createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent, type MouseEventHandler, type ReactElement, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 
 import { composeEventHandlers, cx, stateProps, useMergedRefs, type ComponentStateValue, type WithRef } from '../../core';
 import { useAnchoredFloating } from '../../hooks/useAnchoredFloating';
 import { useOutsideDismiss } from '../../hooks/useOutsideDismiss';
 import { useCollapseState } from '../../hooks/useCollapseState';
+import { useSharedMotion } from '../../hooks/useSharedMotion';
+import { useOpenPresence } from '../../hooks/useOpenPresence';
+import { isOpenAnimate, type OpenAnimate } from '../../core/reveal/reveal';
 import { Box, type BoxProps } from '../Box';
 import { CollapseWrap, type CollapseSettings } from '../Collapse/CollapseWrap';
 import { composeDropdownTriggerClick } from './trigger';
 import styles from './Dropdown.module.scss';
+import { DropdownBackdrop, type DropdownBackdropOptions } from './DropdownBackdrop';
 import { useInteractionActivity } from '../../core/InteractionScope';
 
 export interface DropdownTriggerProps {
@@ -21,7 +25,15 @@ export interface DropdownTriggerProps {
   'aria-controls'?: string;
 }
 
-export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'collapse'> {
+export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'collapse' | 'animate'> {
+  /** An owner's open drives enter/exit; without it the existing collapse behavior is preserved. */
+  animate?: BoxProps['animate'] | OpenAnimate;
+  /** Geometry anchor; keyboard focus and trigger semantics remain attached to trigger. */
+  anchorRef?: RefObject<HTMLElement | null>;
+  /** Minimum distance from viewport edges in native pixels. Default 8. */
+  viewportPadding?: number;
+  /** DOM data-атрибуты поверхности панели, включая проектные маркеры портала. */
+  [attribute: `data-${string}`]: string | number | boolean | undefined;
   /** Край триггера, к которому прижата панель. */
   side?: 'start' | 'center' | 'end';
   /** Зазор от триггера в дизайн-единицах. */
@@ -39,12 +51,16 @@ export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'colla
 }
 
 interface DropdownBaseProps extends Omit<BoxProps, 'children'> {
+  /** Закрывающий клик не активирует содержимое страницы под панелью. */
+  blockOutsideClick?: boolean;
   /** Пользовательский onClick выполняется первым; preventDefault отменяет переключение. */
   trigger: ReactElement<DropdownTriggerProps>;
   /** Содержимое панели; функция получает команду закрытия. */
   children: ReactNode | ((close: () => void) => ReactNode);
   /** Размещение, оформление и раскрытие выпадающей панели. */
   panel?: DropdownPanelOptions;
+  /** Optional non-focusable scrim; uses the same portal and outside-dismiss owner as the panel. */
+  backdrop?: DropdownBackdropOptions;
   /** Состояния оформления корня и его портальной области. */
   state?: ComponentStateValue;
 }
@@ -68,12 +84,19 @@ export type DropdownProps = DropdownBaseProps & (
 
 const NO_VARIABLES: readonly `--${string}`[] = [];
 const VIEWPORT_PADDING = 8;
+const DropdownAncestors = createContext<readonly string[]>([]);
+
+function focusableItems(panel: HTMLElement | null) {
+  return [...(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])') ?? [])]
+    .filter((node) => !node.closest('[hidden], [inert]') && node.getClientRects().length > 0);
+}
 
 export function Dropdown({
   ref,
   trigger,
   children,
   panel = {},
+  backdrop,
   open: controlledOpen,
   defaultOpen = false,
   onOpenChange,
@@ -83,11 +106,12 @@ export function Dropdown({
   state,
   onKeyDown,
   onBlur,
+  blockOutsideClick = false,
   ...rootProps
 }: WithRef<DropdownProps, HTMLDivElement>) {
   const {
     side = 'start', offset = 8, portal = false, matchTriggerWidth = false, keepMounted = true,
-    inheritVariables = NO_VARIABLES, collapse: panelCollapse, ...panelProps
+    inheritVariables = NO_VARIABLES, collapse: panelCollapse, animate: panelAnimate, anchorRef: geometryAnchorRef, viewportPadding = VIEWPORT_PADDING, ...panelProps
   } = panel;
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const requestedOpen = controlledOpen ?? internalOpen;
@@ -100,6 +124,12 @@ export function Dropdown({
   const rootRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const openAnimate = isOpenAnimate(panelAnimate) ? panelAnimate : undefined;
+  const { motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ animate: openAnimate, open });
+  const presence = useOpenPresence(open, Boolean(openAnimate));
+  const setSurfaceRef = useMergedRefs(presence.ref, setMotionNode);
+  const geometryRef = geometryAnchorRef ?? anchorRef;
+  const focusOnOpen = useRef<'first' | 'last' | null>(null);
   const scopeRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLDivElement>(null);
   const [rootNode, setRootNode] = useState<HTMLDivElement | null>(null);
@@ -107,10 +137,15 @@ export function Dropdown({
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [gapPixels, setGapPixels] = useState(0);
   const id = useId();
+  const parentIds = useContext(DropdownAncestors);
+  const ownIds = [...parentIds, id];
 
   useLayoutEffect(() => {
     const triggerNode = rootRef.current?.firstElementChild;
-    anchorRef.current = triggerNode instanceof HTMLElement ? triggerNode : null;
+    anchorRef.current = triggerNode instanceof HTMLElement
+      ? triggerNode.matches('button, a[href], [tabindex]') ? triggerNode
+        : triggerNode.querySelector<HTMLElement>('button, a[href], [tabindex]') ?? triggerNode
+      : null;
   });
 
   const changeOpen = (next: boolean) => {
@@ -119,16 +154,14 @@ export function Dropdown({
     onOpenChange?.(next);
   };
   const close = () => {
+    focusOnOpen.current = null;
     if (!open) return;
-    if (panelRef.current?.contains(document.activeElement)) {
-      anchorRef.current?.focus();
-    }
     changeOpen(false);
   };
-  const dismissProps = useOutsideDismiss([rootRef, panelRef], close, { enabled: open, escape: false });
+  const dismissProps = useOutsideDismiss([rootRef, panelRef], close, { enabled: open, escape: false, blockOutsideClick });
   const { style: floatingStyle, updatePosition } = useAnchoredFloating({
-    anchorRef, floatingRef: panelRef, isActive: portal && open,
-    placement: 'bottom', align: side, gap: gapPixels, viewportPadding: VIEWPORT_PADDING,
+    anchorRef: geometryRef, floatingRef: panelRef, isActive: portal && open,
+    placement: 'bottom', align: side, gap: gapPixels, viewportPadding,
     keepPositionWhenInactive: true,
   });
 
@@ -144,21 +177,52 @@ export function Dropdown({
     setPortalNode(portal ? modal?.parentElement ?? document.body : null);
   }, [portal, rootNode]);
 
+  useEffect(() => {
+    if (!open || !focusOnOpen.current) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focus = () => {
+      const direction = focusOnOpen.current;
+      if (!direction) return;
+      if (!anchorRef.current?.contains(document.activeElement)) {
+        focusOnOpen.current = null;
+        observer.disconnect();
+        return;
+      }
+      const items = focusableItems(panel);
+      const next = direction === 'first' ? items[0] : items.at(-1);
+      if (!next) return;
+      focusOnOpen.current = null;
+      observer.disconnect();
+      next.focus();
+    };
+    // Collapse may mount its children or remove hidden after the opening commit.
+    const observer = new MutationObserver(focus);
+    observer.observe(panel, { childList: true, subtree: true, attributes: true });
+    const frame = requestAnimationFrame(focus);
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+  }, [open, portalNode]);
+
   useLayoutEffect(() => {
     const sync = () => {
       const width = probeRef.current?.getBoundingClientRect().width;
       if (width !== undefined) setGapPixels(Math.sign(offset) * width);
       const root = rootRef.current;
-      const anchor = anchorRef.current;
+      const anchor = geometryRef.current;
       const panel = panelRef.current;
       if (root && anchor && panel) {
         const triggerRect = anchor.getBoundingClientRect();
-        const rootRect = root.getBoundingClientRect();
-        const left = triggerRect.left - rootRect.left - root.clientLeft;
+        const parent = panel.offsetParent;
+        const parentRect = parent instanceof HTMLElement ? parent.getBoundingClientRect() : { left: 0, top: 0 };
+        const borderLeft = parent instanceof HTMLElement ? parent.clientLeft : 0;
+        const borderTop = parent instanceof HTMLElement ? parent.clientTop : 0;
+        const scrollLeft = parent instanceof HTMLElement ? parent.scrollLeft : 0;
+        const scrollTop = parent instanceof HTMLElement ? parent.scrollTop : 0;
+        const left = triggerRect.left - parentRect.left - borderLeft + scrollLeft;
         panel.style.setProperty('--dropdown-anchor-start', `${left}px`);
         panel.style.setProperty('--dropdown-anchor-center', `${left + triggerRect.width / 2}px`);
         panel.style.setProperty('--dropdown-anchor-end', `${left + triggerRect.width}px`);
-        panel.style.setProperty('--dropdown-anchor-bottom', `${triggerRect.bottom - rootRect.top - root.clientTop}px`);
+        panel.style.setProperty('--dropdown-anchor-bottom', `${triggerRect.bottom - parentRect.top - borderTop + scrollTop}px`);
         panel.style.setProperty('--dropdown-anchor-width', `${triggerRect.width}px`);
       }
       const scope = scopeRef.current;
@@ -173,19 +237,71 @@ export function Dropdown({
     sync();
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(sync) : null;
     if (rootRef.current) observer?.observe(rootRef.current);
-    if (anchorRef.current) observer?.observe(anchorRef.current);
+    if (geometryRef.current) observer?.observe(geometryRef.current);
     window.addEventListener('resize', sync);
     return () => {
       observer?.disconnect();
       window.removeEventListener('resize', sync);
     };
-  }, [rootNode, portal, portalNode, offset, matchTriggerWidth, inheritVariables, className, style]);
+  }, [rootNode, portal, portalNode, offset, matchTriggerWidth, inheritVariables, className, style, geometryRef]);
+
+  useLayoutEffect(() => {
+    if (!open && panelRef.current?.contains(document.activeElement)) anchorRef.current?.focus();
+  }, [open]);
+
+  const surface = (
+    <Box
+        {...panelProps}
+        ref={setSurfaceRef}
+        animate={isOpenAnimate(panelAnimate) ? undefined : panelAnimate}
+        className={cx(styles.surface, panelProps.className)}
+        style={{ ...motionStyle, ...panelProps.style }}
+        {...revealAttrs}
+        hidden={openAnimate ? !presence.present : panelProps.hidden}
+    >
+      {typeof children === 'function' ? children(close) : children}
+    </Box>
+  );
 
   const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
+    focusOnOpen.current = null;
     const next = event.relatedTarget;
+    if (next instanceof Element && next.closest('[data-dropdown-ancestors]')?.getAttribute('data-dropdown-ancestors')?.split(' ').includes(id)) return;
     if (next instanceof Node && !rootRef.current?.contains(next) && !panelRef.current?.contains(next)) close();
   };
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const atTrigger = !!anchorRef.current?.contains(target);
+    const inPanel = !!panelRef.current?.contains(target);
+    if (!(atTrigger || inPanel)) return;
+    const items = focusableItems(panelRef.current);
+    if (open && event.key === 'Tab' && atTrigger && !event.shiftKey && items[0]) {
+      event.preventDefault();
+      event.stopPropagation();
+      items[0].focus();
+      return;
+    }
+    if (atTrigger && !target.matches('input, textarea, select, [contenteditable="true"]') && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (blocked) return;
+      if (!open) {
+        focusOnOpen.current = event.key === 'ArrowDown' ? 'first' : 'last';
+        changeOpen(true);
+        return;
+      }
+      const next = event.key === 'ArrowDown' ? items[0] : items.at(-1);
+      next?.focus();
+      return;
+    }
+    if (open && inPanel && !target.matches('input, textarea, select, [contenteditable="true"]') && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      const at = items.indexOf(target);
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+        : event.key === 'ArrowDown' ? (at + 1) % items.length : (at - 1 + items.length) % items.length;
+      if (items[next]) { event.preventDefault(); event.stopPropagation(); items[next].focus(); }
+      return;
+    }
     if (event.key !== 'Escape' || !open) return;
     event.preventDefault();
     event.stopPropagation();
@@ -195,13 +311,16 @@ export function Dropdown({
     if (event.target instanceof Element && event.target.closest('a[href]')) close();
   };
   const content = (
+    <>
+    {backdrop && <DropdownBackdrop {...backdrop} open={open} />}
     <Box
       ref={panelRef}
       id={id}
+      data-dropdown-ancestors={ownIds.join(' ')}
       className={cx(styles.panel, portal && styles.portalPanel)}
       style={{
         '--dropdown-offset': `calc(${offset} * var(--rpx))`,
-        '--dropdown-viewport-padding': `${VIEWPORT_PADDING}px`,
+        '--dropdown-viewport-padding': `${viewportPadding}px`,
         ...(portal ? floatingStyle : null),
       } as CSSProperties}
       data-side={side}
@@ -212,7 +331,7 @@ export function Dropdown({
       onMouseDownCapture={dismissProps.onMouseDownCapture}
       onClick={handlePanelClick}
     >
-      <CollapseWrap
+      {openAnimate ? ((presence.present || keepMounted) && surface) : <CollapseWrap
         {...panelCollapse}
         open={open}
         fade={panelCollapse?.fade ?? true}
@@ -222,14 +341,14 @@ export function Dropdown({
           panelCollapse?.onTransition?.(transition);
         }}
       >
-        <Box {...panelProps} className={cx(styles.surface, panelProps.className)}>
-          {typeof children === 'function' ? children(close) : children}
-        </Box>
-      </CollapseWrap>
+        {surface}
+      </CollapseWrap>}
     </Box>
+    </>
   );
 
   return (
+    <DropdownAncestors.Provider value={ownIds}>
     <Box
       {...rootProps}
       ref={setRootRef}
@@ -245,14 +364,28 @@ export function Dropdown({
       onBlur={composeEventHandlers(onBlur, handleBlur, { cancelable: true })}
     >
       {cloneElement(trigger, {
-        onClick: composeDropdownTriggerClick(trigger.props.onClick, disabled, () => changeOpen(!open)),
+        onClick: composeDropdownTriggerClick(trigger.props.onClick, disabled, () => {
+          focusOnOpen.current = null;
+          changeOpen(!open);
+        }),
         'aria-expanded': open,
         'aria-controls': trigger.props['aria-controls'] ?? id,
       })}
-      <Box ref={probeRef} className={styles.gapProbe} aria-hidden style={{ width: `calc(${Math.abs(offset)} * var(--rpx))` }} />
+      <Box
+          ref={probeRef}
+          className={styles.gapProbe}
+          aria-hidden
+          style={{ width: `calc(${Math.abs(offset)} * var(--rpx))` }}
+      />
       {portal && portalNode ? createPortal(
-        <Box ref={scopeRef} className={cx(styles.PortalRoot, className)} style={style} {...stateProps(state)}>{content}</Box>, portalNode,
+        <Box
+            ref={scopeRef}
+            className={cx(styles.PortalRoot, className)}
+            style={style}
+            {...stateProps(state)}
+        >{content}</Box>, portalNode,
       ) : content}
     </Box>
+    </DropdownAncestors.Provider>
   );
 }

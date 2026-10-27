@@ -25,6 +25,7 @@ export * from './components/Radio';
 export * from './components/RichText';
 export * from './components/RichTextarea';
 export * from './components/Section';
+export * from './components/ScrollArea';
 export * from './components/Skeleton';
 export * from './components/Select';
 export type { FieldValueChangeDetails, FieldValueChangeHandler, FieldValueChangeReason } from './core/base/field-value';
@@ -77,6 +78,7 @@ export { LenisScroll, LenisScrollProvider, useLenisScroll, useLenisScrollOptiona
 export * from './components/SmoothScroll';
 export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
 export { useAnchoredFloating, type FloatingAlign, type FloatingPlacement } from './hooks/useAnchoredFloating';
+export { useTooltip, type UseTooltipOptions, type UseTooltipResult, type TooltipBubbleProps } from './hooks/useTooltip';
 export { useMediaQuery } from './hooks/useMediaQuery';
 export { useScroll } from './hooks/useScroll';
 export { useUrl } from './hooks/useUrl';
@@ -93,6 +95,8 @@ export { isAppearanceAnimate, isInViewAnimate, isOpenAnimate, resolveRevealInput
 export type { AppearanceAnimate, InViewAnimate, OpenAnimate, RevealConfig, RevealInput, RevealKey, RevealOptions, RevealProps } from './core/reveal/reveal';
 export type { MotionTime, MotionTimingName } from './core/base/timing';
 export type { MotionDistance, MotionDistanceName } from './core/base/distance';
+export type { HoverTransformAnimate, HoverTransformOptions, HoverTransformValues } from './core/base/hover-motion';
+export type { SharedAnimate } from './hooks/useSharedMotion';
 export * from './components/PhoneField';
 
 export { useScrollProgress, type ScrollProgressOptions } from './hooks/useScrollProgress';

@@ -11,6 +11,7 @@ import { PhoneField } from '../../src/components/PhoneField/PhoneField';
 import { LexicalText } from '../../src/components/RichText/RichText';
 import { Text } from '../../src/components/Text/Text';
 import { Textarea } from '../../src/components/Textarea/Textarea';
+import { ScrollArea } from '../../src/components/ScrollArea';
 
 function Glyph(props: SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 16 16" {...props}><path d="M2 8h12M8 2v12" /></svg>;
@@ -24,6 +25,7 @@ export function SsrFixture() {
   return (
     <main className="fixture">
       <h1>SSR and hydration</h1>
+      <ScrollArea fade maxH={[120, 120, 120]} aria-label="Server scroll area">Server scroll content</ScrollArea>
       <Flex position={['relative', 'relative', 'relative']} r={[24, 16, 20]}>
         <GradientBorder gradient={['var(--primary)', 'var(--primary)', 'var(--primary)']} />
         <Text>Framed server content</Text>

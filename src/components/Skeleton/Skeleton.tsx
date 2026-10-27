@@ -36,7 +36,13 @@ export interface SkeletonProps {
  */
 export function Skeleton({ w = ['100%', null, null], h = [16, null, null], r = [8, null, null], rows = 1, gap = [8, null, null], className }: SkeletonProps) {
     if (rows === 1) {
-        return <Flex w={w} h={h} r={r} bg={['var(--line)', 'var(--line)', 'var(--line)']} className={cx(styles.Skeleton, className)} />;
+        return <Flex
+            w={w}
+            h={h}
+            r={r}
+            bg={['var(--line)', 'var(--line)', 'var(--line)']}
+            className={cx(styles.Skeleton, className)}
+        />;
     }
 
     return (

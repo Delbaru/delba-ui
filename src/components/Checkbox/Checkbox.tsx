@@ -13,6 +13,8 @@ import checkIcon from '../../../assets/icons/ui/check/succsess_check_black.svg';
 const c = createLayoutClasses(styles);
 
 export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>, Omit<BoxLayoutProps, 'aspectRatio'>, SharedMotionProps {
+    /** Show the decorative checkbox; the native input and label are preserved. */
+    indicator?: boolean;
     style?: CSSProperties;
     children?: React.ReactNode;
     indeterminate?: boolean;
@@ -51,6 +53,7 @@ export function Checkbox({
     state, linkState,
     size,
     iconSize,
+    indicator = true,
     'data-point-events': dataPointEvents,
     ...props
 }: WithRef<CheckboxProps, HTMLInputElement>) {
@@ -100,10 +103,21 @@ export function Checkbox({
                 скаляр печатает класс без брейкпоинт-префикса и потому действует на всех
                 ширинах. С кортежем ниже 1024 не было ни ширины, ни высоты, ни радиуса — то
                 есть квадрат схлопывался в точку (§12 «Экран, который живёт НИЖЕ 1024»). */}
-            <Flex gap={gap ?? [8, 8, 8]} align={[alignItems, alignItems, alignItems]} grow={[1, 1, 1]} minW={[0, 0, 0]}>
-                <input ref={setInputRef} id={id} type="checkbox" className={styles.Input} {...inputProps} />
+            <Flex
+                gap={gap ?? [8, 8, 8]}
+                align={[alignItems, alignItems, alignItems]}
+                grow={[1, 1, 1]}
+                minW={[0, 0, 0]}
+            >
+                <input
+                    ref={setInputRef}
+                    id={id}
+                    type="checkbox"
+                    className={styles.Input}
+                    {...inputProps}
+                />
 
-                <Flex
+                {indicator && <Flex
                     className={styles.Box}
                     w={size ?? [24, 24, 24]}
                     h={size ?? [24, 24, 24]}
@@ -127,7 +141,7 @@ export function Checkbox({
                         className={styles.icon}
                         aria-hidden
                     />
-                </Flex>
+                </Flex>}
 
                 {children}
             </Flex>

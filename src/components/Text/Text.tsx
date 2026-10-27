@@ -7,7 +7,7 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { boxLayout, buildClampStyle, composeInteractionHandlers, createLayoutClasses, cx, normalizeComponentState, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveInput, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
 import type { TextRole, TextVariantName } from '../../core/base/typography';
-import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { resolveAnimation } from './animations/resolveAnimation';
 import type { AnimationInput, TextAnimate } from './animations/types';
@@ -16,7 +16,6 @@ import { useTextTimeline } from './animations/useTextTimeline';
 import type { LineHeightValue } from './typography';
 import { resolveTextContent, type TextFormat } from './formatContent';
 import { bindTextContent } from './nonBreaking';
-import { isAppearanceAnimate, type AppearanceAnimate } from '../../core/reveal/reveal';
 
 /**
  * Вариант проекта (`UiTypography`), служебная роль кита или 'inherit' — не навязывать типографику:
@@ -38,7 +37,7 @@ export interface TextProps
   style?: CSSProperties;
   format?: ResponsiveValue<TextFormat>;
   /** Появление, эффект текста или композиция: `{ when: 'inView', effect: { up: {}, counter: { to: 100 } } }`. */
-  animate?: AppearanceAnimate | ResponsiveInput<AnimationInput> | TextAnimate;
+  animate?: SharedMotionProps<ResponsiveInput<AnimationInput> | TextAnimate>['animate'];
   required?: boolean;
 
   newTab?: boolean;
@@ -124,7 +123,7 @@ export function Text({
   const content = resolveTextContent(children, format);
   const timelineInput = isTextTimeline(animate) ? animate : undefined;
   const timeline = useTextTimeline(timelineInput, content, internalRef);
-  const contentAnimate = isAppearanceAnimate(animate) || timelineInput ? undefined : animate;
+  const contentAnimate = isSharedMotionAnimate(animate) || timelineInput ? undefined : animate;
   const anim = resolveAnimation(animation ?? contentAnimate, content);
 
   // Классы и inline-стиль host'а — коробка из ядра (boxLayout), типографика здесь. Алгоритмика (letter-spacing,

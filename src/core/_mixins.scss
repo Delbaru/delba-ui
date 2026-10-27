@@ -2,6 +2,18 @@
 // выражается), поэтому живут миксинами, а не утилитами.
 
 @use 'sass:map';
+@use './scss-utils' as utils;
+
+/// Непропсовые эффекты по существующим полосам кита: d, m, t.
+/// Размеры и раскладка по-прежнему задаются responsive-пропсами компонентов.
+@mixin breakpoint($name) {
+  @if not map.has-key(utils.$breakpoints, $name) {
+    @error 'breakpoint: неизвестная полоса «#{$name}». Есть: #{map.keys(utils.$breakpoints)}.';
+  }
+  @media #{map.get(utils.$breakpoints, $name)} {
+    @content;
+  }
+}
 
 // Шрифт служебной роли кита (`body`, `caption`, `micro`) с фолбэком на вариант, которым её
 // набирала тема до ролей. Карта — копия `TEXT_ROLES` из core/base/typography.ts (сверяет тест);

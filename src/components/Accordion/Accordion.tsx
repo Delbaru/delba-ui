@@ -165,7 +165,13 @@ export function Accordion(props: WithRef<AccordionProps, HTMLElement>) {
 
     return (
         <AccordionContext.Provider value={{ rootId, isOpen, toggle, reveal, indicator, headingAs }}>
-            <Flex ref={ref} {...rest} className={cx(styles.Accordion, className)} data-accordion={rootId} onKeyDown={onKeyDown} />
+            <Flex
+                ref={ref}
+                {...rest}
+                className={cx(styles.Accordion, className)}
+                data-accordion={rootId}
+                onKeyDown={onKeyDown}
+            />
         </AccordionContext.Provider>
     );
 }

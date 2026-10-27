@@ -3,10 +3,10 @@
 import { type CSSProperties } from 'react';
 import type React from 'react';
 import { boxLayout, composeEventHandlers, containerClass, createLayoutClasses, cx, splitBoxLayout, stateLinkProps, useMergedRefs, type BoxLayoutProps, type ContainerProp, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
-import { isAppearanceAnimate, type AppearanceAnimate, type RevealProps } from '../../core/reveal/reveal';
+import { type RevealProps } from '../../core/reveal/reveal';
 import { resolveContentAnimate, type ContentAnimate } from '../../hooks/contentMotion';
 import { useContentMotion } from '../../hooks/useContentMotion';
-import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 
 type JustifyContentKey = 'start' | 'end' | 'center' | 'space_between' | 'space_around' | 'space_evenly';
@@ -26,7 +26,7 @@ export interface BoxProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayou
   /** Появление и смена содержимого: `animate="fadeIn"` — вход при монтировании,
    *  `animate={['fadeIn', { key: tab }]}` — при смене `key` старое уходит зеркальным ходом, затем
    *  входит новое. Узел тот же (ref и фокус сохраняются), reduced-motion меняет сразу. */
-  animate?: AppearanceAnimate | ContentAnimate;
+  animate?: SharedMotionProps<ContentAnimate>['animate'];
 
   justify?: ResponsiveValue<JustifyContentKey>;
   linkState?: StateLinkInput;
@@ -60,7 +60,7 @@ export function Box({
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal, animate });
-  const contentAnimate = isAppearanceAnimate(animate) ? undefined : animate;
+  const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
   const contentMotion = useContentMotion({ ...resolveContentAnimate(contentAnimate), children, onAnimationEnd });
   const setRefs = useMergedRefs(setMotionNode, contentMotion.ref, ref);
 

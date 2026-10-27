@@ -228,7 +228,12 @@ export function Video({
       }}
     >
       {showPlayButton && resolvedSrc && !isPlaying ? (
-        <button type="button" className={styles.VideoPlayButton} aria-label="Запустить видео" onClick={handlePlayButtonClick}>
+        <button
+            type="button"
+            className={styles.VideoPlayButton}
+            aria-label="Запустить видео"
+            onClick={handlePlayButtonClick}
+        >
           <span className={styles.VideoPlayButtonIcon} aria-hidden="true">▶</span>
         </button>
       ) : null}

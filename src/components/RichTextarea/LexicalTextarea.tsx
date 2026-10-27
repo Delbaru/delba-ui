@@ -255,7 +255,12 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
                 />
               }
               placeholder={placeholder ? (
-                <Text as='div' variant={['body', null, null]} color={placeholderColor} className={styles.Placeholder}>{placeholder}</Text>
+                <Text
+                    as='div'
+                    variant={['body', null, null]}
+                    color={placeholderColor}
+                    className={styles.Placeholder}
+                >{placeholder}</Text>
               ) : null}
               ErrorBoundary={LexicalErrorBoundary}
             />
@@ -272,7 +277,10 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
               borderT={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
           >
             <LexicalTextareaToolbar hasVariables={hasVariables} allowLink={allowLink} />
-            {showCounter && <LexicalTextareaCounter characters={editorMeta.payload.characters} maxLength={maxLength} />}
+            {showCounter && <LexicalTextareaCounter
+                characters={editorMeta.payload.characters}
+                maxLength={maxLength}
+            />}
           </Flex>
         </LexicalComposer>
       </Box>

@@ -25,9 +25,19 @@ export function TimeField({
   return (
     <div className={styles.root}>
       {showMask && maskSuffix && (
-        <input className={cx(fieldClassName, styles.mask)} aria-hidden='true' tabIndex={-1} readOnly value={`${maskValue}${maskSuffix}`} />
+        <input
+            className={cx(fieldClassName, styles.mask)}
+            aria-hidden='true'
+            tabIndex={-1}
+            readOnly
+            value={`${maskValue}${maskSuffix}`}
+        />
       )}
-      <input ref={inputRef} className={cx(fieldClassName, showMask && styles.fieldMasked)} {...inputProps} />
+      <input
+          ref={inputRef}
+          className={cx(fieldClassName, showMask && styles.fieldMasked)}
+          {...inputProps}
+      />
     </div>
   );
 }

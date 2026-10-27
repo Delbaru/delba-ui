@@ -7,6 +7,8 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   expect(html).toContain('Иван');
   expect(html).toContain('Server state');
   expect(html).toContain('ui-gradient-border');
+  expect(html).toContain('ui-scroll-area');
+  expect(html).toContain('Server scroll content');
   expect(html).toContain('Текст из CMS');
   expect(html).toContain('aria-hidden="true"');
   expect(html).toContain('data-reveal="up"');

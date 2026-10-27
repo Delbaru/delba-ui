@@ -11,11 +11,8 @@ import * as datePicker from './date-picker';
 import * as timeMask from './time-mask';
 import { useDatePicker } from './use-date-picker';
 
-const EMAIL_PATTERN = '[^\\s@]+@[^\\s@]+\\.[^\\s@]+';
-// Экспортируется намеренно: тот же формат проверяют формы ЗА пределами атома (кнопка «Продолжить»
-// в окне входа гаснет, пока адрес неполон). Своя копия регулярки на call-site была бы вторым
-// источником правды — поле и кнопка расходились бы во мнении о том, что такое верный адрес.
-export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { EMAIL_PATTERN, EMAIL_REGEX } from '../../../validation';
+export { EMAIL_REGEX } from '../../../validation';
 const DEFAULT_EMAIL_ERROR = 'Неверный формат email';
 const DEFAULT_DATE_MIN_ERROR = 'Дата не может быть раньше';
 const DEFAULT_DATE_MAX_ERROR = 'Дата не может быть позже';
@@ -638,8 +635,8 @@ export function useInputBehavior({
           ? (showTimeMask ? '' : (placeholder ?? timeMask.placeholder))
           : seedField.placeholder,
     'aria-invalid': restInputProps['aria-invalid'] ?? (displayError ? true : undefined),
-    minLength: isTime ? 5 : length?.min,
-    maxLength: isPhone ? (length?.max ?? phoneMask.maxLengthOf(phoneFormat)) : isTime ? timeMask.maxLength : isDate ? datePicker.maxLength : length?.max,
+    minLength: isTime ? 5 : (length?.min ?? restInputProps.minLength),
+    maxLength: isPhone ? (length?.max ?? phoneMask.maxLengthOf(phoneFormat)) : isTime ? timeMask.maxLength : isDate ? datePicker.maxLength : (length?.max ?? restInputProps.maxLength),
     inputMode: isTime ? 'numeric' : isPhone ? 'tel' : isEmail ? 'email' : restInputProps.inputMode,
     readOnly: isDate || restInputProps.readOnly || (lockAutofill && isAutofillLocked),
     value: isPhone

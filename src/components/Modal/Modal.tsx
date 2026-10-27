@@ -16,7 +16,8 @@ import {
 import styles from './Modal.module.scss';
 import { boxLayout, composeEventHandlers, createLayoutClasses, cx, MEDIA_QUERY, MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs, useMergedRefs, type BoxLayoutProps, type LayoutSpaceProps, type ResponsiveInput, type ResponsiveValue, type SpaceValue, type StateLinkInput, type WithRef } from '../../core';
 import { Flex } from '../Flex';
-import { useModalRegistry, useModalRuntime } from './ModalProvider';
+import { scrollbarProps, type ScrollbarOptions } from '../ScrollArea/scrollbar';
+import { ModalDeclarationPortal, useModalRegistry, useModalRuntime } from './ModalProvider';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useInteractionActivity } from '../../core/InteractionScope';
@@ -37,6 +38,8 @@ export interface ModalCloseOptions {
 }
 
 export interface ModalScrollOptions extends LayoutSpaceProps {
+  /** Native scrollbar appearance, shared with ScrollArea. Does not add a scroll container. */
+  scrollbar?: ScrollbarOptions;
   /** Reserve the legacy scrollbar padding. Set false for a panel with its own padding. */
   gutter?: boolean;
 }
@@ -177,6 +180,7 @@ function ModalSurface({
   const activeRef = useRef(active);
   activeRef.current = active;
   const [entered, setEntered] = useState(false);
+  const overlayPressed = useRef(false);
   // Свежий onClose без переподписки: провайдер отдаёт новую стрелку на каждом рендере.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -287,7 +291,9 @@ function ModalSurface({
   }, [active, open, closeOnEscape]);
 
   const handleOverlayClick = () => {
-    if (closeOn?.overlay ?? closeOnOverlayClick) onClose();
+    const pressed = overlayPressed.current;
+    overlayPressed.current = false;
+    if (pressed && (closeOn?.overlay ?? closeOnOverlayClick)) onClose();
   };
 
   return (
@@ -307,7 +313,13 @@ function ModalSurface({
         justify={justifyContent ?? ['center', 'center', 'center']}
         style={rootStyle}
     >
-      <div className={cx(styles.Overlay, overlayClassName)} style={overlayStyle} onClick={handleOverlayClick} role="presentation" />
+      <div
+          className={cx(styles.Overlay, overlayClassName)}
+          style={overlayStyle}
+          onMouseDown={() => { overlayPressed.current = true; }}
+          onClick={handleOverlayClick}
+          role="presentation"
+      />
       <div
         id={id}
         ref={setPanelNode}
@@ -337,7 +349,8 @@ function ModalSurface({
         onKeyDown={handleKeyDown}
       >
         <div
-            className={cx(styles.inner, overflowVisible && styles.innerOverflowVisible, scroll?.gutter === false && styles.noGutter, ...boxLayout(c, scroll ?? {}))}
+            {...scrollbarProps({ width: 4, color: 'var(--primary)', inset: 8, gutter: 'auto', ...scroll?.scrollbar })}
+            className={cx('ui-scrollbar', styles.inner, overflowVisible && styles.innerOverflowVisible, scroll?.gutter === false && styles.noGutter, ...boxLayout(c, scroll ?? {}))}
         >
           {typeof children === 'function' ? children(onClose) : children}
         </div>
@@ -364,27 +377,31 @@ function DeclarativeModal({ ref, trigger, open: controlledOpen, defaultOpen = fa
   const close = useCallback(() => changeOpenRef.current(false), []);
 
   useLayoutEffect(() => {
-    registry.sync(id, <ModalSurface {...props} id={id} ref={ref} />, open, close);
+    registry.sync(id, open, close);
   });
   useLayoutEffect(() => () => registry.remove(id), [registry, id]);
   useEffect(() => {
     if (breakpointMatches) changeOpenRef.current(false);
   }, [breakpointMatches]);
 
-  if (!trigger) return null;
-  const disabled = trigger.props.disabled || trigger.props['aria-disabled'] === true || trigger.props['aria-disabled'] === 'true';
-  return cloneElement(trigger, {
+  const disabled = trigger?.props.disabled || trigger?.props['aria-disabled'] === true || trigger?.props['aria-disabled'] === 'true';
+  return <>
+    <ModalDeclarationPortal id={id}><ModalSurface {...props} id={id} ref={ref} /></ModalDeclarationPortal>
+    {trigger && cloneElement(trigger, {
     onClick: composeEventHandlers(trigger.props.onClick, () => {
       if (!disabled && !breakpointMatches) changeOpenRef.current(true);
     }, { cancelable: true }),
     'aria-haspopup': 'dialog',
     'aria-expanded': open,
     'aria-controls': open ? id : undefined,
-  });
+    })}
+  </>;
 }
 
 export function Modal(props: WithRef<ModalProps, HTMLDivElement>) {
-  if (props.trigger || props.open !== undefined || props.defaultOpen !== undefined) return <DeclarativeModal {...props} />;
+  if (props.trigger || props.open !== undefined || props.defaultOpen !== undefined) return <DeclarativeModal
+      {...props}
+  />;
   const { trigger: _trigger, open: _open, defaultOpen: _defaultOpen, onOpenChange: _onOpenChange, ...surface } = props;
   return <ModalSurface {...surface} />;
 }

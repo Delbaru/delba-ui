@@ -5,6 +5,62 @@ async function openFixture(page: Page) {
   await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
 }
 
+test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport ref/events', async ({ page }) => {
+  await openFixture(page);
+  const viewport = page.getByTestId('scroll-area');
+  const search = page.getByRole('textbox', { name: 'Pinned scroll search' });
+  await viewport.scrollIntoViewIfNeeded();
+  const before = await search.boundingBox();
+  await viewport.hover();
+  await page.mouse.wheel(0, 360);
+  await expect.poll(() => viewport.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  expect(await search.boundingBox()).toEqual(before);
+  await expect.poll(async () => Number(await page.getByTestId('scroll-area-events').textContent())).toBeGreaterThan(0);
+  const scrollbar = await viewport.evaluate((node) => {
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;width:var(--ui-scrollbar-width)';
+    node.append(probe);
+    const expectedWidth = getComputedStyle(probe).width;
+    probe.remove();
+    return {
+    width: getComputedStyle(node, '::-webkit-scrollbar').width,
+    color: getComputedStyle(node, '::-webkit-scrollbar-thumb').backgroundColor,
+    buttons: getComputedStyle(node, '::-webkit-scrollbar-button').display,
+    nativeWidth: getComputedStyle(node).scrollbarWidth,
+    nativeColor: getComputedStyle(node).scrollbarColor,
+    expectedWidth,
+  }; });
+  expect(Math.abs(parseFloat(scrollbar.width) - parseFloat(scrollbar.expectedWidth))).toBeLessThan(0.02);
+  expect(scrollbar).toMatchObject({ color: 'rgb(120, 120, 120)', buttons: 'none', nativeWidth: 'auto', nativeColor: 'auto' });
+  await viewport.focus();
+  await page.keyboard.press('Control+End');
+  await expect.poll(() => viewport.evaluate((node) => node.scrollTop + node.clientHeight >= node.scrollHeight - 1)).toBe(true);
+  await expect(search).toHaveValue('Search');
+});
+
+test('Lexical lists restore markers after reset and honor editor marker color and ordered start', async ({ page }) => {
+  await openFixture(page);
+  const rich = page.getByTestId('lexical-markers');
+  await rich.scrollIntoViewIfNeeded();
+  await expect(rich.locator('ul').nth(0)).toHaveCSS('list-style-type', 'disc');
+  await expect(rich.locator('ul').nth(1)).toHaveCSS('list-style-type', '"—  "');
+  const marker = await rich.locator('ul').nth(1).locator('li').evaluate((node) => ({
+    actual: getComputedStyle(node, '::marker').color,
+    expected: getComputedStyle(node).getPropertyValue('--primary').trim(),
+  }));
+  const tokenColor = await page.evaluate((color) => {
+    const probe = document.createElement('span');
+    probe.style.color = color;
+    document.body.append(probe);
+    const resolved = getComputedStyle(probe).color;
+    probe.remove();
+    return resolved;
+  }, marker.expected);
+  expect(marker.actual).toBe(tokenColor);
+  await expect(rich.locator('ol')).toHaveAttribute('start', '4');
+  await expect(rich.locator('ol')).toHaveCSS('list-style-type', 'decimal');
+});
+
 test('interaction scope holds portal controls and releases them on close and unmount', async ({ page }) => {
   await openFixture(page);
   const active = page.getByTestId('interaction-scope-state');
@@ -592,6 +648,32 @@ test('object and legacy Accordion triggers keep keyboard behavior, ARIA and opti
   await expect(page.getByText('Legacy panel', { exact: true })).toBeVisible();
 });
 
+test('Input and Textarea preserve native decoration, refs and opt-in required form validation', async ({ page }) => {
+  await openFixture(page);
+  const input = page.getByRole('textbox', { name: 'Decorated native input', exact: true });
+  const textarea = page.getByRole('textbox', { name: 'Decorated native textarea', exact: true });
+  await expect(input).toHaveClass(/native-input-contract/);
+  await expect(input).toHaveCSS('padding-left', '13px');
+  await expect(textarea).toHaveClass(/native-textarea-contract/);
+  await expect(textarea).toHaveCSS('padding-left', '17px');
+  expect(await input.evaluate((node: HTMLInputElement) => node.required)).toBe(true);
+  expect(await textarea.evaluate((node: HTMLTextAreaElement) => node.required)).toBe(true);
+  expect(await page.getByRole('textbox', { name: 'Default custom required input', exact: true })
+    .evaluate((node: HTMLInputElement) => node.required)).toBe(false);
+  const submit = page.getByRole('button', { name: 'Submit decorated native fields', exact: true });
+  await submit.click();
+  await expect(page.getByTestId('native-field-submits')).toHaveText('0');
+  await input.pressSequentially('abc');
+  await textarea.pressSequentially('body');
+  await expect(input).toHaveValue('abc');
+  await expect(textarea).toHaveValue('body');
+  await page.getByRole('button', { name: 'Verify decorated native refs', exact: true }).click();
+  await expect(page.getByTestId('native-field-refs')).toHaveText('INPUT:TEXTAREA');
+  await expect(textarea).toBeFocused();
+  await submit.click();
+  await expect(page.getByTestId('native-field-submits')).toHaveText('1');
+});
+
 test('Input and Textarea keep native events separate from normalized value changes', async ({ page }) => {
   await openFixture(page);
 
@@ -1043,6 +1125,20 @@ test('CarouselNav supports keyboard activation and disabled endpoints', async ({
   await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText('Navigation slide two');
 });
 
+test('CarouselDots custom controls share page selection with arrows and keyboard', async ({ page }) => {
+  await openFixture(page);
+  const first = page.getByRole('button', { name: 'Thumbnail 1', exact: true });
+  const third = page.getByRole('button', { name: 'Thumbnail 3', exact: true });
+  await expect(first).toHaveAttribute('aria-pressed', 'true');
+  await third.focus();
+  await third.press('Enter');
+  await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText('Navigation slide three');
+  await expect(third).toHaveAttribute('aria-pressed', 'true');
+  await expect(first).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('.fixture-carousel-nav').getByRole('button', { name: 'Предыдущий слайд' }).click();
+  await expect(page.getByRole('button', { name: 'Thumbnail 2', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('Box and Flex swap content through real exit and enter animation completion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
@@ -1096,6 +1192,31 @@ test('LexicalText mounted from empty content attaches reveal observation and set
   await lexical.scrollIntoViewIfNeeded();
   await expect(lexical).toHaveAttribute('data-reveal-state', 'done');
   await expect(lexical).toContainText('Revealed lexical content');
+});
+
+test('Dropdown keeps nested portal focus, bridges keyboard navigation and blocks the dismissing click', async ({ page }) => {
+  await openFixture(page);
+  const outer = page.getByRole('button', { name: 'Outer choices', exact: true });
+  const inner = page.getByRole('button', { name: 'Inner choices', exact: true });
+  await outer.click();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'First outer choice' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(inner).toBeFocused();
+  await inner.press('Enter');
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('textbox', { name: 'Inner choice input' })).toBeFocused();
+  await expect(outer).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await expect(inner).toHaveAttribute('aria-expanded', 'false');
+  await expect(outer).toHaveAttribute('aria-expanded', 'true');
+  await expect(inner).toBeFocused();
+  const outside = page.getByRole('button', { name: 'Outside dropdown target' });
+  await outside.click();
+  await expect(outer).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByTestId('dropdown-outside-clicks')).toHaveText('0');
+  await outside.click();
+  await expect(page.getByTestId('dropdown-outside-clicks')).toHaveText('1');
 });
 
 test('Dropdown keeps controlled state with its owner and honors cancellation, disabled and defaultOpen', async ({ page }) => {
@@ -1174,7 +1295,7 @@ test('Select preserves panel styling, grouped options and opening guards through
     await expect(surface).toHaveCSS('border-top-left-radius', '6px');
     const sizes = await trigger.evaluate((node) => {
       const list = document.getElementById(node.getAttribute('aria-controls') ?? '');
-      return { trigger: node.getBoundingClientRect().width, surface: list?.parentElement?.getBoundingClientRect().width };
+      return { trigger: node.parentElement?.getBoundingClientRect().width ?? 0, surface: list?.parentElement?.getBoundingClientRect().width };
     });
     expect(sizes.surface).toBeDefined();
     expect(Math.abs((sizes.surface ?? 0) - sizes.trigger)).toBeLessThan(1);
@@ -1191,6 +1312,105 @@ test('Select preserves panel styling, grouped options and opening guards through
   await disabled.dispatchEvent('click');
   await expect(disabled).toHaveAttribute('aria-expanded', 'false');
   await expect(disabled).toHaveAttribute('aria-disabled', 'true');
+});
+
+test('Dropdown arrow keys enter its portal directly from the focused trigger', async ({ page }) => {
+  await openFixture(page);
+  const trigger = page.getByRole('button', { name: 'Outer choices', exact: true });
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('button', { name: 'First outer choice', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowUp');
+  await expect(page.getByRole('button', { name: 'Inner choices', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('closed nested Dropdown consumes arrows, opens and focuses its first or last item', async ({ page }) => {
+  await openFixture(page);
+  const outer = page.getByRole('button', { name: 'Keyboard filters', exact: true });
+  const inner = page.getByRole('button', { name: 'Keyboard status', exact: true });
+  await outer.click();
+  await inner.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(inner).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', { name: 'First keyboard status', exact: true })).toBeFocused();
+  await expect(outer).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await expect(inner).toBeFocused();
+  await expect(inner).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('ArrowUp');
+  await expect(page.getByRole('button', { name: 'Last keyboard status', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  const disabled = page.getByRole('button', { name: 'Unavailable keyboard status', exact: true });
+  await disabled.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(disabled).toBeFocused();
+  await expect(disabled).toHaveAttribute('aria-expanded', 'false');
+  const native = page.getByRole('textbox', { name: 'Native input dropdown trigger', exact: true });
+  await native.focus();
+  await native.fill('abc');
+  await page.keyboard.press('ArrowDown');
+  await expect(native).toBeFocused();
+  await expect(native).toHaveAttribute('aria-expanded', 'false');
+  await expect(native).toHaveValue('abc');
+  await page.keyboard.press('Escape');
+  await expect(outer).toHaveAttribute('aria-expanded', 'false');
+  await outer.press('ArrowUp');
+  await expect(native).toBeFocused();
+});
+
+test('Modal keeps a drag started inside its content open when released on the backdrop', async ({ page }) => {
+  await openFixture(page);
+  const opener = page.getByRole('button', { name: 'Open context dialog', exact: true });
+  await opener.click();
+  const dialog = page.getByRole('dialog', { name: 'Context outer dialog', exact: true });
+  const content = page.getByTestId('outer-dialog-context');
+  await expect(content).toHaveText('alpha');
+  const dialogBox = await dialog.boundingBox();
+  const contentBox = await content.boundingBox();
+  if (!dialogBox || !contentBox) throw new Error('Modal content must have visible bounds');
+  const outside = { x: Math.max(1, dialogBox.x - 16), y: dialogBox.y + 8 };
+  await page.mouse.move(contentBox.x + contentBox.width / 2, contentBox.y + contentBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(outside.x, outside.y, { steps: 8 });
+  await page.mouse.up();
+  await expect(dialog).toBeVisible();
+  await expect(opener).toHaveAttribute('aria-expanded', 'true');
+  await page.mouse.click(outside.x, outside.y);
+  await expect(dialog).toHaveCount(0);
+  await expect(opener).toBeFocused();
+});
+
+test('declarative Modal preserves live declaration context through nested portals', async ({ page }) => {
+  await openFixture(page);
+  const opener = page.getByRole('button', { name: 'Open context dialog', exact: true });
+  await opener.click();
+  const outer = page.getByRole('dialog', { name: 'Context outer dialog', exact: true });
+  await expect(outer).toBeVisible();
+  await expect(page.getByTestId('outer-dialog-context')).toHaveText('alpha');
+  await outer.getByRole('button', { name: 'Update declaration context', exact: true }).click();
+  await expect(page.getByTestId('outer-dialog-context')).toHaveText('beta');
+  const nestedOpener = outer.getByRole('button', { name: 'Open nested context dialog', exact: true });
+  await nestedOpener.click();
+  const nested = page.getByRole('dialog', { name: 'Context nested dialog', exact: true });
+  await expect(nested).toBeVisible();
+  await expect(page.getByTestId('nested-dialog-context')).toHaveText('nested:beta');
+  await nested.getByRole('button', { name: 'Update nested declaration context', exact: true }).click();
+  await expect(page.getByTestId('nested-dialog-context')).toHaveText('nested:gamma');
+  await expect(page.getByTestId('outer-dialog-context')).toHaveText('gamma');
+  await page.keyboard.press('Escape');
+  await expect(nested).toHaveCount(0);
+  await expect(outer).toBeVisible();
+  await expect(nestedOpener).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(outer).toHaveCount(0);
+  await expect(opener).toBeFocused();
 });
 
 test('nested Dropdown consumes the first Escape inside a scrolling Modal', async ({ page }) => {
@@ -1508,6 +1728,8 @@ test('Modal scroll lock keeps independent provider leases through provider unmou
 });
 
 test('Modal scroll lock stays while stacked dialogs exit and releases after the final DOM removal', async ({ page }) => {
+  // This scenario inspects the exit phase; reduced motion intentionally removes that phase.
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   await page.getByRole('button', { name: 'Open stacked modal', exact: true }).click();
   await page.getByTestId('open-top-modal').click();
@@ -1554,13 +1776,18 @@ test('Modal scroll lock preserves body padding when a stable scrollbar gutter re
   await openFixture(page);
   await page.evaluate(() => {
     document.documentElement.style.setProperty('scrollbar-gutter', 'stable');
+    document.documentElement.style.setProperty('scrollbar-width', 'thin');
+    document.documentElement.style.setProperty('scrollbar-color', 'gold black');
     document.body.style.setProperty('padding-right', '36px', 'important');
   });
-  const before = await page.evaluate(() => document.documentElement.clientWidth);
+  const before = await page.evaluate(() => document.documentElement.getBoundingClientRect().width);
   await page.getByRole('button', { name: 'Open First independent lease', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'First independent lease', exact: true });
   await expect(dialog).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.clientWidth)).toBe(before);
+  const viewport = dialog.locator('.ui-scrollbar');
+  await expect(viewport).toHaveCSS('scrollbar-color', 'auto');
+  expect(await viewport.evaluate((node) => getComputedStyle(node, '::-webkit-scrollbar-button').display)).toBe('none');
+  expect(await page.evaluate(() => document.documentElement.getBoundingClientRect().width)).toBe(before);
   await expect(page.locator('body')).toHaveCSS('padding-right', '36px');
   await dialog.getByRole('button', { name: 'Unmount First independent lease', exact: true }).click();
   await expect(dialog).toHaveCount(0);
@@ -1719,6 +1946,26 @@ test('Checkbox, Radio, and SwitchButton show focus-visible state through native 
   expect(switchOutline).not.toBe('none');
   await toggle.press('Space');
   await expect(toggle).toBeChecked();
+});
+
+test('Indicatorless choices keep native keyboard input and expose active/error states', async ({ page }) => {
+  await openFixture(page);
+  const checkbox = page.getByRole('checkbox', { name: 'Chip checkbox' });
+  const radio = page.getByRole('radio', { name: 'Chip radio' });
+  await expect(checkbox.locator('..').locator(':scope > div')).toHaveCount(0);
+  await expect(radio.locator('..').locator(':scope > div')).toHaveCount(0);
+  await checkbox.focus();
+  await checkbox.press('Space');
+  await expect(checkbox).toBeChecked();
+  await expect(radio).toBeChecked();
+  await expect(radio.locator('..').locator('..')).toHaveAttribute('state', /active/);
+  await expect(radio.locator('..').locator('..')).toHaveAttribute('state', /error/);
+  await checkbox.press('Space');
+  await expect(checkbox).not.toBeChecked();
+  await checkbox.press('Tab');
+  await expect(radio).toBeFocused();
+  await radio.press('Space');
+  await expect(radio).toBeChecked();
 });
 
 test('Input calendar month and year controls are keyboard-operable', async ({ page }) => {

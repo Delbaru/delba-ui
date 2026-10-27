@@ -1,0 +1,35 @@
+.ui-scroll-area {
+    min-height: 0;
+    min-width: 0;
+    overscroll-behavior: contain;
+    &[data-scroll-axis='y'] { overflow-y: auto; overflow-x: hidden; }
+    &[data-scroll-axis='x'] { overflow-x: auto; overflow-y: hidden; }
+}
+
+.ui-scrollbar {
+    scrollbar-color: var(--ui-scrollbar-color) var(--ui-scrollbar-track);
+    scrollbar-width: var(--ui-scrollbar-native-width);
+
+    // Chromium ignores WebKit geometry/buttons when standard scrollbar styles are set.
+    // Firefox keeps its native thin/auto fallback above.
+    @supports selector(::-webkit-scrollbar) {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+    }
+
+    &::-webkit-scrollbar {
+        width: var(--ui-scrollbar-width);
+        height: var(--ui-scrollbar-width);
+    }
+    &::-webkit-scrollbar-thumb {
+        background: var(--ui-scrollbar-color);
+        border-radius: var(--ui-scrollbar-width);
+    }
+    &::-webkit-scrollbar-track {
+        background: var(--ui-scrollbar-track);
+        margin-block: var(--ui-scrollbar-inset);
+        margin-inline: var(--ui-scrollbar-inset);
+    }
+    &::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+    &::-webkit-scrollbar-corner { background: transparent; }
+}

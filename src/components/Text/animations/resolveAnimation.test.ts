@@ -29,6 +29,8 @@ test('textSlide change object selects swap, preserving older hover and sequence 
   const modern = resolveAnimation({ when: 'change', effect: 'textSlide', duration: 'fast' }, '00:07');
   assert.equal(modern.active, true);
   assert.deepEqual(modern.options, { mode: 'swap', durationTime: 'fast' });
+  assert.deepEqual(resolveAnimation({ when: 'change', effect: 'textSlide', by: 'text', duration: 'normal' }, 'Подвески').options,
+    { mode: 'swap', durationTime: 'normal', by: 'text' });
   assert.equal(resolveAnimation('textSlide', 'Hover').active, true);
   assert.deepEqual(resolveAnimation(['textSlide', { mode: 'swap', duration: 0.4 }], '00:07').options, { mode: 'swap', duration: 0.4 });
 });

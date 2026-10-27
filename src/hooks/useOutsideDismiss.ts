@@ -9,6 +9,8 @@ export interface UseOutsideDismissOptions {
   enabled?: boolean;
   /** Закрывать по Escape. У поля со своим обработчиком клавиш — выключить, иначе закроют оба. */
   escape?: boolean;
+  /** Поглотить закрывающий клик, чтобы он не активировал строку под панелью. */
+  blockOutsideClick?: boolean;
 }
 
 /**
@@ -39,7 +41,7 @@ export interface OutsideDismissInsideProps {
 export function useOutsideDismiss(
   refs: DismissRef | readonly DismissRef[],
   onDismiss: () => void,
-  { enabled = true, escape = true }: UseOutsideDismissOptions = {},
+  { enabled = true, escape = true, blockOutsideClick = false }: UseOutsideDismissOptions = {},
 ): OutsideDismissInsideProps {
   const dismissRef = useRef(onDismiss);
   dismissRef.current = onDismiss;
@@ -56,10 +58,17 @@ export function useOutsideDismiss(
     if (!enabled) return undefined;
 
     const isInside = (target: Node) => nodesRef.current.some((ref) => ref.current?.contains(target));
+    const swallowClick = (event: MouseEvent) => { event.preventDefault(); event.stopPropagation(); };
+    let swallowTimer: ReturnType<typeof setTimeout> | undefined;
 
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node | null;
       if (!target || event === insideEventRef.current || isInside(target)) return;
+
+      if (blockOutsideClick && event.button === 0) {
+        document.addEventListener('click', swallowClick, { capture: true, once: true });
+        swallowTimer = setTimeout(() => document.removeEventListener('click', swallowClick, true), 300);
+      }
 
       dismissRef.current();
     };
@@ -74,8 +83,11 @@ export function useOutsideDismiss(
     return () => {
       document.removeEventListener('mousedown', handlePointerDown);
       if (escape) document.removeEventListener('keydown', handleKeyDown);
+      // The closing click follows mousedown after this effect's cleanup.
+      // Its once listener or short fallback removes it even if mouseup leaves the window.
+      if (swallowTimer === undefined) document.removeEventListener('click', swallowClick, true);
     };
-  }, [enabled, escape]);
+  }, [enabled, escape, blockOutsideClick]);
 
   return { onMouseDownCapture };
 }

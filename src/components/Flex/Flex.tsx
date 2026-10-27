@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useLinkPrefetch, type LinkPrefetchProps } from '../../hooks/useLinkPrefetch';
 import { useRef, type CSSProperties } from 'react';
 import type React from 'react';
 import { boxLayout, composeEventHandlers, containerClass, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ContainerProp, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
 import type { Transition } from '../../core';
-import { isAppearanceAnimate, type AppearanceAnimate, type RevealProps } from '../../core/reveal/reveal';
-import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import { type RevealProps } from '../../core/reveal/reveal';
+import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { CollapseHandle } from '../../hooks/useCollapseMotion';
 import { resolveContentAnimate, type ContentAnimate, type ContentAnimation, type ContentEnter } from '../../hooks/contentMotion';
 import { useContentMotion } from '../../hooks/useContentMotion';
@@ -32,7 +33,7 @@ export interface FlexProps
     BoxLayoutProps,
     ContainerProp,
     SharedMotionProps<ContentAnimate>,
-    RevealProps {
+    RevealProps, LinkPrefetchProps {
   children?: React.ReactNode;
   style?: CSSProperties;
   state?: ComponentStateValue;
@@ -42,6 +43,8 @@ export interface FlexProps
   /** Активность области: указатель, фокус или открытая дочерняя Modal/Dropdown, включая порталы.
    * Fixed/sticky-панель с top=0 также реагирует на указатель у верхнего края viewport. */
   onInteractionChange?: (active: boolean) => void;
+  /** Marks the nearest source for descendant animate hover transforms, including non-link cards. */
+  motionScope?: boolean;
   /** Тег узла без `href`: `header`, `nav`, `footer`… */
   as?: 'div' | 'header' | 'nav' | 'footer' | 'main' | 'aside' | 'section' | 'ul' | 'li' | 'dl' | 'figure' | 'figcaption';
 
@@ -89,7 +92,7 @@ export interface FlexProps
    *  `animate={['fadeIn', { key: tab }]}` — при смене `key` старое уходит зеркальным ходом, затем входит
    *  новое. Узел тот же (ref и фокус сохраняются), reduced-motion меняет сразу. Если задан, прежние
    *  `animation` и `transitionKey` не читаются. */
-  animate?: AppearanceAnimate | ContentAnimate;
+  animate?: SharedMotionProps<ContentAnimate>['animate'];
   /** Прежняя запись входа; новая — `animate`. Без transitionKey — играет один раз при монтировании (появление контента).
    *  С transitionKey — служит enter'ом свопа (exit берётся зеркально). reduced-motion гасит. */
   animation?: FlexAnimation;
@@ -133,21 +136,24 @@ export function Flex({
   container,
   state,
   trackInteraction,
+  motionScope,
   onInteractionChange,
   onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp,
   onClick, onFocus, onBlur,
-  href, target, rel, download, newTab, nofollow, noreferrer,
+  href, target, rel, download, newTab, nofollow, noreferrer, prefetch,
   linkState,
   ...props
 }: WithRef<FlexProps, HTMLElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
   const isLink = Boolean(href);
-  const Comp = (isLink ? (shouldUseNextLink(href, target, download) ? Link : 'a') : as) as React.ElementType;
+  const useNextLink = isLink && shouldUseNextLink(href, target, download);
+  const prepare = useLinkPrefetch(prefetch, href, useNextLink && !newTab);
+  const Comp = (isLink ? (useNextLink ? Link : 'a') : as) as React.ElementType;
   const resolved = resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer });
-  const anchorProps = isLink ? { ...rest, ...resolved } : rest;
+  const anchorProps = isLink ? { ...rest, ...resolved, ...(useNextLink ? { prefetch: prepare.prefetch } : null) } : rest;
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal, animate });
-  const contentAnimate = isAppearanceAnimate(animate) ? undefined : animate;
+  const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
   const motionInput = contentAnimate !== undefined ? resolveContentAnimate(contentAnimate) : { animation, key: transitionKey };
   const contentMotion = useContentMotion({ ...motionInput, children, onAnimationEnd: anchorProps.onAnimationEnd });
   const interactionRef = useRef<HTMLElement>(null);
@@ -177,16 +183,17 @@ export function Flex({
         ...style,
       }}
       {...revealAttrs}
+      data-motion-scope={motionScope ? '' : undefined}
       {...stateProps(state, trackInteraction && active && 'interacting')}
       {...anchorProps}
       {...stateLinkProps(linkState, {
-        onMouseEnter: composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter),
+        onMouseEnter: composeEventHandlers(composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter), prepare.onIntent),
         onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),
         onMouseLeave: composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave),
         onMouseDown,
         onMouseUp,
         onClick,
-        onFocus,
+        onFocus: composeEventHandlers(onFocus, prepare.onIntent),
         onBlur,
       })}
       onAnimationEnd={contentMotion.onAnimationEnd}

@@ -1,2 +1,2 @@
 export { useIconSwap, componentSwapKey } from './useIconSwap';
-export type { IconAnimate, IconSwapOptions } from './types';
+export type { IconAnimate, IconChangeAnimate, IconSwapOptions } from './types';

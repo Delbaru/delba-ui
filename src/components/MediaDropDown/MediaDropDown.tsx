@@ -438,9 +438,17 @@ export function MediaDropDown({
                         justify={['center', 'center', 'center']}
                         className={styles.TriggerIconRoot}
                     >
-                        <Icon name={selectedMedia.icon} w={[20, 20, 20]} h={[20, 20, 20]} className={styles.TriggerIcon} />
+                        <Icon
+                            name={selectedMedia.icon}
+                            w={[20, 20, 20]}
+                            h={[20, 20, 20]}
+                            className={styles.TriggerIcon}
+                        />
                     </Flex>
-                    <Text variant={['caption', 'caption', 'caption']} className={styles.TriggerLabel}>{triggerLabel}</Text>
+                    <Text
+                        variant={['caption', 'caption', 'caption']}
+                        className={styles.TriggerLabel}
+                    >{triggerLabel}</Text>
                 </Flex>
                 <Flex
                     dir={['row', 'row', 'row']}
@@ -493,7 +501,12 @@ export function MediaDropDown({
                             />
                         </button>
                     ) : null}
-                    <Icon name="ui/arrows/arrow-2/arrow" w={[16, 16, 16]} h={[16, 16, 16]} className={styles.Arrow} />
+                    <Icon
+                        name="ui/arrows/arrow-2/arrow"
+                        w={[16, 16, 16]}
+                        h={[16, 16, 16]}
+                        className={styles.Arrow}
+                    />
                 </Flex>
             </Flex>
 
@@ -513,7 +526,11 @@ export function MediaDropDown({
                         p={isDropzone ? [12, 12, 16, 12] : [8, 8, 24, 8]}
                     >
                         {isDropzone ? (
-                            <Flex dir={['column', 'column', 'column']} gap={[12, 12, 12]} w={['100%', null, null]}>
+                            <Flex
+                                dir={['column', 'column', 'column']}
+                                gap={[12, 12, 12]}
+                                w={['100%', null, null]}
+                            >
                                 {/* Дроп-зона — китовая Button БЕЗ варианта: ни один вариант Button не
                                     выражает пунктирную рамку с подсветкой при перетаскивании, а зона
                                     обязана остаться настоящей кнопкой (фокус, Enter/Space) — клик по
@@ -534,7 +551,11 @@ export function MediaDropDown({
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
                                 >
-                                    <Flex dir={['column', 'column', 'column']} align={['center', 'center', 'center']} gap={[8, 8, 8]}>
+                                    <Flex
+                                        dir={['column', 'column', 'column']}
+                                        align={['center', 'center', 'center']}
+                                        gap={[8, 8, 8]}
+                                    >
                                         <Icon
                                             name='ui/upload/style-2/upload'
                                             w={[20, 20, 20]}
@@ -542,12 +563,25 @@ export function MediaDropDown({
                                             className={styles.DropZoneIcon}
                                         />
 
-                                        <Flex align={['center', 'center', 'center']} gap={[8, 8, 8]}>
-                                            <Text variant={['micro', 'micro', 'micro']} color='var(--black)'>{dropTitle}</Text>
-                                            <Text variant={['micro', 'micro', 'micro']} color='var(--line)' aria-hidden>
+                                        <Flex
+                                            align={['center', 'center', 'center']}
+                                            gap={[8, 8, 8]}
+                                        >
+                                            <Text
+                                                variant={['micro', 'micro', 'micro']}
+                                                color='var(--black)'
+                                            >{dropTitle}</Text>
+                                            <Text
+                                                variant={['micro', 'micro', 'micro']}
+                                                color='var(--line)'
+                                                aria-hidden
+                                            >
                                                 ·
                                             </Text>
-                                            <Text variant={['micro', 'micro', 'micro']} color='var(--text-muted)'>{dropHint}</Text>
+                                            <Text
+                                                variant={['micro', 'micro', 'micro']}
+                                                color='var(--text-muted)'
+                                            >{dropHint}</Text>
                                         </Flex>
                                     </Flex>
                                 </Button>
@@ -602,22 +636,42 @@ export function MediaDropDown({
                                                 className={cx(styles.TypeButton, isActive && styles.TypeButtonActive)}
                                                 onClick={() => handleSelect(media.type)}
                                             >
-                                                <Icon name={media.icon} w={[16, 16, 16]} h={[16, 16, 16]} className={styles.TypeIcon} />
-                                                <Text variant={['micro', 'micro', 'micro']} className={styles.TypeLabel}>{media.label}</Text>
+                                                <Icon
+                                                    name={media.icon}
+                                                    w={[16, 16, 16]}
+                                                    h={[16, 16, 16]}
+                                                    className={styles.TypeIcon}
+                                                />
+                                                <Text
+                                                    variant={['micro', 'micro', 'micro']}
+                                                    className={styles.TypeLabel}
+                                                >{media.label}</Text>
                                             </Button>
                                         );
                                     })}
                                 </div>
 
-                                <Flex dir={['column', 'column', 'column']} gap={[12, 12, 12]} className={styles.UploadSection}>
-                                    <button type="button" className={styles.FileButton} disabled={disabled} onClick={handleFileClick}>
+                                <Flex
+                                    dir={['column', 'column', 'column']}
+                                    gap={[12, 12, 12]}
+                                    className={styles.UploadSection}
+                                >
+                                    <button
+                                        type="button"
+                                        className={styles.FileButton}
+                                        disabled={disabled}
+                                        onClick={handleFileClick}
+                                    >
                                         <Icon
                                             name="ui/upload/style-2/upload"
                                             w={[16, 16, 16]}
                                             h={[16, 16, 16]}
                                             className={styles.UploadIcon}
                                         />
-                                        <Text variant={['micro', 'micro', 'micro']} className={styles.UploadLabel}>
+                                        <Text
+                                            variant={['micro', 'micro', 'micro']}
+                                            className={styles.UploadLabel}
+                                        >
                                             Выбрать файл
                                         </Text>
                                     </button>
@@ -629,7 +683,10 @@ export function MediaDropDown({
                                         className={styles.Divider}
                                     >
                                         <span className={styles.DividerLine} />
-                                        <Text variant={['micro', 'micro', 'micro']} className={styles.DividerText}>
+                                        <Text
+                                            variant={['micro', 'micro', 'micro']}
+                                            className={styles.DividerText}
+                                        >
                                             или
                                         </Text>
                                         <span className={styles.DividerLine} />
@@ -646,7 +703,10 @@ export function MediaDropDown({
                                             className={styles.LinkInput}
                                         />
                                     </div>
-                                    <Text variant={['micro', 'micro', 'micro']} className={styles.LinkHint}>{selectedMedia.hint}</Text>
+                                    <Text
+                                        variant={['micro', 'micro', 'micro']}
+                                        className={styles.LinkHint}
+                                    >{selectedMedia.hint}</Text>
                                 </Flex>
                             </>
                         )}

@@ -6,6 +6,7 @@ import { Text } from '../../src/components/Text/Text';
 import { Dropdown } from '../../src/components/Dropdown/Dropdown';
 import { Button } from '../../src/components/Button/Button';
 import { Select } from '../../src/components/Select/Select';
+import { Accordion, AccordionItem } from '../../src/components/Accordion/Accordion';
 import type { CollapseControls } from '../../src/hooks/useCollapseControls';
 
 declare global {
@@ -106,6 +107,11 @@ export function CollapseControlsFixture() {
         <Text>Initial appearance</Text>
       </Flex>
       <output data-testid="appear-ends">{appearEnds}</output>
+      <Accordion defaultValue="padded">
+        <AccordionItem value="padded" trigger="Padded answer" panelProps={{ className: 'fixture-accordion-panel' }}>
+          Answer with layout padding
+        </AccordionItem>
+      </Accordion>
     </section>
   );
 }

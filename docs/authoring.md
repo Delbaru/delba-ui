@@ -258,6 +258,14 @@ AST-правило `jsx-format` проверяет компактные коро
 `{ when: 'inView', effect: 'counter', duration: 'slow' }` у Text,
 `{ when: 'change', effect: 'textSlide', duration: 'fast' }` у Text,
 `{ when: 'change', effect: 'veil', direction: 1, duration: 'slow' }` у Img.
+Hover transform задаётся `{ when: 'hover', effect: 'transform', source: 'closest', scale: 1.025, duration: 'slow' }`;
+область карточки отмечается `Flex motionScope`. Hover можно вложить в объект появления.
+Открытие Dropdown задаётся `panel.animate={{ when: 'open', effect: 'down', duration: 'normal' }}`;
+Select передаёт `panel.animate`, `panel.collapse`, `panel.offset` и `panel.r` той же панели:
+проектная обёртка задаёт движение и радиус списка, не копируя состояние и обработчики Dropdown.
+подложка, dismiss и ожидание exit принадлежат Dropdown, а не проектным слушателям/таймерам.
+У Icon смена глифа задаётся `{ when: 'change', effect: 'swap', duration: 'fast', scale: 1, rotate: 0 }`;
+duration относится к каждой из двух последовательных фаз, прежние string/tuple формы совместимы.
 В новых объектах время — секунды или ключ `ui.config.motion.timing`. Старые формы сохраняют
 единицы: legacy `CounterOptions.duration` — миллисекунды. CSS и JS читают один токен на одном узле
 через `motionTimeCss` / `readMotionTimeMs`, а не отдельный список имён или таймер с копией значения.
@@ -316,6 +324,12 @@ AST-правило `jsx-format` проверяет компактные коро
 
 ## Формы — `name` участвует в `FormData`
 
+`Checkbox` и `Radio` принимают `indicator={false}`: скрывается только декоративный
+индикатор, нативный input, label, ref и клавиатура сохраняются. Потребитель оформляет
+фокус такого варианта сам. Контролируемый Radio отражает checked в `state="active"`,
+aria-invalid в error; декор не следует скрывать селектором `input + div`, затрагивающим
+соседнее содержимое.
+
 У кастомных полей задавай `name`, чтобы выбранное значение было доступно через нативную форму.
 `Select` с одним выбором отправляет одну запись. `Select multiple` отправляет повторяющиеся записи
 с одним именем (`formData.getAll(name)`); пустой выбор ничего не отправляет. Отключённый `Select`
@@ -338,6 +352,11 @@ AST-правило `jsx-format` проверяет компактные коро
 
 ### Независимые эффекты кнопки и документ Lexical
 
+Список Lexical поддерживает `marker: 'dash' | 'disc'` и `markerColor` (CSS-токен
+темы). Рендер восстанавливает `disc`/`decimal` после reset, уважает `start` у `ol`;
+цвет `::marker` берёт из документа, отдельно от цвета текста. Старые списки без
+этих полей сохраняют обычные маркеры. Проект не окрашивает маркеры селекторами секции.
+
 Button принимает появление вместе с независимыми настройками:
 `animate={{ when: 'inView', effect: 'up', hover: { effect: 'rise', fill: 'var(--primary)' }, idle: { effect: 'glow' } }}`.
 Прежние `when: 'hover'/'idle'` совместимы. У проектной D-кнопки появление сохраняет эффекты роли;
@@ -347,3 +366,13 @@ Button принимает появление вместе с независим�
 LexicalText.content — HTML-строка или публичный `LexicalDocument` с `root.children: unknown[]`.
 Редактор/CMS владеет тегом, ролью, marks и цветом. Renderer проверяет каждый узел; повреждённый
 узел пропускает, корректных соседей сохраняет. Зависимости библиотеки от CMS нет.
+
+Декларативный `Modal` сохраняет React-контексты места объявления, включая вложенные
+провайдеры и их обновления. Реестр хранит порядок и lifecycle, а портал содержимого
+рендерится из исходного поддерева. Императивный `present(node)` по-прежнему рендерит
+переданный узел в контексте ModalProvider.
+
+`Input.field` и `Textarea.field` принимают `className`/`style` нативного контрола;
+`className`/`style` корня относятся к компоненту целиком. DOM ref и события остаются
+нативными. `Input.nativeValidation` включает нативный `required` для потребителей,
+которые сохраняют браузерную валидацию формы; по умолчанию обязательность проверяет кит.

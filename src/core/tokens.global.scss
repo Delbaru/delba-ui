@@ -42,6 +42,7 @@
   @include meta.load-css('../components/Button/button');
   @include meta.load-css('./layout/container');
   @include meta.load-css('../components/Flex/flex');
+  @include meta.load-css('../components/ScrollArea/scroll-area');
   @include meta.load-css('../components/Grid/grid');
   @include meta.load-css('../components/GradientBorder/gradient-border');
   @include meta.load-css('../components/Icon/icon');
@@ -58,10 +59,12 @@
 
 // Появление по скроллу (`reveal` у Flex, Grid, Box, Img) — состояние узла, его ставит наблюдатель.
 @layer ui.states {
+  @include meta.load-css('../components/Flex/flex-states');
   @include meta.load-css('./reveal/reveal');
 }
 
 @include meta.load-css('../components/Button/hover/button-hover');
+@include meta.load-css('./base/hover-motion');
 @include meta.load-css('../components/Button/idle/button-idle');
 
 // ── Краевой fade скролл-контейнеров (mask + scroll-driven animations) ─────────────────────────

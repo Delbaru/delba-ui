@@ -108,7 +108,11 @@ function Layer({ text, mode, staticPrefix, staticSuffix }: LayerProps) {
               // Статичный символ (общий край) не несёт data-reveal-char → не анимируется и не участвует в волне.
               const isStatic = gi < staticPrefix || gi >= total - staticSuffix;
               return (
-                <span key={i} {...(isStatic ? null : { 'data-reveal-char': '' })} className={'ui-reveal-char'}>{ch}</span>
+                <span
+                    key={i}
+                    {...(isStatic ? null : { 'data-reveal-char': '' })}
+                    className={'ui-reveal-char'}
+                >{ch}</span>
               );
             })}
           </span>
@@ -343,7 +347,13 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
   return (
     <span ref={viewportRef} className={'ui-reveal'} style={vars}>
       {previous !== null && (
-        <Layer key={`out-${generation}`} text={previous} mode="out" staticPrefix={affixes.prefix} staticSuffix={affixes.suffix} />
+        <Layer
+            key={`out-${generation}`}
+            text={previous}
+            mode="out"
+            staticPrefix={affixes.prefix}
+            staticSuffix={affixes.suffix}
+        />
       )}
 
       <Layer
