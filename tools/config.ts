@@ -11,6 +11,11 @@ import type {
 export type MotionTiming = Readonly<Record<string, number>>;
 export type MotionDistances = Readonly<Record<string, number | `${number}%`>>;
 
+export interface UiImages {
+    /** Public local API directories that next/image may fetch without visitor cookies. Include the trailing slash; default: none. */
+    readonly optimizeApi?: readonly string[];
+}
+
 export interface UiMotion {
     /** Named motion durations in seconds. At least one camelCase name is required. */
     readonly timing: MotionTiming;
@@ -90,4 +95,6 @@ export interface UiConfig {
     readonly scale?: Partial<UiScale>;
     /** Motion duration tokens in seconds; names and values are defined together here. */
     readonly motion?: UiMotion;
+    /** Image optimization policy. Private /api/ files stay unoptimized unless explicitly allowed. */
+    readonly images?: UiImages;
 }

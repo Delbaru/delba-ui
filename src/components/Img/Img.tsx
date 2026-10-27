@@ -13,6 +13,7 @@ import { isAppearanceAnimate, withoutStagger, type RevealInput, type RevealOptio
 import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useImgSwap } from './swap/useImgSwap';
 import type { ImgAnimate } from './swap/types';
+import { imageUnoptimized } from './optimization';
 
 const c = createLayoutClasses();
 
@@ -63,6 +64,8 @@ type ImgRootSizeProps = {
 type ImgElementProps = ImgBaseProps & Record<string, unknown>;
 
 export interface ImgProps extends ImgBaseProps, BoxLayoutProps, ImgRootSizeProps, SharedMotionProps<ImgAnimate> {
+  /** Explicitly override ui.config.images.optimizeApi and the private /api/ default. Only enable optimization for sources accessible without visitor cookies. */
+  unoptimized?: boolean;
   className?: string;
   style?: CSSProperties;
   'data-point-events'?: string;
@@ -195,13 +198,6 @@ const buildSizes = (
 };
 
 /**
- * Оптимизатор `next/image` не может собрать картинку по адресу НАШЕГО API (см. ниже у
- * `unoptimized`): решается для каждого источника отдельно — в кортеже они бывают разными.
- */
-const isOwnApiSource = (src: ImgSource | null | undefined): boolean =>
-  typeof src === 'string' && src.startsWith('/api/');
-
-/**
  * Источники по полосам. Своя `<source>` нужна полосе, только если кадр у неё СВОЙ: совпал с
  * десктопным — браузеру нечего переключать.
  */
@@ -308,14 +304,8 @@ export function Img({
   };
   const { rootProps, elementProps } = splitRootDomProps(props as ImgElementProps);
 
-  // Картинку по адресу НАШЕГО API оптимизатор `next/image` собрать не может, и это не настройка,
-  // а его устройство: он идёт за исходником со СВОЕГО сервера, отдельным запросом и без cookie
-  // человека. Ответ такому запросу — 401/404, то есть на экране битая картинка, а не «чуть хуже
-  // качеством». Поэтому всё под `/api/` отдаётся как есть — ровно так же, как Next сам поступает
-  // с `blob:` и `data:`.
-  //
-  // Правилом, а не пропом на call-site: иначе про него забудут ровно там, где картинка личная,
-  // и поймается это уже глазами на живых данных.
+  // Next fetches originals without visitor cookies. Local API files are private by default;
+  // the project may declare public directories once in ui.config.images.optimizeApi.
   const sources = resolveSources(src);
   // `priority` — «картинка первого экрана»: в Next 16 это eager + high, без устаревшего `priority` и без
   // preload-ссылки, которая у кадров по полосам тянула бы десктопный файл и на телефон.
@@ -324,7 +314,7 @@ export function Img({
     loading: priority ? 'eager' : loading,
     fetchPriority: priority ? 'high' : fetchPriority,
     src: sources.desktop,
-    unoptimized: elementProps.unoptimized || isOwnApiSource(sources.desktop),
+    unoptimized: imageUnoptimized(sources.desktop, elementProps.unoptimized),
   } as const;
   const hasArtDirection = sources.mobile !== null || sources.tablet !== null;
 
@@ -385,26 +375,31 @@ export function Img({
     getImageProps({
       ...imageProps,
       src: source,
-      unoptimized: elementProps.unoptimized || isOwnApiSource(source),
+      unoptimized: imageUnoptimized(source, elementProps.unoptimized),
       alt: normalizedAlt,
       fill: true,
       sizes: computedSizes,
       quality: normalizedQuality,
     }).props;
 
+  const pictureSource = (source: ImgSource) => {
+    const props = pictureProps(source);
+    return props.srcSet ?? props.src;
+  };
+
   const mainImage = hasArtDirection ? (
     <picture>
       {sources.mobile !== null && (
         <source
             media={MEDIA_QUERY.mobile}
-            srcSet={pictureProps(sources.mobile).srcSet}
+            srcSet={pictureSource(sources.mobile)}
             sizes={computedSizes}
         />
       )}
       {sources.tablet !== null && (
         <source
             media={MEDIA_QUERY.below}
-            srcSet={pictureProps(sources.tablet).srcSet}
+            srcSet={pictureSource(sources.tablet)}
             sizes={computedSizes}
         />
       )}
