@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 
+type WheelFrame = { offset: number; opacity: number };
+type WheelCapture = HTMLElement & { wheelFrame?: Promise<WheelFrame | { error: string }> };
+
 test('duration wheels support keyboard, wheel, drag and a bounded disabled state', async ({ page }) => {
   await page.goto('/');
   const picker = page.getByRole('group', { name: 'Duration', exact: true });
@@ -60,22 +63,51 @@ test('wheel digits move through real intermediate frames, reverse and settle; re
   const picker = page.getByRole('group', { name: 'Duration', exact: true });
   const hours = picker.getByRole('spinbutton', { name: 'Hours' });
   await hours.focus();
+  // Arm in the page before the keypress. Several later Playwright round trips can
+  // outlive the short animation even though it painted its intermediate frames.
+  await hours.evaluate(element => {
+    const wheel = element as WheelCapture;
+    wheel.wheelFrame = new Promise(resolve => {
+      let frame = 0;
+      const finish = (result: WheelFrame | { error: string }) => {
+        clearTimeout(timeout);
+        cancelAnimationFrame(frame);
+        observer.disconnect();
+        resolve(result);
+      };
+      const inspect = () => {
+        const incoming = wheel.querySelector('[data-motion="in"]');
+        const animation = incoming?.getAnimations()[0];
+        const progress = animation?.effect?.getComputedTiming().progress;
+        if (incoming && progress !== null && progress !== undefined && progress > .1 && progress < .95) {
+          const style = getComputedStyle(incoming);
+          finish({ offset: new DOMMatrixReadOnly(style.transform).m42, opacity: Number(style.opacity) });
+          return;
+        }
+        if (animation?.playState === 'finished') {
+          finish({ error: 'No intermediate wheel animation frame' });
+          return;
+        }
+        frame = requestAnimationFrame(inspect);
+      };
+      const observer = new MutationObserver(() => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(inspect);
+      });
+      const timeout = setTimeout(() => finish({ error: 'Wheel animation did not produce an intermediate frame' }), 3000);
+      observer.observe(wheel, { childList: true, subtree: true });
+    });
+  });
   await page.keyboard.press('ArrowUp');
   await expect(hours).toHaveAttribute('aria-valuenow', '2');
-  const incoming = hours.locator('[data-motion="in"]');
-  await expect(incoming).toHaveCount(1);
-  const intermediate = await incoming.evaluate(node => new Promise<{ offset: number; opacity: number }>((resolve, reject) => {
-    const inspect = () => {
-      const animation = node.getAnimations()[0];
-      const progress = animation?.effect?.getComputedTiming().progress;
-      if (progress !== null && progress !== undefined && progress > .1 && progress < .95) {
-        const style = getComputedStyle(node);
-        resolve({ offset: new DOMMatrixReadOnly(style.transform).m42, opacity: Number(style.opacity) });
-      } else if (!animation || animation.playState === 'finished') reject(new Error('No intermediate wheel animation frame'));
-      else requestAnimationFrame(inspect);
-    };
-    inspect();
-  }));
+  const intermediate = await hours.evaluate(async element => {
+    const wheel = element as WheelCapture;
+    if (!wheel.wheelFrame) throw new Error('Wheel frame sampler was not armed');
+    const result = await wheel.wheelFrame;
+    delete wheel.wheelFrame;
+    return result;
+  });
+  if ('error' in intermediate) throw new Error(intermediate.error);
   expect(intermediate.offset).toBeGreaterThan(0);
   expect(intermediate.opacity).toBeGreaterThan(0);
   expect(intermediate.opacity).toBeLessThan(1);
