@@ -9,6 +9,7 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   expect(html).toContain('ui-gradient-border');
   expect(html).toContain('ui-scroll-area');
   expect(html).toContain('Server scroll content');
+  expect(html).toContain('ui-duration-picker');
   expect(html).toContain('Текст из CMS');
   expect(html).toContain('aria-hidden="true"');
   expect(html).toContain('data-reveal="up"');
@@ -31,6 +32,11 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   await expect(page.getByTestId('ssr-named-slide').locator('.ui-slide-swap')).toHaveCSS('--slide-swap-dur', '190ms');
   await expect(page.getByTestId('ssr-named-reveal').locator('.ui-reveal')).toHaveCSS('--reveal-dur', '0.19s');
   await expect(page.getByTestId('ssr-named-clip').locator('.ui-clip')).toHaveCSS('--clip-dur', '190ms');
+  const duration = page.getByRole('spinbutton', { name: 'Minutes', exact: true });
+  await expect(duration).toHaveAttribute('aria-valuenow', '30');
+  await duration.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(duration).toHaveAttribute('aria-valuenow', '31');
   const button = page.getByTestId('ssr-button');
   await expect(page.getByTestId('ssr-counter').locator('.ui-counter-value')).toHaveText('125%');
   await expect(page.getByTestId('ssr-timeline').locator('.ui-counter-value')).toHaveText('250%');

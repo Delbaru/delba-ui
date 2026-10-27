@@ -19,6 +19,8 @@ export function ScrollAreaFixture() {
                     aria-label="Scrollable choices"
                     tabIndex={0}
                     scrollbar={{ color: 'rgb(120, 120, 120)', inset: 8 }}
+                    // Consumer native styles must not re-enable OS arrows in Chromium.
+                    style={{ scrollbarWidth: 'thin', scrollbarColor: 'red blue' }}
                     onScroll={(event) => {
                         if (event.currentTarget === viewport.current) setEvents((count) => count + 1);
                     }}

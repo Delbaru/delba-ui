@@ -401,3 +401,22 @@ keyframes на панели с layout-padding и border, а не только hi
 ### Браузерный стенд не должен наследовать список высот полей потребителя
 
 **Причина:** Select получает локальные CSS-классы высот из сгенерированного field-sizes; в потребителе без h=44 соответствующий класс отсутствовал даже при наличии правильного пропа в fixture. **Лечение:** Vite стенда конфигурирует Sass-модуль высот из фактических утилит fixture, не меняя генераты потребителя. На Windows импорт передаётся как file URL, BOM исходного SCSS убирается перед добавлением @use. Проверка: сценарии Select в reduce/no-preference после генерации потребителя, где нет высоты fixture; проверяется настоящая геометрия и работа выбора, не только наличие класса.
+## Chromium reintroduces native arrow buttons — 2026-10-27
+
+Symptom: an explicitly styled scroll viewport again shows Windows arrow buttons.
+Cause: a consumer's unlayered `scrollbar-width: thin` wins over the kit's layered
+reset, which disables all WebKit scrollbar geometry and button rules in Chromium.
+Fix: the kit enforces native width/colour `auto` in the WebKit branch, and hides
+single/double horizontal and vertical buttons. Use ScrollArea/scrollbarProps on
+the actual scrolling node; a plain overflowing Flex does not opt into this contract.
+Verify the computed reset with a deliberately conflicting consumer rule, both
+axes, wheel scrolling, and a screenshot; Firefox retains its native fallback.
+
+### Browser gate must resolve hoisted development tools
+
+Symptom: the consumer installed Vite at its workspace root, but the toolkit browser
+server tried `node_modules/vite` inside the submodule and failed before tests.
+Cause: a hardcoded dependency path assumed an isolated install. Fix: resolve Vite's
+public package metadata from the toolkit configuration, then launch its declared CLI
+path. Verify both the standalone checkout and a consumer with no toolkit-local
+`node_modules`; all library and browser suites remain mandatory.

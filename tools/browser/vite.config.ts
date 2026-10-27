@@ -23,6 +23,7 @@ function fixtureRules() {
         return { file, text: fs.readFileSync(file, 'utf8') };
       }),
       { file: path.join(fixtureRoot, 'refactor-contracts.fixture.tsx'), text: fs.readFileSync(path.join(fixtureRoot, 'refactor-contracts.fixture.tsx'), 'utf8') },
+      { file: path.join(kitRoot, 'src/components/DurationPicker/DurationPicker.tsx'), text: fs.readFileSync(path.join(kitRoot, 'src/components/DurationPicker/DurationPicker.tsx'), 'utf8') },
       { file: path.join(kitRoot, 'src/components/GradientBorder/GradientBorder.tsx'), text: fs.readFileSync(path.join(kitRoot, 'src/components/GradientBorder/GradientBorder.tsx'), 'utf8') },
     ]);
 }
