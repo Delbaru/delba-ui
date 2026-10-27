@@ -49,10 +49,14 @@ export interface UiConfig {
   readonly typography?: ExtractOptions['typography'];
   /** Стили темы для договора токенов. По умолчанию `theme`. */
   readonly theme?: string | readonly string[];
+  /** Include the starter theme in token checks when global SCSS imports @delba/ui/theme. */
+  readonly themeDefaults?: boolean;
   /** Папки под счётчик красных линий. По умолчанию `['src']`. */
   readonly rules?: readonly string[];
   /** Планка красных линий. По умолчанию `.rules-baseline.json`. */
   readonly baseline?: string;
+  /** Node export conditions for consumer tests only, e.g. react-server for server-only imports. */
+  readonly testConditions?: readonly string[];
   readonly skins?: UiSkins;
   /**
    * Базовые ширины макета, px: `1rpx = окно / база` на своей полосе, десктоп шире `max` не растёт.

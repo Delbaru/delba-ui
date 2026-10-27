@@ -11,7 +11,7 @@ import { projectSteps, uiCheckSteps } from './index.mjs';
 import { runNode, runSteps } from './run.mjs';
 
 test('CI suites cover the complete gate without dropping checks; each starts with generation', () => {
-    const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../site');
+    const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
     const complete = uiCheckSteps({ project }).map((step: { name: string }) => step.name);
     const partitioned = ['library', 'project', 'browser'].flatMap((suite) => {
         const steps = uiCheckSteps({ project, suite });
@@ -167,5 +167,32 @@ test('репортёр тестов показывает упавший тест
     } finally {
         fs.rmSync(file, { force: true });
         fs.rmdirSync(fixture);
+    }
+});
+
+test('consumer test conditions resolve server-only exports without changing library tests', async () => {
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-server-conditions-'));
+    const source = path.join(fixture, 'src');
+    const modules = path.join(fixture, 'node_modules');
+    const probe = path.join(modules, 'server-probe');
+    fs.mkdirSync(source);
+    fs.mkdirSync(probe, { recursive: true });
+    fs.writeFileSync(path.join(fixture, 'package.json'), '{"type":"module"}');
+    fs.writeFileSync(path.join(probe, 'package.json'), JSON.stringify({
+        name: 'server-probe', type: 'module', exports: { 'react-server': './server.js', default: './client.js' },
+    }));
+    fs.writeFileSync(path.join(probe, 'server.js'), 'export const value = 42;');
+    fs.writeFileSync(path.join(probe, 'client.js'), 'throw new Error("server-only export requires react-server");');
+    fs.writeFileSync(path.join(source, 'server.test.ts'), 'import assert from "node:assert/strict"; import {value} from "server-probe"; assert.equal(value, 42);');
+    try {
+        const step = (config = {}) => uiCheckSteps({ project: fixture, config, suite: 'project' })
+            .find((item: { name: string }) => item.name === 'Тесты проекта');
+        assert.equal((await step()?.run())?.ok, false);
+        assert.equal((await step({ testConditions: ['react-server'] })?.run())?.ok, true);
+    } finally {
+        for (const file of ['package.json', 'src/server.test.ts', 'node_modules/server-probe/package.json', 'node_modules/server-probe/server.js', 'node_modules/server-probe/client.js']) {
+            fs.unlinkSync(path.join(fixture, file));
+        }
+        for (const directory of [probe, modules, source, fixture]) fs.rmdirSync(directory);
     }
 });

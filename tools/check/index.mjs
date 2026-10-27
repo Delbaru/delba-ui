@@ -24,7 +24,7 @@ export function projectSteps(root, config, { update = false, strict = false, fix
   const configs = readdirSync(root).filter((file) => /^(next|ui).config./.test(file));
   return [
     nodeStep('Правила проекта', [script('check-rules.mjs'), '--baseline', config.baseline ?? '.rules-baseline.json', ...(update ? ['--update'] : []), ...(fix ? ['--fix'] : []), ...(config.rules ?? ['src'])], root),
-    nodeStep('Тема', [script('check-tokens.mjs'), ...(strict ? ['--strict'] : []), ...[config.theme ?? 'theme'].flat(), ...(config.motion ? ['--generated-motion', path.join(KIT, 'src/core/_motion.scss')] : []), ...(config.typography ? ['--typography', config.typography.join(',')] : [])], root),
+    nodeStep('Тема', [script('check-tokens.mjs'), ...(strict ? ['--strict'] : []), ...(config.themeDefaults ? ['--with-defaults'] : []), ...[config.theme ?? 'theme'].flat(), ...(config.motion ? ['--generated-motion', path.join(KIT, 'src/core/_motion.scss')] : []), ...(config.typography ? ['--typography', config.typography.join(',')] : [])], root),
     nodeStep('Импорты', [script('check-migration.mjs'), ...(config.rules ?? ['src']), ...configs], root),
     astStep('Архитектура проекта', root, { rules: projectRules, dirs: config.rules ?? ['src'] }),
   ];
@@ -59,7 +59,7 @@ export function uiCheckSteps({ project, config = {}, configArg = 'ui.config.ts',
     { ...nodeStep('Границы', [script('check-boundary.mjs')]), suite: 'library' },
     { ...nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']), suite: 'library' },
     { ...nodeStep('Тесты', ['--import', 'tsx', '--test', ...(process.env.CI ? ['--test-concurrency=2'] : []), '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, 'src/**/*.test.ts', 'tools/**/*.test.ts']), suite: 'library' },
-    ...(projectTests.length ? [{ ...nodeStep('Тесты проекта', ['--import', pathToFileURL(require.resolve('tsx')).href, '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, ...projectTests], project), suite: 'project' }] : []),
+    ...(projectTests.length ? [{ ...nodeStep('Тесты проекта', [...(config.testConditions ?? []).map((condition) => `--conditions=${condition}`), '--import', pathToFileURL(require.resolve('tsx')).href, '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, ...projectTests], project), suite: 'project' }] : []),
     { ...nodeStep('Браузер', [require.resolve('@playwright/test/cli'), 'test', '--config', 'tools/browser/playwright.config.ts', ...(shard ? ['--shard', shard] : [])]), suite: 'browser' },
     ...(fix ? projectChecks.slice(1) : projectChecks).map((step) => ({ ...step, suite: 'project' })),
   ];
