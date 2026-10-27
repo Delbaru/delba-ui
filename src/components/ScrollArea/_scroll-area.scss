@@ -13,8 +13,11 @@
     // Chromium ignores WebKit geometry/buttons when standard scrollbar styles are set.
     // Firefox keeps its native thin/auto fallback above.
     @supports selector(::-webkit-scrollbar) {
-        scrollbar-width: auto;
-        scrollbar-color: auto;
+        // This is an invariant of the custom scrollbar, including consumers
+        // with unlayered or inline native thin/colour overrides. Those styles
+        // otherwise switch Chromium back to OS scrollbars with arrow buttons.
+        scrollbar-width: auto !important;
+        scrollbar-color: auto !important;
     }
 
     &::-webkit-scrollbar {
@@ -30,6 +33,17 @@
         margin-block: var(--ui-scrollbar-inset);
         margin-inline: var(--ui-scrollbar-inset);
     }
-    &::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+    &::-webkit-scrollbar-button,
+    &::-webkit-scrollbar-button:single-button,
+    &::-webkit-scrollbar-button:double-button,
+    &::-webkit-scrollbar-button:vertical:start:decrement,
+    &::-webkit-scrollbar-button:vertical:end:increment,
+    &::-webkit-scrollbar-button:horizontal:start:decrement,
+    &::-webkit-scrollbar-button:horizontal:end:increment {
+        display: none;
+        width: 0;
+        height: 0;
+        appearance: none;
+    }
     &::-webkit-scrollbar-corner { background: transparent; }
 }

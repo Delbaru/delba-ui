@@ -378,3 +378,14 @@ trace подтверждает уменьшение пересчитываемо
 после чего hidden убирал его одним кадром. **Лечение:** закрытая геометрия находится
 в ui.states, без !important, чтобы WAAPI мог анимировать её. Проверять конечные
 keyframes на панели с layout-padding и border, а не только hidden в конце перехода.
+
+## Chromium reintroduces native arrow buttons — 2026-10-27
+
+Symptom: an explicitly styled scroll viewport again shows Windows arrow buttons.
+Cause: a consumer's unlayered `scrollbar-width: thin` wins over the kit's layered
+reset, which disables all WebKit scrollbar geometry and button rules in Chromium.
+Fix: the kit enforces native width/colour `auto` in the WebKit branch, and hides
+single/double horizontal and vertical buttons. Use ScrollArea/scrollbarProps on
+the actual scrolling node; a plain overflowing Flex does not opt into this contract.
+Verify the computed reset with a deliberately conflicting consumer rule, both
+axes, wheel scrolling, and a screenshot; Firefox retains its native fallback.
