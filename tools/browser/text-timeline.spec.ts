@@ -107,12 +107,27 @@ test('release between entry and clock registration cancels pending completion wo
 
 test('reveal without document animation snapshots keeps scoped timing fallback', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.addInitScript(() => Object.defineProperty(Document.prototype, 'getAnimations', { configurable: true, value: undefined }));
+  await page.addInitScript(() => {
+    Object.defineProperty(Document.prototype, 'getAnimations', { configurable: true, value: undefined });
+    // Record phases inside the page: a short intermediate state can finish
+    // between two Playwright assertions on a busy CI runner.
+    const samples: (string | null)[][] = [];
+    new MutationObserver(() => {
+      const first = document.querySelector('[data-testid="reveal-batch-a0"]');
+      const second = document.querySelector('[data-testid="reveal-batch-a1"]');
+      if (!first || !second) return;
+      samples.push([first.getAttribute('data-reveal-state'), second.getAttribute('data-reveal-state')]);
+      sessionStorage.setItem('revealFallbackPhases', JSON.stringify(samples));
+    }).observe(document, { subtree: true, attributes: true, attributeFilter: ['data-reveal-state'] });
+  });
   await page.goto('/');
   await page.addStyleTag({ content: '[data-testid="reveal-batch-a1"] { --reveal-duration: 0.6s; }' });
   await page.getByTestId('reveal-batches').scrollIntoViewIfNeeded();
+  await expect.poll(() => page.evaluate(() => {
+    const samples = JSON.parse(sessionStorage.getItem('revealFallbackPhases') ?? '[]') as (string | null)[][];
+    return samples.some(([first, second]) => first === 'done' && second === 'in');
+  })).toBe(true);
   await expect(page.getByTestId('reveal-batch-a0')).toHaveAttribute('data-reveal-state', 'done');
-  await expect(page.getByTestId('reveal-batch-a1')).toHaveAttribute('data-reveal-state', 'in');
   await expect(page.getByTestId('reveal-batch-a1')).toHaveAttribute('data-reveal-state', 'done');
 });
 

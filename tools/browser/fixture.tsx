@@ -89,6 +89,7 @@ declare global {
     __phoneProfileSamples: number[];
     __phoneCountryOptionCount: number;
     __motionProfileSamples: { phase: string; actualDuration: number; baseDuration: number }[];
+    __motionProfileUpdate: { phase: string; actualDuration: number; baseDuration: number } | null;
     __setMotionProfileEnabled: ((value: boolean) => void) | null;
     __setMotionProfileText: ((value: string) => void) | null;
     __modalSelectChanges: string[];
@@ -129,6 +130,7 @@ const initWindowState = () => {
   window.__phoneProfileSamples = [];
   window.__phoneCountryOptionCount = 0;
   window.__motionProfileSamples = [];
+  window.__motionProfileUpdate = null;
   window.__setMotionProfileEnabled = null;
   window.__setMotionProfileText = null;
   window.__modalSelectChanges = [];
@@ -293,6 +295,8 @@ function MotionProfileField() {
       </button>
       <Profiler id="motion-40-text-tree" onRender={(_id, phase, actualDuration, baseDuration) => {
         window.__motionProfileSamples = [...window.__motionProfileSamples, { phase, actualDuration, baseDuration }].slice(-20);
+        // Nested commits can evict the root update from the bounded history.
+        if (phase === 'update') window.__motionProfileUpdate = { phase, actualDuration, baseDuration };
       }}>
         <Box
           data-testid="motion-profile-box"
