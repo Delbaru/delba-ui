@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { reportLegacy } from './check-migration.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss', '_scale.scss', '_motion.scss']);
+const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss', '_scale.scss', '_motion.scss', '_scrollbar-policy.scss', 'scrollbar-config.ts']);
 // Генераты шкур несут токены ПРОЕКТА из его словарей — в договор кита они не входят.
 const GENERATED_SKIN = new Set(['_tokens.scss', '_classes.scss'].map((name) => path.join(ROOT, 'src', 'skin', name)));
 // Заглушки в тестах — не потребители темы: их значения в договор токенов не идут.

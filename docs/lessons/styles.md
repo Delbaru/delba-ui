@@ -420,3 +420,33 @@ Cause: a hardcoded dependency path assumed an isolated install. Fix: resolve Vit
 public package metadata from the toolkit configuration, then launch its declared CLI
 path. Verify both the standalone checkout and a consumer with no toolkit-local
 `node_modules`; all library and browser suites remain mandatory.
+
+### Native scrollbar fade and browser input
+
+Native thumb transitions cannot be trusted as ordinary element transitions.
+Animate a registered opacity variable on the viewport and derive thumb/track
+paint from it; leave native width, gutter and hit testing intact. Hover, native
+scroll and dragging share one document observer, with delayed cleanup, cancel,
+blur, visibility and detached-node handling. Config generates the same defaults
+for SSR helpers and plain scroll surfaces; without an active observer the
+decoration remains visible. Reduced motion removes both transitions.
+
+Chromium headless adds `--hide-scrollbars`: computed thumb paint and reserved
+gutter still exist while native painting/dragging is unavailable. Scrollbar
+regressions therefore remove only that launch argument and check real mouse
+drag, painted intermediate alpha, screenshots, hover/leave delay, keyboard,
+scroll without hover and reduced motion. A variable changing from 0 to 1 alone
+does not prove native scrollbar behavior. Generated config colors belong to
+the consumer and are excluded from the kit's starter-theme contract.
+
+Keep the generated stylesheet's basename distinct from the TS runtime config:
+Next's Sass importer tried to resolve `scrollbar-config` as the same-named TS
+module, reporting a missing stylesheet even when the Sass file existed. The
+stylesheet now uses `scrollbar-policy`, with a tracked directory fallback that
+also compiles in a fresh checkout before generation.
+
+Use DOM constructors from the observed document's defaultView. The initial
+global MutationObserver lookup broke consumer focus tests whose JSDOM realm
+provided the constructor without copying it onto globalThis. MutationObserver,
+HTMLElement and Node now all come from the owner realm; the existing nested
+dialog focus tests exercise this integration as well as browser regressions.

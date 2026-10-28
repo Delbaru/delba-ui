@@ -3,6 +3,7 @@
 import { cx, type WithRef } from '../../core';
 import { Flex, type FlexProps } from '../Flex';
 import { scrollbarProps, type ScrollbarOptions } from './scrollbar';
+import { useScrollbarActivity } from './ScrollbarActivity';
 
 export interface ScrollAreaProps extends Omit<FlexProps, 'scrollFade'> {
     /** Ось нативной прокрутки. По умолчанию y. */
@@ -15,6 +16,7 @@ export interface ScrollAreaProps extends Omit<FlexProps, 'scrollFade'> {
 
 /** Сам узел прокрутки: ref и DOM-события относятся к viewport. Заголовок и footer размещаются снаружи. */
 export function ScrollArea({ axis = 'y', fade = false, scrollbar, className, style, ...props }: WithRef<ScrollAreaProps, HTMLDivElement>) {
+    useScrollbarActivity();
     const decoration = scrollbarProps(scrollbar);
 
     return (

@@ -1,0 +1,9 @@
+@use '../../core/mixins' as m;
+
+:where(:root[data-ui-scrollbar-ready]) .ui-scrollbar,
+:where(:root[data-ui-scrollbar-ready]).ui-scrollbar { --ui-scrollbar-opacity: var(--ui-scrollbar-rest-opacity, 1); }
+.ui-scrollbar[data-ui-scrollbar-active] { --ui-scrollbar-opacity: 1; transition-duration: var(--ui-scrollbar-show-duration, 0s); }
+@include m.reduced-motion {
+    .ui-scrollbar, .ui-scrollbar[data-ui-scrollbar-active] { transition-duration: 0s; }
+}
+@media (forced-colors: active) { .ui-scrollbar { --ui-scrollbar-opacity: 1; } }

@@ -8,6 +8,8 @@ src/core/_motion.scss
 src/core/scale.ts
 src/core/motion-config.ts
 src/core/image-config.ts
+src/core/scrollbar-config.ts
+src/core/_scrollbar-policy.scss
 
 # Ссылки pnpm на peer-зависимости: кит — пакет воркспейса проекта
 node_modules

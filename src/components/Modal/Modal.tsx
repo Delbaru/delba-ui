@@ -17,6 +17,7 @@ import styles from './Modal.module.scss';
 import { boxLayout, composeEventHandlers, createLayoutClasses, cx, MEDIA_QUERY, MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs, useMergedRefs, type BoxLayoutProps, type LayoutSpaceProps, type ResponsiveInput, type ResponsiveValue, type SpaceValue, type StateLinkInput, type WithRef } from '../../core';
 import { Flex } from '../Flex';
 import { scrollbarProps, type ScrollbarOptions } from '../ScrollArea/scrollbar';
+import { useScrollbarActivity } from '../ScrollArea/ScrollbarActivity';
 import { ModalDeclarationPortal, useModalRegistry, useModalRuntime } from './ModalProvider';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -397,6 +398,7 @@ function DeclarativeModal({ ref, trigger, open: controlledOpen, defaultOpen = fa
 }
 
 export function Modal(props: WithRef<ModalProps, HTMLDivElement>) {
+  useScrollbarActivity();
   if (props.trigger || props.open !== undefined || props.defaultOpen !== undefined) return <DeclarativeModal
       {...props}
   />;

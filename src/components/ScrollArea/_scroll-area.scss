@@ -1,3 +1,5 @@
+@property --ui-scrollbar-opacity { syntax: '<number>'; inherits: true; initial-value: 1; }
+
 .ui-scroll-area {
     min-height: 0;
     min-width: 0;
@@ -7,7 +9,12 @@
 }
 
 .ui-scrollbar {
-    scrollbar-color: var(--ui-scrollbar-color) var(--ui-scrollbar-track);
+    // Progressive enhancement: plain SSR helpers stay visible until the observer mounts.
+    --ui-scrollbar-opacity: 1;
+    --ui-scrollbar-thumb-paint: color-mix(in srgb, var(--ui-scrollbar-color) calc(var(--ui-scrollbar-opacity) * 100%), transparent);
+    --ui-scrollbar-track-paint: color-mix(in srgb, var(--ui-scrollbar-track) calc(var(--ui-scrollbar-opacity) * 100%), transparent);
+    transition: --ui-scrollbar-opacity var(--ui-scrollbar-fade-duration, 0s) ease;
+    scrollbar-color: var(--ui-scrollbar-thumb-paint) var(--ui-scrollbar-track-paint);
     scrollbar-width: var(--ui-scrollbar-native-width);
 
     // Chromium ignores WebKit geometry/buttons when standard scrollbar styles are set.
@@ -25,11 +32,11 @@
         height: var(--ui-scrollbar-width);
     }
     &::-webkit-scrollbar-thumb {
-        background: var(--ui-scrollbar-color);
+        background: var(--ui-scrollbar-thumb-paint);
         border-radius: var(--ui-scrollbar-width);
     }
     &::-webkit-scrollbar-track {
-        background: var(--ui-scrollbar-track);
+        background: var(--ui-scrollbar-track-paint);
         margin-block: var(--ui-scrollbar-inset);
         margin-inline: var(--ui-scrollbar-inset);
     }

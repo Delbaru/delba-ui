@@ -70,6 +70,8 @@ description: 'Правка и создание компонентов общей
 Не заменяй if/useState системой команд, render-обёрткой или ручкой set стилей без
 самостоятельной задачи. Пресет — готовый набор настроек; размер/геометрия — size/layout.
 Сохранённые DOM/ref/events/SSR/reduced motion важнее уменьшения числа строк.
+DOM-конструкторы observer и проверки instanceof бери из ownerDocument.defaultView:
+порталы, iframe и JSDOM могут принадлежать другому realm без копий на globalThis.
 Составное поле сохраняет нативный договор: uncontrolled checked/reset, отменённый reset,
 form= и readonly/disabled на каждом пути записи. Подписка на DOM переподключается при
 замене ref target; события дополняются composeInteractionHandlers, не spread-перекрытием.
