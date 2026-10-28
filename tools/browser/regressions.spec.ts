@@ -2193,16 +2193,19 @@ test('motion profiler records static and enabled 40-Text updates as an observati
   await expect(box).toContainText('Profile text A 40');
   const staticSample = await page.evaluate(() => window.__motionProfileSamples.at(-1));
   expect(staticSample).toBeTruthy();
+  await page.evaluate(() => { window.__motionProfileUpdate = null; });
   await page.getByTestId('motion-profile-update').click();
   await expect(box).toContainText('Profile text B 40');
-  const staticTextUpdate = await page.evaluate(() => window.__motionProfileSamples.at(-1));
+  const staticTextUpdate = await page.evaluate(() => window.__motionProfileUpdate);
 
+  await page.evaluate(() => { window.__motionProfileUpdate = null; });
   await page.getByTestId('motion-profile-toggle').click();
   await expect(box).toHaveAttribute('data-profile-mode', 'motion');
-  const enabledSample = await page.evaluate(() => window.__motionProfileSamples.at(-1));
+  const enabledSample = await page.evaluate(() => window.__motionProfileUpdate);
+  await page.evaluate(() => { window.__motionProfileUpdate = null; });
   await page.getByTestId('motion-profile-update').click();
   await expect(box).toContainText('Profile text A 40');
-  const motionTextUpdate = await page.evaluate(() => window.__motionProfileSamples.at(-1));
+  const motionTextUpdate = await page.evaluate(() => window.__motionProfileUpdate);
   const observation = { static: staticSample, staticTextUpdate, enabled: enabledSample, motionTextUpdate };
   console.log('[motion-profiler-observation]', JSON.stringify(observation));
   expect(observation.staticTextUpdate?.phase).toBe('update');
