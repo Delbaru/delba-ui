@@ -13,7 +13,7 @@ import { isAppearanceAnimate, withoutStagger, type RevealInput, type RevealOptio
 import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { useImgSwap } from './swap/useImgSwap';
 import type { ImgAnimate } from './swap/types';
-import { imageUnoptimized } from './optimization';
+import { imageUnoptimized, nativeImageSizes } from './optimization';
 
 const c = createLayoutClasses();
 
@@ -100,6 +100,7 @@ export interface ImgProps extends ImgBaseProps, BoxLayoutProps, ImgRootSizeProps
 
 
 
+  /** Явная подсказка ресурса. Без неё lazy contain использует native auto с responsive fallback. */
   sizes?: string;
 
   /**
@@ -303,6 +304,9 @@ export function Img({
     maxH: imageSizeProps.maxH,
   };
   const { rootProps, elementProps } = splitRootDomProps(props as ImgElementProps);
+  const automaticSizes = !sizes && sizesWidth === undefined && sizesHeight === undefined &&
+    !priority && elementProps.preload !== true && loading !== 'eager' &&
+    resolveResponsive(objectFit).every(value => value === 'contain');
 
   // Next fetches originals without visitor cookies. Local API files are private by default;
   // the project may declare public directories once in ui.config.images.optimizeApi.
@@ -311,7 +315,7 @@ export function Img({
   // preload-ссылки, которая у кадров по полосам тянула бы десктопный файл и на телефон.
   const imageProps = {
     ...elementProps,
-    loading: priority ? 'eager' : loading,
+    loading: priority ? 'eager' : loading ?? (automaticSizes ? 'lazy' : undefined),
     fetchPriority: priority ? 'high' : fetchPriority,
     src: sources.desktop,
     unoptimized: imageUnoptimized(sources.desktop, elementProps.unoptimized),
@@ -336,8 +340,12 @@ export function Img({
     if (sizes) return sizes;
     const widthForSizes = sizesWidth ?? imageSizeProps.w;
     const heightForSizes = sizesHeight ?? imageSizeProps.h;
-    return buildSizes(widthForSizes, heightForSizes, aspectRatio);
-  }, [aspectRatio, imageSizeProps.h, imageSizeProps.w, sizes, sizesHeight, sizesWidth]);
+    const fallback = buildSizes(widthForSizes, heightForSizes, aspectRatio);
+    // Lazy contain знает свою реальную рамку после layout. В поддерживающем браузере
+    // выбор ресурса нативный; старый браузер использует прежний responsive fallback.
+    // Cover и явные подсказки сохраняем: им может требоваться запас под crop/zoom.
+    return automaticSizes ? nativeImageSizes(fallback) : fallback;
+  }, [aspectRatio, automaticSizes, imageSizeProps.h, imageSizeProps.w, sizes, sizesHeight, sizesWidth]);
   const normalizedAlt = typeof alt === 'string' ? alt : '';
   const swapIdentity = typeof sources.desktop === 'string' ? sources.desktop : resolveFancyboxHref(sources.desktop) ?? '';
   const fancyboxAriaLabel = normalizedAlt || 'Изображение';

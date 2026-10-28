@@ -61,7 +61,11 @@ export function useScroll<T>(optionsOrSelect: ScrollWatchOptions | ((snapshot: S
     };
     const observer = new ResizeObserver(dimensions);
     observer.observe(document.body);
-    const unsubscribe = subscribeWindowScroll((y) => { position = y; schedule(); });
+    const unsubscribe = subscribeWindowScroll((y) => {
+      position = y;
+      cancelAnimationFrame(frame);
+      sync();
+    });
     window.addEventListener('resize', dimensions);
     dimensions();
     return () => {

@@ -81,6 +81,10 @@ $load-max: 24;
 }
 
 @media screen {
+  #{$load-child} {
+    --reveal-delay: inherit;
+  }
+
   #{$load-self},
   #{$load-child} {
     animation: ui-reveal var(--reveal-duration, var(--t-m-reveal-duration)) var(--t-t-f-cubic-bezier)

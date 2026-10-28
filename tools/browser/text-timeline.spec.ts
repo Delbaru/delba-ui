@@ -1,5 +1,149 @@
 import { expect, test } from '@playwright/test';
 
+test('reveal prepares every host before reading scoped duration and preserves cascade cleanup', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    const getAnimations = Document.prototype.getAnimations;
+    const initialReads: string[][] = [];
+    const reads: string[][] = [];
+    Document.prototype.getAnimations = function() {
+      if (this.querySelector('[data-testid="reveal-batch-a0"]:not([data-reveal-state])')) {
+        initialReads.push(Array.from(document.querySelectorAll('[data-testid^="reveal-batch-"]'), el => el.getAttribute('data-reveal-state') ?? 'unset'));
+        sessionStorage.setItem('revealInitialReads', JSON.stringify(initialReads));
+      }
+      if (this.querySelector('[data-testid="reveal-batch-a0"][data-reveal-state="in"]')) {
+        reads.push(Array.from(document.querySelectorAll('[data-testid^="reveal-batch-"]'), el => el.getAttribute('data-reveal-state') ?? 'unset'));
+        sessionStorage.setItem('revealBatchReads', JSON.stringify(reads));
+      }
+      return getAnimations.call(this);
+    };
+  });
+  await page.goto('/');
+  await expect(page.getByTestId('reveal-load-child-0')).toHaveCSS('animation-delay', '0.1s');
+  await expect(page.getByTestId('reveal-load-child-1')).toHaveCSS('animation-delay', '0.18s');
+  await page.addStyleTag({ content: '[data-testid="reveal-batch-a1"] { --reveal-duration: 0.6s; }' });
+  const scope = page.getByTestId('reveal-batches');
+  const targets = scope.locator('[data-testid^="reveal-batch-"]');
+  await expect(targets.first()).toHaveAttribute('data-reveal-state', 'wait');
+  const initialReads = await page.evaluate(() => JSON.parse(sessionStorage.getItem('revealInitialReads') ?? '[]') as string[][]);
+  expect(initialReads).toHaveLength(1);
+  expect(initialReads.every(states => states.length === 4 && states.every(state => state === 'unset'))).toBe(true);
+  await scope.scrollIntoViewIfNeeded();
+  await expect(targets.first()).toHaveAttribute('data-reveal-state', 'in');
+  await expect.poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem('revealBatchReads') ?? '[]').length)).toBeGreaterThan(0);
+  const reads = await page.evaluate(() => JSON.parse(sessionStorage.getItem('revealBatchReads') ?? '[]') as string[][]);
+  expect(reads.length).toBeGreaterThan(0);
+  expect(reads.every(states => states.length === 4 && states.every(state => state === 'in'))).toBe(true);
+  for (const [index, delay] of ['0s', '0.06s', '0.1s', '0.18s'].entries()) {
+    await expect(targets.nth(index)).toHaveCSS('animation-delay', delay);
+  }
+  await expect(page.getByTestId('batch-descendant')).toHaveCSS('--reveal-delay', '0s');
+  await expect(page.getByTestId('reveal-batch-a0')).toHaveAttribute('data-reveal-state', 'done');
+  await expect(page.getByTestId('reveal-batch-a1')).toHaveAttribute('data-reveal-state', 'in');
+  for (const target of await targets.all()) {
+    await expect(target).toHaveAttribute('data-reveal-state', 'done');
+  }
+});
+
+test('reveal follows native pause, scoped duration changes and cancellation without stale deadlines', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+  await page.addStyleTag({ content: '[data-testid="reveal-batch-a1"] { --reveal-duration: 0.6s; }' });
+  const target = page.getByTestId('reveal-batch-a1');
+  await page.getByTestId('reveal-batches').scrollIntoViewIfNeeded();
+  await expect(target).toHaveAttribute('data-reveal-state', 'in');
+  await target.evaluate(el => {
+    const animation = el.getAnimations().find(a => a instanceof CSSAnimation && a.animationName === 'ui-reveal');
+    if (!animation) throw new Error('Missing reveal clock');
+    animation.pause();
+    animation.currentTime = 160;
+  });
+  await page.waitForTimeout(850);
+  await expect(target).toHaveAttribute('data-reveal-state', 'in');
+  await target.evaluate(el => {
+    el.style.setProperty('--reveal-duration', '1.2s');
+    const animation = el.getAnimations().find(a => a instanceof CSSAnimation && a.animationName === 'ui-reveal');
+    if (!animation) throw new Error('Lost paused reveal clock');
+    animation.finish();
+  });
+  await expect(target).toHaveAttribute('data-reveal-state', 'done');
+  await page.goto('/?cancel-reveal');
+  await page.addStyleTag({ content: '[data-testid="reveal-batch-a1"] { --reveal-duration: 2s; }' });
+  await page.getByTestId('reveal-batches').scrollIntoViewIfNeeded();
+  await expect(target).toHaveAttribute('data-reveal-state', 'in');
+  await target.evaluate(el => el.getAnimations().forEach(animation => animation.cancel()));
+  await expect(target).toHaveAttribute('data-reveal-state', 'done');
+  await expect(target).toHaveCSS('will-change', 'auto');
+});
+
+test('release between entry and clock registration cancels pending completion work', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/?smooth');
+  const result = await page.evaluate(async () => {
+    const fixturePath = '/text-timeline.fixture.tsx';
+    const { armReveal, releaseReveal, resolveReveal } = await import(fixturePath);
+    const node = document.createElement('div');
+    node.dataset.reveal = 'up';
+    node.style.cssText = 'position:absolute;top:100px;width:40px;height:40px;--reveal-duration:10s';
+    document.body.appendChild(node);
+    let released = false;
+    const observer = new MutationObserver(() => {
+      if (node.getAttribute('data-reveal-state') !== 'in') return;
+      releaseReveal(node);
+      node.remove();
+      released = true;
+    });
+    observer.observe(node, { attributes: true, attributeFilter: ['data-reveal-state'] });
+    armReveal(node, resolveReveal('up'));
+    try {
+      await new Promise(resolve => setTimeout(resolve, 150));
+      return { released, state: node.getAttribute('data-reveal-state'), animations: node.getAnimations().length };
+    } finally {
+      observer.disconnect(); releaseReveal(node); node.remove();
+    }
+  });
+  expect(result).toEqual({ released: true, state: null, animations: 0 });
+});
+
+test('reveal without document animation snapshots keeps scoped timing fallback', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => Object.defineProperty(Document.prototype, 'getAnimations', { configurable: true, value: undefined }));
+  await page.goto('/');
+  await page.addStyleTag({ content: '[data-testid="reveal-batch-a1"] { --reveal-duration: 0.6s; }' });
+  await page.getByTestId('reveal-batches').scrollIntoViewIfNeeded();
+  await expect(page.getByTestId('reveal-batch-a0')).toHaveAttribute('data-reveal-state', 'done');
+  await expect(page.getByTestId('reveal-batch-a1')).toHaveAttribute('data-reveal-state', 'in');
+  await expect(page.getByTestId('reveal-batch-a1')).toHaveAttribute('data-reveal-state', 'done');
+});
+
+test('batched reveal preserves expired hold, fresh hold and release before initialization', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/?smooth');
+  const states = await page.evaluate(async () => {
+    const fixturePath = '/text-timeline.fixture.tsx';
+    const { armReveal, releaseReveal, resolveReveal } = await import(fixturePath);
+    const config = resolveReveal('up');
+    const nodes = [0, 1, 2, 3].map(index => {
+      const node = document.createElement('div');
+      node.dataset.reveal = 'up';
+      node.style.cssText = `position:absolute;top:${index === 2 ? 50000 : 100}px;width:40px;height:40px`;
+      if (index === 0 || index === 2) node.style.animation = 'none';
+      document.body.appendChild(node);
+      armReveal(node, config);
+      return node;
+    });
+    const removed = nodes[3];
+    if (removed) { releaseReveal(removed); removed.remove(); }
+    try {
+      await Promise.resolve();
+      return nodes.map(node => node.getAttribute('data-reveal-state'));
+    } finally {
+      for (const node of nodes) { releaseReveal(node); node.remove(); }
+    }
+  });
+  expect(states).toEqual(['done', 'wait', 'wait', null]);
+});
+
 test('whole text slide moves matching letters too and settles after rapid changes', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');

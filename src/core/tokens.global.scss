@@ -21,6 +21,9 @@
 @property --parallax-translate-x { syntax: '<length>'; inherits: false; initial-value: 0px; }
 @property --parallax-translate-y { syntax: '<length>'; inherits: false; initial-value: 0px; }
 @property --parallax-transform { syntax: '*'; inherits: false; initial-value: none; }
+// Observer пишет задержку каждому участнику. Её изменение не должно инвалидировать
+// стили всего поддерева карточки; load-каскад наследует значение явно в reveal.scss.
+@property --reveal-delay { syntax: '*'; inherits: false; initial-value: 0s; }
 
 // Масштаб: `--base-width` и `--rpx` по полосам из `scale` конфига (генерат). Слой — чтобы тема
 // проекта, которая ещё объявляет `--rpx` сама, перебивала его при любом порядке подключения.

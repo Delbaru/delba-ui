@@ -203,6 +203,38 @@ test('interaction scope holds portal controls and releases them on close and unm
   await expect(page.getByRole('button', { name: 'Close scoped dropdown', exact: true })).toHaveCount(0);
 });
 
+test('lazy contain images select native auto sizes while eager, cover and explicit hints keep their contract', async ({ page }) => {
+  await page.goto('/');
+  const auto = page.getByTestId('sizes-auto');
+  await expect(auto).toHaveAttribute('loading', 'lazy');
+  await expect(auto).toHaveAttribute('sizes', /^auto, /);
+  for (const variant of ['eager', 'priority', 'explicit', 'zoom', 'cover']) {
+    await expect(page.getByTestId(`sizes-${variant}`)).not.toHaveAttribute('sizes', /^auto/);
+  }
+  await expect(page.getByTestId('sizes-explicit')).toHaveAttribute('sizes', '72px');
+});
+
+test('window scroll events share one position read in the animation frame', async ({ page }) => {
+  await page.goto('/?smooth');
+  const result = await page.evaluate(async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
+    if (!descriptor?.get) throw new Error('Missing native scrollY getter');
+    const engine = window.__createSmoothScroll({ lerp: 0.1, wheelMultiplier: 1, duration: 0.1, easing: (x: number) => x, offset: 0, mobile: true, anchors: false, updateHash: false });
+    let reads = 0;
+    Object.defineProperty(window, 'scrollY', { ...descriptor, get: () => { reads++; return descriptor.get?.call(window); } });
+    try {
+      for (let i = 0; i < 3; i++) window.dispatchEvent(new Event('scroll'));
+      const duringEvents = reads;
+      await new Promise(requestAnimationFrame);
+      return { duringEvents, afterFrame: reads };
+    } finally {
+      engine.destroy();
+      Object.defineProperty(window, 'scrollY', descriptor);
+    }
+  });
+  expect(result).toEqual({ duringEvents: 0, afterFrame: 1 });
+});
+
 test('smooth scroll caches the range and refreshes it when page content grows', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/?smooth');
