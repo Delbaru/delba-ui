@@ -118,6 +118,11 @@ test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport r
   expect(await search.boundingBox()).toEqual(before);
   await expect.poll(async () => Number(await page.getByTestId('scroll-area-events').textContent())).toBeGreaterThan(0);
   const scrollbar = await viewport.evaluate((node) => {
+    const context = document.createElement('canvas').getContext('2d');
+    if (!context) throw new Error('Missing 2d context');
+    context.fillStyle = getComputedStyle(node, '::-webkit-scrollbar-thumb').backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
     const probe = document.createElement('span');
     probe.style.cssText = 'position:absolute;width:var(--ui-scrollbar-width)';
     node.append(probe);
@@ -125,7 +130,7 @@ test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport r
     probe.remove();
     return {
     width: getComputedStyle(node, '::-webkit-scrollbar').width,
-    color: getComputedStyle(node, '::-webkit-scrollbar-thumb').backgroundColor,
+    color: `rgb(${red}, ${green}, ${blue})`,
     buttons: getComputedStyle(node, '::-webkit-scrollbar-button').display,
     nativeWidth: getComputedStyle(node).scrollbarWidth,
     nativeColor: getComputedStyle(node).scrollbarColor,

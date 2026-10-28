@@ -12,8 +12,8 @@
   }
 
   :where(*)::-webkit-scrollbar {
-    width: calc(4 * var(--rpx));
-    height: calc(4 * var(--rpx));
+    width: var(--ui-scrollbar-width, calc(4 * var(--rpx)));
+    height: var(--ui-scrollbar-width, calc(4 * var(--rpx)));
   }
   :where(*)::-webkit-scrollbar-track { background: transparent; }
   :where(*)::-webkit-scrollbar-thumb {

@@ -35,9 +35,11 @@ async function loadConfig() {
   }
   const { validateMotion } = await import('./motion.ts');
   const { validateImages } = await import('./images.ts');
+  const { validateScrollbar } = await import('./scrollbar.ts');
   try {
     validateMotion(config.motion);
     validateImages(config.images);
+    validateScrollbar(config.scrollbar);
   } catch (error) {
     throw new Error(`${path.relative(root, configFile)}: ${error instanceof Error ? error.message : error}`);
   }
@@ -53,6 +55,8 @@ async function load() {
   generateMotion(config.motion);
   const { generateImages } = await import('./images.ts');
   generateImages(config.images);
+  const { generateScrollbar } = await import('./scrollbar.ts');
+  generateScrollbar(config.scrollbar);
   const { createUtilities } = await import('./utilities/generate.ts');
   const { generateSkins } = await import('./skin.ts');
   const utilities = createUtilities(root, { scan: [...(config.scan ?? ['src']), path.relative(root, KIT)], seeds: config.seeds, typography: config.typography, scale: config.scale });

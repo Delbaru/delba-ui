@@ -33,6 +33,7 @@
 
 // Config owns these durations; outside layers they override the kit's starter theme.
 @include meta.load-css('./motion');
+@include meta.load-css('./scrollbar-policy');
 
 @layer ui.utilities {
   @include meta.load-css('./utilities');
@@ -62,6 +63,7 @@
 
 // Появление по скроллу (`reveal` у Flex, Grid, Box, Img) — состояние узла, его ставит наблюдатель.
 @layer ui.states {
+  @include meta.load-css('../components/ScrollArea/scroll-area-states');
   @include meta.load-css('../components/Flex/flex-states');
   @include meta.load-css('./reveal/reveal');
 }
