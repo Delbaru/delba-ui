@@ -295,8 +295,9 @@ function MotionProfileField() {
       </button>
       <Profiler id="motion-40-text-tree" onRender={(_id, phase, actualDuration, baseDuration) => {
         window.__motionProfileSamples = [...window.__motionProfileSamples, { phase, actualDuration, baseDuration }].slice(-20);
-        // Nested commits can evict the root update from the bounded history.
-        if (phase === 'update') window.__motionProfileUpdate = { phase, actualDuration, baseDuration };
+        // React also reports layout-effect commits as nested-update. Preserve
+        // the action's first commit before later commits evict bounded history.
+        if (phase !== 'mount' && !window.__motionProfileUpdate) window.__motionProfileUpdate = { phase, actualDuration, baseDuration };
       }}>
         <Box
           data-testid="motion-profile-box"

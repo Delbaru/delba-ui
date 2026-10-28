@@ -2208,9 +2208,9 @@ test('motion profiler records static and enabled 40-Text updates as an observati
   const motionTextUpdate = await page.evaluate(() => window.__motionProfileUpdate);
   const observation = { static: staticSample, staticTextUpdate, enabled: enabledSample, motionTextUpdate };
   console.log('[motion-profiler-observation]', JSON.stringify(observation));
-  expect(observation.staticTextUpdate?.phase).toBe('update');
-  expect(observation.enabled?.phase).toBe('update');
-  expect(observation.motionTextUpdate?.phase).toBe('update');
+  expect(observation.staticTextUpdate?.phase).toMatch(/^(update|nested-update)$/);
+  expect(observation.enabled?.phase).toMatch(/^(update|nested-update)$/);
+  expect(observation.motionTextUpdate?.phase).toMatch(/^(update|nested-update)$/);
 });
 
 test('date calendar inside Modal stays in its focus scope and Escape restores the input', async ({ page }) => {
