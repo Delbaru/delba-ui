@@ -95,6 +95,25 @@ test('actual single-source Img SSR preloads the optimized image and protects pri
     assert.doesNotMatch(privateHtml, /\/_next\/image/);
 });
 
+test('actual contain Img SSR uses native auto sizing but preserves explicit preload', () => {
+    const { Img: ServerImg } = createRequire(import.meta.url)('../src/components/Img/Img.tsx') as typeof import('../src/components/Img/Img');
+    const props = {
+        src: '/product.webp', alt: 'Contained product',
+        objectFit: ['contain', 'contain', 'contain'] as ['contain', 'contain', 'contain'],
+        w: ['100%', '100%', '100%'] as ['100%', '100%', '100%'],
+        h: ['100%', '100%', '100%'] as ['100%', '100%', '100%'],
+    };
+    const html = renderToStaticMarkup(createElement(ServerImg, props));
+    assert.match(html, /loading="lazy"/);
+    assert.match(html, /sizes="auto, /);
+    assert.match(html, /srcSet="\/_next\/image/);
+    assert.match(html, / 384w[,\"]/);
+    const preloaded = renderToStaticMarkup(createElement(ServerImg, { ...props, preload: true }));
+    assert.match(preloaded, /<link rel="preload"/);
+    assert.doesNotMatch(preloaded, /sizes="auto/);
+    assert.doesNotMatch(preloaded, /loading="lazy"/);
+});
+
 test('image config rejects ambiguous, remote and malformed directory prefixes', () => {
     validateImages();
     validateImages({ optimizeApi: [] });

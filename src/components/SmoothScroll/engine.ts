@@ -1,5 +1,5 @@
 import { MEDIA_QUERY } from '../../core/base/breakpoints';
-import { subscribeWindowScroll } from './scroll-events';
+import { flushWindowScroll, subscribeWindowScroll } from './scroll-events';
 import {
   anchorTop,
   autoDurationMs,
@@ -106,6 +106,9 @@ export function createSmoothScroll(initial: SmoothScrollConfig): SmoothScrollCon
 
   const tick = (now: number) => {
     frame = 0;
+    // Чужой scroll должен прервать ход ДО нашей записи, даже если tick уже стоял
+    // в очереди rAF раньше общей доставки scroll-подписчиков.
+    flushWindowScroll();
     const dt = Math.min(now - last, MAX_FRAME_MS);
     last = now;
 

@@ -6,6 +6,9 @@ import { useScroll } from '../../src/hooks/useScroll';
 import { Flex } from '../../src/components/Flex';
 import { GradientBorder } from '../../src/components/GradientBorder';
 import { Carousel } from '../../src/components/Carousel';
+import { Img } from '../../src/components/Img';
+
+const imageSource = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2280%22 height=%2280%22/%3E';
 
 export function RefactorContractsFixture() {
   const [limit, setLimit] = useState(0);
@@ -14,6 +17,53 @@ export function RefactorContractsFixture() {
   return (
     <section>
       <h2>Refactor contracts</h2>
+      <Flex>
+        <Img
+            data-testid="sizes-auto"
+            src={imageSource}
+            alt="Auto contain"
+            objectFit={['contain', 'contain', 'contain']}
+            w={[80, 80, 80]}
+            h={[80, 80, 80]}
+        />
+        <Img
+            data-testid="sizes-eager"
+            src={imageSource}
+            alt="Eager contain"
+            loading="eager"
+            objectFit={['contain', 'contain', 'contain']}
+            w={[80, 80, 80]}
+            h={[80, 80, 80]}
+        />
+        <Img
+            data-testid="sizes-priority"
+            src={imageSource}
+            alt="Priority contain"
+            priority
+            objectFit={['contain', 'contain', 'contain']}
+            w={[80, 80, 80]}
+            h={[80, 80, 80]}
+        />
+        <Img
+            data-testid="sizes-explicit"
+            src={imageSource}
+            alt="Explicit contain"
+            sizes="72px"
+            objectFit={['contain', 'contain', 'contain']}
+            w={[80, 80, 80]}
+            h={[80, 80, 80]}
+        />
+        <Img
+            data-testid="sizes-zoom"
+            src={imageSource}
+            alt="Zoom contain"
+            sizesWidth={['110%', '110%', '110%']}
+            objectFit={['contain', 'contain', 'contain']}
+            w={[80, 80, 80]}
+            h={[80, 80, 80]}
+        />
+        <Img data-testid="sizes-cover" src={imageSource} alt="Cover" w={[80, 80, 80]} h={[80, 80, 80]} />
+      </Flex>
       <button
         type="button"
         data-testid="scroll-selector-limit"
