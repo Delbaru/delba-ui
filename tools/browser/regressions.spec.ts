@@ -892,6 +892,31 @@ test('Input and Textarea keep native events separate from normalized value chang
   });
 });
 
+test('plain phone mask preserves native Backspace/Delete/range selection and clamps pasted or typed digits', async ({ page }) => {
+  await openFixture(page);
+  const phone=page.getByTestId('phone-value');
+  await phone.pressSequentially('9773717828');
+  await expect(phone).toHaveValue('(977) 371 - 78 - 28');
+  await phone.press('Home');
+  for(let index=0;index<7;index++)await phone.press('ArrowRight');
+  await phone.press('Backspace');
+  await expect(phone).toHaveValue('(977) 717 - 82 - 8');
+  await expect.poll(()=>phone.evaluate(element=>element.selectionStart)).toBe(6);
+  await phone.press('Delete');
+  await expect.poll(()=>phone.evaluate(element=>element.selectionStart)).toBeLessThan(8);
+  await phone.press('Home');
+  for(let index=0;index<2;index++)await phone.press('ArrowRight');
+  for(let index=0;index<2;index++)await phone.press('Shift+ArrowRight');
+  await phone.pressSequentially('12');
+  await expect.poll(()=>phone.evaluate(element=>element.selectionStart)).toBeLessThan(8);
+  await phone.press('ControlOrMeta+A');await phone.press('Backspace');await expect(phone).toHaveValue('');
+  await phone.pressSequentially('97737178289999');await expect(phone).toHaveValue('(977) 371 - 78 - 28');
+  await page.context().grantPermissions(['clipboard-read','clipboard-write']);
+  await page.evaluate(()=>navigator.clipboard.writeText('8 (977) 371-78-28'));
+  await phone.press('ControlOrMeta+A');await phone.press('ControlOrMeta+V');
+  await expect(phone).toHaveValue('(977) 371 - 78 - 28');
+});
+
 test('PhoneField keeps picker aligned, focuses country search, preserves the native input, and submits the international value', async ({ page }) => {
   await openFixture(page);
   const phone = page.getByTestId('phone-field');

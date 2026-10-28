@@ -11,6 +11,8 @@ import {
     stripPrefix,
     validate,
     type PhoneFormat,
+    normalizePhoneInput,
+    maxLengthOf,
 } from './phone-mask';
 
 // Контролируемое поле: то, что маска отдала наружу, возвращается ей же следующим рендером.
@@ -71,6 +73,18 @@ test('проверка ругается только на НЕполный но�
     assert.equal(validate(''), undefined);
     assert.equal(validate('+7 (916) 123 - 45 - 67'), undefined);
     assert.ok(validate('+7 (916) 123'));
+});
+
+test('native middle edits retain digit selection and underscore placeholders do not truncate capacity',()=>{
+    const next=normalizePhoneInput('(977) 71 - 78 - 28',6,6);
+    assert.equal(next.displayValue,'(977) 717 - 82 - 8');
+    assert.equal(next.selectionStart,6);assert.equal(next.selectionEnd,6);
+    assert.equal(normalizePhoneInput('(977) 371 - 78 - 28',7,9).selectionStart,7);
+    const tail=normalizePhoneInput('8 (977) 371-78-28',17,17);
+    assert.equal(tail.selectionStart,tail.displayValue.length);
+    const masked={dial:'+7',digits:10,groups:[3,3,2,2],sample:'__________'};
+    assert.equal(placeholderText(masked),'(___) ___ - __ - __');
+    assert.equal(maxLengthOf(masked),maxLengthOf());
 });
 
 // ─── Формат другой страны ─────────────────────────────────────────────────────────────────────

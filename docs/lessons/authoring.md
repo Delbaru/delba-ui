@@ -730,3 +730,15 @@ ObserverMargin требует четыре стороны, legacy string и widt
 renderToString → hydrateRoot с named time и другим CSS time не выдаёт ошибок и
 обновляет clocks TextSlide/TextReveal/TextClip до CSS. Browser проверяет .6s tuple
 counter, scoped 220ms slide, -10% bottom при разной ширине/высоте и reduced motion.
+
+## Телефонная маска: каретка и подсказка не определяют данные
+
+**Симптом.** В обычном Input type=tel Backspace в середине номера переносил каретку
+с позиции 7 в конец. Подсказка sample из подчёркиваний давала maxLength=3.
+**Причина.** Контролируемое форматирование меняло разделители без восстановления
+логической позиции; потолок длины вычислялся форматированием sample как цифр.
+**Исправление.** Маска отображает выделение по числу национальных цифр, Input
+восстанавливает его после render через ownerWindow rAF с cleanup и проверкой ref/value.
+Потолок берётся из ёмкости формата, sample может быть заполнителем без потери ввода.
+**Проверка.** Pure regression и настоящий browser Backspace/Delete/range replacement,
+Ctrl+V номера с 8, полный ввод/переполнение и очистка; CRM сохраняет E.164 через тот же Input.

@@ -19,7 +19,7 @@ export interface PhoneFormat {
   digits?: number;
   /** Разбивка национального номера на группы; сумма равна `digits`. */
   groups?: number[];
-  /** Образец номера для подсказки в пустом поле; длина равна `digits`. */
+  /** Образец номера или символы заполнителя (например, __________); длина равна `digits`. */
   sample?: string;
 }
 
@@ -108,6 +108,32 @@ export const formatPhone = (raw: string, format: PhoneFormat = DEFAULT_PHONE_FOR
   return result;
 };
 
+/** Preserve the logical national-digit selection when separators move during native editing. */
+export function normalizePhoneInput(
+    raw: string,
+    start: number | null,
+    end: number | null,
+    format: PhoneFormat = DEFAULT_PHONE_FORMAT,
+) {
+    const formatted = formatPhone(raw, format), displayValue = stripPrefix(formatted, format);
+    const position = (offset: number | null) => {
+        if (offset === null) return null;
+        if (offset === raw.length) return displayValue.length;
+        const count = digitsOf(raw.slice(0, offset)).length;
+        if (!count) return 0;
+        let seen = 0;
+        for (let index = 0; index < displayValue.length; index++) if (/\d/.test(displayValue.charAt(index)) && ++seen === count) {
+            let result = index + 1;
+            if (offset > 0 && !/\d/.test(raw.charAt(offset - 1))) {
+                while (result < displayValue.length && !/\d/.test(displayValue.charAt(result))) result++;
+            }
+            return result;
+        }
+        return displayValue.length;
+    };
+    return { formatted, displayValue, selectionStart: position(start), selectionEnd: position(end) };
+}
+
 /** Убирает префикс кода страны — его поле рисует отдельным узлом. */
 export const stripPrefix = (formatted: string, format: PhoneFormat = DEFAULT_PHONE_FORMAT): string =>
   formatted.replace(new RegExp(`^\\+${dialDigits(format)}\\s?`), '');
@@ -142,12 +168,17 @@ export const emptyValue = (format: PhoneFormat = DEFAULT_PHONE_FORMAT): string =
  * У `type='tel'` её гасит слой-маска (он же рисует части разным цветом и весом), но фолбэк
  * обязан совпадать с ним по символам — иначе в одном поле живут два вида одной подсказки.
  */
-export const placeholderText = (format: PhoneFormat = DEFAULT_PHONE_FORMAT): string =>
-  format.sample ? stripPrefix(formatPhone(format.sample, format), format) : '';
+export const placeholderText = (format: PhoneFormat = DEFAULT_PHONE_FORMAT): string => {
+  if(!format.sample)return '';
+  if(!format.sample.includes('_'))return stripPrefix(formatPhone(format.sample,format),format);
+  const sample=format.sample;
+  let index=0;
+  return stripPrefix(formatPhone('9'.repeat(capacity(format)),format),format).replace(/\d/g,()=>sample.charAt(index++)||'_');
+};
 
 /** Потолок длины для `<input>`: полностью набранный номер плюс его разделители. */
 export const maxLengthOf = (format: PhoneFormat = DEFAULT_PHONE_FORMAT): number =>
-  formatPhone(format.sample ?? '9'.repeat(capacity(format)), format).length;
+  formatPhone('9'.repeat(capacity(format)), format).length;
 
 /**
  * Подсказка ЧАСТЯМИ для слоя-маски: `dim` — группы цифр (серые, с разрядкой), остальное —
