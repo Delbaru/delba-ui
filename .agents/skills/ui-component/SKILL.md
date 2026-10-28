@@ -72,6 +72,9 @@ description: 'Правка и создание компонентов общей
 Сохранённые DOM/ref/events/SSR/reduced motion важнее уменьшения числа строк.
 DOM-конструкторы observer и проверки instanceof бери из ownerDocument.defaultView:
 порталы, iframe и JSDOM могут принадлежать другому realm без копий на globalThis.
+Маскированное поле проверяй нативными Backspace/Delete, выделением и paste:
+правильные итоговые цифры не доказывают сохранённую каретку. Ёмкость формата
+не должна зависеть от декоративного образца подсказки.
 Составное поле сохраняет нативный договор: uncontrolled checked/reset, отменённый reset,
 form= и readonly/disabled на каждом пути записи. Подписка на DOM переподключается при
 замене ref target; события дополняются composeInteractionHandlers, не spread-перекрытием.

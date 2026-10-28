@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState, type ChangeEvent, type FocusEvent, type MouseEvent, type Ref } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FocusEvent, type MouseEvent, type Ref } from 'react';
 import type React from 'react';
 
 import { useFieldControl } from '../../../core';
@@ -166,6 +166,8 @@ export function useInputBehavior({
   // он бывает true и у даты, и у анти-автозаполнения — там поле обычное, просто заперто на миг.
   const isReadOnly = Boolean(restInputProps.readOnly);
   const isPhone = inputType === 'tel';
+  const phoneCaret=useRef<{view:Window;frame:number}|null>(null);
+  useEffect(()=>()=>{if(phoneCaret.current)phoneCaret.current.view.cancelAnimationFrame(phoneCaret.current.frame);},[]);
   const isTime = inputType === 'time';
   const isDate = inputType === 'data' || inputType === 'date';
   const isNumber = inputType === 'number';
@@ -425,9 +427,20 @@ export function useInputBehavior({
       const rawValue = event.target.value;
       onChange?.(event);
       if (isPhone) {
-        const formatted = phoneMask.formatPhone(rawValue, phoneFormat);
+        const input = event.currentTarget;
+        const next = phoneMask.normalizePhoneInput(rawValue, input.selectionStart, input.selectionEnd, phoneFormat);
+        const formatted = next.formatted, direction = input.selectionDirection;
         if (!isPhoneControlled) setPhoneUncontrolled(formatted);
         onValueChange?.(formatted, { reason: 'input', event });
+        const view=input.ownerDocument.defaultView;
+        if(view&&next.selectionStart!==null&&next.selectionEnd!==null){
+          if(phoneCaret.current)phoneCaret.current.view.cancelAnimationFrame(phoneCaret.current.frame);
+          const start=next.selectionStart,end=next.selectionEnd;
+          phoneCaret.current={view,frame:view.requestAnimationFrame(()=>{
+            phoneCaret.current=null;
+            if(innerRef.current===input&&input.value===next.displayValue)input.setSelectionRange(start,end,direction??'none');
+          })};
+        }
         // Пока номер НАБИРАЮТ, ошибку только гасим, а не поднимаем: «Введите 11 цифр номера»
         // на третьей цифре — претензия к незаконченному действию. Полную проверку ведёт blur
         // (handleBlur ниже), а здесь уже показанная ошибка пересчитывается и уходит сама.
