@@ -23,6 +23,7 @@
     "./prettier": "./tools/check/prettier-plugin.mjs",
     "./config": "./tools/config.ts",
     "./motion": "./src/motion.ts",
+    "./startup": "./src/startup.ts",
     "./package.json": "./package.json"
   },
   "bin": {

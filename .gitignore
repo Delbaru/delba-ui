@@ -8,6 +8,7 @@ src/core/_motion.scss
 src/core/scale.ts
 src/core/motion-config.ts
 src/core/image-config.ts
+src/core/inline-icons.ts
 
 # Ссылки pnpm на peer-зависимости: кит — пакет воркспейса проекта
 node_modules

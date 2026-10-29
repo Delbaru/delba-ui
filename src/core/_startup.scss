@@ -1,0 +1,14 @@
+// Activated by the optional head bootstrap, never by CSS alone: no-JS stays readable.
+html[data-ui-loading] {
+  background: var(--background);
+
+  body {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  body,
+  body * {
+    animation-play-state: paused !important;
+  }
+}

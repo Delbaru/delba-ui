@@ -7,6 +7,7 @@ import { resolveScale, scaleCss } from '../../src/core/base/scale';
 import { renderRules } from '../../src/core/utilities/rules';
 import { extractUtilityRules } from '../utilities/extract';
 import { ssrPlugin } from './ssr-plugin';
+import { browserPort } from './environment';
 
 const kitRoot = fileURLToPath(new URL('../..', import.meta.url));
 const fixtureRoot = fileURLToPath(new URL('.', import.meta.url));
@@ -74,7 +75,7 @@ export default defineConfig({
   },
   server: {
     host: '127.0.0.1',
-    port: 4178,
+    port: browserPort,
     strictPort: true,
   },
 });

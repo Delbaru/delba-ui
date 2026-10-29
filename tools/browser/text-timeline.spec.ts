@@ -110,10 +110,24 @@ test('reveal without document animation snapshots keeps scoped timing fallback',
   await page.addInitScript(() => Object.defineProperty(Document.prototype, 'getAnimations', { configurable: true, value: undefined }));
   await page.goto('/');
   await page.addStyleTag({ content: '[data-testid="reveal-batch-a1"] { --reveal-duration: 0.6s; }' });
-  await page.getByTestId('reveal-batches').scrollIntoViewIfNeeded();
-  await expect(page.getByTestId('reveal-batch-a0')).toHaveAttribute('data-reveal-state', 'done');
-  await expect(page.getByTestId('reveal-batch-a1')).toHaveAttribute('data-reveal-state', 'in');
-  await expect(page.getByTestId('reveal-batch-a1')).toHaveAttribute('data-reveal-state', 'done');
+  const states = await page.getByTestId('reveal-batches').evaluate(async (host) => {
+    const short = host.querySelector('[data-testid="reveal-batch-a0"]')!;
+    const long = host.querySelector('[data-testid="reveal-batch-a1"]')!;
+    const snapshots: { short: string | null; long: string | null }[] = [];
+    await new Promise<void>((resolve) => {
+      // Capture both states in the browser: separate Playwright polls can miss the short window.
+      const observer = new MutationObserver(() => {
+        const state = { short: short.getAttribute('data-reveal-state'), long: long.getAttribute('data-reveal-state') };
+        snapshots.push(state);
+        if (state.long === 'done') { observer.disconnect(); resolve(); }
+      });
+      observer.observe(host, { subtree: true, attributes: true, attributeFilter: ['data-reveal-state'] });
+      host.scrollIntoView({ block: 'center', behavior: 'instant' });
+    });
+    return snapshots;
+  });
+  expect(states).toContainEqual({ short: 'done', long: 'in' });
+  expect(states.at(-1)).toEqual({ short: 'done', long: 'done' });
 });
 
 test('batched reveal preserves expired hold, fresh hold and release before initialization', async ({ page }) => {

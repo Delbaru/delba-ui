@@ -53,6 +53,8 @@ async function load() {
   generateMotion(config.motion);
   const { generateImages } = await import('./images.ts');
   generateImages(config.images);
+  const { generateInlineIcons } = await import('./icons.ts');
+  generateInlineIcons(root);
   const { createUtilities } = await import('./utilities/generate.ts');
   const { generateSkins } = await import('./skin.ts');
   const utilities = createUtilities(root, { scan: [...(config.scan ?? ['src']), path.relative(root, KIT)], seeds: config.seeds, typography: config.typography, scale: config.scale });
@@ -112,6 +114,11 @@ async function work() {
   const skinsDir = config.skins?.dir === undefined ? undefined : path.resolve(root, config.skins.dir);
   if (skinsDir) watch(skinsDir, { recursive: true }, (_event, file) => file && String(file).endsWith('.skin.ts') && restart());
   utilities?.watch(restart);
+  const publicDir = path.join(root, 'public');
+  if (existsSync(publicDir)) watch(publicDir, { recursive: true }, (_event, file) => {
+    const name = String(file ?? '').replaceAll('\\', '/');
+    if (name === 'icons' || (name.startsWith('icons/') && name.endsWith('.svg'))) restart();
+  });
 }
 
 async function check() {
@@ -137,6 +144,7 @@ async function test() {
 }
 
 const commands = {
+  startup: async () => (await import('./startup-check.mjs')).checkStartup(argv.slice(1)),
   build: () => load().then((utilities) => utilities.build()),
   watch: () => (argv.includes('--worker') ? work() : supervise()),
   check,
@@ -144,7 +152,7 @@ const commands = {
 };
 
 if (!commands[command]) {
-  console.error('Usage: delba-ui <build|watch|check|test> [--update] [--fix] [--config ui.config.ts] [--suite all|library|project|browser] [--shard index/total] [--typecheck-cache file]');
+  console.error('Usage: delba-ui <build|watch|check|test> [--update] [--fix] [--config ui.config.ts] [--suite all|library|project|browser] [--shard index/total] [--typecheck-cache file]\n       delba-ui startup --url <running production URL> [--font "selector=family"] [--max-cls 0.001]');
   process.exit(1);
 }
 try {

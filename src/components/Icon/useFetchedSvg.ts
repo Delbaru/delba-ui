@@ -3,15 +3,16 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { parseRemoteSvg, parseSvg, type ParsedSvg } from './svg';
+import { INLINE_ICONS } from '../../core/inline-icons';
 
 const svgFetchCache = new Map<string, Promise<ParsedSvg>>();
 // Синхронный кэш уже разобранных SVG. Позволяет отрисовать иконку в первом же рендере
 // (без вспышки null → content), если тот же файл уже грузился ранее на клиенте.
 const svgResolvedCache = new Map<string, ParsedSvg>();
 // Реестр инлайн-иконок: сырой <svg>-текст, впечённый в бандл на этапе сборки
-// (см. tools/icons/generate-inline-manifest.mjs). Ключ — итоговый URL вида '/icons/...'.
+// (см. tools/icons.ts). Ключ — итоговый URL вида '/icons/...'.
 // Даёт синхронную отрисовку в первом кадре и в SSR, без рантайм-fetch.
-const inlineSvgRegistry = new Map<string, string>();
+const inlineSvgRegistry = new Map<string, string>(Object.entries(INLINE_ICONS));
 const svgGenerations = new Map<string, number>();
 
 /**

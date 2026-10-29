@@ -7,6 +7,8 @@ export type ScrollTarget = Element | null | undefined | { readonly current: Elem
 export type ScrollResult = { status: 'finished' | 'interrupted' };
 
 export interface ScrollToOptions {
+  /** Scroll only this viewport (Element/ref/selector); the document and its provider stay still. */
+  container?: ScrollTarget;
   /** Положение цели в окне: `'start'` (по умолчанию), `'center'`, `'end'` или `'nearest'`. */
   block?: ScrollLogicalPosition;
   /**
@@ -67,6 +69,52 @@ type ScrollRun = { cancel(): void };
 
 let active: ScrollRun | null = null;
 let provider: ScrollProviderApi | null = null;
+const containerRuns = new WeakMap<Element, ScrollRun>();
+
+function scrollWithin(element: Element | null, viewport: Element | null, block: ScrollLogicalPosition): Promise<ScrollResult> {
+    if (!element || !viewport || !viewport.contains(element)) return Promise.resolve({ status: 'interrupted' });
+    containerRuns.get(viewport)?.cancel();
+    const bounds = viewport.getBoundingClientRect();
+    const target = element.getBoundingClientRect();
+    const start = bounds.top + viewport.clientTop;
+    const end = start + viewport.clientHeight;
+    const above = target.top - start;
+    const below = target.bottom - end;
+    let delta = block === 'center' ? (above + below) / 2 : block === 'end' ? below : above;
+    if (block === 'nearest') {
+        if ((above >= 0 && below <= 0) || (above <= 0 && below >= 0)) delta = 0;
+        else delta = above < 0 ? above : below;
+    }
+    const top = Math.max(0, Math.min(viewport.scrollHeight - viewport.clientHeight, viewport.scrollTop + delta));
+    if (Math.abs(top - viewport.scrollTop) < 1) return Promise.resolve({ status: 'finished' });
+    return new Promise(resolve => {
+        let frame = 0;
+        let stable = 0;
+        let previous = viewport.scrollTop;
+        const started = performance.now();
+        const finish = (status: ScrollResult['status']) => {
+            window.cancelAnimationFrame(frame);
+            if (containerRuns.get(viewport) === run) containerRuns.delete(viewport);
+            resolve({ status });
+        };
+        const run: ScrollRun = { cancel: () => {
+            viewport.scrollTo({ top: viewport.scrollTop, behavior: 'instant' });
+            finish('interrupted');
+        } };
+        containerRuns.set(viewport, run);
+        viewport.scrollTo({ top, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
+        const tick = () => {
+            if (!viewport.isConnected || !element.isConnected) { finish('interrupted'); return; }
+            const position = viewport.scrollTop;
+            stable = Math.abs(position - previous) < 0.5 ? stable + 1 : 0;
+            previous = position;
+            if (Math.abs(position - top) < 1 && stable >= REST_FRAMES) { finish('finished'); return; }
+            if (performance.now() - started > SETTLE_TIMEOUT_MS * 2) { finish('interrupted'); return; }
+            frame = window.requestAnimationFrame(tick);
+        };
+        frame = window.requestAnimationFrame(tick);
+    });
+}
 
 /** Провайдер отдаёт себя двери ядра: вызывает один раз при монтировании, при размонтировании снимает. */
 export function registerScrollProvider(api: ScrollProviderApi): void {
@@ -153,6 +201,8 @@ function launchFlight(element: Element, options: ScrollToOptions, resolve: (resu
  */
 export function scrollTo(target: ScrollTarget, options: ScrollToOptions = {}): Promise<ScrollResult> {
   if (typeof document === 'undefined') return Promise.resolve<ScrollResult>({ status: 'interrupted' });
+  if (options.container !== undefined)
+    return scrollWithin(resolveScrollTarget(target), resolveScrollTarget(options.container), options.block ?? 'start');
 
   cancelActiveScroll();
 

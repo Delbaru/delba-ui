@@ -1182,6 +1182,7 @@ test('Button tooltip keeps its anchor node, ref, keyboard focus, and click callb
 
 test('disabled Button links cannot activate external or internal destinations', async ({ page }) => {
   await openFixture(page);
+  const initialUrl = page.url();
   const internal = page.getByTestId('disabled-internal-link');
   const external = page.getByTestId('disabled-external-link');
   await expect(internal).toHaveAttribute('aria-disabled', 'true');
@@ -1192,7 +1193,7 @@ test('disabled Button links cannot activate external or internal destinations', 
   await expect(external).not.toHaveAttribute('href', 'https://example.test/external-destination');
   await internal.click({ force: true });
   await external.click({ force: true });
-  await expect(page).toHaveURL(/4178\/$/);
+  await expect(page).toHaveURL(initialUrl);
   expect(await page.evaluate(() => window.__disabledLinkClicks)).toBe(0);
 });
 

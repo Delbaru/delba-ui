@@ -2,11 +2,16 @@ import { renderToString } from 'react-dom/server';
 import { createElement } from 'react';
 import type { ComponentType } from 'react';
 import type { Plugin } from 'vite';
+import { kitRoot } from './environment';
 
 /** Реальный серверный HTML и hydrateRoot проверяются с одним экземпляром React. */
 export const ssrPlugin: Plugin = {
   name: 'ui-ssr-fixture',
   configureServer(server) {
+    server.middlewares.use('/__ui_fixture__', (_request, response) => {
+      response.setHeader('Content-Type', 'application/json');
+      response.end(JSON.stringify({ kitRoot }));
+    });
     server.middlewares.use('/ssr', async (_request, response, next) => {
       try {
         const module = await server.ssrLoadModule('/ssr-fixture.tsx') as { SsrFixture: ComponentType };
