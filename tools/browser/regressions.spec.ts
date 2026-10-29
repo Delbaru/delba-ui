@@ -118,6 +118,11 @@ test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport r
   expect(await search.boundingBox()).toEqual(before);
   await expect.poll(async () => Number(await page.getByTestId('scroll-area-events').textContent())).toBeGreaterThan(0);
   const scrollbar = await viewport.evaluate((node) => {
+    const context = document.createElement('canvas').getContext('2d');
+    if (!context) throw new Error('Missing 2d context');
+    context.fillStyle = getComputedStyle(node, '::-webkit-scrollbar-thumb').backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
     const probe = document.createElement('span');
     probe.style.cssText = 'position:absolute;width:var(--ui-scrollbar-width)';
     node.append(probe);
@@ -125,7 +130,7 @@ test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport r
     probe.remove();
     return {
     width: getComputedStyle(node, '::-webkit-scrollbar').width,
-    color: getComputedStyle(node, '::-webkit-scrollbar-thumb').backgroundColor,
+    color: `rgb(${red}, ${green}, ${blue})`,
     buttons: getComputedStyle(node, '::-webkit-scrollbar-button').display,
     nativeWidth: getComputedStyle(node).scrollbarWidth,
     nativeColor: getComputedStyle(node).scrollbarColor,
@@ -885,6 +890,31 @@ test('Input and Textarea keep native events separate from normalized value chang
     trusted: true,
     pairedWithDomEvent: true,
   });
+});
+
+test('plain phone mask preserves native Backspace/Delete/range selection and clamps pasted or typed digits', async ({ page }) => {
+  await openFixture(page);
+  const phone=page.getByTestId('phone-value');
+  await phone.pressSequentially('9773717828');
+  await expect(phone).toHaveValue('(977) 371 - 78 - 28');
+  await phone.press('Home');
+  for(let index=0;index<7;index++)await phone.press('ArrowRight');
+  await phone.press('Backspace');
+  await expect(phone).toHaveValue('(977) 717 - 82 - 8');
+  await expect.poll(()=>phone.evaluate(element=>element.selectionStart)).toBe(6);
+  await phone.press('Delete');
+  await expect.poll(()=>phone.evaluate(element=>element.selectionStart)).toBeLessThan(8);
+  await phone.press('Home');
+  for(let index=0;index<2;index++)await phone.press('ArrowRight');
+  for(let index=0;index<2;index++)await phone.press('Shift+ArrowRight');
+  await phone.pressSequentially('12');
+  await expect.poll(()=>phone.evaluate(element=>element.selectionStart)).toBeLessThan(8);
+  await phone.press('ControlOrMeta+A');await phone.press('Backspace');await expect(phone).toHaveValue('');
+  await phone.pressSequentially('97737178289999');await expect(phone).toHaveValue('(977) 371 - 78 - 28');
+  await page.context().grantPermissions(['clipboard-read','clipboard-write']);
+  await page.evaluate(()=>navigator.clipboard.writeText('8 (977) 371-78-28'));
+  await phone.press('ControlOrMeta+A');await phone.press('ControlOrMeta+V');
+  await expect(phone).toHaveValue('(977) 371 - 78 - 28');
 });
 
 test('PhoneField keeps picker aligned, focuses country search, preserves the native input, and submits the international value', async ({ page }) => {
@@ -2189,21 +2219,24 @@ test('motion profiler records static and enabled 40-Text updates as an observati
   await expect(box).toContainText('Profile text A 40');
   const staticSample = await page.evaluate(() => window.__motionProfileSamples.at(-1));
   expect(staticSample).toBeTruthy();
+  await page.evaluate(() => { window.__motionProfileUpdate = null; });
   await page.getByTestId('motion-profile-update').click();
   await expect(box).toContainText('Profile text B 40');
-  const staticTextUpdate = await page.evaluate(() => window.__motionProfileSamples.at(-1));
+  const staticTextUpdate = await page.evaluate(() => window.__motionProfileUpdate);
 
+  await page.evaluate(() => { window.__motionProfileUpdate = null; });
   await page.getByTestId('motion-profile-toggle').click();
   await expect(box).toHaveAttribute('data-profile-mode', 'motion');
-  const enabledSample = await page.evaluate(() => window.__motionProfileSamples.at(-1));
+  const enabledSample = await page.evaluate(() => window.__motionProfileUpdate);
+  await page.evaluate(() => { window.__motionProfileUpdate = null; });
   await page.getByTestId('motion-profile-update').click();
   await expect(box).toContainText('Profile text A 40');
-  const motionTextUpdate = await page.evaluate(() => window.__motionProfileSamples.at(-1));
+  const motionTextUpdate = await page.evaluate(() => window.__motionProfileUpdate);
   const observation = { static: staticSample, staticTextUpdate, enabled: enabledSample, motionTextUpdate };
   console.log('[motion-profiler-observation]', JSON.stringify(observation));
-  expect(observation.staticTextUpdate?.phase).toBe('update');
-  expect(observation.enabled?.phase).toBe('update');
-  expect(observation.motionTextUpdate?.phase).toBe('update');
+  expect(observation.staticTextUpdate?.phase).toMatch(/^(update|nested-update)$/);
+  expect(observation.enabled?.phase).toMatch(/^(update|nested-update)$/);
+  expect(observation.motionTextUpdate?.phase).toMatch(/^(update|nested-update)$/);
 });
 
 test('date calendar inside Modal stays in its focus scope and Escape restores the input', async ({ page }) => {

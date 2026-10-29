@@ -1,0 +1,14 @@
+// Progressive fallback for a fresh source checkout before `delba-ui build`.
+// Generated _scrollbar-policy.scss takes precedence and supplies the project's config.
+:root {
+  --ui-scrollbar-width: calc(6 * var(--rpx));
+  --ui-scrollbar-color: currentColor;
+  --ui-scrollbar-track: transparent;
+  --ui-scrollbar-inset: calc(4 * var(--rpx));
+  --ui-scrollbar-native-width: thin;
+  --ui-scrollbar-auto-hide: 1;
+  --ui-scrollbar-rest-opacity: 0;
+  --ui-scrollbar-hide-delay: 0.3s;
+  --ui-scrollbar-show-duration: 0.15s;
+  --ui-scrollbar-fade-duration: 0.2s;
+}

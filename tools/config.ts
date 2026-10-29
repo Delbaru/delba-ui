@@ -1,4 +1,5 @@
 import type { UiScale } from '../src/core/base/scale';
+import type { ScrollbarOptions } from '../src/components/ScrollArea/scrollbar';
 import type { ExtractOptions } from './utilities/extract';
 import type { ObserverMargin } from '../src/core/base/observer-margin';
 import type { MotionDefaultOverrides } from '../src/core/base/motion-defaults';
@@ -97,4 +98,6 @@ export interface UiConfig {
     readonly motion?: UiMotion;
     /** Image optimization policy. Private /api/ files stay unoptimized unless explicitly allowed. */
     readonly images?: UiImages;
+    /** Native scrollbar defaults for ScrollArea, Modal and scrollbarProps. Durations are seconds. */
+    readonly scrollbar?: Readonly<ScrollbarOptions>;
 }
