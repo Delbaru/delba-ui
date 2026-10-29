@@ -77,7 +77,7 @@ export { createUrl, createBrowserUrl, installBrowserUrl, type BrowserUrl } from 
 // Хуки и типы, которые нужны D-компонентам и страницам проекта.
 export * from './components/SmoothScroll';
 export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
-export { useAnchoredFloating, type FloatingAlign, type FloatingPlacement } from './hooks/useAnchoredFloating';
+export { useAnchoredFloating, type FloatingAlign, type FloatingPlacement, type FloatingStrategy } from './hooks/useAnchoredFloating';
 export { useTooltip, type UseTooltipOptions, type UseTooltipResult, type TooltipBubbleProps } from './hooks/useTooltip';
 export { useMediaQuery } from './hooks/useMediaQuery';
 export { useScroll } from './hooks/useScroll';

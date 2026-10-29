@@ -159,10 +159,13 @@ export function Dropdown({
     changeOpen(false);
   };
   const dismissProps = useOutsideDismiss([rootRef, panelRef], close, { enabled: open, escape: false, blockOutsideClick });
-  const { style: floatingStyle, updatePosition } = useAnchoredFloating({
+  const { style: floatingStyle, strategy: floatingStrategy, updatePosition } = useAnchoredFloating({
     anchorRef: geometryRef, floatingRef: panelRef, isActive: portal && open,
     placement: 'bottom', align: side, gap: gapPixels, viewportPadding,
     keepPositionWhenInactive: true,
+    // Портальная панель — в координатах документа: прокручивается со страницей без отставания и
+    // уходит за край вместе с триггером; у триггера в шапке или окне — по-прежнему от окна.
+    strategy: 'document',
   });
 
   useEffect(() => {
@@ -324,6 +327,7 @@ export function Dropdown({
         ...(portal ? floatingStyle : null),
       } as CSSProperties}
       data-side={side}
+      data-strategy={portal ? floatingStrategy : undefined}
       data-open={open || undefined}
       data-match-width={matchTriggerWidth || undefined}
       aria-hidden={!open}

@@ -40,12 +40,15 @@
     &[data-match-width] { width: var(--dropdown-anchor-width, 100%); }
 
     &.portalPanel {
+      // До первого замера; дальше position ставит useAnchoredFloating (strategy document — absolute, иначе fixed).
       position: fixed;
       right: auto;
       bottom: auto;
       max-width: calc(100vw - 2 * var(--dropdown-viewport-padding));
       &[data-side] { translate: none; }
       &[data-match-width] { width: var(--floating-anchor-width); }
+      // Едет со страницей — под липкой шапкой проекта, а не поверх (--z-anchored).
+      &[data-strategy='document'] { z-index: var(--z-anchored, var(--z-under-floating)); }
     }
   }
 
