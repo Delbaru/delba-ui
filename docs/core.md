@@ -589,7 +589,7 @@ React 19: при отсоединении вызывает эту очистку
 | `useOutsideDismiss(refs, onDismiss, { enabled, escape })` | закрытие по клику вне и по Escape; возвращает `{ onMouseDownCapture }` для корня панели, из которой открываются вложенные слои в своих порталах, и не закрывает по Escape, который уже погасил внутренний слой |
 | `usePresence(show, axis, appear)` | монтирование и размонтирование с анимацией |
 | `useSwapTransition(key, children)` | подмена контента: exit старого, затем enter нового |
-| `useAnchoredFloating` | позиционирование панели относительно якоря; `strategy: 'fixed'` (по умолчанию: координаты окна, панель держится в экране) или `'document'` (координаты документа: страница прокручивает панель сама, без отставания, и уводит её за край вместе с якорем; у якоря в fixed/sticky-предке — как `fixed`). Портальная панель `Dropdown`/`Select` — `document`, этаж `--z-anchored` (проект ставит его ниже своей липкой шапки; по умолчанию `--z-under-floating`) |
+| `useAnchoredFloating` | позиционирование панели относительно якоря; `strategy: 'fixed'` (по умолчанию: координаты окна, панель держится в экране) или `'document'` (координаты документа: страница прокручивает панель сама, без отставания, и уводит её за край вместе с якорем; сторона не переворачивается, высота — до высоты окна; у якоря в fixed/sticky-предке — как `fixed`). Портальная панель `Dropdown`/`Select` — `document`, этаж `--z-anchored` (проект ставит его ниже своей липкой шапки; по умолчанию `--z-under-floating`) |
 | `useSharedMotion`, `useParallaxMotion`, `usePerspective3dMotion`, `useReveal` | параллакс, наклон и появление по скроллу (`reveal`) |
 | `useTextOverflow`, `useTooltip`, `useFancybox`, `useInView`, `useMergedRefs` | по названию |
 

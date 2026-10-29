@@ -225,7 +225,11 @@ export function useAnchoredFloating({
     const floatingRect = floatingNode.getBoundingClientRect();
     const nextStrategy: FloatingStrategy = strategy === 'document' && !hasPinnedAncestor(anchorNode) ? 'document' : 'fixed';
     strategyRef.current = nextStrategy;
-    const nextPlacement = resolvePlacement(preferredPlacement, anchorRect, floatingRect, gap, viewportPadding);
+    // В координатах документа сторона не переворачивается: до панели у низа экрана докручивают
+    // страницу, а перевёрнутая вверх уходила под липкую шапку и была недоступна.
+    const nextPlacement = nextStrategy === 'document'
+      ? preferredPlacement
+      : resolvePlacement(preferredPlacement, anchorRect, floatingRect, gap, viewportPadding);
     const viewportPosition = resolveAlignedPosition(nextPlacement, align, anchorRect, floatingRect, gap, viewportPadding, nextStrategy === 'fixed');
     // Координаты документа — от offsetParent панели; position ставим до замера: от неё зависит offsetParent.
     floatingNode.style.position = nextStrategy === 'document' ? 'absolute' : 'fixed';
@@ -242,7 +246,10 @@ export function useAnchoredFloating({
     floatingNode.style.setProperty('--floating-top', `${Math.round(nextSnapshot.top)}px`);
     floatingNode.style.setProperty(
       '--floating-available',
-      `${Math.round(resolveAvailableHeight(nextPlacement, anchorRect, gap, viewportPadding))}px`
+      // В документе высота не ужимается до остатка экрана под якорем — только до высоты окна.
+      `${Math.round(nextStrategy === 'document'
+        ? Math.max(0, window.innerHeight - 2 * viewportPadding)
+        : resolveAvailableHeight(nextPlacement, anchorRect, gap, viewportPadding))}px`
     );
     hasEverPositionedRef.current = true;
 
