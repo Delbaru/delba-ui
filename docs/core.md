@@ -150,11 +150,14 @@ rAF-цикл прогресса крутится только пока есть 
 
 ## Фокус
 
-`focusWhenReady(target, { preventScroll = true, timeout = 1000 })` (`src/core/base/focus.ts`) — фокус,
+`focusWhenReady(target, { preventScroll = true, timeout = 1000, signal })` (`src/core/base/focus.ts`) — фокус,
 который ждёт, пока поле станет фокусируемым. Обычный `focus()` молча не срабатывает внутри свёрнутого
 `collapse` (`inert`) и до монтирования узла; этот ловит снятие `inert`/`hidden`/`disabled` и появление
 узла `MutationObserver`-ом, без опроса по кадрам. `target` — узел или `ref` (поля кита отдают в `ref`
 настоящий `<input>`/`<textarea>`). Не отбирает фокус, если человек уже ушёл в другое поле ввода.
+Смена общего атрибута `state` также повторяет попытку: floating-панель может стать видимой
+только после позиционирования. Необязательный `AbortSignal` отменяет ожидание с результатом
+`false` и сразу удаляет observer/таймер; владелец отменяет запрос при закрытии и unmount.
 Возвращает `Promise<boolean>`.
 
 ## Реестр ручек

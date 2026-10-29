@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState, type ChangeEvent, type FocusEvent, type MouseEvent, type Ref } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FocusEvent, type MouseEvent, type Ref } from 'react';
 import type React from 'react';
 
-import { useFieldControl } from '../../../core';
+import { focusWhenReady, useFieldControl } from '../../../core';
 import type { FieldValueChangeDetails, FieldValueChangeHandler } from '../../../core';
 import { resolveSeedField } from '../../../core/base/seed';
 import * as phoneMask from './phone-mask';
@@ -348,6 +348,8 @@ export function useInputBehavior({
   });
 
   const isFieldActive = isFieldFocused || isDatePickerActive;
+  const calendarFocus = useRef<AbortController | null>(null);
+  useEffect(() => () => calendarFocus.current?.abort(), [isDatePickerActive]);
 
   const handleFocus = useCallback(
     (event: FocusEvent<HTMLInputElement>) => {
@@ -519,7 +521,10 @@ export function useInputBehavior({
         const firstControl = floatingRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
         if (firstControl) {
           event.preventDefault();
-          firstControl.focus();
+          calendarFocus.current?.abort();
+          const pending = new AbortController();
+          calendarFocus.current = pending;
+          void focusWhenReady(firstControl, { signal: pending.signal });
           return;
         }
       }

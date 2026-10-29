@@ -2,6 +2,8 @@
 export type FocusTarget = HTMLElement | null | undefined | { readonly current: HTMLElement | null };
 
 export interface FocusWhenReadyOptions {
+  /** Cancel pending focus when its owning interaction closes or unmounts. */
+  signal?: AbortSignal;
   /** Не прокручивать страницу к полю: прокруткой владеет `scrollTo`, а не фокус. По умолчанию `true`. */
   preventScroll?: boolean;
   /** Сколько ждать, пока поле станет фокусируемым, мс. По умолчанию 1000. */
@@ -10,7 +12,7 @@ export interface FocusWhenReadyOptions {
 
 const DEFAULT_TIMEOUT_MS = 1000;
 const EDITABLE_SELECTOR = 'input, textarea, select, [contenteditable="true"], [contenteditable=""]';
-const BLOCKING_ATTRIBUTES = ['inert', 'hidden', 'disabled', 'class', 'style'];
+const BLOCKING_ATTRIBUTES = ['inert', 'hidden', 'disabled', 'class', 'style', 'state'];
 
 /** Узел цели: `ref` разворачивается, пустое значение — `null`. */
 export function resolveFocusTarget(target: FocusTarget): HTMLElement | null {
@@ -44,9 +46,9 @@ function isFocusableNow(element: HTMLElement): boolean {
  * Возвращает `true`, если фокус встал; `false` — по тайм-ауту или если человек сам ушёл в другое поле.
  */
 export function focusWhenReady(target: FocusTarget, options: FocusWhenReadyOptions = {}): Promise<boolean> {
-  if (typeof document === 'undefined') return Promise.resolve(false);
+  if (typeof document === 'undefined' || options.signal?.aborted) return Promise.resolve(false);
 
-  const { preventScroll = true, timeout = DEFAULT_TIMEOUT_MS } = options;
+  const { preventScroll = true, timeout = DEFAULT_TIMEOUT_MS, signal } = options;
   const initial = document.activeElement;
 
   const attempt = (): boolean | null => {
@@ -73,8 +75,10 @@ export function focusWhenReady(target: FocusTarget, options: FocusWhenReadyOptio
       settled = true;
       observer.disconnect();
       window.clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
       resolve(result);
     };
+    const onAbort = () => finish(false);
 
     const observer = new MutationObserver(() => {
       const result = attempt();
@@ -90,5 +94,7 @@ export function focusWhenReady(target: FocusTarget, options: FocusWhenReadyOptio
     });
 
     const timer = window.setTimeout(() => finish(attempt() ?? false), timeout);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    if (signal?.aborted) finish(false);
   });
 }

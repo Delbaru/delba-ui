@@ -2190,19 +2190,25 @@ test('motion profiler records static and enabled 40-Text updates as an observati
   expect(staticSample).toBeTruthy();
   await page.getByTestId('motion-profile-update').click();
   await expect(box).toContainText('Profile text B 40');
-  const staticTextUpdate = await page.evaluate(() => window.__motionProfileSamples.at(-1));
+  const staticTextUpdate = await page.evaluate(() => window.__motionProfileSamples.findLast((sample) => sample.mode === 'static' && sample.text === 'Profile text B'));
 
   await page.getByTestId('motion-profile-toggle').click();
   await expect(box).toHaveAttribute('data-profile-mode', 'motion');
-  const enabledSample = await page.evaluate(() => window.__motionProfileSamples.at(-1));
+  const enabledSample = await page.evaluate(() => window.__motionProfileSamples.findLast((sample) => sample.mode === 'motion' && sample.text === 'Profile text B'));
   await page.getByTestId('motion-profile-update').click();
   await expect(box).toContainText('Profile text A 40');
-  const motionTextUpdate = await page.evaluate(() => window.__motionProfileSamples.at(-1));
+  const motionTextUpdate = await page.evaluate(() => window.__motionProfileSamples.findLast((sample) => sample.mode === 'motion' && sample.text === 'Profile text A'));
   const observation = { static: staticSample, staticTextUpdate, enabled: enabledSample, motionTextUpdate };
   console.log('[motion-profiler-observation]', JSON.stringify(observation));
-  expect(observation.staticTextUpdate?.phase).toBe('update');
-  expect(observation.enabled?.phase).toBe('update');
-  expect(observation.motionTextUpdate?.phase).toBe('update');
+  for (const sample of [staticTextUpdate, enabledSample, motionTextUpdate]) {
+    expect(sample).toBeTruthy();
+    // React documents both update phases; a layout-effect commit may be last.
+    expect(['update', 'nested-update']).toContain(sample?.phase);
+    expect(Number.isFinite(sample?.actualDuration)).toBe(true);
+    expect(Number.isFinite(sample?.baseDuration)).toBe(true);
+    expect(sample?.actualDuration).toBeGreaterThanOrEqual(0);
+    expect(sample?.baseDuration).toBeGreaterThanOrEqual(0);
+  }
 });
 
 test('date calendar inside Modal stays in its focus scope and Escape restores the input', async ({ page }) => {
@@ -2238,6 +2244,31 @@ test('date calendar inside Modal stays in its focus scope and Escape restores th
   await expect(modal).toBeVisible();
 });
 
+
+test('date calendar inside Modal waits for visibility before Tab focus and cancels a dismissed request', async ({ page }) => {
+  await openFixture(page);
+  await page.getByRole('button', { name: 'Open calendar focus modal' }).click();
+  const date = page.getByTestId('modal-date');
+  const toggle = page.getByTestId('modal-calendar-control').locator('[data-input-action="true"]');
+  const previousMonth = page.getByRole('button', { name: 'Previous month' });
+  const hidden = await page.addStyleTag({ content: '[class*="_Calendar_"] { visibility: hidden !important; }' });
+  await toggle.click();
+  await date.press('Tab');
+  await expect(date).toBeFocused();
+  await hidden.evaluate((node) => node.remove());
+  await expect(previousMonth).toBeFocused();
+
+  await previousMonth.press('Escape');
+  await expect(date).toBeFocused();
+  const hiddenAgain = await page.addStyleTag({ content: '[class*="_Calendar_"] { visibility: hidden !important; }' });
+  await toggle.click();
+  await date.press('Tab');
+  await date.press('Escape');
+  await toggle.click();
+  await hiddenAgain.evaluate((node) => node.remove());
+  await expect(previousMonth).toBeVisible();
+  await expect(date).toBeFocused();
+});
 
 test('scroll selector recomputes changed closures without another scroll event', async ({ page }) => {
   await openFixture(page);
