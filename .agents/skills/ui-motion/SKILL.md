@@ -5,6 +5,12 @@ description: 'Общая механика анимаций @delba/ui: appearance
 
 # Motion UI-кита
 
+Применяй по задаче без отдельного вызова. Прочитай [принципы](../../../docs/specs/architecture/principles.md)
+и [спецификацию движения](../../../docs/specs/ui/motion.md); если меняется публичный
+договор — также [API](../../../docs/specs/architecture/api.md). Новый результат
+фиксируется через [карту спецификаций](../../../docs/specs/README.md), проверяется
+по её критериям и [приёмке](../../../docs/specs/verification/acceptance.md).
+
 Пути — от корня UI-репозитория. Сначала [ui-component](../ui-component/SKILL.md),
 затем [authoring §3.1 и §6](../../../docs/authoring.md), нужный раздел
 [core](../../../docs/core.md) и существующий хук/компонент.

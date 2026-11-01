@@ -314,6 +314,21 @@ function collectComponents(facts: FileFacts): void {
       const walk = (node: ts.Node, depth: number): void => {
         if (depth > MAX_DEPTH || seen.has(node)) return;
         seen.add(node);
+        // A condition selects a value; its own data is never emitted as that value.
+        if (ts.isConditionalExpression(node)) {
+          walk(node.whenTrue, depth + 1);
+          walk(node.whenFalse, depth + 1);
+          return;
+        }
+        if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+          walk(node.right, depth + 1);
+          return;
+        }
+        // A lookup key selects a preset, unlike the object/array supplying its values.
+        if (ts.isElementAccessExpression(node)) {
+          walk(node.expression, depth + 1);
+          return;
+        }
         if (ts.isPropertyAccessExpression(node)) {
           const param = params.get(node.getText());
           if (param) { found.add(param); return; }

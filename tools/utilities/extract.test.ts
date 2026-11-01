@@ -7,6 +7,32 @@ import { extractUtilityRules, type Source } from './extract';
 const classesOf = (sources: Source[], options: Parameters<typeof extractUtilityRules>[1] = {}) =>
   new Set(extractUtilityRules(sources, options).map((rule) => rule.className));
 
+test('conditions and lookup keys do not forward business strings into CSS values', () => {
+  const rules = extractUtilityRules([
+    { file: 'text.tsx', text: `
+      const tones = { error: 'var(--error)', muted: 'var(--muted)' };
+      export function DText({ tone }) { return <Text color={tones[tone]} />; }
+      export function DField({ error }) { return <DText tone={error ? 'error' : 'muted'} />; }
+      export function DirectField({ error }) { return <Text color={error ? 'red' : 'black'} />; }
+      export function Guard({ enabled }) { return <Text color={enabled && 'var(--active)'} />; }
+    ` },
+    { file: 'checkout.tsx', text: `
+      const summary = { parts: [{ name: 'UI review.stl' }] };
+      const errors = { name: 'Please enter your name' };
+      export const Contact = () => <>
+        <DField error={errors.name} /><DirectField error={errors.name} />
+        <DText tone="Not a CSS color.stl" /><Guard enabled="Business guard.stl" />
+      </>;
+    ` },
+  ]);
+  const declarations = new Set(rules.map((rule) => rule.declaration));
+  assert.ok(![...declarations].some((value) => value.includes('UI review.stl') || value.includes('Please enter')));
+  assert.ok(![...declarations].some((value) => value.includes('Not a CSS') || value.includes('Business guard')));
+  for (const color of ['var(--error)', 'var(--muted)', 'var(--active)', 'red', 'black']) {
+    assert.ok(declarations.has(`color: ${color}`), color);
+  }
+});
+
 test('GradientBorder generates its default thickness and forwarded gradient/width', () => {
   const classes = classesOf([
     { file: 'border.tsx', text: readFileSync(new URL('../../src/components/GradientBorder/GradientBorder.tsx', import.meta.url), 'utf8') },
