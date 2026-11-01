@@ -216,7 +216,7 @@ placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
         <LexicalComposer
           initialConfig={{
             namespace: 'SocratLexicalTextarea',
-            onError: (nextError) => {
+            onError: (nextError: Error) => {
               throw nextError;
             },
             nodes: [VariableNode, ListNode, ListItemNode, LinkNode],

@@ -151,7 +151,7 @@ test('проект получает общее правило отдельным
         const found = check(project, { rules: projectRules });
         assert.equal(found.length, 1);
         assert.equal(found[0]?.rule, 'dom-ref');
-        assert.match(found[0]?.docs ?? '', /delba-ui[\\/]docs[\\/]authoring\.md$/);
+        assert.equal(found[0]?.docs, path.resolve(import.meta.dirname, '../../docs/authoring.md'));
         assert.equal(projectSteps(project, {}).at(-1)?.name, 'Архитектура проекта');
     } finally {
         fs.rmSync(project, { recursive: true, force: true });

@@ -1,0 +1,40 @@
+# GradientBorder
+
+Текущий договор, сверенный по исходнику; runtime-проверка отдельно.
+
+## Назначение и применение
+
+Декоративная градиентная рамка внутри позиционированного родителя. Не создаёт дополнительную область layout и не перехватывает клики. Применяй внутри проектного D-компонента, если такая рамка — часть его скина.
+
+## Основной API
+
+- `gradient` обязателен: CSS-gradient или токен темы, responsive-кортеж `[desktop, mobile, tablet]`.
+- `width` — толщина в дизайн-единицах, по умолчанию 1 на всех полосах.
+- `animate={{ when: 'idle', effect: 'trace', duration }}` — подсветка контура, приостанавливаемая вне экрана и учитывающая reduced motion.
+- `ref` относится к декоративному `span`; `className` и `style` — его оформление.
+- Родитель задаёт позиционирование и радиус, рамка наследует радиус и оставляет прозрачный центр. Фирменный градиент выбирает потребитель.
+
+## Пример
+
+```tsx
+import { Box, GradientBorder } from '@delba/ui';
+
+export function GradientBorderExample() {
+  return <Box position={['relative', 'relative', 'relative']} r={[12, 8, 12]}>
+    <GradientBorder gradient={[
+      'var(--card-border-gradient)',
+      'var(--card-border-gradient)',
+      'var(--card-border-gradient)',
+    ]} />
+    <p>Содержимое карточки</p>
+  </Box>;
+}
+```
+
+Токен `--card-border-gradient` должен быть задан темой приложения.
+
+## Приёмка
+
+Проверь радиусы, прозрачный центр, толщину на каждой полосе и отсутствие клипа содержимого. Клики и фокус проходят к контролам родителя; слой скрыт от доступности. Для trace проверь остановку вне экрана и reduced motion.
+
+[GradientBorderProps и реализация](../../../../src/components/GradientBorder/GradientBorder.tsx) · [Box](Box.md) · [приёмка](../../verification/acceptance.md).
