@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import { animationVisibilityMargin } from '../core/base/animation-visibility';
+import { observeAnimationVisibility } from '../core/base/animation-visibility';
 
 type AnimationNode = HTMLElement | SVGElement;
 const PROPERTY = '--idle-animation-state';
@@ -20,19 +20,10 @@ export function useAnimationVisibility(enabled = true) {
     if (!node || !enabledRef.current) return;
 
     const previous = node.style.getPropertyValue(PROPERTY);
-    let visible = typeof IntersectionObserver === 'undefined';
-    const update = () => node.style.setProperty(PROPERTY, visible && !document.hidden ? 'running' : 'paused');
-    const observer = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(([entry]) => {
-      visible = Boolean(entry?.isIntersecting);
-      update();
-    }, { rootMargin: animationVisibilityMargin(node) });
-    observer?.observe(node);
-    document.addEventListener('visibilitychange', update);
-    update();
+    const stopObserving = observeAnimationVisibility(node, visible => node.style.setProperty(PROPERTY, visible ? 'running' : 'paused'));
 
     cleanupRef.current = () => {
-      observer?.disconnect();
-      document.removeEventListener('visibilitychange', update);
+      stopObserving();
       if (previous) node.style.setProperty(PROPERTY, previous);
       else node.style.removeProperty(PROPERTY);
     };

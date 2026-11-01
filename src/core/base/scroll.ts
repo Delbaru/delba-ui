@@ -20,7 +20,10 @@ export interface ScrollToOptions {
 
 /** Что дверь ядра берёт у провайдера плавной прокрутки; в точности умеет `SmoothScroll`. */
 export type ScrollProviderApi = {
-  scrollTo: (target: Element | string | number, options?: { offset?: number | string | (() => number) }) => void;
+  scrollTo: (target: Element | string | number, options?: {
+    offset?: number | string | (() => number);
+    block?: ScrollLogicalPosition;
+  }) => void;
 };
 
 /** Сколько кадров подряд положение цели и высота документа должны стоять, прежде чем ехать. */
@@ -178,7 +181,10 @@ function launchFlight(element: Element, options: ScrollToOptions, resolve: (resu
   const api = provider;
 
   if (api) {
-    api.scrollTo(element, options.offset === undefined ? undefined : { offset: options.offset });
+    const alignment = options.offset !== undefined || options.block !== undefined
+      ? { offset: options.offset, block: options.block }
+      : undefined;
+    api.scrollTo(element, alignment);
   } else {
     // Нативный ход ведёт браузер; отступ под шапку берётся из `scroll-margin-top` цели.
     element.scrollIntoView({

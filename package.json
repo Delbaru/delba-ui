@@ -10,6 +10,7 @@
   ],
   "exports": {
     ".": "./src/index.ts",
+    "./carousel": "./src/components/NativeCarousel/index.ts",
     "./phone-field": "./src/components/PhoneField/index.ts",
     "./skin": "./src/skin/index.ts",
     "./rich-text": "./src/rich-text.ts",

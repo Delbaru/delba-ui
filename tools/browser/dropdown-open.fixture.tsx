@@ -49,5 +49,17 @@ export function DropdownOpenFixture() {
         backdrop={{ className: 'fixture-dropdown-backdrop', style: { background: 'rgba(0,0,0,.15)' } }}
         panel={{ portal: true, keepMounted: false, animate: { when: 'open', effect: 'fade', duration: 'fast' } }}
     ><button>Backdrop dropdown item</button></Dropdown>
+    <Dropdown
+        style={{ width: 440 }}
+        blockOutsideClick
+        trigger={<button style={{ width: '100%' }}>Wide dropdown anchor</button>}
+        panel={{ portal: true, matchTriggerWidth: true, keepMounted: false,
+          'data-testid': 'narrow-dropdown-surface', style: { width: 180, padding: 12, background: 'white' } }}
+    >
+      <button>Inside narrow surface</button>
+      <Dropdown trigger={<button>Nested narrow dropdown</button>}
+        panel={{ portal: true, keepMounted: false, 'data-testid': 'nested-narrow-surface', style: { padding: 12, background: 'white' } }}
+      ><button>Nested narrow item</button></Dropdown>
+    </Dropdown>
   </section>;
 }

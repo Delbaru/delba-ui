@@ -65,6 +65,7 @@ export function Carousel({
   animate,
   apiRef,
   onNavigationStateChange,
+  onActiveIndexChange,
   onMouseEnter,
   onMouseLeave,
   ...props
@@ -80,7 +81,7 @@ export function Carousel({
   } = useCarousel(ref, {
     children, carouselId: explicitCarouselId, slidesPerView, orientation, effect, navigation, pagination,
     autoplay, mousewheel, drag, initialSlide, loop, centeredSlides, offsetBefore, offsetAfter, peekStart,
-    peekEnd, speed, scrollBased, perspective3d, parallax, apiRef, onNavigationStateChange, inertia,
+    peekEnd, speed, scrollBased, perspective3d, parallax, apiRef, onNavigationStateChange, onActiveIndexChange, inertia,
     scrollProgress, paginationClassName, navigationClassName, animate,
   });
 

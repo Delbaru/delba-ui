@@ -1,0 +1,89 @@
+@use '../../core/scss-utils' as utils;
+
+@layer ui.components {
+    .Root {
+        position: relative;
+        min-width: 0;
+        display: block;
+        --slides-per-view: 1;
+        --native-carousel-axis: horizontal;
+    }
+    .Viewport {
+        overflow-x: auto;
+        overflow-y: hidden;
+        width: 100%;
+        height: 100%;
+        gap: inherit;
+        scroll-snap-type: x mandatory;
+    }
+    .Track {
+        display: flex;
+        align-items: stretch;
+        gap: inherit;
+        height: 100%;
+    }
+    .Slide {
+        flex: 0 0 calc((100% - (var(--slides-per-view) - 1) * var(--native-carousel-gap, 0px)) / var(--slides-per-view));
+        min-width: 0;
+        min-height: 0;
+        scroll-snap-align: start;
+    }
+    .Root[data-carousel-ready='true'] .Viewport {
+        overflow: hidden;
+        scroll-snap-type: none;
+    }
+    .Root[data-carousel-ready='true'][data-draggable='true'] .Viewport {
+        touch-action: pan-y pinch-zoom;
+    }
+    .Root[data-dragging='true'] {
+        user-select: none;
+        cursor: grabbing;
+    }
+    .Root img {
+        -webkit-user-drag: none;
+    }
+    .Announcement {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+    @mixin counts($bp: null) {
+        $prefix: '';
+        @if $bp != null { $prefix: '#{$bp}_'; }
+        @each $count, $value in (1: 1, '1-5': 1.5, 2: 2, '2-5': 2.5, 3: 3, '3-5': 3.5, 4: 4, '4-5': 4.5, 5: 5, 6: 6) {
+            .#{$prefix}slides-per-view_#{$count} { --slides-per-view: #{$value}; }
+        }
+        @each $orientation in (horizontal, vertical) {
+            .#{$prefix}orientation_#{$orientation} {
+                --native-carousel-axis: #{$orientation};
+                @if $orientation == vertical {
+                    .Track { flex-direction: column; }
+                    .Viewport { scroll-snap-type: y mandatory; }
+                } @else {
+                    .Track { flex-direction: row; }
+                    .Viewport { scroll-snap-type: x mandatory; }
+                }
+                @if $orientation == vertical {
+                    .Viewport { overflow-y: auto; overflow-x: hidden; }
+                    &[data-carousel-ready='true'][data-draggable='true'] .Viewport { touch-action: pan-x pinch-zoom; }
+                } @else {
+                    .Viewport { overflow-x: auto; overflow-y: hidden; }
+                    &[data-carousel-ready='true'][data-draggable='true'] .Viewport { touch-action: pan-y pinch-zoom; }
+                }
+                &[data-carousel-ready='true'] .Viewport { overflow: hidden; scroll-snap-type: none; }
+            }
+        }
+    }
+    @include counts();
+    @include utils.withBreakpoints() using ($bp) { @include counts($bp); }
+}
+
+@layer ui.states {
+    .Root:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 4px;
+    }
+}

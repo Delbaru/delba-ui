@@ -80,6 +80,7 @@ export const DEFAULT_EASING_ROLES = {
     spring: 'spring',
     veil: 'veil',
     counter: 'easeOutQuart',
+    carousel: 'easeOutCubic',
 } as const satisfies Record<string, MotionEasingName>;
 export type MotionEasingRole = keyof typeof DEFAULT_EASING_ROLES;
 export type MotionEasingOverrides = Partial<

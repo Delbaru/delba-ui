@@ -49,6 +49,8 @@ test('fresh package imports public motion before any ignored runtime config has 
     assert.equal(fs.existsSync(path.join(dir, 'src/core/motion-config.ts')), false);
     const entry = await import(pathToFileURL(path.join(dir, 'src/motion.ts')).href);
     assert.equal(entry.motionDefaults.textSlide.duration, 0.4);
+    assert.equal(entry.motionCarousel.drag, true);
+    assert.equal(entry.motionCarousel.orientation, 'horizontal');
     assert.equal(entry.scrollEasing.ease(0.25), 0.0625);
     const timing = await import(pathToFileURL(path.join(dir, 'src/core/base/timing.ts')).href);
     assert.equal(timing.readMotionTimeMs('normal'), 500);
@@ -60,6 +62,9 @@ test('fresh package imports public motion before any ignored runtime config has 
         path.join(configured, 'src/core/motion-config.ts'),
         motionTs({
             timing: { normal: 0.42 },
+            carousel: { drag: false, orientation: 'vertical', loop: true, inertia: true },
+            defaults: { carousel: { inertiaDuration: 'normal', dragThreshold: 42 } },
+            easing: { carousel: motionEasing.linear },
             scroll: {
                 lerp: 0.3,
                 minDuration: 0.2,
@@ -79,6 +84,12 @@ test('fresh package imports public motion before any ignored runtime config has 
     const scroll = await import(
         pathToFileURL(path.join(configured, 'src/components/SmoothScroll/smooth-scroll.ts')).href
     );
+    assert.equal(runtime.motionCarousel.drag, false);
+    assert.equal(runtime.motionCarousel.orientation, 'vertical');
+    assert.equal(runtime.motionCarousel.loop, true);
+    assert.equal(runtime.readMotionDefaultMs('carousel', 'inertiaDuration'), 420);
+    assert.equal(runtime.readMotionDefaultNumber('carousel', 'dragThreshold'), 42);
+    assert.equal(runtime.configuredMotionEasing('carousel')(0.25), 0.25);
     assert.equal(scroll.autoDurationMs(0, 800), 200);
     assert.equal(scroll.autoDurationMs(800, 800), 300);
     assert.equal(scroll.autoDurationMs(1e7, 800), 900);
@@ -274,6 +285,32 @@ test('one motion config drives semantic CSS, SSR defaults, inView and scroll pre
         { nope: { duration: 1 } },
     ])
         assert.throws(() => validateMotion({ timing: { fast: 0.1 }, defaults }), /motion.defaults/);
+});
+
+test('carousel tuning has one typed generated source while old configs preserve behavior', () => {
+    const config = {
+        timing: { throw: 0.9 },
+        carousel: { loop: true, orientation: 'vertical', autoplay: true, inertia: true, drag: false },
+        easing: { carousel: motionEasing.easeInOutCubic },
+        defaults: { carousel: { inertiaDuration: 'throw', inertiaMaxSlides: 7, dragThreshold: 42, edgeResistance: 0.4 } },
+    } satisfies UiMotion;
+    const runtime = JSON.parse(motionTs(config).split(' = ')[1]?.replace(/;\n$/, '') ?? 'null');
+    assert.deepEqual(runtime.carousel, {
+        drag: false, rewind: false, loop: true, orientation: 'vertical', mousewheel: false,
+        autoplay: true, inertia: true, pauseInactiveMedia: true,
+    });
+    assert.equal(runtime.defaults.carousel.inertiaDuration, 'throw');
+    assert.equal(runtime.defaults.carousel.inertiaMaxSlides, 7);
+    assert.equal(runtime.easing.carousel, 'easeInOutCubic');
+    assert.match(motionScss(config), /--t-m-carousel-inertia-duration: var\(--t-d-throw\);/);
+    assert.match(motionScss(config), /--t-m-carousel-drag-threshold: 42;/);
+    const old = JSON.parse(motionTs({ timing: { fast: 0.3 } }).split(' = ')[1]?.replace(/;\n$/, '') ?? 'null');
+    assert.equal(old.carousel.drag, true);
+    assert.equal(old.carousel.loop, false);
+    assert.equal(old.defaults.carousel.inertiaDuration, 0.6);
+    for (const carousel of [{ loop: 'yes' }, { orientation: 'diagonal' }, { typo: true }])
+        assert.throws(() => validateMotion({ timing: { fast: 0.3 }, carousel }), /motion.carousel/);
+    assert.throws(() => validateMotion({ timing: { fast: 0.3 }, defaults: { carousel: { edgeResistance: 1.5 } } }), /edgeResistance/);
 });
 
 test('writeMotionScss writes only on content changes', (t) => {

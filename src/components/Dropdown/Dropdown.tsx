@@ -124,10 +124,11 @@ export function Dropdown({
   const rootRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const surfaceRef = useRef<HTMLDivElement>(null);
   const openAnimate = isOpenAnimate(panelAnimate) ? panelAnimate : undefined;
   const { motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ animate: openAnimate, open });
   const presence = useOpenPresence(open, Boolean(openAnimate));
-  const setSurfaceRef = useMergedRefs(presence.ref, setMotionNode);
+  const setSurfaceRef = useMergedRefs(surfaceRef, presence.ref, setMotionNode);
   const geometryRef = geometryAnchorRef ?? anchorRef;
   const focusOnOpen = useRef<'first' | 'last' | null>(null);
   const scopeRef = useRef<HTMLDivElement>(null);
@@ -158,7 +159,7 @@ export function Dropdown({
     if (!open) return;
     changeOpen(false);
   };
-  const dismissProps = useOutsideDismiss([rootRef, panelRef], close, { enabled: open, escape: false, blockOutsideClick });
+  const dismissProps = useOutsideDismiss([anchorRef, surfaceRef], close, { enabled: open, escape: false, blockOutsideClick });
   const { style: floatingStyle, updatePosition } = useAnchoredFloating({
     anchorRef: geometryRef, floatingRef: panelRef, isActive: portal && open,
     placement: 'bottom', align: side, gap: gapPixels, viewportPadding,
@@ -253,6 +254,7 @@ export function Dropdown({
     <Box
         {...panelProps}
         ref={setSurfaceRef}
+        onMouseDownCapture={composeEventHandlers(panelProps.onMouseDownCapture, dismissProps.onMouseDownCapture)}
         animate={isOpenAnimate(panelAnimate) ? undefined : panelAnimate}
         className={cx(styles.surface, panelProps.className)}
         style={{ ...motionStyle, ...panelProps.style }}
@@ -328,7 +330,6 @@ export function Dropdown({
       data-match-width={matchTriggerWidth || undefined}
       aria-hidden={!open}
       inert={!open}
-      onMouseDownCapture={dismissProps.onMouseDownCapture}
       onClick={handlePanelClick}
     >
       {openAnimate ? ((presence.present || keepMounted) && surface) : <CollapseWrap

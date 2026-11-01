@@ -38,6 +38,8 @@ export type SmoothScrollConfig = {
 export type SmoothScrollTarget = number | Element | string;
 
 export type SmoothScrollToOptions = {
+  /** Выравнивание элемента в окне; по умолчанию `start`. Числовая цель уже задаёт точную позицию. */
+  block?: ScrollLogicalPosition;
   /** Сдвиг под шапку для этого вызова; по умолчанию — `offset` провайдера. К числовой цели не применяется. */
   offset?: SmoothScrollOffset;
   /** Длительность, секунды; по умолчанию — `duration` провайдера. */
@@ -162,20 +164,33 @@ export function createSmoothScroll(initial: SmoothScrollConfig): SmoothScrollCon
     }
   };
 
-  const resolver = (to: SmoothScrollTarget, offset: SmoothScrollOffset): (() => number) | null => {
+  const resolver = (to: SmoothScrollTarget, offset: SmoothScrollOffset, block: ScrollLogicalPosition): (() => number) | null => {
     if (typeof to === 'number') return () => to;
 
     const element = typeof to === 'string' ? findElement(to) : to;
     if (!element) return null;
 
     const px = measureOffset(offset);
-    const margin = parseFloat(getComputedStyle(element).scrollMarginTop) || 0;
+    const style = getComputedStyle(element);
+    const margin = parseFloat(style.scrollMarginTop) || 0;
+    const bottomMargin = parseFloat(style.scrollMarginBottom) || 0;
 
-    return () => anchorTop(element.getBoundingClientRect().top, window.scrollY, px, margin);
+    return () => {
+      const bounds = element.getBoundingClientRect();
+      const start = anchorTop(bounds.top, window.scrollY, px, margin);
+      if (block === 'start') return start;
+      const end = bounds.bottom + bottomMargin + window.scrollY - window.innerHeight;
+      if (block === 'end') return end;
+      if (block === 'center') return (start + end) / 2;
+      const above = start < window.scrollY;
+      const below = end > window.scrollY;
+      if (above === below) return window.scrollY;
+      return Math.abs(start - window.scrollY) < Math.abs(end - window.scrollY) ? start : end;
+    };
   };
 
   const scrollTo = (to: SmoothScrollTarget, options: SmoothScrollToOptions = {}) => {
-    const resolve = resolver(to, options.offset ?? config.offset);
+    const resolve = resolver(to, options.offset ?? config.offset, options.block ?? 'start');
     if (!resolve) return;
 
     stop();

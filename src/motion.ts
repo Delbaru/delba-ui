@@ -9,8 +9,9 @@ export {
 export {
     type MotionDefaultOverrides,
     type MotionDefaults,
+    type CarouselBehaviorDefaults,
 } from './core/base/motion-defaults';
-export { motionDefaults } from './core/base/motion-config';
+export { motionDefaults, motionCarousel } from './core/base/motion-config';
 export type {
     ObserverMargin,
     ObserverMargins,

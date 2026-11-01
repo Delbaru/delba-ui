@@ -2,7 +2,7 @@ import type { UiScale } from '../src/core/base/scale';
 import type { ScrollbarOptions } from '../src/components/ScrollArea/scrollbar';
 import type { ExtractOptions } from './utilities/extract';
 import type { ObserverMargin } from '../src/core/base/observer-margin';
-import type { MotionDefaultOverrides } from '../src/core/base/motion-defaults';
+import type { CarouselBehaviorDefaults, MotionDefaultOverrides } from '../src/core/base/motion-defaults';
 import type {
     MotionEasingOverrides,
     MotionEasingName,
@@ -26,6 +26,8 @@ export interface UiMotion {
     readonly visibility?: { readonly rootMargin: ObserverMargin };
     /** Per-behavior defaults shared by CSS, JS and SSR. Durations are seconds or timing names. */
     readonly defaults?: MotionDefaultOverrides;
+    /** Shared NativeCarousel behavior; instance props override it. Numeric tuning lives in defaults.carousel. */
+    readonly carousel?: Partial<CarouselBehaviorDefaults>;
     /** Discoverable motionEasing presets share their curve between CSS and JS. */
     readonly easing?: MotionEasingOverrides;
     /** Default viewport-start behavior. Percentages retain IntersectionObserver's width-relative semantics. */

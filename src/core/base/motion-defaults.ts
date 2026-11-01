@@ -52,6 +52,17 @@ export const MOTION_DEFAULTS = {
     carousel: {
         duration: 0.3,
         autoplayDelay: 3,
+        autoplayMinimumDuration: 0.1,
+        inertiaDuration: 0.6,
+        inertiaMinimumDuration: 0.1,
+        inertiaMaxSlides: 3,
+        inertiaMinimumVelocity: 150,
+        dragThreshold: 6,
+        dragSampleDuration: 0.1,
+        flickDistance: 20,
+        flickVelocity: 350,
+        edgeResistance: 0.2,
+        wheelCooldownDuration: 0.18,
     },
     buttonIdle: {
         duration: 8,
@@ -109,9 +120,27 @@ export type MotionDefaults<Time = MotionTime> = {
 export type MotionDefaultOverrides = {
     readonly [G in MotionDefaultGroup]?: Partial<MotionDefaults[G]>;
 };
+/** Shared NativeCarousel behavior. Instance props override these defaults; layout remains explicit. */
+export interface CarouselBehaviorDefaults {
+    drag: boolean;
+    rewind: boolean;
+    loop: boolean;
+    orientation: 'horizontal' | 'vertical';
+    mousewheel: boolean;
+    autoplay: boolean;
+    inertia: boolean;
+    pauseInactiveMedia: boolean;
+}
+export const CAROUSEL_BEHAVIOR_DEFAULTS: CarouselBehaviorDefaults = {
+    drag: true, rewind: false, loop: false, orientation: 'horizontal', mousewheel: false,
+    autoplay: false, inertia: false, pauseInactiveMedia: true,
+};
+export const resolveCarouselBehavior = (overrides?: Partial<CarouselBehaviorDefaults>): CarouselBehaviorDefaults =>
+    ({ ...CAROUSEL_BEHAVIOR_DEFAULTS, ...overrides });
 export interface RuntimeMotionConfig {
     timing: Record<string, number>;
     defaults: MotionDefaults<string | number>;
+    carousel: CarouselBehaviorDefaults;
     easing: Record<MotionEasingRole, SerializedEasing>;
     inView: { rootMargin: string; threshold: number };
     scroll: {

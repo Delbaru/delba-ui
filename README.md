@@ -25,6 +25,7 @@
 | Вход | Что | Пример |
 |---|---|---|
 | `@delba/ui` | компоненты, хуки, типы (`src/index.ts`) | `import { Flex, Text } from '@delba/ui'` |
+| `@delba/ui/carousel` | собственная карусель без Swiper, контроллер, индикаторы и синхронизация; [договор](docs/carousel.md) | `import { NativeCarousel, useCarouselController } from '@delba/ui/carousel'` |
 | `@delba/ui/phone-field` | отдельный вход международного телефона для загрузки по необходимости; основной вход сохранён | `import('@delba/ui/phone-field').then(({ PhoneField }) => PhoneField)` |
 | `@delba/ui/skin` | движок шкур для D-/Shared-компонентов | `import { defineSkin } from '@delba/ui/skin'` |
 | `@delba/ui/icons/*` | иконки кита (`assets/icons/ui/*`) | `import eye from '@delba/ui/icons/eye/style-1/eye.svg'` → `assetUrl(eye)` |

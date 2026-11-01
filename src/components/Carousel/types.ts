@@ -100,6 +100,8 @@ export interface CarouselProps extends GrowProps, SharedMotionProps {
   linkState?: StateLinkInput;
   apiRef?: CarouselApiRef;
   onNavigationStateChange?: (state: CarouselNavigationState) => void;
+  /** Called for every changed logical slide index, independently of boundary/button state. */
+  onActiveIndexChange?: (index: number) => void;
 
   onMouseEnter?: React.MouseEventHandler<HTMLDivElement>;
   onMouseLeave?: React.MouseEventHandler<HTMLDivElement>;

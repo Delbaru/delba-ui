@@ -2,6 +2,7 @@ import {
     SCROLL_DEFAULTS,
     MOTION_TIMING_DEFAULTS,
     resolveMotionDefaults,
+    resolveCarouselBehavior,
     type RuntimeMotionConfig,
 } from '../base/motion-defaults';
 import { DEFAULT_EASING_ROLES } from '../base/easing';
@@ -9,6 +10,7 @@ import { DEFAULT_EASING_ROLES } from '../base/easing';
 export const MOTION_CONFIG: RuntimeMotionConfig = {
     timing: MOTION_TIMING_DEFAULTS,
     defaults: resolveMotionDefaults(),
+    carousel: resolveCarouselBehavior(),
     easing: DEFAULT_EASING_ROLES,
     inView: {
         rootMargin: '0px',

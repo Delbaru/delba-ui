@@ -13,6 +13,7 @@ import { Text } from '../../src/components/Text/Text';
 import { Textarea } from '../../src/components/Textarea/Textarea';
 import { ScrollArea } from '../../src/components/ScrollArea';
 import { DurationPicker } from '../../src/components/DurationPicker';
+import { NativeCarousel } from '../../src/components/NativeCarousel';
 
 function Glyph(props: SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 16 16" {...props}><path d="M2 8h12M8 2v12" /></svg>;
@@ -27,6 +28,11 @@ export function SsrFixture() {
   return (
     <main className="fixture">
       <h1>SSR and hydration</h1>
+      <NativeCarousel label="Server carousel" slidesPerView={[2, 1, 2]} w={[600, 320, 480]}>
+        <a href="#server-one">Server carousel one</a>
+        <a href="#server-two">Server carousel two</a>
+        <a href="#server-three">Server carousel three</a>
+      </NativeCarousel>
       <style>{':root { --t-d-fast: 190ms; }'}</style>
       <Text data-testid="ssr-named-slide" animate={['textSlide', { mode: 'swap', duration: 'fast' }]}>Named slide</Text>
       <Text data-testid="ssr-named-reveal" animate={['textReveal', { duration: 'fast' }]}>Named reveal</Text>

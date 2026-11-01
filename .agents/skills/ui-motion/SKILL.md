@@ -31,13 +31,19 @@ description: 'Общая механика анимаций @delba/ui: appearance
 - DOM ref сохраняет назначение и cleanup; ручка поведения отдельна.
 - Callback ref сохраняет идентичность между рендерами, чтобы не сбрасывать движение.
 - Пользовательские события компонуются; отмена действия не отменяет обязательный cleanup.
+- Для pointer capture различай собственную потерю захвата и всплывший `lostpointercapture`
+  дочернего implicit touch capture; проверяй настоящий touch, а не только mouse drag.
 - Обратная команда, cancel и unmount корректно завершают ожидающий результат.
+- Адаптер Transition сохраняет исходный объект для композиции ядра; проверяй together/sequence.
+- Повторная команда во время движения сохраняет позицию и скорость; tap не прерывает ход до порога drag.
 - Reduced motion сохраняет результат и lifecycle; первый SSR и hydration согласованы.
   Initial state времени читает generated runtime без DOM; scoped CSS уточняется после commit.
 - Пауза вне экрана/скрытого документа и снятие слушателей/observer/rAF обязательны
   там, где механика их создаёт. Не дублируй движок в компоненте.
 - Сглаживание учитывает время кадра, а не число кадров; на разных Hz длительность одинакова.
 - Все публичные motion duration/delay, включая legacy counter и Carousel, — секунды или timing name.
+  Пороги, инерция и общие defaults поведения доступны в ui.config, без скрытых числовых fallback
+  в движке; численные допуски и коэффициенты формул остаются внутренними и объясняются кодом.
   Defaults эффектов берутся из motion.defaults; прокруткой целиком владеет motion.scroll.
   Кривые берутся из motionEasing, damping — из frameResponse/timeResponse.
   Observer margins — явные top/right/bottom/left; legacy % не подменяют единицами vh. Lenis удалён.

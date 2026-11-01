@@ -12,6 +12,8 @@ import { BrowserFixture } from './fixture';
 import { DropdownOpenFixture } from './dropdown-open.fixture';
 import { HoverMotionFixture } from './hover-motion.fixture';
 import { GridLayoutFixture } from './grid-layout.fixture';
+import { NativeCarouselFixture } from './native-carousel.fixture';
+import { NativeCarouselAdvancedFixture } from './native-carousel-advanced.fixture';
 import { LinkPrefetchFixture } from './link-prefetch.fixture';
 import { ModalProvider } from '../../src/components/Modal/ModalProvider';
 import { createSmoothScroll } from '../../src/components/SmoothScroll/engine';
@@ -31,6 +33,8 @@ createRoot(root).render(
     <StrictMode>
       <ModalProvider>{location.search === '?smooth'
         ? <main style={{ height: 2000 }}><h1>Delba UI browser regression fixture</h1></main>
+        : location.search === '?native-carousel-advanced' ? <NativeCarouselAdvancedFixture />
+        : location.search === '?native-carousel' ? <NativeCarouselFixture />
         : location.search === '?dropdown-open' ? <DropdownOpenFixture />
         : location.search === '?link-prefetch' ? <LinkPrefetchFixture />
         : location.search === '?grid-layout' ? <GridLayoutFixture />

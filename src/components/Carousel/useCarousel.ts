@@ -14,7 +14,7 @@ export type CarouselConfig = Pick<
   | 'children' | 'carouselId' | 'slidesPerView' | 'orientation' | 'effect' | 'navigation' | 'pagination'
   | 'autoplay' | 'mousewheel' | 'drag' | 'initialSlide' | 'loop' | 'centeredSlides' | 'offsetBefore'
   | 'offsetAfter' | 'peekStart' | 'peekEnd' | 'speed' | 'scrollBased' | 'perspective3d' | 'parallax' | 'animate'
-  | 'apiRef' | 'onNavigationStateChange' | 'inertia' | 'scrollProgress' | 'paginationClassName'
+  | 'apiRef' | 'onNavigationStateChange' | 'onActiveIndexChange' | 'inertia' | 'scrollProgress' | 'paginationClassName'
   | 'navigationClassName'
 >;
 
@@ -28,7 +28,7 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     children, carouselId: explicitCarouselId, slidesPerView, orientation, effect, navigation, pagination,
     autoplay, mousewheel, drag, initialSlide, loop, centeredSlides, offsetBefore, offsetAfter, peekStart,
     peekEnd, speed, scrollBased, perspective3d, parallax, animate, apiRef, onNavigationStateChange, inertia,
-    scrollProgress, paginationClassName, navigationClassName,
+    scrollProgress, paginationClassName, navigationClassName, onActiveIndexChange,
   } = config;
 
   const slides = useMemo(() => Children.toArray(children), [children]);
@@ -54,9 +54,11 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     getNavigationState: () => DEFAULT_NAVIGATION_STATE,
   });
   const onNavigationStateChangeRef = useRef(onNavigationStateChange);
+  const onActiveIndexChangeRef = useRef(onActiveIndexChange);
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
 
   onNavigationStateChangeRef.current = onNavigationStateChange;
+  onActiveIndexChangeRef.current = onActiveIndexChange;
 
   const slidesPerViewKey = useMemo(() => {
     const toKey = (value: number | 'auto') => {
@@ -221,8 +223,10 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
 
     if (!force && lastActiveIndexRef.current === nextIndex) return;
 
+    const changed = lastActiveIndexRef.current !== nextIndex;
     lastActiveIndexRef.current = nextIndex;
     setActiveIndex(nextIndex);
+    if (changed) onActiveIndexChangeRef.current?.(nextIndex);
   }, [loopEnabled, slides.length]);
 
   const normalizePaddedLoopPosition = useCallback((swiper: SwiperInstance | null) => {

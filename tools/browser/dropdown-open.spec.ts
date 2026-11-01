@@ -127,3 +127,25 @@ test('dropdown backdrop shares the portal and dismisses without entering the tab
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(backdrop).toHaveCount(0);
 });
+
+test('outside click uses the painted surface rather than empty positioning space, retaining nested portals', async ({ page }) => {
+  await page.goto('/?dropdown-open');
+  const trigger = page.getByRole('button', { name: 'Wide dropdown anchor', exact: true });
+  const surface = page.getByTestId('narrow-dropdown-surface');
+  await trigger.click();
+  await page.getByRole('button', { name: 'Inside narrow surface', exact: true }).click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await page.getByRole('button', { name: 'Nested narrow dropdown', exact: true }).click();
+  await page.getByRole('button', { name: 'Nested narrow item', exact: true }).click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  const painted = await surface.boundingBox();
+  const positioning = await surface.locator('xpath=ancestor::*[@data-dropdown-ancestors][1]').boundingBox();
+  expect(painted).not.toBeNull();
+  expect(positioning).not.toBeNull();
+  expect((positioning?.width ?? 0) - (painted?.width ?? 0)).toBeGreaterThan(80);
+  if (!painted) throw new Error('Dropdown surface is missing');
+  await page.mouse.click(painted.x + painted.width + 40, painted.y + 12);
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});

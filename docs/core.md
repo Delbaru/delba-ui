@@ -50,6 +50,17 @@ preload может передаваться HTTP Link, а не только DOM.
 
 ## Раскладка
 
+`NativeCarousel` из `@delba/ui/carousel` использует собственную ленту и общий
+`Transition`; Swiper не входит в этот runtime-вход. `useCarouselController()` даёт
+`next/prev/goTo`, `play/pause/stop`, snapshot и подписку; `useCarouselSnapshot()`
+подключает дискретное UI-состояние. Точки и миниатюры используют тот же протокол,
+что прежняя карусель. Подробный договор и границы — [carousel.md](carousel.md).
+`core/base/carousel-motion.ts` владеет движением track, общими easing/reduced motion
+и чтением фактической позиции только при прерывании.
+`observeAnimationVisibility()` в `core/base/animation-visibility.ts` объединяет
+видимость элемента и документа для CSS motion и JS playback с общим cleanup;
+конструкторы observer берутся из realm владельца узла.
+
 `CarouselDots.renderItem({ index, isActive, onSelect })` заменяет стандартную точку
 миниатюрой или подписанной кнопкой. Позиция и переход принадлежат существующей
 подписке карусели и синхронизируются со стрелками и перетаскиванием; второй индекс
@@ -192,6 +203,8 @@ rAF-цикл прогресса крутится только пока есть 
 раскладка встанет (положение цели и высота документа неизменны 6 кадров), потом едет. Ход строится
 на провайдере `SmoothScroll` — он сам отдаёт себя через `registerScrollProvider`; без провайдера —
 нативная плавная прокрутка окна. Отступ под шапку — CSS `scroll-margin-top` у цели, не число в JS.
+`block: 'start' | 'center' | 'end' | 'nearest'` сохраняется при передаче провайдеру;
+`nearest` оставляет уже видимую цель на месте и выбирает ближайший край скрытой цели.
 Одна прокрутка за раз: новая прерывает недоехавшую, её обещание даёт `{ status: 'interrupted' }`;
 возвращает `Promise<{ status: 'finished' | 'interrupted' }>` (когда в ките появится `Transition`,
 тип им заменится — форма результата та же).

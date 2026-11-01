@@ -3,6 +3,7 @@ import {
     MOTION_DEFAULTS,
     SCROLL_DEFAULTS,
     resolveMotionDefaults,
+    resolveCarouselBehavior,
     motionDefaultVariable,
     type MotionDefaultGroup,
     type MotionDefaults,
@@ -14,6 +15,7 @@ import { DEFAULT_EASING_ROLES, resolveEasingPreset, type MotionEasingRole } from
 // A previous generated artifact may be loaded by ui.config.ts before the first rebuild after an upgrade.
 const runtime = MOTION_CONFIG as Partial<RuntimeMotionConfig>;
 export const motionDefaults: MotionDefaults = resolveMotionDefaults(runtime.defaults);
+export const motionCarousel = resolveCarouselBehavior(runtime.carousel);
 export const configuredMotionEasing = (role: MotionEasingRole) =>
     resolveEasingPreset(runtime.easing?.[role] ?? DEFAULT_EASING_ROLES[role]);
 export const motionInView = runtime.inView ?? { rootMargin: '0px', threshold: 0 };
@@ -22,6 +24,17 @@ export const motionScroll = {
     ...runtime.scroll,
     easing: resolveEasingPreset(runtime.scroll?.easing ?? SCROLL_DEFAULTS.easing),
 };
+/** Unitless behavior tuning shares the generated runtime and optional scoped CSS override. */
+export function readMotionDefaultNumber<G extends MotionDefaultGroup>(
+    group: G, key: keyof MotionDefaults[G] & string, scope?: Element,
+): number {
+    const value = scope && typeof getComputedStyle === 'function'
+        ? getComputedStyle(scope).getPropertyValue(motionDefaultVariable(group, key)).trim() : '';
+    const parsed = value === '' ? NaN : Number(value);
+    const configured = motionDefaults[group][key];
+    const fallback = MOTION_DEFAULTS[group][key as keyof (typeof MOTION_DEFAULTS)[G]];
+    return Number.isFinite(parsed) ? parsed : typeof configured === 'number' ? configured : typeof fallback === 'number' ? fallback : 0;
+}
 /** CSS and JS resolve the exact same semantic token, including scoped overrides. */
 export function readMotionDefaultMs<G extends MotionDefaultGroup>(
     group: G,

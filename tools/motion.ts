@@ -17,6 +17,8 @@ import {
     isDefaultTime,
     motionDefaultVariable,
     resolveMotionDefaults,
+    CAROUSEL_BEHAVIOR_DEFAULTS,
+    resolveCarouselBehavior,
 } from '../src/core/base/motion-defaults';
 import {
     DEFAULT_EASING_ROLES,
@@ -51,9 +53,17 @@ export function validateMotion(value: unknown): asserts value is UiMotion | unde
     if (!isRecord(value)) throw new Error('motion must be an object');
     assertOnlyKeys(
         value,
-        ['timing', 'distance', 'visibility', 'defaults', 'easing', 'inView', 'scroll'],
+        ['timing', 'distance', 'visibility', 'defaults', 'carousel', 'easing', 'inView', 'scroll'],
         'motion',
     );
+    if (value.carousel !== undefined) {
+        if (!isRecord(value.carousel)) throw new Error('motion.carousel must be an object');
+        assertOnlyKeys(value.carousel, Object.keys(CAROUSEL_BEHAVIOR_DEFAULTS), 'motion.carousel');
+        for (const [key, setting] of Object.entries(value.carousel)) {
+            if (key === 'orientation' ? setting !== 'horizontal' && setting !== 'vertical' : typeof setting !== 'boolean')
+                throw new Error(`motion.carousel.${key} must be ${key === 'orientation' ? 'horizontal or vertical' : 'boolean'}`);
+        }
+    }
     if (value.inView !== undefined) {
         if (!isRecord(value.inView)) throw new Error('motion.inView must be an object');
         assertOnlyKeys(value.inView, ['rootMargin', 'threshold'], 'motion.inView');
@@ -141,7 +151,7 @@ export function validateMotion(value: unknown): asserts value is UiMotion | unde
                     (key === 'threshold' ||
                         key === 'ease' ||
                         key === 'restEase' ||
-                        key === 'lerp') &&
+                        key === 'lerp' || key === 'edgeResistance') &&
                     (amount < 0 || amount > 1)
                 )
                     throw new Error(`motion.defaults.${group}.${key} must be between 0 and 1`);
@@ -242,6 +252,7 @@ export function motionTs(motion?: UiMotion): string {
     const runtime = {
         timing: { ...MOTION_TIMING_DEFAULTS, ...motion?.timing },
         defaults: resolveMotionDefaults(motion?.defaults),
+        carousel: resolveCarouselBehavior(motion?.carousel),
         easing: resolveEasing(motion),
         inView: {
             rootMargin: normalizeObserverMargin(motion?.inView?.rootMargin ?? '0px'),
