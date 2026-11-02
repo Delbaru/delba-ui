@@ -134,7 +134,9 @@ type LexicalNode =
   | LexicalLinkNode;
 
 function record(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
 }
 
 /** Неподдерживаемые/повреждённые узлы пропускаются, соседний корректный контент сохраняется. */
@@ -142,34 +144,80 @@ function readNode(value: unknown): LexicalNode | null {
   const node = record(value);
   if (!node) return null;
   const type = node.type;
-  const string = (key: string): string | undefined => { const value = node[key]; return typeof value === 'string' ? value : undefined; };
+  const string = (key: string): string | undefined => {
+    const value = node[key];
+    return typeof value === 'string' ? value : undefined;
+  };
   if (type === 'text' || type === 'variable') {
     if (typeof node.text !== 'string') return null;
-    const text = { text: node.text, format: typeof node.format === 'number' ? node.format : undefined, style: string('style') };
-    return type === 'text' ? { type, ...text } : { type, ...text, label: string('label'), variableKey: string('variableKey'), color: string('color') };
+    const text = {
+      text: node.text,
+      format: typeof node.format === 'number' ? node.format : undefined,
+      style: string('style'),
+    };
+    return type === 'text'
+      ? { type, ...text }
+      : {
+          type,
+          ...text,
+          label: string('label'),
+          variableKey: string('variableKey'),
+          color: string('color'),
+        };
   }
   if (type === 'linebreak') return { type };
   if (!Array.isArray(node.children)) return null;
-  const children = node.children.flatMap((child) => { const parsed = readNode(child); return parsed ? [parsed] : []; });
+  const children = node.children.flatMap((child) => {
+    const parsed = readNode(child);
+    return parsed ? [parsed] : [];
+  });
   const roles = { role: string('role'), roleM: string('roleM'), roleT: string('roleT') };
   if (type === 'paragraph' || type === 'rich-paragraph') return { type, children, ...roles };
   if (type === 'heading' || type === 'rich-heading') {
     const tag = node.tag;
-    if (tag !== 'h1' && tag !== 'h2' && tag !== 'h3' && tag !== 'h4' && tag !== 'h5' && tag !== 'h6') return null;
+    if (
+      tag !== 'h1' &&
+      tag !== 'h2' &&
+      tag !== 'h3' &&
+      tag !== 'h4' &&
+      tag !== 'h5' &&
+      tag !== 'h6'
+    )
+      return null;
     return { type, tag, children, ...roles };
   }
-  if (type === 'list' || type === 'rich-list') return { type, children, marker: string('marker'), markerColor: string('markerColor'), start: typeof node.start === 'number' ? node.start : undefined, listType: node.listType === 'number' ? 'number' : 'bullet', tag: node.tag === 'ol' ? 'ol' : 'ul' };
+  if (type === 'list' || type === 'rich-list')
+    return {
+      type,
+      children,
+      marker: string('marker'),
+      markerColor: string('markerColor'),
+      start: typeof node.start === 'number' ? node.start : undefined,
+      listType: node.listType === 'number' ? 'number' : 'bullet',
+      tag: node.tag === 'ol' ? 'ol' : 'ul',
+    };
   if (type === 'listitem' || type === 'quote') return { type, children };
   if (type === 'link' || type === 'autolink') {
-    const fields = record(node.fields), doc = record(fields?.doc), entry = record(doc?.value);
+    const fields = record(node.fields),
+      doc = record(fields?.doc),
+      entry = record(doc?.value);
     return {
-      type, children, url: string('url'), target: string('target'), rel: string('rel'), title: string('title'),
-      fields: fields ? {
-        url: typeof fields.url === 'string' ? fields.url : undefined,
-        linkType: fields.linkType === 'internal' ? 'internal' : 'custom',
-        newTab: fields.newTab === true,
-        doc: entry ? { value: { slug: typeof entry.slug === 'string' ? entry.slug : undefined } } : undefined,
-      } : undefined,
+      type,
+      children,
+      url: string('url'),
+      target: string('target'),
+      rel: string('rel'),
+      title: string('title'),
+      fields: fields
+        ? {
+            url: typeof fields.url === 'string' ? fields.url : undefined,
+            linkType: fields.linkType === 'internal' ? 'internal' : 'custom',
+            newTab: fields.newTab === true,
+            doc: entry
+              ? { value: { slug: typeof entry.slug === 'string' ? entry.slug : undefined } }
+              : undefined,
+          }
+        : undefined,
     };
   }
   return null;
@@ -185,7 +233,10 @@ function parseInlineStyle(styleText?: string): CSSProperties | undefined {
     .map((entry) => entry.trim())
     .filter(Boolean)
     .map((entry) => entry.split(':'))
-    .filter((entry): entry is [string, string] => entry.length >= 2 && Boolean(entry[0]?.trim()) && Boolean(entry[1]?.trim()));
+    .filter(
+      (entry): entry is [string, string] =>
+        entry.length >= 2 && Boolean(entry[0]?.trim()) && Boolean(entry[1]?.trim()),
+    );
 
   if (styleEntries.length === 0) {
     return undefined;
@@ -221,7 +272,11 @@ function renderTextNode(node: LexicalTextNode, key: string): ReactNode {
   const isCode = (format & 16) !== 0;
   const inlineStyle = parseInlineStyle(node.style);
 
-  let content: ReactNode = inlineStyle ? <span key={`${key}-text`} style={inlineStyle}>{text}</span> : text;
+  let content: ReactNode = inlineStyle ? (
+    <span key={`${key}-text`} style={inlineStyle}>{text}</span>
+  ) : (
+    text
+  );
 
   if (isCode) content = <code key={key}>{content}</code>;
   if (isUnderline) content = <u key={key}>{content}</u>;
@@ -235,10 +290,14 @@ function renderTextNode(node: LexicalTextNode, key: string): ReactNode {
 function renderVariableNode(node: LexicalVariableNode, key: string): ReactNode {
   return (
     <span
-        key={key}
-        className={styles.variableChip}
-        style={node.color ? ({ ['--rich-text-variable-color' as string]: node.color } as CSSProperties) : undefined}
-        data-variable-key={node.variableKey}
+      key={key}
+      className={styles.variableChip}
+      style={
+        node.color
+          ? ({ ['--rich-text-variable-color' as string]: node.color } as CSSProperties)
+          : undefined
+      }
+      data-variable-key={node.variableKey}
     >
       {node.label ?? node.text}
     </span>
@@ -266,7 +325,9 @@ function resolveLinkHref(node: LexicalLinkNode): string | undefined {
  * победит на мобилке, решал бы порядок двух разных файлов стилей.
  */
 function roleClass(node: LexicalRoleFields): string | undefined {
-  const roles = [node.role, node.roleM, node.roleT].filter((role) => role !== undefined && role !== null && role !== '');
+  const roles = [node.role, node.roleM, node.roleT].filter(
+    (role) => role !== undefined && role !== null && role !== '',
+  );
   const legacy = roles.every((role) => isRichRole(role));
   const classes = legacy
     ? roleClassKeys(node.role, node.roleM, node.roleT).map((key) => styles[key])
@@ -274,7 +335,7 @@ function roleClass(node: LexicalRoleFields): string | undefined {
   return classes.length > 0 ? cx(...classes) : undefined;
 }
 
-function renderNode(node: LexicalNode, index: number): ReactNode {
+function renderNode(node: LexicalNode, index: number, links: 'active' | 'text'): ReactNode {
   const key = `node-${index}`;
 
   if (node.type === 'variable') {
@@ -292,7 +353,7 @@ function renderNode(node: LexicalNode, index: number): ReactNode {
   if (node.type === 'paragraph' || node.type === 'rich-paragraph') {
     return (
       <p key={key} className={roleClass(node)}>
-        {node.children?.map((child, i) => renderNode(child, i))}
+        {node.children?.map((child, i) => renderNode(child, i, links))}
       </p>
     );
   }
@@ -301,7 +362,7 @@ function renderNode(node: LexicalNode, index: number): ReactNode {
     const Tag = node.tag || 'h2';
     return (
       <Tag key={key} className={roleClass(node)}>
-        {node.children?.map((child, i) => renderNode(child, i))}
+        {node.children?.map((child, i) => renderNode(child, i, links))}
       </Tag>
     );
   }
@@ -312,37 +373,38 @@ function renderNode(node: LexicalNode, index: number): ReactNode {
       <Tag
         key={key}
         start={Tag === 'ol' ? node.start : undefined}
-        style={{
-          listStyleType: Tag === 'ol' ? 'decimal' : node.marker === 'dash' ? '"—  "' : 'disc',
-          '--rich-list-marker-color': node.markerColor || 'currentColor',
-        } as CSSProperties}
+        style={
+          {
+            listStyleType: Tag === 'ol' ? 'decimal' : node.marker === 'dash' ? '"—  "' : 'disc',
+            '--rich-list-marker-color': node.markerColor || 'currentColor',
+          } as CSSProperties
+        }
       >
-        {node.children?.map((child, i) => renderNode(child, i))}
+        {node.children?.map((child, i) => renderNode(child, i, links))}
       </Tag>
     );
   }
 
   if (node.type === 'listitem') {
-    return (
-      <li key={key}>
-        {node.children?.map((child, i) => renderNode(child, i))}
-      </li>
-    );
+    return <li key={key}>{node.children?.map((child, i) => renderNode(child, i, links))}</li>;
   }
 
   if (node.type === 'quote') {
     return (
       <blockquote key={key}>
-        {node.children?.map((child, i) => renderNode(child, i))}
+        {node.children?.map((child, i) => renderNode(child, i, links))}
       </blockquote>
     );
   }
 
   if (node.type === 'link' || node.type === 'autolink') {
+    if (links === 'text') {
+      return <span key={key}>{node.children?.map((child, i) => renderNode(child, i, links))}</span>;
+    }
     const href = resolveLinkHref(node);
 
     if (!href) {
-      return node.children?.map((child, i) => renderNode(child, i));
+      return node.children?.map((child, i) => renderNode(child, i, links));
     }
 
     const target = node.fields?.newTab ? '_blank' : node.target;
@@ -350,7 +412,7 @@ function renderNode(node: LexicalNode, index: number): ReactNode {
 
     return (
       <a key={key} href={href} target={target} rel={rel} title={node.title}>
-        {node.children?.map((child, i) => renderNode(child, i))}
+        {node.children?.map((child, i) => renderNode(child, i, links))}
       </a>
     );
   }
@@ -358,12 +420,18 @@ function renderNode(node: LexicalNode, index: number): ReactNode {
   return null;
 }
 
-export function renderLexicalContent(content: LexicalDocument | null | undefined): ReactNode {
+export function renderLexicalContent(
+  content: LexicalDocument | null | undefined,
+  links: 'active' | 'text' = 'active',
+): ReactNode {
   if (!Array.isArray(content?.root?.children)) return null;
-  
+
   return (
     <>
-      {content.root.children.map((value, index) => { const node = readNode(value); return node ? renderNode(node, index) : null; })}
+      {content.root.children.map((value, index) => {
+        const node = readNode(value);
+        return node ? renderNode(node, index, links) : null;
+      })}
     </>
   );
 }

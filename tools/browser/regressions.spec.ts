@@ -2,18 +2,28 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function openFixture(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Delba UI browser regression fixture' }),
+  ).toBeVisible();
 }
 
-test('uncontrolled checkbox visuals and custom form values follow native reset and cancellation', async ({ page }) => {
+test('uncontrolled checkbox visuals and custom form values follow native reset and cancellation', async ({
+  page,
+}) => {
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
-  const checkbox = scope.getByRole('checkbox', { name: 'Uncontrolled visual checkbox', exact: true });
-  const initiallyChecked = scope.getByRole('checkbox', { name: 'Initially checked visual checkbox' });
-  const iconOpacity = () => checkbox.evaluate((input) => {
-    const icon = input.nextElementSibling?.querySelector('svg');
-    return icon ? getComputedStyle(icon).opacity : null;
+  const checkbox = scope.getByRole('checkbox', {
+    name: 'Uncontrolled visual checkbox',
+    exact: true,
   });
+  const initiallyChecked = scope.getByRole('checkbox', {
+    name: 'Initially checked visual checkbox',
+  });
+  const iconOpacity = () =>
+    checkbox.evaluate((input) => {
+      const icon = input.nextElementSibling?.querySelector('svg');
+      return icon ? getComputedStyle(icon).opacity : null;
+    });
   await checkbox.locator('xpath=../..').click();
   await expect(checkbox).toBeChecked();
   await expect.poll(iconOpacity).toBe('1');
@@ -29,18 +39,28 @@ test('uncontrolled checkbox visuals and custom form values follow native reset a
   const before = await scope.getByTestId('audit-change-count').textContent();
   await scope.getByRole('button', { name: 'Toggle lifecycle reset cancellation' }).click();
   await scope.getByRole('button', { name: 'Reset lifecycle form' }).click();
-  const values = () => scope.locator('#audit-reset-form').evaluate((form: HTMLFormElement) => [...new FormData(form).entries()]);
+  const values = () =>
+    scope
+      .locator('#audit-reset-form')
+      .evaluate((form: HTMLFormElement) => [...new FormData(form).entries()]);
   expect(await values()).toContainEqual(['single', 'two']);
   await scope.getByRole('button', { name: 'Toggle lifecycle reset cancellation' }).click();
   await scope.getByRole('button', { name: 'Reset lifecycle form' }).click();
   await expect(checkbox).not.toBeChecked();
   await expect(initiallyChecked).toBeChecked();
   await expect.poll(iconOpacity).toBe('0');
-  await expect.poll(values).toEqual([['checked', 'on'], ['single', 'one'], ['multiple', 'one'], ['choice', 'one']]);
+  await expect.poll(values).toEqual([
+    ['checked', 'on'],
+    ['single', 'one'],
+    ['multiple', 'one'],
+    ['choice', 'one'],
+  ]);
   await expect(scope.getByTestId('audit-change-count')).toHaveText(before ?? '');
 });
 
-test('readonly date and disabled open calendar cannot mutate, and pointer callbacks compose with motion', async ({ page }) => {
+test('readonly date and disabled open calendar cannot mutate, and pointer callbacks compose with motion', async ({
+  page,
+}) => {
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
   const readonly = scope.getByRole('textbox', { name: 'Read only calendar' });
@@ -55,13 +75,41 @@ test('readonly date and disabled open calendar cannot mutate, and pointer callba
   await expect(date).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Previous month' })).not.toBeVisible();
   await scope.getByTestId('audit-event-section').hover();
-  await expect.poll(async () => Number(await scope.getByTestId('audit-pointer-count').textContent())).toBeGreaterThan(0);
+  await expect
+    .poll(async () => Number(await scope.getByTestId('audit-pointer-count').textContent()))
+    .toBeGreaterThan(0);
   const previous = Number(await scope.getByTestId('audit-pointer-count').textContent());
-  await scope.getByRole('checkbox', { name: 'Composed pointer checkbox' }).locator('xpath=../..').hover();
-  await expect.poll(async () => Number(await scope.getByTestId('audit-pointer-count').textContent())).toBeGreaterThan(previous);
+  await scope
+    .getByRole('checkbox', { name: 'Composed pointer checkbox' })
+    .locator('xpath=../..')
+    .hover();
+  await expect
+    .poll(async () => Number(await scope.getByTestId('audit-pointer-count').textContent()))
+    .toBeGreaterThan(previous);
 });
 
-test('replacement input continues observing overflow after skeleton exits and container resizes', async ({ page }) => {
+test('readonly seeded fields keep readonly and do not publish seed changes', async ({ page }) => {
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
+  const input = scope.getByRole('textbox', { name: 'Read only seeded input' });
+  const textarea = scope.getByRole('textbox', { name: 'Read only seeded textarea' });
+
+  await input.focus();
+  await expect(input).toHaveAttribute('readonly', '');
+  await input.press('x');
+  await input.blur();
+
+  await textarea.focus();
+  await expect(textarea).toHaveAttribute('readonly', '');
+  await textarea.press('x');
+  await textarea.blur();
+
+  await expect(scope.getByTestId('readonly-seed-changes')).toHaveText('0');
+});
+
+test('replacement input continues observing overflow after skeleton exits and container resizes', async ({
+  page,
+}) => {
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
   await scope.getByRole('button', { name: 'Toggle replacement loading' }).click();
@@ -69,18 +117,27 @@ test('replacement input continues observing overflow after skeleton exits and co
   await expect(input).toBeVisible();
   await scope.getByRole('button', { name: 'Shrink overflow host' }).click();
   await input.locator('xpath=../../..').hover();
-  await expect(page.getByRole('tooltip', { name: 'Overflow measurement follows the replacement input' })).toBeVisible();
+  await expect(
+    page.getByRole('tooltip', { name: 'Overflow measurement follows the replacement input' }),
+  ).toBeVisible();
 });
 
-test('tuple counter seconds and scoped text-slide CSS use the same completion clock', async ({ page }) => {
+test('tuple counter seconds and scoped text-slide CSS use the same completion clock', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
   const counter = scope.getByTestId('audit-counter-seconds');
   await expect(counter.locator('.ui-counter-value')).toHaveText('80');
   await scope.getByRole('button', { name: 'Update seconds contracts' }).click();
-  await expect(scope.getByTestId('audit-slide-clock').locator('.ui-slide-swap')).toHaveCSS('--slide-swap-dur', '220ms');
-  await expect(scope.getByTestId('audit-slide-clock').locator('.ui-slide-swap-in').first()).toHaveCSS('animation-duration', '0.22s');
+  await expect(scope.getByTestId('audit-slide-clock').locator('.ui-slide-swap')).toHaveCSS(
+    '--slide-swap-dur',
+    '220ms',
+  );
+  await expect(
+    scope.getByTestId('audit-slide-clock').locator('.ui-slide-swap-in').first(),
+  ).toHaveCSS('animation-duration', '0.22s');
   const during = Number(await counter.locator('.ui-counter-value').textContent());
   expect(during).toBeGreaterThanOrEqual(0);
   expect(during).toBeLessThan(160);
@@ -88,7 +145,9 @@ test('tuple counter seconds and scoped text-slide CSS use the same completion cl
   await expect(scope.getByTestId('audit-slide-clock').locator('.ui-slide-swap-out')).toHaveCount(0);
 });
 
-test('four-sided negative percentage margins retain IntersectionObserver width semantics', async ({ page }) => {
+test('four-sided negative percentage margins retain IntersectionObserver width semantics', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1000, height: 800 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
@@ -96,7 +155,10 @@ test('four-sided negative percentage margins retain IntersectionObserver width s
   await target.evaluate((node) => {
     let top = 0;
     let current: HTMLElement | null = node;
-    while (current) { top += current.offsetTop; current = current.offsetParent as HTMLElement | null; }
+    while (current) {
+      top += current.offsetTop;
+      current = current.offsetParent as HTMLElement | null;
+    }
     // The waiting up-reveal is translated 32px: its observed top is 712px.
     // Width-based -10% ends at 700px; height-based -10% would end at 720px.
     window.scrollTo(0, top - 680);
@@ -106,7 +168,9 @@ test('four-sided negative percentage margins retain IntersectionObserver width s
   await expect(target).toHaveAttribute('data-reveal-state', /in|done/);
 });
 
-test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport ref/events', async ({ page }) => {
+test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport ref/events', async ({
+  page,
+}) => {
   await openFixture(page);
   const viewport = page.getByTestId('scroll-area');
   const search = page.getByRole('textbox', { name: 'Pinned scroll search' });
@@ -116,7 +180,9 @@ test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport r
   await page.mouse.wheel(0, 360);
   await expect.poll(() => viewport.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
   expect(await search.boundingBox()).toEqual(before);
-  await expect.poll(async () => Number(await page.getByTestId('scroll-area-events').textContent())).toBeGreaterThan(0);
+  await expect
+    .poll(async () => Number(await page.getByTestId('scroll-area-events').textContent()))
+    .toBeGreaterThan(0);
   const scrollbar = await viewport.evaluate((node) => {
     const context = document.createElement('canvas').getContext('2d');
     if (!context) throw new Error('Missing 2d context');
@@ -129,31 +195,49 @@ test('ScrollArea scrolls natively, keeps search fixed and exposes the viewport r
     const expectedWidth = getComputedStyle(probe).width;
     probe.remove();
     return {
-    width: getComputedStyle(node, '::-webkit-scrollbar').width,
-    color: `rgb(${red}, ${green}, ${blue})`,
-    buttons: getComputedStyle(node, '::-webkit-scrollbar-button').display,
-    nativeWidth: getComputedStyle(node).scrollbarWidth,
-    nativeColor: getComputedStyle(node).scrollbarColor,
-    expectedWidth,
-  }; });
-  expect(Math.abs(parseFloat(scrollbar.width) - parseFloat(scrollbar.expectedWidth))).toBeLessThan(0.02);
-  expect(scrollbar).toMatchObject({ color: 'rgb(120, 120, 120)', buttons: 'none', nativeWidth: 'auto', nativeColor: 'auto' });
+      width: getComputedStyle(node, '::-webkit-scrollbar').width,
+      color: `rgb(${red}, ${green}, ${blue})`,
+      buttons: getComputedStyle(node, '::-webkit-scrollbar-button').display,
+      nativeWidth: getComputedStyle(node).scrollbarWidth,
+      nativeColor: getComputedStyle(node).scrollbarColor,
+      expectedWidth,
+    };
+  });
+  expect(Math.abs(parseFloat(scrollbar.width) - parseFloat(scrollbar.expectedWidth))).toBeLessThan(
+    0.02,
+  );
+  expect(scrollbar).toMatchObject({
+    color: 'rgb(120, 120, 120)',
+    buttons: 'none',
+    nativeWidth: 'auto',
+    nativeColor: 'auto',
+  });
   await viewport.focus();
   await page.keyboard.press('Control+End');
-  await expect.poll(() => viewport.evaluate((node) => node.scrollTop + node.clientHeight >= node.scrollHeight - 1)).toBe(true);
+  await expect
+    .poll(() =>
+      viewport.evaluate((node) => node.scrollTop + node.clientHeight >= node.scrollHeight - 1),
+    )
+    .toBe(true);
   await expect(search).toHaveValue('Search');
 });
 
-test('Lexical lists restore markers after reset and honor editor marker color and ordered start', async ({ page }) => {
+test('Lexical lists restore markers after reset and honor editor marker color and ordered start', async ({
+  page,
+}) => {
   await openFixture(page);
   const rich = page.getByTestId('lexical-markers');
   await rich.scrollIntoViewIfNeeded();
   await expect(rich.locator('ul').nth(0)).toHaveCSS('list-style-type', 'disc');
   await expect(rich.locator('ul').nth(1)).toHaveCSS('list-style-type', '"—  "');
-  const marker = await rich.locator('ul').nth(1).locator('li').evaluate((node) => ({
-    actual: getComputedStyle(node, '::marker').color,
-    expected: getComputedStyle(node).getPropertyValue('--primary').trim(),
-  }));
+  const marker = await rich
+    .locator('ul')
+    .nth(1)
+    .locator('li')
+    .evaluate((node) => ({
+      actual: getComputedStyle(node, '::marker').color,
+      expected: getComputedStyle(node).getPropertyValue('--primary').trim(),
+    }));
   const tokenColor = await page.evaluate((color) => {
     const probe = document.createElement('span');
     probe.style.color = color;
@@ -167,7 +251,9 @@ test('Lexical lists restore markers after reset and honor editor marker color an
   await expect(rich.locator('ol')).toHaveCSS('list-style-type', 'decimal');
 });
 
-test('interaction scope holds portal controls and releases them on close and unmount', async ({ page }) => {
+test('interaction scope holds portal controls and releases them on close and unmount', async ({
+  page,
+}) => {
   await openFixture(page);
   const active = page.getByTestId('interaction-scope-state');
   const root = page.getByTestId('interaction-scope-root');
@@ -185,7 +271,9 @@ test('interaction scope holds portal controls and releases them on close and unm
   await expect(active).toHaveText('false');
   await page.getByRole('button', { name: 'Open scoped dropdown', exact: true }).click();
   await page.mouse.move(1, 1);
-  await expect(page.getByRole('button', { name: 'Close scoped dropdown', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Close scoped dropdown', exact: true }),
+  ).toBeVisible();
   await expect(active).toHaveText('true');
   await page.getByRole('button', { name: 'Close scoped dropdown', exact: true }).click();
   await expect(active).toHaveText('true');
@@ -205,10 +293,14 @@ test('interaction scope holds portal controls and releases them on close and unm
   await page.getByRole('button', { name: 'Toggle scoped controls', exact: true }).click();
   await page.mouse.move(1, 1);
   await expect(active).toHaveText('false');
-  await expect(page.getByRole('button', { name: 'Close scoped dropdown', exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Close scoped dropdown', exact: true }),
+  ).toHaveCount(0);
 });
 
-test('lazy contain images select native auto sizes while eager, cover and explicit hints keep their contract', async ({ page }) => {
+test('lazy contain images select native auto sizes while eager, cover and explicit hints keep their contract', async ({
+  page,
+}) => {
   await page.goto('/');
   const auto = page.getByTestId('sizes-auto');
   await expect(auto).toHaveAttribute('loading', 'lazy');
@@ -217,6 +309,17 @@ test('lazy contain images select native auto sizes while eager, cover and explic
     await expect(page.getByTestId(`sizes-${variant}`)).not.toHaveAttribute('sizes', /^auto/);
   }
   await expect(page.getByTestId('sizes-explicit')).toHaveAttribute('sizes', '72px');
+  const squareSizes = await page.getByTestId('sizes-cover').getAttribute('sizes');
+  const metadataSizes = await page.getByTestId('sizes-metadata-cover').getAttribute('sizes');
+  const firstBandWidth = (sizes: string | null) => Number(sizes?.match(/\) ([\d.]+)vw/)?.[1]);
+  expect(firstBandWidth(metadataSizes)).toBeCloseTo(firstBandWidth(squareSizes) * 2, 1);
+  await expect
+    .poll(() =>
+      page
+        .getByTestId('sizes-metadata-cover')
+        .evaluate((image) => (image as HTMLImageElement).naturalWidth),
+    )
+    .toBe(160);
 });
 
 test('window scroll events share one position read in the animation frame', async ({ page }) => {
@@ -224,9 +327,24 @@ test('window scroll events share one position read in the animation frame', asyn
   const result = await page.evaluate(async () => {
     const descriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
     if (!descriptor?.get) throw new Error('Missing native scrollY getter');
-    const engine = window.__createSmoothScroll({ lerp: 0.1, wheelMultiplier: 1, duration: 0.1, easing: (x: number) => x, offset: 0, mobile: true, anchors: false, updateHash: false });
+    const engine = window.__createSmoothScroll({
+      lerp: 0.1,
+      wheelMultiplier: 1,
+      duration: 0.1,
+      easing: (x: number) => x,
+      offset: 0,
+      mobile: true,
+      anchors: false,
+      updateHash: false,
+    });
     let reads = 0;
-    Object.defineProperty(window, 'scrollY', { ...descriptor, get: () => { reads++; return descriptor.get?.call(window); } });
+    Object.defineProperty(window, 'scrollY', {
+      ...descriptor,
+      get: () => {
+        reads++;
+        return descriptor.get?.call(window);
+      },
+    });
     try {
       for (let i = 0; i < 3; i++) window.dispatchEvent(new Event('scroll'));
       const duringEvents = reads;
@@ -240,17 +358,36 @@ test('window scroll events share one position read in the animation frame', asyn
   expect(result).toEqual({ duringEvents: 0, afterFrame: 1 });
 });
 
-test('smooth scroll caches the range and refreshes it when page content grows', async ({ page }) => {
+test('smooth scroll caches the range and refreshes it when page content grows', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/?smooth');
-  await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Delba UI browser regression fixture' }),
+  ).toBeVisible();
   const result = await page.evaluate(async () => {
     const root = document.documentElement;
     const getter = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollHeight')?.get;
     if (!getter) throw new Error('Missing native scrollHeight getter');
     let reads = 0;
-    Object.defineProperty(root, 'scrollHeight', { configurable: true, get: () => { reads++; return getter.call(root); } });
-    const engine = window.__createSmoothScroll({ lerp: 0.1, wheelMultiplier: 1, duration: 0.1, easing: (x: number) => x, offset: 0, mobile: true, anchors: false, updateHash: false });
+    Object.defineProperty(root, 'scrollHeight', {
+      configurable: true,
+      get: () => {
+        reads++;
+        return getter.call(root);
+      },
+    });
+    const engine = window.__createSmoothScroll({
+      lerp: 0.1,
+      wheelMultiplier: 1,
+      duration: 0.1,
+      easing: (x: number) => x,
+      offset: 0,
+      mobile: true,
+      anchors: false,
+      updateHash: false,
+    });
     const content = document.createElement('div');
     content.style.height = '1000px';
     try {
@@ -272,17 +409,31 @@ test('smooth scroll caches the range and refreshes it when page content grows', 
       await new Promise((resolve) => setTimeout(resolve, 75));
       window.scrollTo({ top: 500, behavior: 'instant' });
       await new Promise((resolve) => setTimeout(resolve, 250));
-      return { duringScroll, grew: maximum > previousMaximum, reachedEnd, synchronousResize, manualInterrupt: Math.abs(scrollY - 500) < 2 };
+      return {
+        duringScroll,
+        grew: maximum > previousMaximum,
+        reachedEnd,
+        synchronousResize,
+        manualInterrupt: Math.abs(scrollY - 500) < 2,
+      };
     } finally {
       engine.destroy();
       Reflect.deleteProperty(root, 'scrollHeight');
       content.remove();
     }
   });
-  expect(result).toEqual({ duringScroll: 1, grew: true, reachedEnd: true, synchronousResize: true, manualInterrupt: true });
+  expect(result).toEqual({
+    duringScroll: 1,
+    grew: true,
+    reachedEnd: true,
+    synchronousResize: true,
+    manualInterrupt: true,
+  });
 });
 
-test('gradient frame keeps a transparent center, radius and live button across breakpoints', async ({ page }) => {
+test('gradient frame keeps a transparent center, radius and live button across breakpoints', async ({
+  page,
+}) => {
   await openFixture(page);
   const frame = page.getByTestId('gradient-frame');
   await frame.scrollIntoViewIfNeeded();
@@ -291,11 +442,15 @@ test('gradient frame keeps a transparent center, radius and live button across b
   await expect(border).toHaveCSS('mask-composite', /^exclude/);
   await expect(border).toHaveCSS('background-image', /linear-gradient/);
   await expect(border).toHaveCSS('pointer-events', 'none');
-  const geometry = () => frame.evaluate((node) => {
-    const parent = getComputedStyle(node);
-    const layer = getComputedStyle(node.querySelector('.ui-gradient-border') ?? node);
-    return { width: parseFloat(layer.paddingTop) / parseFloat(parent.paddingTop) * 24, sameRadius: layer.borderTopLeftRadius === parent.borderTopLeftRadius };
-  });
+  const geometry = () =>
+    frame.evaluate((node) => {
+      const parent = getComputedStyle(node);
+      const layer = getComputedStyle(node.querySelector('.ui-gradient-border') ?? node);
+      return {
+        width: (parseFloat(layer.paddingTop) / parseFloat(parent.paddingTop)) * 24,
+        sameRadius: layer.borderTopLeftRadius === parent.borderTopLeftRadius,
+      };
+    });
   await expect.poll(async () => (await geometry()).width).toBeCloseTo(4, 3);
   expect((await geometry()).sameRadius).toBe(true);
   await expect(frame).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
@@ -303,13 +458,17 @@ test('gradient frame keeps a transparent center, radius and live button across b
   await button.click();
   await button.focus();
   await expect(button).toBeFocused();
-  await expect.poll(() => button.evaluate((node) => getComputedStyle(node, '::before').transform)).toBe('matrix(1, 0, 0, 1, 0, 0)');
+  await expect
+    .poll(() => button.evaluate((node) => getComputedStyle(node, '::before').transform))
+    .toBe('matrix(1, 0, 0, 1, 0, 0)');
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(async () => (await geometry()).width).toBeCloseTo(8, 3);
   expect((await geometry()).sameRadius).toBe(true);
 });
 
-test('ancestor perspective follows a stretched link, resets outside, and supports keyboard and reduced motion', async ({ page }) => {
+test('ancestor perspective follows a stretched link, resets outside, and supports keyboard and reduced motion', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const scope = page.getByTestId('perspective-scope');
@@ -320,7 +479,10 @@ test('ancestor perspective follows a stretched link, resets outside, and support
   if (!box) throw new Error('Missing scoped link');
   const position = { x: box.width * 0.85, y: box.height * 0.2 };
   await link.hover({ position });
-  const rotation = () => photo.evaluate((node) => Math.abs(parseFloat(node.style.getPropertyValue('--perspective3d-rotate-y'))));
+  const rotation = () =>
+    photo.evaluate((node) =>
+      Math.abs(parseFloat(node.style.getPropertyValue('--perspective3d-rotate-y'))),
+    );
   await expect.poll(rotation).toBeGreaterThan(1);
   await page.mouse.move(1, 1);
   await expect.poll(rotation).toBeLessThan(0.01);
@@ -335,20 +497,33 @@ test('ancestor perspective follows a stretched link, resets outside, and support
   await expect(scope.locator('.ui-gradient-border')).toHaveCSS('animation-name', 'none');
 });
 
-test('carousel defaults reach Swiper through the public component and its scoped CSS', async ({ page }) => {
+test('carousel defaults reach Swiper through the public component and its scoped CSS', async ({
+  page,
+}) => {
   await openFixture(page);
   const carousel = page.getByTestId('carousel-config-defaults').locator('.swiper');
-  await expect.poll(() => carousel.evaluate((node) => {
-    const swiper = (node as HTMLElement & { swiper?: { params: { speed?: number; autoplay?: { delay?: number } } } }).swiper;
-    return { speed: swiper?.params.speed, delay: swiper?.params.autoplay?.delay };
-  })).toEqual({ speed: 120, delay: 170 });
+  await expect
+    .poll(() =>
+      carousel.evaluate((node) => {
+        const swiper = (
+          node as HTMLElement & {
+            swiper?: { params: { speed?: number; autoplay?: { delay?: number } } };
+          }
+        ).swiper;
+        return { speed: swiper?.params.speed, delay: swiper?.params.autoplay?.delay };
+      }),
+    )
+    .toEqual({ speed: 120, delay: 170 });
 });
 
 test('scoped perspective reconnects when the primitive replaces its DOM host', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const host = page.getByTestId('perspective-replacement');
-  const rotation = () => host.evaluate((node) => Math.abs(parseFloat(node.style.getPropertyValue('--perspective3d-rotate-y'))));
+  const rotation = () =>
+    host.evaluate((node) =>
+      Math.abs(parseFloat(node.style.getPropertyValue('--perspective3d-rotate-y'))),
+    );
   await host.hover({ position: { x: 210, y: 20 } });
   await expect.poll(rotation).toBeGreaterThan(1);
   await page.getByRole('button', { name: 'Replace tilt host' }).click();
@@ -359,7 +534,9 @@ test('scoped perspective reconnects when the primitive replaces its DOM host', a
   await expect.poll(rotation).toBeLessThan(0.01);
 });
 
-test('border trace advances only while visible and leaves its center clickable', async ({ page }) => {
+test('border trace advances only while visible and leaves its center clickable', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const scope = page.getByTestId('perspective-scope');
@@ -367,15 +544,23 @@ test('border trace advances only while visible and leaves its center clickable',
   await scope.scrollIntoViewIfNeeded();
   await expect(border).toHaveCSS('animation-play-state', 'running');
   await expect(border).toHaveCSS('background-image', /conic-gradient/);
-  const angle = await border.evaluate((node) => getComputedStyle(node).getPropertyValue('--ui-border-angle'));
-  await expect.poll(() => border.evaluate((node) => getComputedStyle(node).getPropertyValue('--ui-border-angle'))).not.toBe(angle);
+  const angle = await border.evaluate((node) =>
+    getComputedStyle(node).getPropertyValue('--ui-border-angle'),
+  );
+  await expect
+    .poll(() =>
+      border.evaluate((node) => getComputedStyle(node).getPropertyValue('--ui-border-angle')),
+    )
+    .not.toBe(angle);
   await page.getByTestId('perspective-scope-link').click();
   await expect(page.getByTestId('perspective-scope-link')).toBeFocused();
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect(border).toHaveCSS('animation-play-state', 'paused');
 });
 
-test('perspective caches pointer geometry and keeps frame variables local to its root', async ({ page }) => {
+test('perspective caches pointer geometry and keeps frame variables local to its root', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const target = page.getByTestId('motion-grid');
@@ -393,32 +578,58 @@ test('perspective caches pointer geometry and keeps frame variables local to its
   const box = await target.boundingBox();
   if (!box) throw new Error('Missing motion target');
   // boundingBox itself uses browser geometry, so count only the following real pointer moves.
-  await target.evaluate((node) => { node.dataset.rectReads = '0'; });
+  await target.evaluate((node) => {
+    node.dataset.rectReads = '0';
+  });
   await page.mouse.move(box.x + 12, box.y + 8, { steps: 12 });
   await page.waitForTimeout(100);
   expect(Number(await target.getAttribute('data-rect-reads'))).toBeLessThanOrEqual(1);
-  await expect.poll(() => target.evaluate((node) => Math.abs(parseFloat(node.style.getPropertyValue('--perspective3d-rotate-y'))))).toBeGreaterThan(0.1);
+  await expect
+    .poll(() =>
+      target.evaluate((node) =>
+        Math.abs(parseFloat(node.style.getPropertyValue('--perspective3d-rotate-y'))),
+      ),
+    )
+    .toBeGreaterThan(0.1);
   await expect(target.locator('div')).toHaveCSS('--perspective3d-rotate-y', '0deg');
   await page.evaluate(() => window.scrollBy(0, 4));
   await page.waitForTimeout(80);
   await page.mouse.move(box.x + 24, box.y + 8);
-  await expect.poll(async () => Number(await target.getAttribute('data-rect-reads'))).toBeGreaterThan(0);
+  await expect
+    .poll(async () => Number(await target.getAttribute('data-rect-reads')))
+    .toBeGreaterThan(0);
 });
 
-test('parallax settles without feedback, skips offscreen geometry and resets on reduced motion', async ({ page }) => {
+test('parallax settles without feedback, skips offscreen geometry and resets on reduced motion', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const target = page.getByTestId('parallax-target');
   await target.scrollIntoViewIfNeeded();
   await page.evaluate(() => window.scrollBy(0, 100));
-  await expect.poll(() => target.evaluate((node) => Math.abs(parseFloat(node.style.getPropertyValue('--parallax-translate-y'))))).toBeGreaterThan(1);
+  await expect
+    .poll(() =>
+      target.evaluate((node) =>
+        Math.abs(parseFloat(node.style.getPropertyValue('--parallax-translate-y'))),
+      ),
+    )
+    .toBeGreaterThan(1);
   await page.waitForTimeout(1000);
-  const settled = await target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y')));
+  const settled = await target.evaluate((node) =>
+    parseFloat(node.style.getPropertyValue('--parallax-translate-y')),
+  );
   const scrollY = await page.evaluate(() => window.scrollY);
-  await page.evaluate(() => { for (let i = 0; i < 10; i++) window.dispatchEvent(new Event('scroll')); });
+  await page.evaluate(() => {
+    for (let i = 0; i < 10; i++) window.dispatchEvent(new Event('scroll'));
+  });
   await page.waitForTimeout(400);
   expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
-  expect(await target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y')))).toBeCloseTo(settled, 1);
+  expect(
+    await target.evaluate((node) =>
+      parseFloat(node.style.getPropertyValue('--parallax-translate-y')),
+    ),
+  ).toBeCloseTo(settled, 1);
 
   await target.evaluate((node) => {
     const original = node.getBoundingClientRect.bind(node);
@@ -429,37 +640,68 @@ test('parallax settles without feedback, skips offscreen geometry and resets on 
   });
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(200);
-  await target.evaluate((node) => { node.dataset.rectReads = '0'; });
-  await page.evaluate(() => { for (let i = 0; i < 10; i++) window.dispatchEvent(new Event('scroll')); });
+  await target.evaluate((node) => {
+    node.dataset.rectReads = '0';
+  });
+  await page.evaluate(() => {
+    for (let i = 0; i < 10; i++) window.dispatchEvent(new Event('scroll'));
+  });
   await page.waitForTimeout(100);
   await expect(target).toHaveAttribute('data-rect-reads', '0');
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await expect.poll(() => target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y')))).toBe(0);
+  await expect
+    .poll(() =>
+      target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y'))),
+    )
+    .toBe(0);
   await target.scrollIntoViewIfNeeded();
   await page.evaluate(() => window.scrollBy(0, 80));
-  await expect.poll(() => target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y')))).toBe(0);
+  await expect
+    .poll(() =>
+      target.evaluate((node) => parseFloat(node.style.getPropertyValue('--parallax-translate-y'))),
+    )
+    .toBe(0);
 });
 
-test('scroll parallax composes with reveal and tilt without frame writes, resets and cleans up', async ({ page }) => {
+test('scroll parallax composes with reveal and tilt without frame writes, resets and cleans up', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const target = page.getByTestId('parallax-scroll-target');
   await target.scrollIntoViewIfNeeded();
   await expect(target).toHaveAttribute('data-reveal-state', 'done');
-  await expect.poll(() => target.evaluate((el) => el.getAnimations().some((animation) => animation.timeline !== document.timeline))).toBe(true);
+  await expect
+    .poll(() =>
+      target.evaluate((el) =>
+        el.getAnimations().some((animation) => animation.timeline !== document.timeline),
+      ),
+    )
+    .toBe(true);
   const initial = await target.evaluate((el) => getComputedStyle(el).translate);
   await target.evaluate((node) => {
     const original = node.getBoundingClientRect.bind(node);
     node.dataset.rectReads = '0';
-    node.getBoundingClientRect = () => { node.dataset.rectReads = String(Number(node.dataset.rectReads) + 1); return original(); };
+    node.getBoundingClientRect = () => {
+      node.dataset.rectReads = String(Number(node.dataset.rectReads) + 1);
+      return original();
+    };
   });
   await page.evaluate(() => window.scrollBy(0, 100));
-  await expect.poll(() => target.evaluate((el) => getComputedStyle(el).translate)).not.toBe(initial);
+  await expect
+    .poll(() => target.evaluate((el) => getComputedStyle(el).translate))
+    .not.toBe(initial);
   await expect(target).toHaveAttribute('data-rect-reads', '0');
   await expect(target).toHaveCSS('--parallax-translate-y', '0px');
   await page.mouse.move(1200, 100);
-  await expect.poll(() => target.evaluate((el) => Math.abs(parseFloat(el.style.getPropertyValue('--perspective3d-rotate-y'))))).toBeGreaterThan(1);
+  await expect
+    .poll(() =>
+      target.evaluate((el) =>
+        Math.abs(parseFloat(el.style.getPropertyValue('--perspective3d-rotate-y'))),
+      ),
+    )
+    .toBeGreaterThan(1);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => target.evaluate((el) => el.getAnimations().length)).toBe(0);
   await expect(target).toHaveCSS('translate', 'none');
@@ -472,28 +714,53 @@ test('scroll parallax composes with reveal and tilt without frame writes, resets
 });
 
 test('scroll parallax falls back when ViewTimeline is unavailable', async ({ page }) => {
-  await page.addInitScript(() => { Reflect.deleteProperty(window, 'ViewTimeline'); });
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'ViewTimeline', { configurable: true, value: undefined });
+  });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
+  expect(
+    await page.evaluate(() => typeof (window as Window & { ViewTimeline?: unknown }).ViewTimeline),
+  ).toBe('undefined');
   const target = page.getByTestId('parallax-scroll-target');
-  await target.scrollIntoViewIfNeeded();
-  await expect.poll(() => target.evaluate((el) => Math.abs(parseFloat(el.style.getPropertyValue('--parallax-translate-y'))))).toBeGreaterThan(1);
+  await target.evaluate((node) => {
+    const top = node.getBoundingClientRect().top;
+    window.scrollTo(0, window.scrollY + top - window.innerHeight * 0.25);
+  });
+  await expect
+    .poll(() =>
+      target.evaluate((el) =>
+        Math.abs(parseFloat(el.style.getPropertyValue('--parallax-translate-y'))),
+      ),
+    )
+    .toBeGreaterThan(1);
 });
 
-test('idle glow pauses offscreen and in a hidden document, then resumes the same cycle', async ({ page }) => {
+test('idle glow pauses offscreen and in a hidden document, then resumes the same cycle', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const button = page.getByTestId('idle-visibility');
-  const state = () => button.evaluate((node) => getComputedStyle(node.querySelector('.ui-button-glow') ?? node, '::before').animationPlayState);
+  const state = () =>
+    button.evaluate(
+      (node) =>
+        getComputedStyle(node.querySelector('.ui-button-glow') ?? node, '::before')
+          .animationPlayState,
+    );
   await expect.poll(state).toBe('paused');
   await button.scrollIntoViewIfNeeded();
   await expect.poll(state).toBe('running');
   await page.waitForTimeout(150);
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect.poll(state).toBe('paused');
-  const paused = await button.evaluate((node) => node.getAnimations({ subtree: true })[0]?.currentTime);
+  const paused = await button.evaluate(
+    (node) => node.getAnimations({ subtree: true })[0]?.currentTime,
+  );
   await page.waitForTimeout(150);
-  expect(await button.evaluate((node) => node.getAnimations({ subtree: true })[0]?.currentTime)).toBe(paused);
+  expect(
+    await button.evaluate((node) => node.getAnimations({ subtree: true })[0]?.currentTime),
+  ).toBe(paused);
   await button.scrollIntoViewIfNeeded();
   await expect.poll(state).toBe('running');
   await page.evaluate(() => {
@@ -507,21 +774,33 @@ test('idle glow pauses offscreen and in a hidden document, then resumes the same
   });
   await expect.poll(state).toBe('running');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await expect.poll(() => button.evaluate((node) => getComputedStyle(node.querySelector('.ui-button-glow') ?? node, '::before').animationName)).toBe('none');
+  await expect
+    .poll(() =>
+      button.evaluate(
+        (node) =>
+          getComputedStyle(node.querySelector('.ui-button-glow') ?? node, '::before').animationName,
+      ),
+    )
+    .toBe('none');
 });
 
 test('idle visibility respects the configured preparation margin', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const button = page.getByTestId('idle-visibility');
-  await button.evaluate(node => window.scrollTo(0, window.scrollY + node.getBoundingClientRect().top - window.innerHeight - 40));
-  const state = () => button.evaluate(node => getComputedStyle(node).getPropertyValue('--idle-animation-state'));
+  await button.evaluate((node) =>
+    window.scrollTo(0, window.scrollY + node.getBoundingClientRect().top - window.innerHeight - 40),
+  );
+  const state = () =>
+    button.evaluate((node) => getComputedStyle(node).getPropertyValue('--idle-animation-state'));
   await expect.poll(state).toBe('paused');
   await button.scrollIntoViewIfNeeded();
   await expect.poll(state).toBe('running');
 });
 
-test('shared box CSS switches background, coordinates and dynamic visibility without DOM prop leakage', async ({ page }) => {
+test('shared box CSS switches background, coordinates and dynamic visibility without DOM prop leakage', async ({
+  page,
+}) => {
   await openFixture(page);
   const box = page.getByTestId('responsive-box');
   const hidden = page.getByTestId('responsive-hidden');
@@ -565,7 +844,13 @@ test('shared box CSS switches background, coordinates and dynamic visibility wit
 
     const icon = page.getByRole('link', { name: 'Positioned icon', exact: true });
     await expect(icon).toHaveCSS('position', 'absolute');
-    expect(await icon.evaluate((node) => node.hasAttribute('position') || Boolean(node.querySelector('svg[position], svg[top], svg[right], svg[hide]')))).toBe(false);
+    expect(
+      await icon.evaluate(
+        (node) =>
+          node.hasAttribute('position') ||
+          Boolean(node.querySelector('svg[position], svg[top], svg[right], svg[hide]')),
+      ),
+    ).toBe(false);
   }
   await page.getByRole('button', { name: 'Toggle responsive box', exact: true }).click();
   await expect(hidden).toBeVisible();
@@ -575,7 +860,9 @@ test('shared box CSS switches background, coordinates and dynamic visibility wit
 // перезагрузок страницы на ОДИН бюджет в 30 с: 18 с на рабочей машине, то есть на раннике
 // за край. Ширина — своя проверка: свой бюджет, своё имя в отчёте и счёт параллельно.
 for (const width of [320, 390, 768, 1024, 1440, 1920]) {
-  test(`Dropdown aligns the visible wide surface rather than a trigger-sized collapse wrapper at ${width}px`, async ({ page }) => {
+  test(`Dropdown aligns the visible wide surface rather than a trigger-sized collapse wrapper at ${width}px`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width, height: 900 });
     await openFixture(page);
     for (const side of ['start', 'center', 'end', 'portal']) {
@@ -595,9 +882,16 @@ for (const width of [320, 390, 768, 1024, 1440, 1920]) {
         return { trigger: rect(node), panel: rect(panel), surface: rect(surface) };
       }, side);
       expect(Math.abs(rects.surface.width - rects.panel.width)).toBeLessThan(1);
-      if (side === 'start') expect(Math.abs(rects.surface.left - rects.trigger.left)).toBeLessThan(1);
-      if (side === 'end') expect(Math.abs(rects.surface.right - rects.trigger.right)).toBeLessThan(1);
-      if (side === 'center') expect(Math.abs(rects.surface.left + rects.surface.right - rects.trigger.left - rects.trigger.right)).toBeLessThan(1);
+      if (side === 'start')
+        expect(Math.abs(rects.surface.left - rects.trigger.left)).toBeLessThan(1);
+      if (side === 'end')
+        expect(Math.abs(rects.surface.right - rects.trigger.right)).toBeLessThan(1);
+      if (side === 'center')
+        expect(
+          Math.abs(
+            rects.surface.left + rects.surface.right - rects.trigger.left - rects.trigger.right,
+          ),
+        ).toBeLessThan(1);
       if (side === 'portal') {
         expect(rects.surface.left).toBeGreaterThanOrEqual(0);
         expect(rects.surface.right).toBeLessThanOrEqual(width);
@@ -609,7 +903,9 @@ for (const width of [320, 390, 768, 1024, 1440, 1920]) {
   });
 }
 
-test('unified inView animate observes one HTML host per primitive and never leaks configuration to DOM', async ({ page }) => {
+test('unified inView animate observes one HTML host per primitive and never leaks configuration to DOM', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   const errors: string[] = [];
   page.on('console', (message) => {
@@ -617,24 +913,34 @@ test('unified inView animate observes one HTML host per primitive and never leak
   });
   await openFixture(page);
   await expect(page.getByTestId('legacy-icon-host').locator(':scope > svg')).toHaveCount(1);
-  const cases = page.getByRole('region', { name: 'Unified viewport animation' }).locator('[data-inview-case]');
+  const cases = page
+    .getByRole('region', { name: 'Unified viewport animation' })
+    .locator('[data-inview-case]');
   await expect(cases).toHaveCount(18);
   for (const scope of await cases.all()) {
     const name = await scope.getAttribute('data-inview-case');
     const host = scope.locator('[data-reveal]');
     await expect(host, `${name}: single motion host`).toHaveCount(1);
-    expect(await host.evaluate((node) => node instanceof HTMLElement), `${name}: observable HTML host`).toBe(true);
+    expect(
+      await host.evaluate((node) => node instanceof HTMLElement),
+      `${name}: observable HTML host`,
+    ).toBe(true);
     await expect(host).toHaveAttribute('data-reveal', 'up');
     await expect(host).toHaveCSS('--reveal-delay', '20ms');
     await expect(host).toHaveCSS('--reveal-duration', '40ms');
     await host.evaluate((node) => node.scrollIntoView({ block: 'center' }));
-    await expect(host, `${name}: enters viewport`).toHaveAttribute('data-reveal-state', /^(in|done)$/);
+    await expect(host, `${name}: enters viewport`).toHaveAttribute(
+      'data-reveal-state',
+      /^(in|done)$/,
+    );
     await expect(scope.locator('[animate]')).toHaveCount(0);
   }
   expect(errors).toEqual([]);
 });
 
-test('reveal skip marker dynamically releases an in-view child without stale observer state or delay', async ({ page }) => {
+test('reveal skip marker dynamically releases an in-view child without stale observer state or delay', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Named motion timing' });
@@ -643,10 +949,14 @@ test('reveal skip marker dynamically releases an in-view child without stale obs
   await view.scrollIntoViewIfNeeded();
   const children = view.locator(':scope > div');
   await expect(children.first()).toHaveAttribute('data-reveal-state', 'in');
-  expect(await children.evaluateAll((nodes) => nodes.map((node) => ({
-    delay: getComputedStyle(node).animationDelay,
-    duration: getComputedStyle(node).animationDuration,
-  })))).toEqual([
+  expect(
+    await children.evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        delay: getComputedStyle(node).animationDelay,
+        duration: getComputedStyle(node).animationDuration,
+      })),
+    ),
+  ).toEqual([
     { delay: '0.1s', duration: '0.8s' },
     { delay: '0.12s', duration: '0.8s' },
   ]);
@@ -662,12 +972,16 @@ test('reveal skip marker dynamically releases an in-view child without stale obs
   const decoration = page.getByTestId('named-inview-decoration');
   await decoration.scrollIntoViewIfNeeded();
   await expect(decoration).toHaveAttribute('data-reveal-state', /^(in|done)$/);
-  expect(await decoration.evaluate((node) => node.style.getPropertyValue('--reveal-delay'))).not.toBe('');
+  expect(
+    await decoration.evaluate((node) => node.style.getPropertyValue('--reveal-delay')),
+  ).not.toBe('');
 
   await page.getByTestId('toggle-reveal-skip').click();
   await expect(decoration).toHaveAttribute('data-reveal-skip', '');
   await expect(decoration).not.toHaveAttribute('data-reveal-state', /.+/);
-  expect(await decoration.evaluate((node) => node.style.getPropertyValue('--reveal-delay'))).toBe('');
+  expect(await decoration.evaluate((node) => node.style.getPropertyValue('--reveal-delay'))).toBe(
+    '',
+  );
 
   await decoration.scrollIntoViewIfNeeded();
   await expect(decoration).not.toHaveAttribute('data-reveal-state', /.+/);
@@ -676,20 +990,31 @@ test('reveal skip marker dynamically releases an in-view child without stale obs
   await expect(decoration).toHaveAttribute('data-reveal-state', /^(in|done)$/);
 });
 
-test('Img object change animate snapshots direction, waits for load, follows the latest source and cleans layers', async ({ page }) => {
+test('Img object change animate snapshots direction, waits for load, follows the latest source and cleans layers', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   let releaseRemote: (() => void) | undefined;
-  const remoteReady = new Promise<void>((resolve) => { releaseRemote = resolve; });
+  const remoteReady = new Promise<void>((resolve) => {
+    releaseRemote = resolve;
+  });
   await page.route('**/motion-two.svg', async (route) => {
     await remoteReady;
-    await route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"><rect width="80" height="48" fill="red"/></svg>' });
+    await route.fulfill({
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"><rect width="80" height="48" fill="red"/></svg>',
+    });
   });
   await openFixture(page);
   const image = page.getByTestId('change-img');
   const swap = image.locator('.ui-img-swap');
   await expect(swap).toHaveCount(1);
   await expect(swap.locator('img.ui-img-image')).toHaveAttribute('src', /data:image\/svg\+xml/);
-  await expect.poll(() => swap.locator('img.ui-img-image').evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await expect
+    .poll(() =>
+      swap.locator('img.ui-img-image').evaluate((node) => (node as HTMLImageElement).naturalWidth),
+    )
+    .toBeGreaterThan(0);
   await expect(swap.locator('.ui-img-swap-out')).toHaveCount(0);
 
   await page.getByTestId('img-change-remote').click();
@@ -697,19 +1022,43 @@ test('Img object change animate snapshots direction, waits for load, follows the
   await swap.locator('.ui-img-swap-layer[aria-hidden="true"] img').dispatchEvent('load');
   await expect(swap.locator('.ui-img-swap-pending')).toHaveCount(1);
   await page.getByTestId('img-change-reverse').click();
-  await expect.poll(() => swap.evaluate((node) => getComputedStyle(node).getPropertyValue('--img-swap-dir').trim())).toBe('1');
+  await expect
+    .poll(() =>
+      swap.evaluate((node) => getComputedStyle(node).getPropertyValue('--img-swap-dir').trim()),
+    )
+    .toBe('1');
   await page.getByTestId('img-change-latest').click();
   releaseRemote?.();
 
   await expect(swap.locator('.ui-img-swap-veil')).toHaveCount(1);
   await expect(swap.locator('.ui-img-swap-veil')).toHaveCSS('animation-duration', '0.7s');
-  await expect.poll(() => swap.evaluate((node) => getComputedStyle(node).getPropertyValue('--img-swap-dir').trim()), { timeout: 4000 }).toBe('-1');
-  await expect.poll(() => image.locator('.ui-img-swap-layer:not(.ui-img-swap-out) img.ui-img-image').last().getAttribute('src'), { timeout: 4000 })
-    .toBe('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"%3E%3Crect width="80" height="48" fill="%2333a"/%3E%3C/svg%3E');
-  await expect(swap.locator('.ui-img-swap-out, .ui-img-swap-veil')).toHaveCount(0, { timeout: 4000 });
+  await expect
+    .poll(
+      () =>
+        swap.evaluate((node) => getComputedStyle(node).getPropertyValue('--img-swap-dir').trim()),
+      { timeout: 4000 },
+    )
+    .toBe('-1');
+  await expect
+    .poll(
+      () =>
+        image
+          .locator('.ui-img-swap-layer:not(.ui-img-swap-out) img.ui-img-image')
+          .last()
+          .getAttribute('src'),
+      { timeout: 4000 },
+    )
+    .toBe(
+      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"%3E%3Crect width="80" height="48" fill="%2333a"/%3E%3C/svg%3E',
+    );
+  await expect(swap.locator('.ui-img-swap-out, .ui-img-swap-veil')).toHaveCount(0, {
+    timeout: 4000,
+  });
 });
 
-test('Text object counter and textSlide keep timing, root semantics and reduced-motion behavior', async ({ page }) => {
+test('Text object counter and textSlide keep timing, root semantics and reduced-motion behavior', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Object text animation' });
@@ -732,7 +1081,9 @@ test('Text object counter and textSlide keep timing, root semantics and reduced-
   expect(Date.now() - viewStart).toBeGreaterThanOrEqual(250);
 
   const slide = page.getByTestId('text-slide-object');
-  await slide.evaluate((node) => { node.setAttribute('data-identity', 'stable-root'); });
+  await slide.evaluate((node) => {
+    node.setAttribute('data-identity', 'stable-root');
+  });
   await page.getByTestId('text-slide-update').click();
   const swap = slide.locator('.ui-slide-swap');
   const outgoing = swap.locator('[data-swap-out]');
@@ -751,7 +1102,9 @@ test('Text object counter and textSlide keep timing, root semantics and reduced-
   await expect(slide).toHaveAttribute('data-identity', 'stable-root');
 });
 
-test('modular Input actions preserve the native input, focus, value and associated feedback', async ({ page }) => {
+test('modular Input actions preserve the native input, focus, value and associated feedback', async ({
+  page,
+}) => {
   await openFixture(page);
   const field = page.getByTestId('modular-password');
   await expect(page.getByLabel('Modular password')).toBeVisible();
@@ -762,7 +1115,9 @@ test('modular Input actions preserve the native input, focus, value and associat
   await expect(field).toHaveAttribute('aria-describedby', errorId ?? '');
 
   await field.fill('edited secret');
-  await field.evaluate((node) => { node.dataset.nativeIdentity = 'same-input'; });
+  await field.evaluate((node) => {
+    node.dataset.nativeIdentity = 'same-input';
+  });
   await page.getByRole('button', { name: 'Показать пароль', exact: true }).click();
   await expect(field).toHaveAttribute('type', 'text');
   await expect(field).toBeFocused();
@@ -776,17 +1131,23 @@ test('modular Input actions preserve the native input, focus, value and associat
   await expect(field).toHaveAttribute('type', 'password');
   await expect(page.getByRole('button', { name: 'Показать пароль', exact: true })).toBeFocused();
   await expect(field).toHaveAttribute('data-native-identity', 'same-input');
-  expect(await page.getByTestId('modular-input-form').evaluate((form: HTMLFormElement) => new FormData(form).get('password'))).toBe('edited secret');
+  expect(
+    await page
+      .getByTestId('modular-input-form')
+      .evaluate((form: HTMLFormElement) => new FormData(form).get('password')),
+  ).toBe('edited secret');
 
   await page.getByRole('button', { name: 'Clear modular error' }).click();
   await expect(page.getByText('Исправьте значение', { exact: true })).toBeHidden();
   const comment = page.getByText('Подсказка поля', { exact: true });
   await expect(comment).toBeVisible();
-  await expect(field).toHaveAttribute('aria-describedby', await comment.getAttribute('id') ?? '');
+  await expect(field).toHaveAttribute('aria-describedby', (await comment.getAttribute('id')) ?? '');
   await expect(field).toHaveAttribute('data-native-identity', 'same-input');
 });
 
-test('object and legacy Accordion triggers keep keyboard behavior, ARIA and option precedence', async ({ page }) => {
+test('object and legacy Accordion triggers keep keyboard behavior, ARIA and option precedence', async ({
+  page,
+}) => {
   await openFixture(page);
   const object = page.getByRole('button', { name: 'Object trigger', exact: true });
   await expect(object).toHaveClass(/object-trigger/);
@@ -821,7 +1182,9 @@ test('object and legacy Accordion triggers keep keyboard behavior, ARIA and opti
   await expect(page.getByText('Legacy panel', { exact: true })).toBeVisible();
 });
 
-test('Input and Textarea preserve native decoration, refs and opt-in required form validation', async ({ page }) => {
+test('Input and Textarea preserve native decoration, refs and opt-in required form validation', async ({
+  page,
+}) => {
   await openFixture(page);
   const input = page.getByRole('textbox', { name: 'Decorated native input', exact: true });
   const textarea = page.getByRole('textbox', { name: 'Decorated native textarea', exact: true });
@@ -831,8 +1194,11 @@ test('Input and Textarea preserve native decoration, refs and opt-in required fo
   await expect(textarea).toHaveCSS('padding-left', '17px');
   expect(await input.evaluate((node: HTMLInputElement) => node.required)).toBe(true);
   expect(await textarea.evaluate((node: HTMLTextAreaElement) => node.required)).toBe(true);
-  expect(await page.getByRole('textbox', { name: 'Default custom required input', exact: true })
-    .evaluate((node: HTMLInputElement) => node.required)).toBe(false);
+  expect(
+    await page
+      .getByRole('textbox', { name: 'Default custom required input', exact: true })
+      .evaluate((node: HTMLInputElement) => node.required),
+  ).toBe(false);
   const submit = page.getByRole('button', { name: 'Submit decorated native fields', exact: true });
   await submit.click();
   await expect(page.getByTestId('native-field-submits')).toHaveText('0');
@@ -847,7 +1213,9 @@ test('Input and Textarea preserve native decoration, refs and opt-in required fo
   await expect(page.getByTestId('native-field-submits')).toHaveText('1');
 });
 
-test('Input and Textarea keep native events separate from normalized value changes', async ({ page }) => {
+test('Input and Textarea keep native events separate from normalized value changes', async ({
+  page,
+}) => {
   await openFixture(page);
 
   const plain = page.getByTestId('plain-value');
@@ -892,35 +1260,45 @@ test('Input and Textarea keep native events separate from normalized value chang
   });
 });
 
-test('plain phone mask preserves native Backspace/Delete/range selection and clamps pasted or typed digits', async ({ page }) => {
+test('plain phone mask preserves native Backspace/Delete/range selection and clamps pasted or typed digits', async ({
+  page,
+}) => {
   await openFixture(page);
-  const phone=page.getByTestId('phone-value');
+  const phone = page.getByTestId('phone-value');
   await phone.pressSequentially('9773717828');
   await expect(phone).toHaveValue('(977) 371 - 78 - 28');
   await phone.press('Home');
-  for(let index=0;index<7;index++)await phone.press('ArrowRight');
+  for (let index = 0; index < 7; index++) await phone.press('ArrowRight');
   await phone.press('Backspace');
   await expect(phone).toHaveValue('(977) 717 - 82 - 8');
-  await expect.poll(()=>phone.evaluate(element=>element.selectionStart)).toBe(6);
+  await expect.poll(() => phone.evaluate((element) => element.selectionStart)).toBe(6);
   await phone.press('Delete');
-  await expect.poll(()=>phone.evaluate(element=>element.selectionStart)).toBeLessThan(8);
+  await expect.poll(() => phone.evaluate((element) => element.selectionStart)).toBeLessThan(8);
   await phone.press('Home');
-  for(let index=0;index<2;index++)await phone.press('ArrowRight');
-  for(let index=0;index<2;index++)await phone.press('Shift+ArrowRight');
+  for (let index = 0; index < 2; index++) await phone.press('ArrowRight');
+  for (let index = 0; index < 2; index++) await phone.press('Shift+ArrowRight');
   await phone.pressSequentially('12');
-  await expect.poll(()=>phone.evaluate(element=>element.selectionStart)).toBeLessThan(8);
-  await phone.press('ControlOrMeta+A');await phone.press('Backspace');await expect(phone).toHaveValue('');
-  await phone.pressSequentially('97737178289999');await expect(phone).toHaveValue('(977) 371 - 78 - 28');
-  await page.context().grantPermissions(['clipboard-read','clipboard-write']);
-  await page.evaluate(()=>navigator.clipboard.writeText('8 (977) 371-78-28'));
-  await phone.press('ControlOrMeta+A');await phone.press('ControlOrMeta+V');
+  await expect.poll(() => phone.evaluate((element) => element.selectionStart)).toBeLessThan(8);
+  await phone.press('ControlOrMeta+A');
+  await phone.press('Backspace');
+  await expect(phone).toHaveValue('');
+  await phone.pressSequentially('97737178289999');
+  await expect(phone).toHaveValue('(977) 371 - 78 - 28');
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate(() => navigator.clipboard.writeText('8 (977) 371-78-28'));
+  await phone.press('ControlOrMeta+A');
+  await phone.press('ControlOrMeta+V');
   await expect(phone).toHaveValue('(977) 371 - 78 - 28');
 });
 
-test('PhoneField keeps picker aligned, focuses country search, preserves the native input, and submits the international value', async ({ page }) => {
+test('PhoneField keeps picker aligned, focuses country search, preserves the native input, and submits the international value', async ({
+  page,
+}) => {
   await openFixture(page);
   const phone = page.getByTestId('phone-field');
-  const country = page.getByRole('region', { name: 'Field event contracts' }).getByRole('button', { name: /Country: Russia/ });
+  const country = page
+    .getByRole('region', { name: 'Field event contracts' })
+    .getByRole('button', { name: /Country: Russia/ });
   await expect(page.getByText('Check this phone number')).toBeVisible();
 
   const phoneBox = await phone.boundingBox();
@@ -928,7 +1306,9 @@ test('PhoneField keeps picker aligned, focuses country search, preserves the nat
   expect(phoneBox).not.toBeNull();
   expect(countryBox).not.toBeNull();
   if (phoneBox && countryBox) {
-    expect(Math.abs((phoneBox.y + phoneBox.height / 2) - (countryBox.y + countryBox.height / 2))).toBeLessThan(4);
+    expect(
+      Math.abs(phoneBox.y + phoneBox.height / 2 - (countryBox.y + countryBox.height / 2)),
+    ).toBeLessThan(4);
   }
 
   await country.click();
@@ -944,7 +1324,9 @@ test('PhoneField keeps picker aligned, focuses country search, preserves the nat
   const nativeEvent = await page.evaluate(() => window.__phoneEvents.at(-1));
   expect(nativeEvent).toMatchObject({ trusted: true });
   expect(nativeEvent?.domValue).toBe('4155552671');
-  const formValues = await page.getByTestId('phone-form').evaluate((form: HTMLFormElement) => [...new FormData(form).entries()]);
+  const formValues = await page
+    .getByTestId('phone-form')
+    .evaluate((form: HTMLFormElement) => [...new FormData(form).entries()]);
   expect(formValues).toEqual([['international', await phone.inputValue()]]);
   expect(await page.evaluate(() => window.__phoneValues.at(-1))).toMatch(/^\+1/);
 
@@ -954,9 +1336,14 @@ test('PhoneField keeps picker aligned, focuses country search, preserves the nat
     return input.value.slice(0, cursor).replace(/\D/g, '').length;
   });
   await phone.press('9');
-  await expect.poll(() => phone.evaluate((input: HTMLInputElement) => (
-    input.value.slice(0, input.selectionStart ?? 0).replace(/\D/g, '').length
-  ))).toBe(before + 1);
+  await expect
+    .poll(() =>
+      phone.evaluate(
+        (input: HTMLInputElement) =>
+          input.value.slice(0, input.selectionStart ?? 0).replace(/\D/g, '').length,
+      ),
+    )
+    .toBe(before + 1);
 
   await phone.fill('4155552671');
   await expect(phone).toHaveValue(/\+1 415 555 2671/);
@@ -967,7 +1354,9 @@ test('PhoneField keeps picker aligned, focuses country search, preserves the nat
   await page.getByRole('button', { name: /Canada \(CA\)/ }).click();
   await expect(phone).toHaveValue(/\+1/);
   await expect(page.getByRole('button', { name: /Country: Canada \(CA\)/ })).toBeVisible();
-  const afterSameCallingCodeForm = await page.getByTestId('phone-form').evaluate((form: HTMLFormElement) => new FormData(form).get('international'));
+  const afterSameCallingCodeForm = await page
+    .getByTestId('phone-form')
+    .evaluate((form: HTMLFormElement) => new FormData(form).get('international'));
   expect(afterSameCallingCodeForm).toBe(await phone.inputValue());
 
   await phone.fill('4155552672');
@@ -976,10 +1365,15 @@ test('PhoneField keeps picker aligned, focuses country search, preserves the nat
   expect(await page.evaluate(() => window.__phoneEvents.at(-1)?.trusted)).toBe(true);
 });
 
-test('all-country PhoneField typing exposes render cost and current picker mount count', async ({ page }) => {
+test('all-country PhoneField typing exposes render cost and current picker mount count', async ({
+  page,
+}) => {
   await openFixture(page);
   const phone = page.getByRole('textbox', { name: 'Profile phone field' });
-  await page.getByRole('button', { name: /Страна: Россия/ }).last().click();
+  await page
+    .getByRole('button', { name: /Страна: Россия/ })
+    .last()
+    .click();
   const picker = page.getByRole('dialog', { name: 'Выберите страну' });
   await expect(picker).toBeVisible();
   const visibleOptionCount = await picker.locator('[aria-label="Страны"] button').count();
@@ -990,10 +1384,14 @@ test('all-country PhoneField typing exposes render cost and current picker mount
   const countBefore = await page.evaluate(() => window.__phoneCountryOptionCount);
   expect(countBefore).toBe(0);
   // Буфер ограничен 20 записями: новая выборка не измеряется ростом уже заполненного буфера.
-  await page.evaluate(() => { window.__phoneProfileSamples = []; });
+  await page.evaluate(() => {
+    window.__phoneProfileSamples = [];
+  });
   await phone.pressSequentially('4155552671');
   await expect(phone).toHaveValue(/\+7/);
-  await expect.poll(() => page.evaluate(() => window.__phoneProfileSamples.length)).toBeGreaterThanOrEqual(10);
+  await expect
+    .poll(() => page.evaluate(() => window.__phoneProfileSamples.length))
+    .toBeGreaterThanOrEqual(10);
   const samples = await page.evaluate(() => window.__phoneProfileSamples.slice(-10));
   expect(samples).toHaveLength(10);
   expect(await page.evaluate(() => window.__phoneCountryOptionCount)).toBe(countBefore);
@@ -1007,10 +1405,15 @@ test('all-country PhoneField typing exposes render cost and current picker mount
   });
 });
 
-test('all-country PhoneField picker stays in the viewport and scrolls to selectable countries', async ({ page }) => {
+test('all-country PhoneField picker stays in the viewport and scrolls to selectable countries', async ({
+  page,
+}) => {
   await openFixture(page);
 
-  for (const viewport of [{ width: 320, height: 480 }, { width: 740, height: 380 }]) {
+  for (const viewport of [
+    { width: 320, height: 480 },
+    { width: 740, height: 380 },
+  ]) {
     await page.setViewportSize(viewport);
     const trigger = page.getByRole('button', { name: /Country:|Страна:/ }).last();
     await trigger.scrollIntoViewIfNeeded();
@@ -1036,28 +1439,41 @@ test('all-country PhoneField picker stays in the viewport and scrolls to selecta
     await search.focus();
     await search.press('Tab');
     await expect(firstOption).toBeFocused();
-    const focusOutline = await firstOption.evaluate((button) => getComputedStyle(button).outlineStyle);
+    const focusOutline = await firstOption.evaluate(
+      (button) => getComputedStyle(button).outlineStyle,
+    );
     expect(focusOutline).not.toBe('none');
 
     const zimbabwe = results.getByRole('button', { name: /\(ZW\)/ });
-    const getScrollMetrics = () => zimbabwe.evaluate((node) => {
-      const item = node.getBoundingClientRect();
-      const container = node.closest<HTMLElement>('[class*="countryResults"]');
-      const viewportRect = container?.getBoundingClientRect();
-      return {
-        inView: Boolean(viewportRect && item.bottom > viewportRect.top && item.top < viewportRect.bottom),
-        scrollTop: container?.scrollTop ?? 0,
-        scrollHeight: container?.scrollHeight ?? 0,
-        clientHeight: container?.clientHeight ?? 0,
-        centerDelta: viewportRect ? (item.top + item.bottom - viewportRect.top - viewportRect.bottom) / 2 : 0,
-      };
-    });
+    const getScrollMetrics = () =>
+      zimbabwe.evaluate((node) => {
+        const item = node.getBoundingClientRect();
+        const container = node.closest<HTMLElement>('[class*="countryResults"]');
+        const viewportRect = container?.getBoundingClientRect();
+        return {
+          inView: Boolean(
+            viewportRect && item.bottom > viewportRect.top && item.top < viewportRect.bottom,
+          ),
+          scrollTop: container?.scrollTop ?? 0,
+          scrollHeight: container?.scrollHeight ?? 0,
+          clientHeight: container?.clientHeight ?? 0,
+          centerDelta: viewportRect
+            ? (item.top + item.bottom - viewportRect.top - viewportRect.bottom) / 2
+            : 0,
+        };
+      });
     let metrics = await getScrollMetrics();
-    while (!metrics.inView && metrics.scrollHeight > metrics.clientHeight && metrics.centerDelta !== 0) {
+    while (
+      !metrics.inView &&
+      metrics.scrollHeight > metrics.clientHeight &&
+      metrics.centerDelta !== 0
+    ) {
       await results.hover();
       await page.mouse.wheel(0, Math.round(metrics.centerDelta));
       const priorScrollTop = metrics.scrollTop;
-      await expect.poll(() => getScrollMetrics().then((next) => next.scrollTop)).not.toBe(priorScrollTop);
+      await expect
+        .poll(() => getScrollMetrics().then((next) => next.scrollTop))
+        .not.toBe(priorScrollTop);
       metrics = await getScrollMetrics();
     }
     expect(metrics.inView, JSON.stringify(metrics)).toBe(true);
@@ -1067,34 +1483,56 @@ test('all-country PhoneField picker stays in the viewport and scrolls to selecta
   }
 });
 
-test('seed focus and blur use real focus events while the DOM value follows the hint', async ({ page }) => {
+test('seed focus and blur use real focus events while the DOM value follows the hint', async ({
+  page,
+}) => {
   await openFixture(page);
   const seed = page.getByTestId('seed-value');
 
   await expect(seed).toHaveValue('');
   await seed.focus();
   await expect(seed).toHaveValue('');
-  expect(await page.evaluate(() => window.__focusLogs['seed-focus'])).toEqual({ type: 'focus', targetIsControl: true, trusted: true });
-  await expect.poll(async () => (await page.evaluate(() => window.__fieldLogs.seed)).at(-1)).toMatchObject({
-    reason: 'seed',
-    value: '',
-    eventType: 'focus',
+  expect(await page.evaluate(() => window.__focusLogs['seed-focus'])).toEqual({
+    type: 'focus',
     targetIsControl: true,
+    trusted: true,
   });
+  await expect
+    .poll(async () => (await page.evaluate(() => window.__fieldLogs.seed)).at(-1))
+    .toMatchObject({
+      reason: 'seed',
+      value: '',
+      eventType: 'focus',
+      targetIsControl: true,
+    });
 
   await seed.press('Tab');
   await expect(seed).toHaveValue('');
   await expect(seed).toHaveAttribute('placeholder', '0');
   const blurLog = await page.evaluate(() => window.__fieldLogs.seed.at(-1));
-  expect(blurLog).toMatchObject({ reason: 'seed', value: '0', eventType: 'blur', targetIsControl: true });
+  expect(blurLog).toMatchObject({
+    reason: 'seed',
+    value: '0',
+    eventType: 'blur',
+    targetIsControl: true,
+  });
   expect(blurLog?.trusted).toBe(true);
-  expect(await page.evaluate(() => window.__focusLogs['seed-blur'])).toEqual({ type: 'blur', targetIsControl: true, trusted: true });
+  expect(await page.evaluate(() => window.__focusLogs['seed-blur'])).toEqual({
+    type: 'blur',
+    targetIsControl: true,
+    trusted: true,
+  });
 });
 
-test('FormData preserves repeated names, disabled omission, and controls associated by form', async ({ page }) => {
+test('FormData preserves repeated names, disabled omission, and controls associated by form', async ({
+  page,
+}) => {
   await openFixture(page);
 
-  const formData = async () => page.getByTestId('external-form').evaluate((form: HTMLFormElement) => [...new FormData(form).entries()]);
+  const formData = async () =>
+    page
+      .getByTestId('external-form')
+      .evaluate((form: HTMLFormElement) => [...new FormData(form).entries()]);
   expect(await formData()).toEqual([
     ['shared', 'first'],
     ['reset', 'initial'],
@@ -1116,9 +1554,15 @@ test('FormData preserves repeated names, disabled omission, and controls associa
     ['topic', 'two'],
   ]);
 
-  expect(await page.getByTestId('external-form').evaluate((form: HTMLFormElement) => (
-    [...document.querySelectorAll<HTMLInputElement>('[form="external-form"]')].every((control) => control.form === form)
-  ))).toBe(true);
+  expect(
+    await page
+      .getByTestId('external-form')
+      .evaluate((form: HTMLFormElement) =>
+        [...document.querySelectorAll<HTMLInputElement>('[form="external-form"]')].every(
+          (control) => control.form === form,
+        ),
+      ),
+  ).toBe(true);
 
   const reset = page.getByTestId('reset-field');
   await reset.fill('changed');
@@ -1134,7 +1578,9 @@ test('FormData preserves repeated names, disabled omission, and controls associa
   await expect(canceled).toHaveValue('keep me');
 });
 
-test('number stepping honors min-relative fractional steps and ignores any or read-only controls', async ({ page }) => {
+test('number stepping honors min-relative fractional steps and ignores any or read-only controls', async ({
+  page,
+}) => {
   await openFixture(page);
 
   const fraction = page.getByTestId('fraction-step');
@@ -1154,8 +1600,12 @@ test('number stepping honors min-relative fractional steps and ignores any or re
   expect(await page.evaluate(() => window.__numberChanges)).toBe(2);
 });
 
-test('collapse hides focusable content with inert, then reopens and reports refs and transition callbacks', async ({ page }) => {
-  await page.addInitScript(() => { delete HTMLElement.prototype.onbeforematch; });
+test('collapse hides focusable content with inert, then reopens and reports refs and transition callbacks', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    delete HTMLElement.prototype.onbeforematch;
+  });
   await openFixture(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
 
@@ -1179,10 +1629,16 @@ test('collapse hides focusable content with inert, then reopens and reports refs
   await expect(wrap).toHaveAttribute('data-settled', 'true');
 });
 
-test('keepMounted Flex search reveal opens before found content can receive focus', async ({ page }) => {
+test('keepMounted Flex search reveal opens before found content can receive focus', async ({
+  page,
+}) => {
   await openFixture(page);
   const input = page.getByTestId('searchable-flex-input');
-  const wrap = page.getByTestId('searchable-flex').locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," ui-collapse ")]');
+  const wrap = page
+    .getByTestId('searchable-flex')
+    .locator(
+      'xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," ui-collapse ")]',
+    );
 
   await expect(wrap).toHaveAttribute('hidden', 'until-found');
   await expect(wrap).not.toHaveAttribute('inert', '');
@@ -1196,7 +1652,9 @@ test('keepMounted Flex search reveal opens before found content can receive focu
   await expect(input).toBeFocused();
 });
 
-test('Button tooltip keeps its anchor node, ref, keyboard focus, and click callback', async ({ page }) => {
+test('Button tooltip keeps its anchor node, ref, keyboard focus, and click callback', async ({
+  page,
+}) => {
   await openFixture(page);
   const button = page.getByTestId('tooltip-button');
   await button.focus();
@@ -1210,7 +1668,9 @@ test('Button tooltip keeps its anchor node, ref, keyboard focus, and click callb
   await expect(page.getByTestId('button-ref')).toHaveText('true');
 });
 
-test('disabled Button links cannot activate external or internal destinations', async ({ page }) => {
+test('disabled Button links cannot activate external or internal destinations', async ({
+  page,
+}) => {
   await openFixture(page);
   const initialUrl = page.url();
   const internal = page.getByTestId('disabled-internal-link');
@@ -1227,7 +1687,9 @@ test('disabled Button links cannot activate external or internal destinations', 
   expect(await page.evaluate(() => window.__disabledLinkClicks)).toBe(0);
 });
 
-test('Icon tooltip keeps the link and inline SVG stable while merging accessible descriptions', async ({ page }) => {
+test('Icon tooltip keeps the link and inline SVG stable while merging accessible descriptions', async ({
+  page,
+}) => {
   await openFixture(page);
   const link = page.getByRole('link', { name: 'Help link' });
   const svg = link.getByTestId('tooltip-icon-svg');
@@ -1246,7 +1708,9 @@ test('Icon tooltip keeps the link and inline SVG stable while merging accessible
     { type: 'focus', currentTarget: 'A', trusted: true },
   ]);
   expect(await svg.evaluate((node) => window.__iconSvg === node)).toBe(true);
-  await svg.evaluate((node) => { node.dataset.nativeIdentity = 'same-svg'; });
+  await svg.evaluate((node) => {
+    node.dataset.nativeIdentity = 'same-svg';
+  });
 
   await page.evaluate(() => window.__setIconTooltip?.('Updated help'));
   await expect(page.getByRole('tooltip')).toHaveText('Updated help');
@@ -1266,7 +1730,9 @@ test('Icon tooltip keeps the link and inline SVG stable while merging accessible
 
   await expect(svg).toHaveAttribute('data-native-identity', 'same-svg');
   expect(await svg.evaluate((node) => window.__iconSvg === node)).toBe(true);
-  expect(await link.evaluate((node) => node === document.querySelector('.ui-icon-link'))).toBe(true);
+  expect(await link.evaluate((node) => node === document.querySelector('.ui-icon-link'))).toBe(
+    true,
+  );
   await link.evaluate((node) => (node as HTMLAnchorElement).blur());
   expect(await page.evaluate(() => window.__iconEvents)).toEqual([
     { type: 'focus', currentTarget: 'A', trusted: true },
@@ -1288,7 +1754,9 @@ test('Media type choices are keyboard-operable buttons with pressed state', asyn
   await expect(video).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('MediaDropDown closes and stays inert after becoming disabled while open', async ({ page }) => {
+test('MediaDropDown closes and stays inert after becoming disabled while open', async ({
+  page,
+}) => {
   await openFixture(page);
   const widget = page.locator('.fixture-media-dropdown');
   const trigger = widget.locator('[class*="Trigger"]').first();
@@ -1314,31 +1782,49 @@ test('CarouselNav supports keyboard activation and disabled endpoints', async ({
   await expect(next).toBeEnabled();
   await next.focus();
   await next.press('Enter');
-  await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText('Navigation slide two');
+  await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText(
+    'Navigation slide two',
+  );
   await expect(previous).toBeEnabled();
   await next.press('Space');
-  await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText('Navigation slide three');
+  await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText(
+    'Navigation slide three',
+  );
   await expect(next).toBeDisabled();
   await previous.focus();
   await previous.press('Enter');
-  await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText('Navigation slide two');
+  await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText(
+    'Navigation slide two',
+  );
 });
 
-test('CarouselDots custom controls share page selection with arrows and keyboard', async ({ page }) => {
+test('CarouselDots custom controls share page selection with arrows and keyboard', async ({
+  page,
+}) => {
   await openFixture(page);
   const first = page.getByRole('button', { name: 'Thumbnail 1', exact: true });
   const third = page.getByRole('button', { name: 'Thumbnail 3', exact: true });
   await expect(first).toHaveAttribute('aria-pressed', 'true');
   await third.focus();
   await third.press('Enter');
-  await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText('Navigation slide three');
+  await expect(page.locator('[data-carousel-id="nav-fixture"] .swiper-slide-active')).toContainText(
+    'Navigation slide three',
+  );
   await expect(third).toHaveAttribute('aria-pressed', 'true');
   await expect(first).toHaveAttribute('aria-pressed', 'false');
-  await page.locator('.fixture-carousel-nav').getByRole('button', { name: 'Предыдущий слайд' }).click();
-  await expect(page.getByRole('button', { name: 'Thumbnail 2', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page
+    .locator('.fixture-carousel-nav')
+    .getByRole('button', { name: 'Предыдущий слайд' })
+    .click();
+  await expect(page.getByRole('button', { name: 'Thumbnail 2', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
 });
 
-test('Box and Flex swap content through real exit and enter animation completion', async ({ page }) => {
+test('Box and Flex swap content through real exit and enter animation completion', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   const box = page.getByTestId('swap-box');
@@ -1347,10 +1833,12 @@ test('Box and Flex swap content through real exit and enter animation completion
   await expect(flex).toHaveText('Flex first');
 
   // Initial entry can finish before the first action on a busy worker. Start the swap observation afterwards.
-  await expect.poll(() => page.evaluate(() => window.__swapEvents)).toMatchObject({
-    box: [{ name: 'ui-flex-fadeInUp' }],
-    flex: [{ name: 'ui-flex-fadeInUp' }],
-  });
+  await expect
+    .poll(() => page.evaluate(() => window.__swapEvents))
+    .toMatchObject({
+      box: [{ name: 'ui-flex-fadeInUp' }],
+      flex: [{ name: 'ui-flex-fadeInUp' }],
+    });
   await page.evaluate(() => {
     window.__swapEvents = { box: [], flex: [] };
     window.__swapStarts = { box: [], flex: [] };
@@ -1362,25 +1850,39 @@ test('Box and Flex swap content through real exit and enter animation completion
   await expect(box).toHaveClass(/ui-anim-fadeInUp/);
   await expect(flex).toHaveClass(/ui-anim-fadeInUp/);
 
-  expect(await page.evaluate(() => window.__swapNodes.box === document.querySelector('[data-testid="swap-box"]'))).toBe(true);
-  expect(await page.evaluate(() => window.__swapNodes.flex === document.querySelector('[data-testid="swap-flex"]'))).toBe(true);
-  await expect.poll(() => page.evaluate(() => window.__swapEvents)).toMatchObject({
-    box: [{ name: 'ui-flex-fadeOutDown' }, { name: 'ui-flex-fadeInUp' }],
-    flex: [{ name: 'ui-flex-fadeOutDown' }, { name: 'ui-flex-fadeInUp' }],
-  });
-  await expect.poll(() => page.evaluate(() => window.__swapStarts)).toMatchObject({
-    box: [
-      { name: 'ui-flex-fadeOutDown', text: 'Box first' },
-      { name: 'ui-flex-fadeInUp', text: 'Box second' },
-    ],
-    flex: [
-      { name: 'ui-flex-fadeOutDown', text: 'Flex first' },
-      { name: 'ui-flex-fadeInUp', text: 'Flex second' },
-    ],
-  });
+  expect(
+    await page.evaluate(
+      () => window.__swapNodes.box === document.querySelector('[data-testid="swap-box"]'),
+    ),
+  ).toBe(true);
+  expect(
+    await page.evaluate(
+      () => window.__swapNodes.flex === document.querySelector('[data-testid="swap-flex"]'),
+    ),
+  ).toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.__swapEvents))
+    .toMatchObject({
+      box: [{ name: 'ui-flex-fadeOutDown' }, { name: 'ui-flex-fadeInUp' }],
+      flex: [{ name: 'ui-flex-fadeOutDown' }, { name: 'ui-flex-fadeInUp' }],
+    });
+  await expect
+    .poll(() => page.evaluate(() => window.__swapStarts))
+    .toMatchObject({
+      box: [
+        { name: 'ui-flex-fadeOutDown', text: 'Box first' },
+        { name: 'ui-flex-fadeInUp', text: 'Box second' },
+      ],
+      flex: [
+        { name: 'ui-flex-fadeOutDown', text: 'Flex first' },
+        { name: 'ui-flex-fadeInUp', text: 'Flex second' },
+      ],
+    });
 });
 
-test('LexicalText mounted from empty content attaches reveal observation and settles when scrolled into view', async ({ page }) => {
+test('LexicalText mounted from empty content attaches reveal observation and settles when scrolled into view', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
   await expect(page.getByTestId('lexical-reveal')).toHaveCount(0);
@@ -1393,7 +1895,9 @@ test('LexicalText mounted from empty content attaches reveal observation and set
   await expect(lexical).toContainText('Revealed lexical content');
 });
 
-test('Dropdown keeps nested portal focus, bridges keyboard navigation and blocks the dismissing click', async ({ page }) => {
+test('Dropdown keeps nested portal focus, bridges keyboard navigation and blocks the dismissing click', async ({
+  page,
+}) => {
   await openFixture(page);
   const outer = page.getByRole('button', { name: 'Outer choices', exact: true });
   const inner = page.getByRole('button', { name: 'Inner choices', exact: true });
@@ -1418,7 +1922,9 @@ test('Dropdown keeps nested portal focus, bridges keyboard navigation and blocks
   await expect(page.getByTestId('dropdown-outside-clicks')).toHaveText('1');
 });
 
-test('Dropdown keeps controlled state with its owner and honors cancellation, disabled and defaultOpen', async ({ page }) => {
+test('Dropdown keeps controlled state with its owner and honors cancellation, disabled and defaultOpen', async ({
+  page,
+}) => {
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Dropdown state contracts' });
   const trigger = scope.getByRole('button', { name: 'Controlled dropdown', exact: true });
@@ -1440,7 +1946,10 @@ test('Dropdown keeps controlled state with its owner and honors cancellation, di
   await expect(action).toBeVisible();
   const panelId = await trigger.getAttribute('aria-controls');
   const panel = page.locator(`[id="${panelId}"]`);
-  expect(await panel.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(await trigger.evaluate((node) => node.getBoundingClientRect().width), 0);
+  expect(await panel.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(
+    await trigger.evaluate((node) => node.getBoundingClientRect().width),
+    0,
+  );
   await action.press('Escape');
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(trigger).toBeFocused();
@@ -1473,12 +1982,17 @@ test('Dropdown keeps controlled state with its owner and honors cancellation, di
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await trigger.click();
   await expect(action).toBeVisible();
-  expect(await panel.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(await trigger.evaluate((node) => node.getBoundingClientRect().width), 0);
+  expect(await panel.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(
+    await trigger.evaluate((node) => node.getBoundingClientRect().width),
+    0,
+  );
   await action.press('Escape');
   await expect(trigger).toBeFocused();
 });
 
-test('Select preserves panel styling, grouped options and opening guards through Dropdown', async ({ page }) => {
+test('Select preserves panel styling, grouped options and opening guards through Dropdown', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Select panel contracts' });
@@ -1494,7 +2008,10 @@ test('Select preserves panel styling, grouped options and opening guards through
     await expect(surface).toHaveCSS('border-top-left-radius', '6px');
     const sizes = await trigger.evaluate((node) => {
       const list = document.getElementById(node.getAttribute('aria-controls') ?? '');
-      return { trigger: node.parentElement?.getBoundingClientRect().width ?? 0, surface: list?.parentElement?.getBoundingClientRect().width };
+      return {
+        trigger: node.parentElement?.getBoundingClientRect().width ?? 0,
+        surface: list?.parentElement?.getBoundingClientRect().width,
+      };
     });
     expect(sizes.surface).toBeDefined();
     expect(Math.abs((sizes.surface ?? 0) - sizes.trigger)).toBeLessThan(1);
@@ -1530,7 +2047,9 @@ test('Dropdown arrow keys enter its portal directly from the focused trigger', a
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 });
 
-test('closed nested Dropdown consumes arrows, opens and focuses its first or last item', async ({ page }) => {
+test('closed nested Dropdown consumes arrows, opens and focuses its first or last item', async ({
+  page,
+}) => {
   await openFixture(page);
   const outer = page.getByRole('button', { name: 'Keyboard filters', exact: true });
   const inner = page.getByRole('button', { name: 'Keyboard status', exact: true });
@@ -1538,13 +2057,17 @@ test('closed nested Dropdown consumes arrows, opens and focuses its first or las
   await inner.focus();
   await page.keyboard.press('ArrowDown');
   await expect(inner).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.getByRole('button', { name: 'First keyboard status', exact: true })).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: 'First keyboard status', exact: true }),
+  ).toBeFocused();
   await expect(outer).toHaveAttribute('aria-expanded', 'true');
   await page.keyboard.press('Escape');
   await expect(inner).toBeFocused();
   await expect(inner).toHaveAttribute('aria-expanded', 'false');
   await page.keyboard.press('ArrowUp');
-  await expect(page.getByRole('button', { name: 'Last keyboard status', exact: true })).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: 'Last keyboard status', exact: true }),
+  ).toBeFocused();
   await page.keyboard.press('Escape');
   const disabled = page.getByRole('button', { name: 'Unavailable keyboard status', exact: true });
   await disabled.focus();
@@ -1564,7 +2087,9 @@ test('closed nested Dropdown consumes arrows, opens and focuses its first or las
   await expect(native).toBeFocused();
 });
 
-test('Modal keeps a drag started inside its content open when released on the backdrop', async ({ page }) => {
+test('Modal keeps a drag started inside its content open when released on the backdrop', async ({
+  page,
+}) => {
   await openFixture(page);
   const opener = page.getByRole('button', { name: 'Open context dialog', exact: true });
   await opener.click();
@@ -1586,7 +2111,9 @@ test('Modal keeps a drag started inside its content open when released on the ba
   await expect(opener).toBeFocused();
 });
 
-test('declarative Modal preserves live declaration context through nested portals', async ({ page }) => {
+test('declarative Modal preserves live declaration context through nested portals', async ({
+  page,
+}) => {
   await openFixture(page);
   const opener = page.getByRole('button', { name: 'Open context dialog', exact: true });
   await opener.click();
@@ -1595,12 +2122,17 @@ test('declarative Modal preserves live declaration context through nested portal
   await expect(page.getByTestId('outer-dialog-context')).toHaveText('alpha');
   await outer.getByRole('button', { name: 'Update declaration context', exact: true }).click();
   await expect(page.getByTestId('outer-dialog-context')).toHaveText('beta');
-  const nestedOpener = outer.getByRole('button', { name: 'Open nested context dialog', exact: true });
+  const nestedOpener = outer.getByRole('button', {
+    name: 'Open nested context dialog',
+    exact: true,
+  });
   await nestedOpener.click();
   const nested = page.getByRole('dialog', { name: 'Context nested dialog', exact: true });
   await expect(nested).toBeVisible();
   await expect(page.getByTestId('nested-dialog-context')).toHaveText('nested:beta');
-  await nested.getByRole('button', { name: 'Update nested declaration context', exact: true }).click();
+  await nested
+    .getByRole('button', { name: 'Update nested declaration context', exact: true })
+    .click();
   await expect(page.getByTestId('nested-dialog-context')).toHaveText('nested:gamma');
   await expect(page.getByTestId('outer-dialog-context')).toHaveText('gamma');
   await page.keyboard.press('Escape');
@@ -1621,7 +2153,9 @@ test('nested Dropdown consumes the first Escape inside a scrolling Modal', async
   await expect(dialog).toBeVisible();
   const menuTrigger = page.getByTestId('nested-dropdown-trigger');
   await menuTrigger.scrollIntoViewIfNeeded();
-  await expect.poll(() => dialog.locator(':scope > div').evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  await expect
+    .poll(() => dialog.locator(':scope > div').evaluate((node) => node.scrollTop))
+    .toBeGreaterThan(0);
   await menuTrigger.click();
   await expect(menuTrigger).toHaveAttribute('aria-expanded', 'true');
   const panelId = await menuTrigger.getAttribute('aria-controls');
@@ -1630,7 +2164,9 @@ test('nested Dropdown consumes the first Escape inside a scrolling Modal', async
   await expect(portalPanel).toHaveAttribute('data-side', 'end');
   expect(await portalPanel.evaluate((node) => !node.closest('[role="dialog"]'))).toBe(true);
   const alignment = await portalPanel.evaluate((node) => {
-    const triggerBox = document.querySelector<HTMLElement>('[data-testid="nested-dropdown-trigger"]')!.getBoundingClientRect();
+    const triggerBox = document
+      .querySelector<HTMLElement>('[data-testid="nested-dropdown-trigger"]')!
+      .getBoundingClientRect();
     const panelBox = node.getBoundingClientRect();
     return Math.abs(triggerBox.right - panelBox.right);
   });
@@ -1659,11 +2195,17 @@ test('nested Dropdown consumes the first Escape inside a scrolling Modal', async
   await expect(menuTrigger).toHaveAttribute('aria-expanded', 'false');
 
   await menuTrigger.press('Escape');
-  await expect(page.locator('[aria-label="Browser regression modal"]').locator('xpath=ancestor::*[@aria-hidden="true"]')).toHaveCount(1);
+  await expect(
+    page
+      .locator('[aria-label="Browser regression modal"]')
+      .locator('xpath=ancestor::*[@aria-hidden="true"]'),
+  ).toHaveCount(1);
   await expect(opener).toBeFocused();
 });
 
-test('Select portal escapes the scroll-clipped Modal, keeps focus trapped, and closes in layers', async ({ page }) => {
+test('Select portal escapes the scroll-clipped Modal, keeps focus trapped, and closes in layers', async ({
+  page,
+}) => {
   await openFixture(page);
   const opener = page.getByRole('button', { name: 'Open portal select modal' });
   await opener.click();
@@ -1671,7 +2213,9 @@ test('Select portal escapes the scroll-clipped Modal, keeps focus trapped, and c
   await expect(dialog).toBeVisible();
   const select = page.getByRole('button', { name: 'Select inside modal' });
   await select.scrollIntoViewIfNeeded();
-  await expect.poll(() => dialog.locator(':scope > div').evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  await expect
+    .poll(() => dialog.locator(':scope > div').evaluate((node) => node.scrollTop))
+    .toBeGreaterThan(0);
   await select.click();
   await expect(page.getByRole('listbox')).toBeVisible();
   const listbox = page.getByRole('listbox');
@@ -1680,7 +2224,13 @@ test('Select portal escapes the scroll-clipped Modal, keeps focus trapped, and c
   await select.press('ArrowDown');
   await expect(listbox).toHaveAttribute('aria-activedescendant', /option-1$/);
   await select.press('Enter');
-  await expect.poll(() => page.getByTestId('modal-select-form').evaluate((form: HTMLFormElement) => new FormData(form).get('modalChoice'))).toBe('second');
+  await expect
+    .poll(() =>
+      page
+        .getByTestId('modal-select-form')
+        .evaluate((form: HTMLFormElement) => new FormData(form).get('modalChoice')),
+    )
+    .toBe('second');
 
   await select.click();
   await expect(page.getByRole('listbox')).toBeVisible();
@@ -1689,7 +2239,9 @@ test('Select portal escapes the scroll-clipped Modal, keeps focus trapped, and c
 
   await select.focus();
   await select.press('Shift+Tab');
-  expect(await page.evaluate(() => Boolean(document.activeElement?.closest('[role="dialog"]')))).toBe(true);
+  expect(
+    await page.evaluate(() => Boolean(document.activeElement?.closest('[role="dialog"]'))),
+  ).toBe(true);
   await select.focus();
   await select.click();
   await expect(page.getByRole('listbox')).toBeVisible();
@@ -1704,7 +2256,9 @@ test('Select portal escapes the scroll-clipped Modal, keeps focus trapped, and c
   await expect(opener).toBeFocused();
 });
 
-test('declarative Modal composes the trigger, respects its controlled owner, updates content, and shares the imperative stack', async ({ page }) => {
+test('declarative Modal composes the trigger, respects its controlled owner, updates content, and shares the imperative stack', async ({
+  page,
+}) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await openFixture(page);
@@ -1714,14 +2268,18 @@ test('declarative Modal composes the trigger, respects its controlled owner, upd
   await trigger.click();
   const dialog = page.locator('[role="dialog"][aria-label="Controlled declaration"]');
   await expect(dialog).toBeVisible();
-  await expect(trigger).toHaveAttribute('aria-controls', await dialog.getAttribute('id') ?? '');
-  await expect(page.getByTestId('declarative-modal-log')).toHaveText('{"clicks":1,"changes":[true]}');
+  await expect(trigger).toHaveAttribute('aria-controls', (await dialog.getAttribute('id')) ?? '');
+  await expect(page.getByTestId('declarative-modal-log')).toHaveText(
+    '{"clicks":1,"changes":[true]}',
+  );
   await page.keyboard.press('Tab');
   await expect(dialog.getByRole('button', { name: 'Request declaration close' })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeVisible();
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.getByTestId('declarative-modal-log')).toHaveText('{"clicks":1,"changes":[true,false]}');
+  await expect(page.getByTestId('declarative-modal-log')).toHaveText(
+    '{"clicks":1,"changes":[true,false]}',
+  );
   for (let value = 1; value <= 5; value += 1) {
     await dialog.getByRole('button', { name: 'Update declaration content' }).click();
     await expect(page.getByTestId('declaration-content')).toHaveText(`Current content ${value}`);
@@ -1729,14 +2287,18 @@ test('declarative Modal composes the trigger, respects its controlled owner, upd
   await dialog.getByRole('button', { name: 'Verify declaration ref' }).click();
   await expect(dialog.locator('..')).toHaveAttribute('data-ref-verified', 'true');
   const inner = dialog.locator(':scope > div');
-  expect(await inner.evaluate((node) => {
-    const measure = document.createElement('div');
-    measure.style.width = 'calc(16 * var(--rpx))';
-    node.append(measure);
-    const expected = measure.getBoundingClientRect().width;
-    measure.remove();
-    return { actual: Number.parseFloat(getComputedStyle(node).paddingRight), expected };
-  }).then(({ actual, expected }) => Math.abs(actual - expected))).toBeLessThan(1);
+  expect(
+    await inner
+      .evaluate((node) => {
+        const measure = document.createElement('div');
+        measure.style.width = 'calc(16 * var(--rpx))';
+        node.append(measure);
+        const expected = measure.getBoundingClientRect().width;
+        measure.remove();
+        return { actual: Number.parseFloat(getComputedStyle(node).paddingRight), expected };
+      })
+      .then(({ actual, expected }) => Math.abs(actual - expected)),
+  ).toBeLessThan(1);
 
   await dialog.getByTestId('open-top-modal').click();
   const top = page.getByRole('dialog', { name: 'Top stacked modal', exact: true });
@@ -1755,12 +2317,20 @@ test('declarative Modal composes the trigger, respects its controlled owner, upd
   expect(errors).toEqual([]);
 });
 
-test('declarative Modal cancellation, disabled trigger, defaultOpen and rapid reopen use one stack entry', async ({ page }) => {
+test('declarative Modal cancellation, disabled trigger, defaultOpen and rapid reopen use one stack entry', async ({
+  page,
+}) => {
   await openFixture(page);
   await page.getByRole('button', { name: 'Cancelled declaration', exact: true }).click();
-  await expect(page.locator('[role="dialog"][aria-label="Cancelled declaration dialog"]')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Disabled declaration', exact: true })).toBeDisabled();
-  await expect(page.locator('[role="dialog"][aria-label="Disabled declaration dialog"]')).toHaveCount(0);
+  await expect(
+    page.locator('[role="dialog"][aria-label="Cancelled declaration dialog"]'),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Disabled declaration', exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.locator('[role="dialog"][aria-label="Disabled declaration dialog"]'),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Mount default declaration' }).click();
   const defaultDialog = page.getByRole('dialog', { name: 'Default declaration', exact: true });
   await expect(defaultDialog).toBeVisible();
@@ -1783,11 +2353,15 @@ test('declarative Modal cancellation, disabled trigger, defaultOpen and rapid re
   await expect(dialog).toHaveCount(0);
 });
 
-test('declarative Modal uses shared full distance open motion, one inner scroll owner and desktop dismissal', async ({ page }) => {
+test('declarative Modal uses shared full distance open motion, one inner scroll owner and desktop dismissal', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 640 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
-  await page.evaluate(() => document.documentElement.style.setProperty('--t-m-distance-full', '100%'));
+  await page.evaluate(() =>
+    document.documentElement.style.setProperty('--t-m-distance-full', '100%'),
+  );
   const trigger = page.getByRole('button', { name: 'Open mobile declaration', exact: true });
   await trigger.click();
   const dialog = page.locator('[role="dialog"][aria-label="Mobile declaration"]');
@@ -1799,7 +2373,9 @@ test('declarative Modal uses shared full distance open motion, one inner scroll 
   await expect(inner).toHaveCSS('overflow-y', 'auto');
   await expect(inner).toHaveCSS('padding-right', '0px');
   const pageY = await page.evaluate(() => window.scrollY);
-  await expect.poll(() => dialog.evaluate((node) => getComputedStyle(node).translate)).toMatch(/^0px(?: 0(?:px|%))?$/);
+  await expect
+    .poll(() => dialog.evaluate((node) => getComputedStyle(node).translate))
+    .toMatch(/^0px(?: 0(?:px|%))?$/);
   await inner.hover();
   await page.mouse.wheel(0, 480);
   await expect.poll(() => inner.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
@@ -1818,7 +2394,9 @@ test('declarative Modal uses shared full distance open motion, one inner scroll 
       // Sample within the browser clock; separate protocol calls must not consume the exit interval.
       setTimeout(() => {
         sample.textContent = JSON.stringify({
-          startOpacity, animation, duration,
+          startOpacity,
+          animation,
+          duration,
           retained: node.isConnected,
           locked: getComputedStyle(document.documentElement).overflowY === 'hidden',
         });
@@ -1830,8 +2408,13 @@ test('declarative Modal uses shared full distance open motion, one inner scroll 
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   const sample = page.getByTestId('modal-exit-sample');
   await expect(sample).not.toBeEmpty();
-  const exit = JSON.parse(await sample.textContent() ?? '{}');
-  expect(exit).toMatchObject({ animation: 'ui-reveal-out', duration: '0.8s', retained: true, locked: true });
+  const exit = JSON.parse((await sample.textContent()) ?? '{}');
+  expect(exit).toMatchObject({
+    animation: 'ui-reveal-out',
+    duration: '0.8s',
+    retained: true,
+    locked: true,
+  });
   expect(exit.startOpacity).toBeGreaterThan(0);
   await sample.evaluate((node) => node.remove());
   await expect(dialog).toHaveCount(0);
@@ -1846,7 +2429,9 @@ test('declarative Modal uses shared full distance open motion, one inner scroll 
   await expect(dialog).toHaveCount(0);
 });
 
-test('declarative Modal reduced motion still releases the shared lock after closing', async ({ page }) => {
+test('declarative Modal reduced motion still releases the shared lock after closing', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 640 });
   await openFixture(page);
   const trigger = page.getByRole('button', { name: 'Open mobile declaration', exact: true });
@@ -1859,7 +2444,9 @@ test('declarative Modal reduced motion still releases the shared lock after clos
   await expect(page.locator('html')).not.toHaveCSS('overflow-y', 'hidden');
 });
 
-test('Modal restores a sticky header trigger without changing the page position', async ({ page }) => {
+test('Modal restores a sticky header trigger without changing the page position', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 640 });
   await openFixture(page);
   const trigger = page.getByRole('button', { name: 'Open mobile declaration', exact: true });
@@ -1886,7 +2473,9 @@ test('Modal restores a sticky header trigger without changing the page position'
   expect(await page.evaluate(() => window.scrollY)).toBe(600);
 });
 
-test('Modal scroll lock keeps independent provider leases through provider unmounts and restores inline priorities', async ({ page }) => {
+test('Modal scroll lock keeps independent provider leases through provider unmounts and restores inline priorities', async ({
+  page,
+}) => {
   await openFixture(page);
   const baseline = await page.evaluate(() => {
     const root = document.documentElement;
@@ -1895,38 +2484,62 @@ test('Modal scroll lock keeps independent provider leases through provider unmou
     root.style.setProperty('overflow-y', 'scroll');
     body.style.setProperty('overflow', 'auto', 'important');
     body.style.setProperty('padding', '24px 40px', 'important');
-    return { width: root.clientWidth, padding: Number.parseFloat(getComputedStyle(body).paddingRight) };
+    return {
+      width: root.clientWidth,
+      padding: Number.parseFloat(getComputedStyle(body).paddingRight),
+    };
   });
   await page.getByRole('button', { name: 'Open First independent lease', exact: true }).click();
   const first = page.getByRole('dialog', { name: 'First independent lease', exact: true });
   await expect(first).toBeVisible();
   await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden');
-  const lockedPadding = await page.evaluate(() => Number.parseFloat(getComputedStyle(document.body).paddingRight));
+  const lockedPadding = await page.evaluate(() =>
+    Number.parseFloat(getComputedStyle(document.body).paddingRight),
+  );
   const reclaimedWidth = await page.evaluate(() => document.documentElement.clientWidth);
   expect(lockedPadding).toBe(baseline.padding + reclaimedWidth - baseline.width);
 
   await first.getByRole('button', { name: 'Open second independent lease' }).click();
   const second = page.getByRole('dialog', { name: 'Second independent lease', exact: true });
   await expect(second).toBeVisible();
-  expect(await page.evaluate(() => Number.parseFloat(getComputedStyle(document.body).paddingRight))).toBe(lockedPadding);
+  expect(
+    await page.evaluate(() => Number.parseFloat(getComputedStyle(document.body).paddingRight)),
+  ).toBe(lockedPadding);
   await second.getByRole('button', { name: 'Unmount first provider', exact: true }).click();
-  await expect(page.locator('[role="dialog"][aria-label="First independent lease"]')).toHaveCount(0);
+  await expect(page.locator('[role="dialog"][aria-label="First independent lease"]')).toHaveCount(
+    0,
+  );
   await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden');
-  await second.getByRole('button', { name: 'Unmount Second independent lease', exact: true }).click();
+  await second
+    .getByRole('button', { name: 'Unmount Second independent lease', exact: true })
+    .click();
   await expect(second).toHaveCount(0);
-  expect(await page.evaluate(() => ({
-    rootX: document.documentElement.style.getPropertyValue('overflow-x'),
-    rootXPriority: document.documentElement.style.getPropertyPriority('overflow-x'),
-    rootY: document.documentElement.style.getPropertyValue('overflow-y'),
-    rootYPriority: document.documentElement.style.getPropertyPriority('overflow-y'),
-    bodyOverflow: document.body.style.getPropertyValue('overflow'),
-    bodyOverflowPriority: document.body.style.getPropertyPriority('overflow'),
-    padding: document.body.style.getPropertyValue('padding'),
-    paddingPriority: document.body.style.getPropertyPriority('padding-right'),
-  }))).toEqual({ rootX: 'clip', rootXPriority: 'important', rootY: 'scroll', rootYPriority: '', bodyOverflow: 'auto', bodyOverflowPriority: 'important', padding: '24px 40px', paddingPriority: 'important' });
+  expect(
+    await page.evaluate(() => ({
+      rootX: document.documentElement.style.getPropertyValue('overflow-x'),
+      rootXPriority: document.documentElement.style.getPropertyPriority('overflow-x'),
+      rootY: document.documentElement.style.getPropertyValue('overflow-y'),
+      rootYPriority: document.documentElement.style.getPropertyPriority('overflow-y'),
+      bodyOverflow: document.body.style.getPropertyValue('overflow'),
+      bodyOverflowPriority: document.body.style.getPropertyPriority('overflow'),
+      padding: document.body.style.getPropertyValue('padding'),
+      paddingPriority: document.body.style.getPropertyPriority('padding-right'),
+    })),
+  ).toEqual({
+    rootX: 'clip',
+    rootXPriority: 'important',
+    rootY: 'scroll',
+    rootYPriority: '',
+    bodyOverflow: 'auto',
+    bodyOverflowPriority: 'important',
+    padding: '24px 40px',
+    paddingPriority: 'important',
+  });
 });
 
-test('Modal scroll lock stays while stacked dialogs exit and releases after the final DOM removal', async ({ page }) => {
+test('Modal scroll lock stays while stacked dialogs exit and releases after the final DOM removal', async ({
+  page,
+}) => {
   // This scenario inspects the exit phase; reduced motion intentionally removes that phase.
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await openFixture(page);
@@ -1951,7 +2564,9 @@ test('Modal scroll lock stays while stacked dialogs exit and releases after the 
   await expect(page.locator('html')).not.toHaveCSS('overflow-y', 'hidden');
 });
 
-test('Modal scroll lock allows inner wheel scrolling while page wheel stays blocked without SmoothScroll', async ({ page }) => {
+test('Modal scroll lock allows inner wheel scrolling while page wheel stays blocked without SmoothScroll', async ({
+  page,
+}) => {
   await openFixture(page);
   await page.getByRole('button', { name: 'Open First independent lease', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'First independent lease', exact: true });
@@ -1971,7 +2586,9 @@ test('Modal scroll lock allows inner wheel scrolling while page wheel stays bloc
   expect(await page.evaluate(() => window.scrollY)).toBe(pageY);
 });
 
-test('Modal scroll lock preserves body padding when a stable scrollbar gutter remains reserved', async ({ page }) => {
+test('Modal scroll lock preserves body padding when a stable scrollbar gutter remains reserved', async ({
+  page,
+}) => {
   await openFixture(page);
   await page.evaluate(() => {
     document.documentElement.style.setProperty('scrollbar-gutter', 'stable');
@@ -1985,16 +2602,28 @@ test('Modal scroll lock preserves body padding when a stable scrollbar gutter re
   await expect(dialog).toBeVisible();
   const viewport = dialog.locator('.ui-scrollbar');
   await expect(viewport).toHaveCSS('scrollbar-color', 'auto');
-  expect(await viewport.evaluate((node) => getComputedStyle(node, '::-webkit-scrollbar-button').display)).toBe('none');
-  expect(await page.evaluate(() => document.documentElement.getBoundingClientRect().width)).toBe(before);
+  expect(
+    await viewport.evaluate((node) => getComputedStyle(node, '::-webkit-scrollbar-button').display),
+  ).toBe('none');
+  expect(await page.evaluate(() => document.documentElement.getBoundingClientRect().width)).toBe(
+    before,
+  );
   await expect(page.locator('body')).toHaveCSS('padding-right', '36px');
-  await dialog.getByRole('button', { name: 'Unmount First independent lease', exact: true }).click();
+  await dialog
+    .getByRole('button', { name: 'Unmount First independent lease', exact: true })
+    .click();
   await expect(dialog).toHaveCount(0);
-  expect(await page.evaluate(() => document.body.style.getPropertyValue('padding-right'))).toBe('36px');
-  expect(await page.evaluate(() => document.body.style.getPropertyPriority('padding-right'))).toBe('important');
+  expect(await page.evaluate(() => document.body.style.getPropertyValue('padding-right'))).toBe(
+    '36px',
+  );
+  expect(await page.evaluate(() => document.body.style.getPropertyPriority('padding-right'))).toBe(
+    'important',
+  );
 });
 
-test('stacked Modals isolate the lower dialog and restore focus when the top closes', async ({ page }) => {
+test('stacked Modals isolate the lower dialog and restore focus when the top closes', async ({
+  page,
+}) => {
   await openFixture(page);
   const opener = page.getByRole('button', { name: 'Open stacked modal' });
   await opener.click();
@@ -2027,7 +2656,9 @@ test('stacked Modals isolate the lower dialog and restore focus when the top clo
   await expect(lowerRoot).not.toHaveAttribute('inert', '');
 });
 
-test('Carousel initializes each public effect with its corresponding Swiper mode', async ({ page }) => {
+test('Carousel initializes each public effect with its corresponding Swiper mode', async ({
+  page,
+}) => {
   await openFixture(page);
   const swiper = page.locator('[data-testid="effect-carousel"] .swiper');
   await expect(swiper).toHaveClass(/swiper-initialized/);
@@ -2048,10 +2679,18 @@ test('Carousel initializes each public effect with its corresponding Swiper mode
   await expect(swiper.locator('.swiper-slide-active')).toContainText('Effect slide one');
 });
 
-test('VideoPlayer timeline keyboard moves by documented increments and endpoints', async ({ page }) => {
+test('VideoPlayer timeline keyboard moves by documented increments and endpoints', async ({
+  page,
+}) => {
   await page.addInitScript(() => {
-    Object.defineProperty(HTMLVideoElement.prototype, 'duration', { configurable: true, get: () => 120 });
-    Object.defineProperty(HTMLVideoElement.prototype, 'readyState', { configurable: true, get: () => 1 });
+    Object.defineProperty(HTMLVideoElement.prototype, 'duration', {
+      configurable: true,
+      get: () => 120,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, 'readyState', {
+      configurable: true,
+      get: () => 1,
+    });
     Object.defineProperty(HTMLVideoElement.prototype, 'currentTime', {
       configurable: true,
       get: () => window.__videoTime ?? 0,
@@ -2060,7 +2699,10 @@ test('VideoPlayer timeline keyboard moves by documented increments and endpoints
         window.__videoSeeks = [...(window.__videoSeeks ?? []), value];
       },
     });
-    Object.defineProperty(HTMLVideoElement.prototype, 'fastSeek', { configurable: true, value: undefined });
+    Object.defineProperty(HTMLVideoElement.prototype, 'fastSeek', {
+      configurable: true,
+      value: undefined,
+    });
   });
   await openFixture(page);
   const timeline = page.getByRole('slider', { name: 'Перемотка' });
@@ -2089,35 +2731,50 @@ test('VideoPlayer timeline keyboard moves by documented increments and endpoints
   await expect(volume).toHaveAttribute('aria-valuenow', '100');
 });
 
-test('shared motion primitives preserve enter, move, leave, and linked hover callbacks', async ({ page }) => {
+test('shared motion primitives preserve enter, move, leave, and linked hover callbacks', async ({
+  page,
+}) => {
   await openFixture(page);
 
   for (const key of ['text', 'grid', 'grid-item', 'img']) {
     const node = page.getByTestId(`motion-${key}`);
     const target = node;
     await target.hover();
-    if (key !== 'grid-item') await expect(page.getByTestId('motion-state')).toHaveAttribute('state', 'hover');
+    if (key !== 'grid-item')
+      await expect(page.getByTestId('motion-state')).toHaveAttribute('state', 'hover');
     const bounds = await target.boundingBox();
     expect(bounds).not.toBeNull();
     if (!bounds) continue;
-    await page.mouse.move(bounds.x + Math.min(8, bounds.width / 3), bounds.y + Math.min(8, bounds.height / 3));
-    await page.mouse.move(bounds.x + Math.min(20, bounds.width / 2), bounds.y + Math.min(20, bounds.height / 2));
+    await page.mouse.move(
+      bounds.x + Math.min(8, bounds.width / 3),
+      bounds.y + Math.min(8, bounds.height / 3),
+    );
+    await page.mouse.move(
+      bounds.x + Math.min(20, bounds.width / 2),
+      bounds.y + Math.min(20, bounds.height / 2),
+    );
     await page.mouse.move(8, 8);
-    if (key !== 'grid-item') await expect(page.getByTestId('motion-state')).not.toHaveAttribute('state', 'hover');
+    if (key !== 'grid-item')
+      await expect(page.getByTestId('motion-state')).not.toHaveAttribute('state', 'hover');
     if (key === 'img') {
       await node.click();
       expect(await page.evaluate(() => window.__imageMotionTargets)).toContain('IMG');
       expect(await page.evaluate(() => window.__imageClickTargets)).toEqual(['IMG']);
-      expect(await node.evaluate((image) => window.__imageRoot === image.closest('.ui-img'))).toBe(true);
-    } else {
-      expect(await page.evaluate((eventKey) => window.__motionEvents[eventKey] ?? [], key), key).toEqual(
-        expect.arrayContaining(['enter', 'move', 'leave']),
+      expect(await node.evaluate((image) => window.__imageRoot === image.closest('.ui-img'))).toBe(
+        true,
       );
+    } else {
+      expect(
+        await page.evaluate((eventKey) => window.__motionEvents[eventKey] ?? [], key),
+        key,
+      ).toEqual(expect.arrayContaining(['enter', 'move', 'leave']));
     }
   }
 });
 
-test('Checkbox, Radio, and SwitchButton show focus-visible state through native Tab navigation', async ({ page }) => {
+test('Checkbox, Radio, and SwitchButton show focus-visible state through native Tab navigation', async ({
+  page,
+}) => {
   await openFixture(page);
   const start = page.getByTestId('focus-sequence-start');
   const checkbox = page.getByRole('checkbox', { name: 'Keyboard checkbox' });
@@ -2127,27 +2784,35 @@ test('Checkbox, Radio, and SwitchButton show focus-visible state through native 
   await start.focus();
   await start.press('Tab');
   await expect(checkbox).toBeFocused();
-  const checkboxOutline = await checkbox.evaluate((input) => input.nextElementSibling ? getComputedStyle(input.nextElementSibling).outlineStyle : null);
+  const checkboxOutline = await checkbox.evaluate((input) =>
+    input.nextElementSibling ? getComputedStyle(input.nextElementSibling).outlineStyle : null,
+  );
   expect(checkboxOutline).not.toBe('none');
   await checkbox.press('Space');
   await expect(checkbox).toBeChecked();
 
   await checkbox.press('Tab');
   await expect(radio).toBeFocused();
-  const radioOutline = await radio.evaluate((input) => input.nextElementSibling ? getComputedStyle(input.nextElementSibling).outlineStyle : null);
+  const radioOutline = await radio.evaluate((input) =>
+    input.nextElementSibling ? getComputedStyle(input.nextElementSibling).outlineStyle : null,
+  );
   expect(radioOutline).not.toBe('none');
   await radio.press('Space');
   await expect(radio).toBeChecked();
 
   await radio.press('Tab');
   await expect(toggle).toBeFocused();
-  const switchOutline = await toggle.evaluate((input) => input.nextElementSibling ? getComputedStyle(input.nextElementSibling).outlineStyle : null);
+  const switchOutline = await toggle.evaluate((input) =>
+    input.nextElementSibling ? getComputedStyle(input.nextElementSibling).outlineStyle : null,
+  );
   expect(switchOutline).not.toBe('none');
   await toggle.press('Space');
   await expect(toggle).toBeChecked();
 });
 
-test('Indicatorless choices keep native keyboard input and expose active/error states', async ({ page }) => {
+test('Indicatorless choices keep native keyboard input and expose active/error states', async ({
+  page,
+}) => {
   await openFixture(page);
   const checkbox = page.getByRole('checkbox', { name: 'Chip checkbox' });
   const radio = page.getByRole('radio', { name: 'Chip radio' });
@@ -2213,33 +2878,48 @@ test('Input calendar month and year controls are keyboard-operable', async ({ pa
   await expect(date).toHaveValue('15.01.2025');
 });
 
-test('motion profiler records static and enabled 40-Text updates as an observation', async ({ page }) => {
+test('motion profiler records static and enabled 40-Text updates as an observation', async ({
+  page,
+}) => {
   await openFixture(page);
   const box = page.getByTestId('motion-profile-box');
   await expect(box).toContainText('Profile text A 40');
   const staticSample = await page.evaluate(() => window.__motionProfileSamples.at(-1));
   expect(staticSample).toBeTruthy();
-  await page.evaluate(() => { window.__motionProfileUpdate = null; });
+  await page.evaluate(() => {
+    window.__motionProfileUpdate = null;
+  });
   await page.getByTestId('motion-profile-update').click();
   await expect(box).toContainText('Profile text B 40');
   const staticTextUpdate = await page.evaluate(() => window.__motionProfileUpdate);
 
-  await page.evaluate(() => { window.__motionProfileUpdate = null; });
+  await page.evaluate(() => {
+    window.__motionProfileUpdate = null;
+  });
   await page.getByTestId('motion-profile-toggle').click();
   await expect(box).toHaveAttribute('data-profile-mode', 'motion');
   const enabledSample = await page.evaluate(() => window.__motionProfileUpdate);
-  await page.evaluate(() => { window.__motionProfileUpdate = null; });
+  await page.evaluate(() => {
+    window.__motionProfileUpdate = null;
+  });
   await page.getByTestId('motion-profile-update').click();
   await expect(box).toContainText('Profile text A 40');
   const motionTextUpdate = await page.evaluate(() => window.__motionProfileUpdate);
-  const observation = { static: staticSample, staticTextUpdate, enabled: enabledSample, motionTextUpdate };
+  const observation = {
+    static: staticSample,
+    staticTextUpdate,
+    enabled: enabledSample,
+    motionTextUpdate,
+  };
   console.log('[motion-profiler-observation]', JSON.stringify(observation));
   expect(observation.staticTextUpdate?.phase).toMatch(/^(update|nested-update)$/);
   expect(observation.enabled?.phase).toMatch(/^(update|nested-update)$/);
   expect(observation.motionTextUpdate?.phase).toMatch(/^(update|nested-update)$/);
 });
 
-test('date calendar inside Modal stays in its focus scope and Escape restores the input', async ({ page }) => {
+test('date calendar inside Modal stays in its focus scope and Escape restores the input', async ({
+  page,
+}) => {
   await openFixture(page);
   await page.getByRole('button', { name: 'Open calendar focus modal' }).click();
   const modal = page.getByRole('dialog', { name: 'Calendar focus modal' });
@@ -2264,7 +2944,11 @@ test('date calendar inside Modal stays in its focus scope and Escape restores th
   await expect(previousYear).toBeFocused();
   await previousYear.press('Tab');
   await expect(nextMonth).toBeFocused();
-  expect(await modal.evaluate((dialog) => Boolean(dialog.parentElement?.contains(document.activeElement)))).toBe(true);
+  expect(
+    await modal.evaluate((dialog) =>
+      Boolean(dialog.parentElement?.contains(document.activeElement)),
+    ),
+  ).toBe(true);
 
   await nextMonth.press('Escape');
   await expect(previousMonth).toHaveCount(0);
@@ -2272,8 +2956,9 @@ test('date calendar inside Modal stays in its focus scope and Escape restores th
   await expect(modal).toBeVisible();
 });
 
-
-test('scroll selector recomputes changed closures without another scroll event', async ({ page }) => {
+test('scroll selector recomputes changed closures without another scroll event', async ({
+  page,
+}) => {
   await openFixture(page);
   const result = page.getByTestId('scroll-selector-result');
   await page.evaluate(() => window.scrollTo(0, 500));
@@ -2295,7 +2980,30 @@ test('button appearance composes hover and idle on the same DOM node', async ({ 
   await expect(button).toHaveAttribute('data-button-idle', 'glow');
 });
 
-test('Lexical renderer validates unknown nodes and preserves valid formatted neighbors', async ({ page }) => {
+test('useInView observes object refs after mount and follows a replaced target', async ({
+  page,
+}) => {
+  await openFixture(page);
+  const state = page.getByTestId('object-ref-in-view');
+  await expect(state).toHaveText('true');
+
+  await page.getByTestId('replace-object-ref-target').click();
+  await expect(state).toHaveText('false');
+});
+
+test('legacy RichText retains nested list items and content after the list', async ({ page }) => {
+  await openFixture(page);
+  const content = page.getByTestId('legacy-nested-rich-text');
+  const lists = content.locator('ul');
+  await expect(lists).toHaveCount(2);
+  await expect(lists.nth(0).locator(':scope > li')).toHaveText(['ParentNested child', 'Sibling']);
+  await expect(lists.nth(1).locator(':scope > li')).toHaveText('Nested child');
+  await expect(content.locator('p')).toHaveText('Afterline');
+});
+
+test('Lexical renderer validates unknown nodes and preserves valid formatted neighbors', async ({
+  page,
+}) => {
   await openFixture(page);
   const content = page.getByTestId('lexical-unknown-nodes');
   await expect(content.getByRole('heading', { level: 2 })).toHaveText('Validated heading');

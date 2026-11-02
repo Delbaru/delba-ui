@@ -6,17 +6,17 @@
 
 ## Основной договор
 
-| Проп | Значение |
-|---|---|
-| `trigger` | Необязательный декларативный открывающий элемент |
-| `open` + `onOpenChange` | Controlled-открытие; callback обязателен |
-| `defaultOpen` | Начальное uncontrolled-открытие, false |
-| `children` | Узлы или функция `(close) => ReactNode` |
-| `layout` | Responsive `default | fullWidth`; default во всех диапазонах |
-| `closeOn` | overlay/escape по умолчанию true; breakpoint закрывает при совпадении |
-| `scroll` | Padding единственного внутреннего scroll-контейнера и scrollbar |
-| `overflowVisible` | false; true снимает клип и требует прокрутки со стороны потребителя |
-| `aria-label` / `aria-labelledby` | Доступное имя диалога |
+| Проп                             | Значение                                                                                                                         |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `trigger`                        | Необязательный декларативный открывающий элемент                                                                                 |
+| `open` + `onOpenChange`          | Controlled-открытие; callback обязателен                                                                                         |
+| `defaultOpen`                    | Начальное uncontrolled-открытие, false                                                                                           |
+| `children`                       | Узлы или функция `(close) => ReactNode`                                                                                          |
+| `layout`                         | Responsive `default                                                                                                              | fullWidth`; default во всех диапазонах |
+| `closeOn`                        | overlay/escape по умолчанию true; breakpoint закрывает при совпадении                                                            |
+| `scroll`                         | Padding единственного внутреннего scroll-контейнера; `scroll.scrollbar` настраивает scrollbar и по умолчанию следует `ui.config` |
+| `overflowVisible`                | false; true снимает клип и требует прокрутки со стороны потребителя                                                              |
+| `aria-label` / `aria-labelledby` | Доступное имя диалога                                                                                                            |
 
 `preset` — прежнее имя layout, deprecated; closeOn имеет приоритет над
 legacy closeOnOverlayClick. `animate` задаёт общий motion; `animation` поддерживает
@@ -29,14 +29,18 @@ legacy closeOnOverlayClick. `animate` задаёт общий motion; `animation
 import { Button, Modal, ModalProvider } from '@delba/ui';
 
 export function Example() {
-  return <ModalProvider>
-    <Modal trigger={<Button>Открыть</Button>} aria-label="Подтверждение">
-      {(close) => <>
-        <p>Данные подготовлены.</p>
-        <Button onClick={close}>Закрыть</Button>
-      </>}
-    </Modal>
-  </ModalProvider>;
+  return (
+    <ModalProvider>
+      <Modal trigger={<Button>Открыть</Button>} aria-label="Подтверждение">
+        {(close) => (
+          <>
+            <p>Данные подготовлены.</p>
+            <Button onClick={close}>Закрыть</Button>
+          </>
+        )}
+      </Modal>
+    </ModalProvider>
+  );
 }
 ```
 

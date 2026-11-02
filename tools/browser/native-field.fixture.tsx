@@ -10,6 +10,7 @@ import { Text } from '../../src/components/Text/Text';
 function LifecycleContracts() {
   const [cancelReset, setCancelReset] = useState(false);
   const [changes, setChanges] = useState(0);
+  const [readonlySeedChanges, setReadonlySeedChanges] = useState(0);
   const [loading, setLoading] = useState(true);
   const [dateDisabled, setDateDisabled] = useState(false);
   const [pointerEvents, setPointerEvents] = useState(0);
@@ -28,6 +29,11 @@ function LifecycleContracts() {
     <button type="button" onClick={() => setCancelReset((value) => !value)}>Toggle lifecycle reset cancellation</button>
     <output data-testid="audit-change-count">{changes}</output>
     <Input type="date" readOnly defaultValue="2025-01-15" aria-label="Read only calendar" onValueChange={() => setChanges((n) => n + 1)} />
+    <Input readOnly autoComplete="off" seed="Seeded input" defaultValue="Seeded input"
+      aria-label="Read only seeded input" onValueChange={() => setReadonlySeedChanges((n) => n + 1)} />
+    <Textarea readOnly seed="Seeded textarea" defaultValue="Seeded textarea"
+      aria-label="Read only seeded textarea" onValueChange={() => setReadonlySeedChanges((n) => n + 1)} />
+    <output data-testid="readonly-seed-changes">{readonlySeedChanges}</output>
     <Input type="date" disabled={dateDisabled} defaultValue="2025-01-15" aria-label="Disable open calendar" />
     <button type="button" onClick={() => setDateDisabled((value) => !value)}>Toggle lifecycle date disabled</button>
     <div ref={overflowHost} style={{ width: 600 }}>

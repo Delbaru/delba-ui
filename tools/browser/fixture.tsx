@@ -1,4 +1,14 @@
-import { Profiler, useRef, useState, type AnimationEvent as ReactAnimationEvent, type ChangeEvent, type CSSProperties, type FocusEvent, type MouseEvent as ReactMouseEvent, type SVGProps } from 'react';
+import {
+  Profiler,
+  useRef,
+  useState,
+  type AnimationEvent as ReactAnimationEvent,
+  type ChangeEvent,
+  type CSSProperties,
+  type FocusEvent,
+  type MouseEvent as ReactMouseEvent,
+  type SVGProps,
+} from 'react';
 
 import { Button } from '../../src/components/Button/Button';
 import { Accordion, AccordionItem } from '../../src/components/Accordion';
@@ -23,6 +33,7 @@ import { Modal } from '../../src/components/Modal/Modal';
 import { ModalProvider, useModal } from '../../src/components/Modal/ModalProvider';
 import { ModalContextFixture } from './modal-context.fixture';
 import { NativeFieldFixture } from './native-field.fixture';
+import { InViewObjectRefFixture } from './in-view-object-ref.fixture';
 import { LexicalText } from '../../src/components/RichText/RichText';
 import { PhoneField } from '../../src/components/PhoneField/PhoneField';
 import { Select } from '../../src/components/Select/Select';
@@ -138,7 +149,10 @@ const initWindowState = () => {
   window.__disabledLinkClicks = 0;
 };
 
-function recordChange<E extends HTMLInputElement | HTMLTextAreaElement>(key: string, event: ChangeEvent<E>) {
+function recordChange<E extends HTMLInputElement | HTMLTextAreaElement>(
+  key: string,
+  event: ChangeEvent<E>,
+) {
   window.__lastChange[key] = event;
 }
 
@@ -216,12 +230,17 @@ function ContractFields() {
         error="Check this phone number"
         country={{ countries: ['RU', 'US', 'CA'], default: 'RU' }}
         value={internationalPhone}
-        onChange={(event) => window.__phoneEvents.push({
-          model: internationalPhone,
-          domValue: event.target.value,
-          trusted: event.nativeEvent.isTrusted,
-        })}
-        onValueChange={(value) => { setInternationalPhone(value); window.__phoneValues.push(value); }}
+        onChange={(event) =>
+          window.__phoneEvents.push({
+            model: internationalPhone,
+            domValue: event.target.value,
+            trusted: event.nativeEvent.isTrusted,
+          })
+        }
+        onValueChange={(value) => {
+          setInternationalPhone(value);
+          window.__phoneValues.push(value);
+        }}
       />
       <form id="phone-form" data-testid="phone-form" />
 
@@ -263,10 +282,15 @@ function ContractFields() {
 function PhoneFieldProfile() {
   const [value, setValue] = useState('');
   return (
-    <Profiler id="phone-field-all-countries" onRender={(_id, _phase, actualDuration) => {
-      window.__phoneProfileSamples = [...window.__phoneProfileSamples, actualDuration].slice(-20);
-      window.__phoneCountryOptionCount = document.querySelectorAll('[aria-label="Страны"] button').length;
-    }}>
+    <Profiler
+      id="phone-field-all-countries"
+      onRender={(_id, _phase, actualDuration) => {
+        window.__phoneProfileSamples = [...window.__phoneProfileSamples, actualDuration].slice(-20);
+        window.__phoneCountryOptionCount = document.querySelectorAll(
+          '[aria-label="Страны"] button',
+        ).length;
+      }}
+    >
       <PhoneField
         data-testid="profile-phone"
         aria-label="Profile phone field"
@@ -287,32 +311,57 @@ function MotionProfileField() {
 
   return (
     <section aria-label="Motion profiling observation" className="fixture">
-      <button type="button" data-testid="motion-profile-toggle" onClick={() => setEnabled((current) => !current)}>
+      <button
+        type="button"
+        data-testid="motion-profile-toggle"
+        onClick={() => setEnabled((current) => !current)}
+      >
         Toggle motion profile
       </button>
-      <button type="button" data-testid="motion-profile-update" onClick={() => setText((current) => current.endsWith('A') ? 'Profile text B' : 'Profile text A')}>
+      <button
+        type="button"
+        data-testid="motion-profile-update"
+        onClick={() =>
+          setText((current) => (current.endsWith('A') ? 'Profile text B' : 'Profile text A'))
+        }
+      >
         Update profiled text
       </button>
-      <Profiler id="motion-40-text-tree" onRender={(_id, phase, actualDuration, baseDuration) => {
-        window.__motionProfileSamples = [...window.__motionProfileSamples, { phase, actualDuration, baseDuration }].slice(-20);
-        // React also reports layout-effect commits as nested-update. Preserve
-        // the action's first commit before later commits evict bounded history.
-        if (phase !== 'mount' && !window.__motionProfileUpdate) window.__motionProfileUpdate = { phase, actualDuration, baseDuration };
-      }}>
+      <Profiler
+        id="motion-40-text-tree"
+        onRender={(_id, phase, actualDuration, baseDuration) => {
+          window.__motionProfileSamples = [
+            ...window.__motionProfileSamples,
+            { phase, actualDuration, baseDuration },
+          ].slice(-20);
+          // React also reports layout-effect commits as nested-update. Preserve
+          // the action's first commit before later commits evict bounded history.
+          if (phase !== 'mount' && !window.__motionProfileUpdate)
+            window.__motionProfileUpdate = { phase, actualDuration, baseDuration };
+        }}
+      >
         <Box
           data-testid="motion-profile-box"
           data-profile-mode={enabled ? 'motion' : 'static'}
           perspective3d={enabled ? 600 : undefined}
           reveal={enabled ? ['up', { duration: 0.1, fade: false }] : undefined}
         >
-          {Array.from({ length: 40 }, (_, index) => <Text key={index}>{text} {index + 1}</Text>)}
+          {Array.from({ length: 40 }, (_, index) => (
+            <Text key={index}>
+              {text} {index + 1}
+            </Text>
+          ))}
         </Box>
       </Profiler>
     </section>
   );
 }
 
-function recordFocus(key: string, control: HTMLInputElement | null, event: FocusEvent<HTMLInputElement>) {
+function recordFocus(
+  key: string,
+  control: HTMLInputElement | null,
+  event: FocusEvent<HTMLInputElement>,
+) {
   window.__focusLogs[key] = {
     type: event.type,
     targetIsControl: Boolean(control && event.target === control),
@@ -333,20 +382,32 @@ function FormDataFields() {
         <form
           id="external-form"
           data-testid="external-form"
-          onReset={(event) => { if (cancelReset) event.preventDefault(); }}
+          onReset={(event) => {
+            if (cancelReset) event.preventDefault();
+          }}
         >
           <button type="reset">Reset external fields</button>
         </form>
       )}
-      <button type="button" onClick={() => setShowForm((current) => !current)}>Toggle external form</button>
-      <Input form="external-form" name="shared" value={choice} onChange={() => undefined} aria-label="External native control" />
+      <button type="button" onClick={() => setShowForm((current) => !current)}>
+        Toggle external form
+      </button>
+      <Input
+        form="external-form"
+        name="shared"
+        value={choice}
+        onChange={() => undefined}
+        aria-label="External native control"
+      />
       <Input
         form="external-form"
         name="reset"
         data-testid="reset-field"
         defaultValue="initial"
         aria-label="Uncontrolled reset field"
-        onValueChange={() => { window.__resetValueChanges += 1; }}
+        onValueChange={() => {
+          window.__resetValueChanges += 1;
+        }}
       />
       <Input
         form="external-form"
@@ -360,7 +421,10 @@ function FormDataFields() {
         aria-label="External multi select"
         name="shared"
         multiple
-        options={[{ value: 'alpha', label: 'Alpha' }, { value: 'beta', label: 'Beta' }]}
+        options={[
+          { value: 'alpha', label: 'Alpha' },
+          { value: 'beta', label: 'Beta' },
+        ]}
         value={selected}
         onChange={setSelected}
       />
@@ -378,7 +442,10 @@ function FormDataFields() {
         name="topic"
         value={topic}
         onChange={(value) => setTopic(value)}
-        items={[{ value: 'one', label: 'One' }, { value: 'two', label: 'Two' }]}
+        items={[
+          { value: 'one', label: 'One' },
+          { value: 'two', label: 'Two' },
+        ]}
       />
       <button type="button" onClick={() => setCancelReset((current) => !current)}>
         Toggle reset cancellation
@@ -402,7 +469,10 @@ function NumberFields() {
         min={0.2}
         step={0.5}
         onChange={() => undefined}
-        onValueChange={(value) => { setFraction(value); window.__numberChanges += 1; }}
+        onValueChange={(value) => {
+          setFraction(value);
+          window.__numberChanges += 1;
+        }}
       />
       <Input
         type="number"
@@ -411,7 +481,10 @@ function NumberFields() {
         value={any}
         step="any"
         onChange={() => undefined}
-        onValueChange={(value) => { setAny(value); window.__numberChanges += 1; }}
+        onValueChange={(value) => {
+          setAny(value);
+          window.__numberChanges += 1;
+        }}
       />
       <Input
         type="number"
@@ -421,7 +494,10 @@ function NumberFields() {
         step={0.5}
         readOnly
         onChange={() => undefined}
-        onValueChange={(value) => { setLocked(value); window.__numberChanges += 1; }}
+        onValueChange={(value) => {
+          setLocked(value);
+          window.__numberChanges += 1;
+        }}
       />
       <output data-testid="number-values">{`${fraction}|${any}|${locked}`}</output>
     </section>
@@ -434,32 +510,50 @@ function CollapseField() {
 
   return (
     <section aria-label="Collapse contracts" className="fixture">
-      <button type="button" onClick={() => setOpen((current) => !current)}>{open ? 'Close details' : 'Open details'}</button>
+      <button type="button" onClick={() => setOpen((current) => !current)}>
+        {open ? 'Close details' : 'Open details'}
+      </button>
       <CollapseWrap
         open={open}
         gap={[8, 8, 8]}
         fade
         keepMounted
         handleRef={handleRef}
-        onTransition={() => { window.__collapseTransitions += 1; }}
-        onEnd={() => { window.__collapseEnds += 1; }}
+        onTransition={() => {
+          window.__collapseTransitions += 1;
+        }}
+        onEnd={() => {
+          window.__collapseEnds += 1;
+        }}
       >
-        <div ref={(node) => { window.__collapseNode = node; }}>
-          <button type="button" data-testid="inside-collapse">Inside collapse</button>
+        <div
+          ref={(node) => {
+            window.__collapseNode = node;
+          }}
+        >
+          <button type="button" data-testid="inside-collapse">
+            Inside collapse
+          </button>
         </div>
       </CollapseWrap>
       <output data-testid="collapse-state" />
-      <button type="button" onClick={() => {
-        window.__collapseHandle = handleRef.current;
-        const state = document.querySelector<HTMLOutputElement>('[data-testid="collapse-state"]');
-        if (state) state.value = JSON.stringify({
-          node: Boolean(window.__collapseNode),
-          handle: Boolean(window.__collapseHandle),
-          transition: window.__collapseHandle?.transition.status,
-          transitions: window.__collapseTransitions,
-          ends: window.__collapseEnds,
-        });
-      }}>Read collapse refs</button>
+      <button
+        type="button"
+        onClick={() => {
+          window.__collapseHandle = handleRef.current;
+          const state = document.querySelector<HTMLOutputElement>('[data-testid="collapse-state"]');
+          if (state)
+            state.value = JSON.stringify({
+              node: Boolean(window.__collapseNode),
+              handle: Boolean(window.__collapseHandle),
+              transition: window.__collapseHandle?.transition.status,
+              transitions: window.__collapseTransitions,
+              ends: window.__collapseEnds,
+            });
+        }}
+      >
+        Read collapse refs
+      </button>
     </section>
   );
 }
@@ -472,7 +566,14 @@ function SearchableFlexField() {
     <section aria-label="Searchable flex contracts" className="fixture">
       <Flex
         data-testid="searchable-flex"
-        collapse={{ open, keepMounted: true, onFound: () => { setFound((count) => count + 1); setOpen(true); } }}
+        collapse={{
+          open,
+          keepMounted: true,
+          onFound: () => {
+            setFound((count) => count + 1);
+            setOpen(true);
+          },
+        }}
       >
         <Input data-testid="searchable-flex-input" aria-label="Searchable flex input" />
       </Flex>
@@ -486,7 +587,9 @@ function ButtonField() {
   return (
     <section aria-label="Button tooltip contracts" className="fixture">
       <Button
-        ref={(node) => { window.__buttonNode = node instanceof HTMLButtonElement ? node : null; }}
+        ref={(node) => {
+          window.__buttonNode = node instanceof HTMLButtonElement ? node : null;
+        }}
         data-testid="tooltip-button"
         tooltip={tooltip}
         onClick={() => setTooltip('Tooltip two')}
@@ -497,19 +600,35 @@ function ButtonField() {
         data-testid="disabled-internal-link"
         href="/local-destination"
         disabled
-        onClick={() => { window.__disabledLinkClicks += 1; }}
-      >Disabled internal link</Button>
+        onClick={() => {
+          window.__disabledLinkClicks += 1;
+        }}
+      >
+        Disabled internal link
+      </Button>
       <Button
         data-testid="disabled-external-link"
         href="https://example.test/external-destination"
         disabled
-        onClick={() => { window.__disabledLinkClicks += 1; }}
-      >Disabled external link</Button>
+        onClick={() => {
+          window.__disabledLinkClicks += 1;
+        }}
+      >
+        Disabled external link
+      </Button>
       <output data-testid="button-ref" />
-      <button type="button" onClick={() => {
-        const output = document.querySelector<HTMLOutputElement>('[data-testid="button-ref"]');
-        if (output) output.value = String(window.__buttonNode === document.querySelector('[data-testid="tooltip-button"]'));
-      }}>Read button ref</button>
+      <button
+        type="button"
+        onClick={() => {
+          const output = document.querySelector<HTMLOutputElement>('[data-testid="button-ref"]');
+          if (output)
+            output.value = String(
+              window.__buttonNode === document.querySelector('[data-testid="tooltip-button"]'),
+            );
+        }}
+      >
+        Read button ref
+      </button>
     </section>
   );
 }
@@ -548,18 +667,38 @@ function IconTooltipField() {
     <section aria-label="Icon tooltip contracts" className="fixture">
       <span id="consumer-description">Consumer description</span>
       <Icon
-        ref={(node) => { window.__iconSvg = node; }}
+        ref={(node) => {
+          window.__iconSvg = node;
+        }}
         component={InlineFixtureIcon}
         href="https://example.test/icon-help"
         aria-label="Help link"
         aria-describedby="consumer-description"
         tooltip={tooltip}
-        onFocus={(event) => window.__iconEvents.push({ type: 'focus', currentTarget: event.currentTarget.tagName, trusted: event.nativeEvent.isTrusted })}
-        onBlur={(event) => window.__iconEvents.push({ type: 'blur', currentTarget: event.currentTarget.tagName, trusted: event.nativeEvent.isTrusted })}
+        onFocus={(event) =>
+          window.__iconEvents.push({
+            type: 'focus',
+            currentTarget: event.currentTarget.tagName,
+            trusted: event.nativeEvent.isTrusted,
+          })
+        }
+        onBlur={(event) =>
+          window.__iconEvents.push({
+            type: 'blur',
+            currentTarget: event.currentTarget.tagName,
+            trusted: event.nativeEvent.isTrusted,
+          })
+        }
       />
-      <button type="button" onClick={() => setTooltip('Updated help')}>Update Icon tooltip</button>
-      <button type="button" onClick={() => setTooltip('')}>Empty Icon tooltip</button>
-      <button type="button" onClick={() => setTooltip(undefined)}>Remove Icon tooltip</button>
+      <button type="button" onClick={() => setTooltip('Updated help')}>
+        Update Icon tooltip
+      </button>
+      <button type="button" onClick={() => setTooltip('')}>
+        Empty Icon tooltip
+      </button>
+      <button type="button" onClick={() => setTooltip(undefined)}>
+        Remove Icon tooltip
+      </button>
       <output data-testid="icon-events" />
     </section>
   );
@@ -569,30 +708,44 @@ function ContentSwapField() {
   const [key, setKey] = useState('first');
   window.__setSwapKey = setKey;
   const onAnimationEnd = (target: string) => (event: ReactAnimationEvent<HTMLElement>) => {
-    window.__swapEvents[target] = [...(window.__swapEvents[target] ?? []), { target: event.currentTarget.tagName, name: event.animationName }];
+    window.__swapEvents[target] = [
+      ...(window.__swapEvents[target] ?? []),
+      { target: event.currentTarget.tagName, name: event.animationName },
+    ];
   };
   const onAnimationStart = (target: string) => (event: ReactAnimationEvent<HTMLElement>) => {
-    window.__swapStarts[target] = [...(window.__swapStarts[target] ?? []), { name: event.animationName, text: event.currentTarget.textContent }];
+    window.__swapStarts[target] = [
+      ...(window.__swapStarts[target] ?? []),
+      { name: event.animationName, text: event.currentTarget.textContent },
+    ];
   };
 
   return (
     <section aria-label="Shared content swap contracts" className="fixture">
       <Box
-        ref={(node) => { window.__swapNodes.box = node; }}
+        ref={(node) => {
+          window.__swapNodes.box = node;
+        }}
         data-testid="swap-box"
         animate={['fadeInUp', { key }]}
         onAnimationEnd={onAnimationEnd('box')}
         onAnimationStart={onAnimationStart('box')}
         style={{ minHeight: 36 }}
-      >Box {key}</Box>
+      >
+        Box {key}
+      </Box>
       <Flex
-        ref={(node) => { window.__swapNodes.flex = node; }}
+        ref={(node) => {
+          window.__swapNodes.flex = node;
+        }}
         data-testid="swap-flex"
         animate={['fadeInUp', { key }]}
         onAnimationEnd={onAnimationEnd('flex')}
         onAnimationStart={onAnimationStart('flex')}
         style={{ minHeight: 36 }}
-      >Flex {key}</Flex>
+      >
+        Flex {key}
+      </Flex>
     </section>
   );
 }
@@ -623,11 +776,21 @@ function DropdownContracts() {
 
   return (
     <section aria-label="Dropdown state contracts" className="fixture">
-      <button type="button" onClick={() => setShowInitial(true)}>Mount initially open dropdown</button>
-      <button type="button" onClick={() => setAllowChange((value) => !value)}>Toggle dropdown approval</button>
-      <button type="button" onClick={() => setCancelClick((value) => !value)}>Toggle dropdown cancellation</button>
-      <button type="button" onClick={() => setDisabled((value) => !value)}>Toggle dropdown disabled</button>
-      <button type="button" onClick={() => setExpanded((value) => !value)}>Toggle whole dropdown</button>
+      <button type="button" onClick={() => setShowInitial(true)}>
+        Mount initially open dropdown
+      </button>
+      <button type="button" onClick={() => setAllowChange((value) => !value)}>
+        Toggle dropdown approval
+      </button>
+      <button type="button" onClick={() => setCancelClick((value) => !value)}>
+        Toggle dropdown cancellation
+      </button>
+      <button type="button" onClick={() => setDisabled((value) => !value)}>
+        Toggle dropdown disabled
+      </button>
+      <button type="button" onClick={() => setExpanded((value) => !value)}>
+        Toggle whole dropdown
+      </button>
       <output data-testid="dropdown-requests">{JSON.stringify(requests)}</output>
       <Dropdown
         open={open}
@@ -641,35 +804,50 @@ function DropdownContracts() {
           <button
             type="button"
             disabled={disabled}
-            onClick={(event) => { if (cancelClick) event.preventDefault(); }}
-          >Controlled dropdown</button>
+            onClick={(event) => {
+              if (cancelClick) event.preventDefault();
+            }}
+          >
+            Controlled dropdown
+          </button>
         }
       >
         <button type="button">Controlled dropdown action</button>
       </Dropdown>
-      {showInitial && <Dropdown
-        defaultOpen
-        trigger={<button type="button">Initially open dropdown</button>}
-      >
-        <button type="button">Initial dropdown action</button>
-      </Dropdown>}
+      {showInitial && (
+        <Dropdown defaultOpen trigger={<button type="button">Initially open dropdown</button>}>
+          <button type="button">Initial dropdown action</button>
+        </Dropdown>
+      )}
     </section>
   );
 }
 
 function DropdownNestedContracts() {
   const [clicks, setClicks] = useState(0);
-  return <section aria-label="Nested dropdown contracts" className="fixture">
-    <Dropdown blockOutsideClick panel={{ portal: true }} trigger={<button type="button">Outer choices</button>}>
-      <button type="button">First outer choice</button>
-      <Dropdown blockOutsideClick panel={{ portal: true }} trigger={<button type="button">Inner choices</button>}>
-        <input aria-label="Inner choice input" />
-        <button type="button">Inner choice action</button>
+  return (
+    <section aria-label="Nested dropdown contracts" className="fixture">
+      <Dropdown
+        blockOutsideClick
+        panel={{ portal: true }}
+        trigger={<button type="button">Outer choices</button>}
+      >
+        <button type="button">First outer choice</button>
+        <Dropdown
+          blockOutsideClick
+          panel={{ portal: true }}
+          trigger={<button type="button">Inner choices</button>}
+        >
+          <input aria-label="Inner choice input" />
+          <button type="button">Inner choice action</button>
+        </Dropdown>
       </Dropdown>
-    </Dropdown>
-    <button type="button" onClick={() => setClicks((count) => count + 1)}>Outside dropdown target</button>
-    <output data-testid="dropdown-outside-clicks">{clicks}</output>
-  </section>;
+      <button type="button" onClick={() => setClicks((count) => count + 1)}>
+        Outside dropdown target
+      </button>
+      <output data-testid="dropdown-outside-clicks">{clicks}</output>
+    </section>
+  );
 }
 
 function DropdownSizingContracts() {
@@ -710,21 +888,36 @@ function DropdownSizingContracts() {
 }
 
 function DropdownClosedArrowContracts() {
-  return <section aria-label="Closed dropdown arrow contracts" className="fixture">
-    <Dropdown panel={{ portal: true }} trigger={<button type="button">Keyboard filters</button>}>
-      <Dropdown panel={{ portal: true, keepMounted: false }} trigger={<button type="button">Keyboard status</button>}>
-        <button type="button">First keyboard status</button>
-        <button type="button">Last keyboard status</button>
+  return (
+    <section aria-label="Closed dropdown arrow contracts" className="fixture">
+      <Dropdown panel={{ portal: true }} trigger={<button type="button">Keyboard filters</button>}>
+        <Dropdown
+          panel={{ portal: true, keepMounted: false }}
+          trigger={<button type="button">Keyboard status</button>}
+        >
+          <button type="button">First keyboard status</button>
+          <button type="button">Last keyboard status</button>
+        </Dropdown>
+        <input aria-label="Keyboard slug" />
+        <Dropdown
+          panel={{ portal: true }}
+          trigger={
+            <button type="button" aria-disabled="true">
+              Unavailable keyboard status
+            </button>
+          }
+        >
+          <button type="button">Unavailable status choice</button>
+        </Dropdown>
+        <Dropdown
+          panel={{ portal: true }}
+          trigger={<input aria-label="Native input dropdown trigger" />}
+        >
+          <button type="button">Native trigger choice</button>
+        </Dropdown>
       </Dropdown>
-      <input aria-label="Keyboard slug" />
-      <Dropdown panel={{ portal: true }} trigger={<button type="button" aria-disabled="true">Unavailable keyboard status</button>}>
-        <button type="button">Unavailable status choice</button>
-      </Dropdown>
-      <Dropdown panel={{ portal: true }} trigger={<input aria-label="Native input dropdown trigger" />}>
-        <button type="button">Native trigger choice</button>
-      </Dropdown>
-    </Dropdown>
-  </section>;
+    </section>
+  );
 }
 
 function DeclarativeModalContracts() {
@@ -741,32 +934,82 @@ function DeclarativeModalContracts() {
       <output data-testid="declarative-modal-log">{JSON.stringify({ clicks, changes })}</output>
       <Modal
         ref={surfaceRef}
-        trigger={<button type="button" onClick={() => setClicks((value) => value + 1)}>Open controlled declaration</button>}
+        trigger={
+          <button type="button" onClick={() => setClicks((value) => value + 1)}>
+            Open controlled declaration
+          </button>
+        }
         open={controlledOpen}
-        onOpenChange={(next) => { setChanges((values) => [...values, next]); if (next || allowClose) setControlledOpen(next); }}
+        onOpenChange={(next) => {
+          setChanges((values) => [...values, next]);
+          if (next || allowClose) setControlledOpen(next);
+        }}
         aria-label="Controlled declaration"
         style={{ width: 360, maxHeight: 240 }}
         scroll={{ gutter: false, p: [16, 16, 16] }}
-      >{(close) => <>
-        <button type="button" onClick={close}>Request declaration close</button>
-        <button type="button" onClick={() => setAllowClose(true)}>Allow declaration close</button>
-        <button type="button" onClick={() => setContent((value) => value + 1)}>Update declaration content</button>
-        <button type="button" onClick={() => { if (surfaceRef.current) surfaceRef.current.dataset.refVerified = 'true'; }}>Verify declaration ref</button>
-        <p data-testid="declaration-content">Current content {content}</p>
-        <ModalStackOpener />
-      </>}</Modal>
+      >
+        {(close) => (
+          <>
+            <button type="button" onClick={close}>
+              Request declaration close
+            </button>
+            <button type="button" onClick={() => setAllowClose(true)}>
+              Allow declaration close
+            </button>
+            <button type="button" onClick={() => setContent((value) => value + 1)}>
+              Update declaration content
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (surfaceRef.current) surfaceRef.current.dataset.refVerified = 'true';
+              }}
+            >
+              Verify declaration ref
+            </button>
+            <p data-testid="declaration-content">Current content {content}</p>
+            <ModalStackOpener />
+          </>
+        )}
+      </Modal>
       <Modal
-        trigger={<button type="button" onClick={(event) => { event.preventDefault(); setClicks((value) => value + 1); }}>Cancelled declaration</button>}
+        trigger={
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              setClicks((value) => value + 1);
+            }}
+          >
+            Cancelled declaration
+          </button>
+        }
         aria-label="Cancelled declaration dialog"
-      >This opening should be cancelled.</Modal>
+      >
+        This opening should be cancelled.
+      </Modal>
       <Modal
-        trigger={<button type="button" disabled>Disabled declaration</button>}
+        trigger={
+          <button type="button" disabled>
+            Disabled declaration
+          </button>
+        }
         aria-label="Disabled declaration dialog"
-      >This opening should be disabled.</Modal>
-      <button type="button" onClick={() => setShowDefault(true)}>Mount default declaration</button>
-      {showDefault && <Modal defaultOpen aria-label="Default declaration" style={{ width: 360 }}>
-        {(close) => <button type="button" onClick={close}>Close default declaration</button>}
-      </Modal>}
+      >
+        This opening should be disabled.
+      </Modal>
+      <button type="button" onClick={() => setShowDefault(true)}>
+        Mount default declaration
+      </button>
+      {showDefault && (
+        <Modal defaultOpen aria-label="Default declaration" style={{ width: 360 }}>
+          {(close) => (
+            <button type="button" onClick={close}>
+              Close default declaration
+            </button>
+          )}
+        </Modal>
+      )}
       <Modal
         trigger={<button type="button">Open mobile declaration</button>}
         closeOn={{ breakpoint: 'desktop' }}
@@ -776,10 +1019,16 @@ function DeclarativeModalContracts() {
         h={['100dvh', '100dvh', '100dvh']}
         scroll={{ gutter: false }}
         animate={{ when: 'open', effect: 'down', distance: 'full', duration: 0.8 }}
-      >{(close) => <>
-        <button type="button" onClick={close}>Close mobile declaration</button>
-        <div style={{ height: 1600 }}>Long mobile declaration content</div>
-      </>}</Modal>
+      >
+        {(close) => (
+          <>
+            <button type="button" onClick={close}>
+              Close mobile declaration
+            </button>
+            <div style={{ height: 1600 }}>Long mobile declaration content</div>
+          </>
+        )}
+      </Modal>
     </section>
   );
 }
@@ -791,26 +1040,38 @@ function ModalScrollLockContracts() {
 
   return (
     <section aria-label="Modal scroll lock contracts" className="fixture">
-      {firstMounted && <ModalProvider>
-        <ModalScrollLeaseOpener
-          name="First independent lease"
-          unmountSelf={() => setFirstMounted(false)}
-          openOther={() => openSecond.current?.()}
-        />
-      </ModalProvider>}
-      {secondMounted && <ModalProvider>
-        <ModalScrollLeaseOpener
-          name="Second independent lease"
-          unmountSelf={() => setSecondMounted(false)}
-          unmountOther={() => setFirstMounted(false)}
-          registerOpen={(open) => { openSecond.current = open; }}
-        />
-      </ModalProvider>}
+      {firstMounted && (
+        <ModalProvider>
+          <ModalScrollLeaseOpener
+            name="First independent lease"
+            unmountSelf={() => setFirstMounted(false)}
+            openOther={() => openSecond.current?.()}
+          />
+        </ModalProvider>
+      )}
+      {secondMounted && (
+        <ModalProvider>
+          <ModalScrollLeaseOpener
+            name="Second independent lease"
+            unmountSelf={() => setSecondMounted(false)}
+            unmountOther={() => setFirstMounted(false)}
+            registerOpen={(open) => {
+              openSecond.current = open;
+            }}
+          />
+        </ModalProvider>
+      )}
     </section>
   );
 }
 
-function ModalScrollLeaseOpener({ name, unmountSelf, unmountOther, openOther, registerOpen }: {
+function ModalScrollLeaseOpener({
+  name,
+  unmountSelf,
+  unmountOther,
+  openOther,
+  registerOpen,
+}: {
   name: string;
   unmountSelf: () => void;
   unmountOther?: () => void;
@@ -818,45 +1079,83 @@ function ModalScrollLeaseOpener({ name, unmountSelf, unmountOther, openOther, re
   registerOpen?: (open: () => void) => void;
 }) {
   const { present } = useModal();
-  const open = () => { present(
-    <Modal aria-label={name} style={{ width: 360, maxHeight: 240 }}>
-      {openOther && <button type="button" onClick={openOther}>Open second independent lease</button>}
-      {unmountOther && <button type="button" onClick={unmountOther}>Unmount first provider</button>}
-      <button type="button" onClick={unmountSelf}>Unmount {name}</button>
-      <div style={{ height: 1600 }}>Long independently scrolling modal content</div>
-      <button type="button">Last focus stop in {name}</button>
-    </Modal>,
-  ); };
+  const open = () => {
+    present(
+      <Modal aria-label={name} style={{ width: 360, maxHeight: 240 }}>
+        {openOther && (
+          <button type="button" onClick={openOther}>
+            Open second independent lease
+          </button>
+        )}
+        {unmountOther && (
+          <button type="button" onClick={unmountOther}>
+            Unmount first provider
+          </button>
+        )}
+        <button type="button" onClick={unmountSelf}>
+          Unmount {name}
+        </button>
+        <div style={{ height: 1600 }}>Long independently scrolling modal content</div>
+        <button type="button">Last focus stop in {name}</button>
+      </Modal>,
+    );
+  };
   registerOpen?.(open);
 
-  return <button type="button" onClick={open}>Open {name}</button>;
+  return (
+    <button type="button" onClick={open}>
+      Open {name}
+    </button>
+  );
 }
 
 function ModalDropdownField() {
   const { present } = useModal();
-  const open = () => present(
-    <Modal aria-label="Browser regression modal" style={{ maxHeight: 240, overflowY: 'auto', width: 360 }}>
-      <div style={{ height: 520 }}>Long modal content</div>
-      <Dropdown
-        panel={{ portal: true, side: 'end', offset: 12 }}
-        trigger={<button type="button" data-testid="nested-dropdown-trigger">Nested actions</button>}
+  const open = () =>
+    present(
+      <Modal
+        aria-label="Browser regression modal"
+        style={{ maxHeight: 240, overflowY: 'auto', width: 360 }}
       >
-        <button type="button" data-testid="nested-dropdown-action">Choose action</button>
-      </Dropdown>
-    </Modal>,
+        <div style={{ height: 520 }}>Long modal content</div>
+        <Dropdown
+          panel={{ portal: true, side: 'end', offset: 12 }}
+          trigger={
+            <button type="button" data-testid="nested-dropdown-trigger">
+              Nested actions
+            </button>
+          }
+        >
+          <button type="button" data-testid="nested-dropdown-action">
+            Choose action
+          </button>
+        </Dropdown>
+      </Modal>,
+    );
+  return (
+    <button type="button" onClick={open}>
+      Open scroll modal
+    </button>
   );
-  return <button type="button" onClick={open}>Open scroll modal</button>;
 }
 
 function ModalSelectField() {
   const { present } = useModal();
-  const open = () => present(
-    <Modal aria-label="Portal select modal" style={{ maxHeight: 240, overflowY: 'auto', width: 360 }}>
-      <div style={{ height: 320 }}>Scroll before the select</div>
-      <ModalSelectContent />
-    </Modal>,
+  const open = () =>
+    present(
+      <Modal
+        aria-label="Portal select modal"
+        style={{ maxHeight: 240, overflowY: 'auto', width: 360 }}
+      >
+        <div style={{ height: 320 }}>Scroll before the select</div>
+        <ModalSelectContent />
+      </Modal>,
+    );
+  return (
+    <button type="button" onClick={open}>
+      Open portal select modal
+    </button>
   );
-  return <button type="button" onClick={open}>Open portal select modal</button>;
 }
 
 function ModalSelectContent() {
@@ -868,8 +1167,14 @@ function ModalSelectContent() {
         name="modalChoice"
         form="modal-select-form"
         value={value}
-        onChange={(next) => { setValue(next); window.__modalSelectChanges.push(next ?? ''); }}
-        options={[{ value: 'first', label: 'First option' }, { value: 'second', label: 'Second option' }]}
+        onChange={(next) => {
+          setValue(next);
+          window.__modalSelectChanges.push(next ?? '');
+        }}
+        options={[
+          { value: 'first', label: 'First option' },
+          { value: 'second', label: 'Second option' },
+        ]}
       />
     </form>
   );
@@ -877,38 +1182,69 @@ function ModalSelectContent() {
 
 function ModalStackField() {
   const { present } = useModal();
-  const open = () => present(
-    <Modal aria-label="Lower stacked modal" style={{ width: 360 }}>
-      <p>Lower modal content</p>
-      <ModalStackOpener />
-    </Modal>,
+  const open = () =>
+    present(
+      <Modal aria-label="Lower stacked modal" style={{ width: 360 }}>
+        <p>Lower modal content</p>
+        <ModalStackOpener />
+      </Modal>,
+    );
+  return (
+    <button type="button" onClick={open}>
+      Open stacked modal
+    </button>
   );
-  return <button type="button" onClick={open}>Open stacked modal</button>;
 }
 
 function ModalCalendarField() {
   const { present } = useModal();
   return (
-    <button type="button" onClick={() => present(
-      <Modal aria-label="Calendar focus modal" style={{ width: 360 }}>
-        <div data-testid="modal-calendar-control">
-          <Input type="date" aria-label="Modal date" data-testid="modal-date" defaultValue="2025-01-15" />
-        </div>
-        <button type="button" data-testid="modal-after-date">After date field</button>
-      </Modal>,
-    )}>Open calendar focus modal</button>
+    <button
+      type="button"
+      onClick={() =>
+        present(
+          <Modal aria-label="Calendar focus modal" style={{ width: 360 }}>
+            <div data-testid="modal-calendar-control">
+              <Input
+                type="date"
+                aria-label="Modal date"
+                data-testid="modal-date"
+                defaultValue="2025-01-15"
+              />
+            </div>
+            <button type="button" data-testid="modal-after-date">
+              After date field
+            </button>
+          </Modal>,
+        )
+      }
+    >
+      Open calendar focus modal
+    </button>
   );
 }
 
 function ModalStackOpener() {
   const { present } = useModal();
   return (
-    <button type="button" data-testid="open-top-modal" onClick={() => present(
-      <Modal aria-label="Top stacked modal" style={{ width: 360 }}>
-        <button type="button" data-testid="top-first">Top first focus stop</button>
-        <button type="button" data-testid="top-last">Top last focus stop</button>
-      </Modal>,
-    )}>Open top modal</button>
+    <button
+      type="button"
+      data-testid="open-top-modal"
+      onClick={() =>
+        present(
+          <Modal aria-label="Top stacked modal" style={{ width: 360 }}>
+            <button type="button" data-testid="top-first">
+              Top first focus stop
+            </button>
+            <button type="button" data-testid="top-last">
+              Top last focus stop
+            </button>
+          </Modal>,
+        )
+      }
+    >
+      Open top modal
+    </button>
   );
 }
 
@@ -917,7 +1253,14 @@ function CarouselEffectsField() {
   window.__setCarouselEffect = setEffect;
   return (
     <section aria-label="Carousel effect contracts" className="fixture">
-      <Carousel data-testid="effect-carousel" effect={effect} speed={0} slidesPerView={1} navigation="none" drag={false}>
+      <Carousel
+        data-testid="effect-carousel"
+        effect={effect}
+        speed={0}
+        slidesPerView={1}
+        navigation="none"
+        drag={false}
+      >
         <div>Effect slide one</div>
         <div>Effect slide two</div>
         <div>Effect slide three</div>
@@ -935,11 +1278,14 @@ function CarouselNavField() {
         <div>Navigation slide three</div>
       </Carousel>
       <CarouselNav carouselId="nav-fixture" className="fixture-carousel-nav" />
-      <CarouselDots carouselId="nav-fixture" renderItem={({ index, isActive, onSelect }) => <Button
-          aria-label={`Thumbnail ${index + 1}`}
-          aria-pressed={isActive}
-          onClick={onSelect}
-      >{index + 1}</Button>} />
+      <CarouselDots
+        carouselId="nav-fixture"
+        renderItem={({ index, isActive, onSelect }) => (
+          <Button aria-label={`Thumbnail ${index + 1}`} aria-pressed={isActive} onClick={onSelect}>
+            {index + 1}
+          </Button>
+        )}
+      />
     </section>
   );
 }
@@ -956,14 +1302,40 @@ function NativeFocusFields() {
   const [chip, setChip] = useState(false);
   return (
     <section aria-label="Native focus visibility contracts" className="fixture">
-      <button type="button" data-testid="focus-sequence-start">Start focus sequence</button>
+      <button type="button" data-testid="focus-sequence-start">
+        Start focus sequence
+      </button>
       <Checkbox aria-label="Keyboard checkbox">Keyboard checkbox</Checkbox>
-      <Radio aria-label="Keyboard radio" name="keyboard-radio" value="one">Keyboard radio</Radio>
+      <Radio aria-label="Keyboard radio" name="keyboard-radio" value="one">
+        Keyboard radio
+      </Radio>
       <SwitchButton aria-label="Keyboard switch">Keyboard switch</SwitchButton>
-      <Checkbox indicator={false} aria-label="Chip checkbox" checked={chip} onChange={event => setChip(event.target.checked)}>Chip checkbox</Checkbox>
-      <Radio indicator={false} aria-label="Chip radio" name="chip-radio" value="chip" checked={chip} aria-invalid onChange={() => setChip(true)}>Chip radio</Radio>
+      <Checkbox
+        indicator={false}
+        aria-label="Chip checkbox"
+        checked={chip}
+        onChange={(event) => setChip(event.target.checked)}
+      >
+        Chip checkbox
+      </Checkbox>
+      <Radio
+        indicator={false}
+        aria-label="Chip radio"
+        name="chip-radio"
+        value="chip"
+        checked={chip}
+        aria-invalid
+        onChange={() => setChip(true)}
+      >
+        Chip radio
+      </Radio>
       <div data-testid="calendar-control">
-        <Input type="date" aria-label="Keyboard date" data-testid="keyboard-date" defaultValue="2025-01-15" />
+        <Input
+          type="date"
+          aria-label="Keyboard date"
+          data-testid="keyboard-date"
+          defaultValue="2025-01-15"
+        />
       </div>
     </section>
   );
@@ -985,12 +1357,41 @@ function MotionFixtures() {
 
   return (
     <section aria-label="Shared motion callback contracts" className="fixture">
-      <Box data-testid="parallax-target" parallax={{ distance: 40, scroll: 'native' }} style={{ width: 240, height: 160 }}><span>Parallax photo surface</span></Box>
-      <button data-testid="toggle-scroll-parallax" onClick={() => setScrollParallax((value) => !value)}>Toggle scroll parallax</button>
-      {scrollParallax && <Box data-testid="parallax-scroll-target" parallax={{ distance: 40, mode: 'scroll' }} perspective3d={{ perspective: 1600, follow: 'viewport' }} animate={{ when: 'inView', effect: 'up', duration: 0.3 }} style={{ width: 240, height: 160 }}>Native parallax with reveal and tilt</Box>}
-      <Button data-testid="idle-visibility" style={{ '--t-m-visibility-root-margin': '0px' } as CSSProperties} animate={{ when: 'idle', effect: 'glow', duration: 2 }}>Idle visibility</Button>
+      <Box
+        data-testid="parallax-target"
+        parallax={{ distance: 40, scroll: 'native' }}
+        style={{ width: 240, height: 160 }}
+      >
+        <span>Parallax photo surface</span>
+      </Box>
+      <button
+        data-testid="toggle-scroll-parallax"
+        onClick={() => setScrollParallax((value) => !value)}
+      >
+        Toggle scroll parallax
+      </button>
+      {scrollParallax && (
+        <Box
+          data-testid="parallax-scroll-target"
+          parallax={{ distance: 40, mode: 'scroll' }}
+          perspective3d={{ perspective: 1600, follow: 'viewport' }}
+          animate={{ when: 'inView', effect: 'up', duration: 0.3 }}
+          style={{ width: 240, height: 160 }}
+        >
+          Native parallax with reveal and tilt
+        </Box>
+      )}
+      <Button
+        data-testid="idle-visibility"
+        style={{ '--t-m-visibility-root-margin': '0px' } as CSSProperties}
+        animate={{ when: 'idle', effect: 'glow', duration: 2 }}
+      >
+        Idle visibility
+      </Button>
       <div id="motion-state" data-testid="motion-state" />
-      <Text data-testid="motion-text" {...interactionProps('text')}>Text motion</Text>
+      <Text data-testid="motion-text" {...interactionProps('text')}>
+        Text motion
+      </Text>
       <Grid data-testid="motion-grid" columns={[1, 1, 1]} {...interactionProps('grid')}>
         <div>Grid motion</div>
       </Grid>
@@ -1000,34 +1401,60 @@ function MotionFixtures() {
         onMouseEnter={record('grid-item', 'enter')}
         onMouseMove={record('grid-item', 'move')}
         onMouseLeave={record('grid-item', 'leave')}
-      >Grid item motion</GridItem>
+      >
+        Grid item motion
+      </GridItem>
       <Img
-        ref={(node) => { window.__imageRoot = node; }}
+        ref={(node) => {
+          window.__imageRoot = node;
+        }}
         data-testid="motion-img"
         alt="Motion image"
         src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
         w={[96, 96, 96]}
         h={[96, 96, 96]}
         style={{ width: 96, height: 96 }}
-        onClick={(event) => { window.__imageClickTargets.push(event.currentTarget.tagName); }}
+        onClick={(event) => {
+          window.__imageClickTargets.push(event.currentTarget.tagName);
+        }}
         {...interactionProps('img')}
       />
     </section>
   );
 }
 
-const motionImageA = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"%3E%3Crect width="80" height="48" fill="%23a33"/%3E%3C/svg%3E';
-const motionImageC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"%3E%3Crect width="80" height="48" fill="%2333a"/%3E%3C/svg%3E';
+const motionImageA =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"%3E%3Crect width="80" height="48" fill="%23a33"/%3E%3C/svg%3E';
+const motionImageC =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"%3E%3Crect width="80" height="48" fill="%2333a"/%3E%3C/svg%3E';
 
 function ImgChangeContracts() {
   const [src, setSrc] = useState(motionImageA);
   const [direction, setDirection] = useState<1 | -1>(1);
 
   return (
-    <section aria-label="Image change animation" className="fixture" style={{ '--t-d-fast': '0.35s' } as CSSProperties}>
-      <button type="button" data-testid="img-change-remote" onClick={() => setSrc('/motion-two.svg')}>Load remote image</button>
-      <button type="button" data-testid="img-change-latest" onClick={() => setSrc(motionImageC)}>Choose latest image</button>
-      <button type="button" data-testid="img-change-reverse" onClick={() => setDirection((value) => value === 1 ? -1 : 1)}>Reverse image direction</button>
+    <section
+      aria-label="Image change animation"
+      className="fixture"
+      style={{ '--t-d-fast': '0.35s' } as CSSProperties}
+    >
+      <button
+        type="button"
+        data-testid="img-change-remote"
+        onClick={() => setSrc('/motion-two.svg')}
+      >
+        Load remote image
+      </button>
+      <button type="button" data-testid="img-change-latest" onClick={() => setSrc(motionImageC)}>
+        Choose latest image
+      </button>
+      <button
+        type="button"
+        data-testid="img-change-reverse"
+        onClick={() => setDirection((value) => (value === 1 ? -1 : 1))}
+      >
+        Reverse image direction
+      </button>
       <div data-testid="change-img">
         <Img
           alt="Animated source"
@@ -1035,7 +1462,13 @@ function ImgChangeContracts() {
           w={[160, 160, 160]}
           h={[96, 96, 96]}
           style={{ width: 160, height: 96 }}
-          animate={{ when: 'change', effect: 'veil', duration: 'fast', direction, veil: <span data-testid="image-veil-content" /> }}
+          animate={{
+            when: 'change',
+            effect: 'veil',
+            duration: 'fast',
+            direction,
+            veil: <span data-testid="image-veil-content" />,
+          }}
         />
       </div>
     </section>
@@ -1047,13 +1480,50 @@ function TextObjectMotionContracts() {
   const [slideText, setSlideText] = useState('Page A');
 
   return (
-    <section aria-label="Object text animation" className="fixture" style={{ '--t-d-fast': '0.35s' } as CSSProperties}>
-      <button type="button" data-testid="counter-change-target" onClick={() => setCounterTo((value) => value + 100)}>Change counter target</button>
-      <Text as="span" data-testid="text-load-counter" aria-label="Load counter" animate={{ when: 'load', effect: 'counter', duration: 'fast', to: counterTo }}>0</Text>
+    <section
+      aria-label="Object text animation"
+      className="fixture"
+      style={{ '--t-d-fast': '0.35s' } as CSSProperties}
+    >
+      <button
+        type="button"
+        data-testid="counter-change-target"
+        onClick={() => setCounterTo((value) => value + 100)}
+      >
+        Change counter target
+      </button>
+      <Text
+        as="span"
+        data-testid="text-load-counter"
+        aria-label="Load counter"
+        animate={{ when: 'load', effect: 'counter', duration: 'fast', to: counterTo }}
+      >
+        0
+      </Text>
       <div style={{ height: 1200 }} aria-hidden />
-      <Text as="span" data-testid="text-inview-counter" aria-label="Viewport counter" animate={{ when: 'inView', effect: 'counter', duration: 'fast', to: 50 }}>0</Text>
-      <button type="button" data-testid="text-slide-update" onClick={() => setSlideText((value) => value === 'Page A' ? 'Page B' : 'Page A')}>Update slide text</button>
-      <Text as="span" data-testid="text-slide-object" aria-label="Page title" animate={{ when: 'change', effect: 'textSlide', duration: 'fast' }}>{slideText}</Text>
+      <Text
+        as="span"
+        data-testid="text-inview-counter"
+        aria-label="Viewport counter"
+        animate={{ when: 'inView', effect: 'counter', duration: 'fast', to: 50 }}
+      >
+        0
+      </Text>
+      <button
+        type="button"
+        data-testid="text-slide-update"
+        onClick={() => setSlideText((value) => (value === 'Page A' ? 'Page B' : 'Page A'))}
+      >
+        Update slide text
+      </button>
+      <Text
+        as="span"
+        data-testid="text-slide-object"
+        aria-label="Page title"
+        animate={{ when: 'change', effect: 'textSlide', duration: 'fast' }}
+      >
+        {slideText}
+      </Text>
     </section>
   );
 }
@@ -1063,22 +1533,56 @@ function InViewContracts() {
 
   return (
     <section aria-label="Unified viewport animation" className="fixture">
-      <div data-testid="legacy-icon-host"><Icon component={InlineFixtureIcon} /></div>
-      <div data-inview-case="box"><Box animate={animate}>View box</Box></div>
-      <div data-inview-case="flex"><Flex animate={animate}>View flex</Flex></div>
-      <div data-inview-case="grid"><Grid animate={animate}>View grid</Grid></div>
-      <div data-inview-case="grid-item"><GridItem animate={animate}>View grid item</GridItem></div>
-      <div data-inview-case="text"><Text animate={animate}>View text</Text></div>
-      <div data-inview-case="lexical"><LexicalText content="<p>View lexical</p>" animate={animate} /></div>
-      <div data-inview-case="input"><Input aria-label="View input" animate={animate} /></div>
-      <div data-inview-case="textarea"><Textarea aria-label="View textarea" animate={animate} /></div>
-      <div data-inview-case="button"><Button animate={animate}>View button</Button></div>
-      <div data-inview-case="checkbox"><Checkbox animate={animate}>View checkbox</Checkbox></div>
-      <div data-inview-case="radio"><Radio name="view-radio" value="one" animate={animate}>View radio</Radio></div>
-      <div data-inview-case="switch"><SwitchButton animate={animate} aria-label="View switch" /></div>
-      <div data-inview-case="section"><Section animate={animate}>View section</Section></div>
-      <div data-inview-case="icon"><Icon component={InlineFixtureIcon} animate={animate} /></div>
-      <div data-inview-case="hover-icon"><Icon component={InlineFixtureIcon} hover={InlineFixtureIcon} animate={animate} /></div>
+      <div data-testid="legacy-icon-host">
+        <Icon component={InlineFixtureIcon} />
+      </div>
+      <div data-inview-case="box">
+        <Box animate={animate}>View box</Box>
+      </div>
+      <div data-inview-case="flex">
+        <Flex animate={animate}>View flex</Flex>
+      </div>
+      <div data-inview-case="grid">
+        <Grid animate={animate}>View grid</Grid>
+      </div>
+      <div data-inview-case="grid-item">
+        <GridItem animate={animate}>View grid item</GridItem>
+      </div>
+      <div data-inview-case="text">
+        <Text animate={animate}>View text</Text>
+      </div>
+      <div data-inview-case="lexical">
+        <LexicalText content="<p>View lexical</p>" animate={animate} />
+      </div>
+      <div data-inview-case="input">
+        <Input aria-label="View input" animate={animate} />
+      </div>
+      <div data-inview-case="textarea">
+        <Textarea aria-label="View textarea" animate={animate} />
+      </div>
+      <div data-inview-case="button">
+        <Button animate={animate}>View button</Button>
+      </div>
+      <div data-inview-case="checkbox">
+        <Checkbox animate={animate}>View checkbox</Checkbox>
+      </div>
+      <div data-inview-case="radio">
+        <Radio name="view-radio" value="one" animate={animate}>
+          View radio
+        </Radio>
+      </div>
+      <div data-inview-case="switch">
+        <SwitchButton animate={animate} aria-label="View switch" />
+      </div>
+      <div data-inview-case="section">
+        <Section animate={animate}>View section</Section>
+      </div>
+      <div data-inview-case="icon">
+        <Icon component={InlineFixtureIcon} animate={animate} />
+      </div>
+      <div data-inview-case="hover-icon">
+        <Icon component={InlineFixtureIcon} hover={InlineFixtureIcon} animate={animate} />
+      </div>
       <div data-inview-case="image">
         <Img
           src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
@@ -1092,7 +1596,12 @@ function InViewContracts() {
         <Select options={[{ value: 'one', label: 'View option' }]} animate={animate} />
       </div>
       <div data-inview-case="phone">
-        <PhoneField country={{ countries: ['RU'], default: 'RU' }} value="" aria-label="View phone" animate={animate} />
+        <PhoneField
+          country={{ countries: ['RU'], default: 'RU' }}
+          value=""
+          aria-label="View phone"
+          animate={animate}
+        />
       </div>
     </section>
   );
@@ -1115,7 +1624,9 @@ function InputPartsField() {
           comment="Подсказка поля"
           data-testid="modular-password"
         />
-        <button type="button" onClick={() => setError(undefined)}>Clear modular error</button>
+        <button type="button" onClick={() => setError(undefined)}>
+          Clear modular error
+        </button>
       </form>
     </section>
   );
@@ -1134,8 +1645,17 @@ function AccordionContracts() {
             className: 'object-trigger',
           }}
           triggerProps={{ p: [4, 4, 4], className: 'legacy-trigger' }}
-        >Object panel</AccordionItem>
-        <AccordionItem value="legacy" trigger={<><span>Legacy</span> trigger</>}>
+        >
+          Object panel
+        </AccordionItem>
+        <AccordionItem
+          value="legacy"
+          trigger={
+            <>
+              <span>Legacy</span> trigger
+            </>
+          }
+        >
           Legacy panel
         </AccordionItem>
       </Accordion>
@@ -1148,21 +1668,67 @@ function NamedTimingContracts({ skipDecoration }: { skipDecoration: boolean }) {
     <section
       aria-label="Named motion timing"
       className="fixture"
-      style={{ '--t-d-very-fast': '0.02s', '--t-d-fast': '0.05s', '--t-d-very-slow': '0.8s' } as React.CSSProperties}
+      style={
+        {
+          '--t-d-very-fast': '0.02s',
+          '--t-d-fast': '0.05s',
+          '--t-d-very-slow': '0.8s',
+        } as React.CSSProperties
+      }
     >
-      <Box data-testid="named-view" animate={{ when: 'inView', effect: 'up', duration: 'verySlow', delay: 'fast', stagger: 'veryFast' }}>
+      <Box
+        data-testid="named-view"
+        animate={{
+          when: 'inView',
+          effect: 'up',
+          duration: 'verySlow',
+          delay: 'fast',
+          stagger: 'veryFast',
+        }}
+      >
         <div>Named view first</div>
         <div>Named view second</div>
       </Box>
-      <Box data-testid="named-load" animate={{ when: 'load', effect: 'up', duration: 'verySlow', delay: 'fast', stagger: 'veryFast' }}>
+      <Box
+        data-testid="named-load"
+        animate={{
+          when: 'load',
+          effect: 'up',
+          duration: 'verySlow',
+          delay: 'fast',
+          stagger: 'veryFast',
+        }}
+      >
         <div data-testid="named-load-first">Named load first</div>
-        <div data-testid="named-load-decoration" data-reveal-skip="">Decorative guide</div>
-        <Box data-testid="named-load-owned" animate={{ when: 'load', effect: 'up', duration: 'verySlow', delay: 'veryFast' }}>Owned load animation</Box>
+        <div data-testid="named-load-decoration" data-reveal-skip="">
+          Decorative guide
+        </div>
+        <Box
+          data-testid="named-load-owned"
+          animate={{ when: 'load', effect: 'up', duration: 'verySlow', delay: 'veryFast' }}
+        >
+          Owned load animation
+        </Box>
         <div data-testid="named-load-second">Named load second</div>
       </Box>
-      <Box data-testid="named-inview" animate={{ when: 'inView', effect: 'up', duration: 'fast', delay: 'fast', stagger: 'veryFast' }}>
+      <Box
+        data-testid="named-inview"
+        animate={{
+          when: 'inView',
+          effect: 'up',
+          duration: 'fast',
+          delay: 'fast',
+          stagger: 'veryFast',
+        }}
+      >
         <div data-testid="named-inview-first">In-view first</div>
-        <div data-testid="named-inview-decoration" data-reveal-skip={skipDecoration ? '' : undefined} style={{ marginTop: 1200 }}>In-view decoration</div>
+        <div
+          data-testid="named-inview-decoration"
+          data-reveal-skip={skipDecoration ? '' : undefined}
+          style={{ marginTop: 1200 }}
+        >
+          In-view decoration
+        </div>
         <div data-testid="named-inview-last">In-view last</div>
       </Box>
     </section>
@@ -1180,13 +1746,34 @@ function SelectPanelContracts() {
           size={['fullWidth', 'fullWidth', 'fullWidth']}
           multiple
           closeOnSelect
-          style={{ '--select-dropdown-radius': '24px', '--select-dropdown-radius-top': '6px' } as CSSProperties}
-          options={[{ label: 'Panel group', options: [{ value: 'one', label: 'Panel option one' }, { value: 'two', label: 'Panel option two' }] }]}
+          style={
+            {
+              '--select-dropdown-radius': '24px',
+              '--select-dropdown-radius-top': '6px',
+            } as CSSProperties
+          }
+          options={[
+            {
+              label: 'Panel group',
+              options: [
+                { value: 'one', label: 'Panel option one' },
+                { value: 'two', label: 'Panel option two' },
+              ],
+            },
+          ]}
         />
       ))}
       <Select aria-label="Empty panel" options={[]} />
-      <Select aria-label="Loading panel" options={[{ value: 'one', label: 'Loading option' }]} loading />
-      <Select aria-label="Disabled panel" options={[{ value: 'one', label: 'Disabled option' }]} disabled />
+      <Select
+        aria-label="Loading panel"
+        options={[{ value: 'one', label: 'Loading option' }]}
+        loading
+      />
+      <Select
+        aria-label="Disabled panel"
+        options={[{ value: 'one', label: 'Disabled option' }]}
+        disabled
+      />
     </section>
   );
 }
@@ -1206,7 +1793,9 @@ function BoxLayoutContracts() {
           w={[80, 80, 80]}
           h={[40, 40, 40]}
         />
-        <Box data-testid="responsive-hidden" hide={[hidden, false, hidden]}>Responsive visibility</Box>
+        <Box data-testid="responsive-hidden" hide={[hidden, false, hidden]}>
+          Responsive visibility
+        </Box>
         <Icon
           data-testid="positioned-icon"
           component={InlineFixtureIcon}
@@ -1232,7 +1821,12 @@ export function BrowserFixture() {
     <main className="fixture">
       <h1>Delba UI browser regression fixture</h1>
       <DurationPicker value={duration} onValueChange={setDuration} />
-      <DurationPicker value={60} onValueChange={setDuration} disabled aria-label="Disabled duration" />
+      <DurationPicker
+        value={60}
+        onValueChange={setDuration}
+        disabled
+        aria-label="Disabled duration"
+      />
       <output data-testid="duration-value">{duration}</output>
       <InteractionScopeFixture />
       <RefactorContractsFixture />
@@ -1242,7 +1836,9 @@ export function BrowserFixture() {
         data-testid="toggle-reveal-skip"
         style={{ position: 'fixed', top: 8, left: 8, zIndex: 1000 }}
         onClick={() => setSkipDecoration((value) => !value)}
-      >Toggle in-view decorative marker</button>
+      >
+        Toggle in-view decorative marker
+      </button>
       {/* Лог профайлера растёт на каждый коммит React. В потоке он менял высоту страницы ВЫШЕ
           текущей прокрутки, и scroll anchoring Chrome подкручивал window.scrollY — тесты, которые
           сверяют прокрутку и геометрию, падали мимо своей темы. Держим его вне потока. */}
@@ -1266,11 +1862,41 @@ export function BrowserFixture() {
       <IconTooltipField />
       <ContentSwapField />
       <LexicalRevealField />
-      <LexicalText data-testid="lexical-markers" content={{ root: { children: [
-        { type: 'list', listType: 'bullet', children: [{ type: 'listitem', children: [{ type: 'text', text: 'Legacy bullet' }] }] },
-        { type: 'list', listType: 'bullet', marker: 'dash', markerColor: 'var(--primary)', children: [{ type: 'listitem', children: [{ type: 'text', text: 'Colored dash' }] }] },
-        { type: 'list', listType: 'number', start: 4, children: [{ type: 'listitem', children: [{ type: 'text', text: 'Fourth item' }] }] },
-      ] } }} />
+      <LexicalText
+        data-testid="lexical-markers"
+        content={{
+          root: {
+            children: [
+              {
+                type: 'list',
+                listType: 'bullet',
+                children: [
+                  { type: 'listitem', children: [{ type: 'text', text: 'Legacy bullet' }] },
+                ],
+              },
+              {
+                type: 'list',
+                listType: 'bullet',
+                marker: 'dash',
+                markerColor: 'var(--primary)',
+                children: [
+                  { type: 'listitem', children: [{ type: 'text', text: 'Colored dash' }] },
+                ],
+              },
+              {
+                type: 'list',
+                listType: 'number',
+                start: 4,
+                children: [{ type: 'listitem', children: [{ type: 'text', text: 'Fourth item' }] }],
+              },
+            ],
+          },
+        }}
+      />
+      <LexicalText
+        data-testid="legacy-nested-rich-text"
+        content="<ul><li>Parent<ul><li>Nested child</li></ul></li><li>Sibling</li></ul><p>After<br>line</p>"
+      />
       <DropdownContracts />
       <DropdownClosedArrowContracts />
       <DropdownNestedContracts />
@@ -1281,6 +1907,7 @@ export function BrowserFixture() {
       <DeclarativeModalContracts />
       <ModalContextFixture />
       <NativeFieldFixture />
+      <InViewObjectRefFixture />
       <ModalSelectField />
       <ModalStackField />
       <ModalCalendarField />
@@ -1294,9 +1921,26 @@ export function BrowserFixture() {
       <TextObjectMotionContracts />
       <TextTimelineFixture />
       <BoxLayoutContracts />
-      <Flex position={['relative', 'relative', 'relative']} r={[24, 16, 20]} p={[24, 24, 24]} data-testid="gradient-frame">
-        <GradientBorder gradient={['linear-gradient(90deg, red, blue)', 'linear-gradient(90deg, red, blue)', 'linear-gradient(90deg, red, blue)']} width={[4, 8, 4]} />
-        <Button data-testid="gradient-button" animate={{ when: 'hover', effect: 'rise', fill: 'var(--primary)' }}>Framed action</Button>
+      <Flex
+        position={['relative', 'relative', 'relative']}
+        r={[24, 16, 20]}
+        p={[24, 24, 24]}
+        data-testid="gradient-frame"
+      >
+        <GradientBorder
+          gradient={[
+            'linear-gradient(90deg, red, blue)',
+            'linear-gradient(90deg, red, blue)',
+            'linear-gradient(90deg, red, blue)',
+          ]}
+          width={[4, 8, 4]}
+        />
+        <Button
+          data-testid="gradient-button"
+          animate={{ when: 'hover', effect: 'rise', fill: 'var(--primary)' }}
+        >
+          Framed action
+        </Button>
       </Flex>
     </main>
   );

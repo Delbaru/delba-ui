@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 import { normalizeObserverMargin, type ObserverMargin } from './base/observer-margin';
 import { motionInView } from './base/motion-config';
 
@@ -18,31 +18,59 @@ export interface UseInViewOptions {
 }
 
 export function useInView<T extends Element>(
-  ref: RefObject<T | null>,
-  options: UseInViewOptions = {}
-): { isInView: boolean; ratio: number } {
-  const { threshold = motionInView.threshold, rootMargin = motionInView.rootMargin, root = null, initialInView = false } = options;
+  ref?: RefObject<T | null>,
+  options: UseInViewOptions = {},
+): { isInView: boolean; ratio: number; setTarget: (node: T | null) => void } {
+  const {
+    threshold = motionInView.threshold,
+    rootMargin = motionInView.rootMargin,
+    root = null,
+    initialInView = false,
+  } = options;
   const margin = normalizeObserverMargin(rootMargin) ?? '0px';
-  const [state, setState] = useState({ isInView: initialInView, ratio: initialInView ? 1 : 0 });
+  const [objectTarget, setObjectTarget] = useState<T | null>(null);
+  const [callbackTarget, setCallbackTarget] = useState<T | null | undefined>(undefined);
+  const initialState = { isInView: initialInView, ratio: initialInView ? 1 : 0 };
+  const [observed, setObserved] = useState({ target: null as T | null, ...initialState });
+  const setTarget = useCallback((node: T | null) => setCallbackTarget(node), []);
+
+  // Object refs update during commit without triggering a render. Read them after commit so a
+  // replaced node causes the observer to detach from the old node and attach to the new one.
+  useLayoutEffect(() => {
+    const nextTarget = ref?.current ?? null;
+    setObjectTarget((currentTarget) => (currentTarget === nextTarget ? currentTarget : nextTarget));
+  });
+
+  const target = callbackTarget === undefined ? objectTarget : callbackTarget;
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    if (!target) {
+      setObserved({ target: null, ...initialState });
+      return;
+    }
+    const view = target.ownerDocument.defaultView;
+    const Observer = view?.IntersectionObserver;
+    if (!Observer) {
+      setObserved({ target, ...initialState });
+      return;
+    }
 
-    const observer = new IntersectionObserver(
+    const observer = new Observer(
       ([entry]) => {
         if (!entry) return;
-        setState({
+        setObserved({
+          target,
           isInView: entry.isIntersecting,
           ratio: entry.intersectionRatio,
         });
       },
-      { threshold, rootMargin: margin, root }
+      { threshold, rootMargin: margin, root },
     );
 
-    observer.observe(el);
+    observer.observe(target);
     return () => observer.disconnect();
-  }, [ref, threshold, margin, root]);
+  }, [target, threshold, margin, root]);
 
-  return state;
+  const state = observed.target === target ? observed : initialState;
+  return { ...state, setTarget };
 }

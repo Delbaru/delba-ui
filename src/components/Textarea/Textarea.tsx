@@ -169,6 +169,7 @@ export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
         error,
         validate: lengthValidate,
     });
+    const isReadOnly = Boolean(rest.readOnly);
 
     const showCounter = showCount ?? (length?.max != null);
     // Проп `seed` — тот же глагол, что у `Input`: пока в поле стоит значение по умолчанию, в DOM
@@ -198,10 +199,10 @@ export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
             setIsFieldFocused(true);
             // Значение по умолчанию — подсказка, а не данные: по фокусу поле пустеет, и модель
             // получает ''. Иначе дописывание к нему давало бы «01» вместо «1».
-            if (seedField.focusValue !== undefined) commitSeedValue(seedField.focusValue, e);
+            if (!isReadOnly && seedField.focusValue !== undefined) commitSeedValue(seedField.focusValue, e);
             onFocus?.(e);
         },
-        [commitSeedValue, onFocus, seedField.focusValue]
+        [commitSeedValue, isReadOnly, onFocus, seedField.focusValue]
     );
 
     const handleBlur = useCallback(
@@ -209,7 +210,7 @@ export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
             setIsFieldFocused(false);
             // Уход из пустого поля возвращает значение по умолчанию: после blur модель обязана
             // получить валидное значение, а не «нет значения».
-            if (seedField.blurValue !== undefined) {
+            if (!isReadOnly && seedField.blurValue !== undefined) {
                 commitSeedValue(seedField.blurValue, e);
                 setInternalError(validateValue(seedField.blurValue));
                 onBlur?.(e);
@@ -218,18 +219,19 @@ export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
             setInternalError(validateValue(e.target.value));
             onBlur?.(e);
         },
-        [commitSeedValue, onBlur, seedField.blurValue, setInternalError, validateValue]
+        [commitSeedValue, isReadOnly, onBlur, seedField.blurValue, setInternalError, validateValue]
     );
 
     const handleChange = useCallback(
         (e: ChangeEvent<HTMLTextAreaElement>) => {
+            if (isReadOnly) return;
             const value = e.target.value;
+            onChange?.(e);
             if (!isControlled) setUncontrolledValue(value);
             setInternalError(validateValue(value));
-            onChange?.(e);
             onValueChange?.(value, { reason: 'input', event: e });
         },
-        [onChange, onValueChange, validateValue, setInternalError, setUncontrolledValue, isControlled]
+        [isReadOnly, onChange, onValueChange, validateValue, setInternalError, setUncontrolledValue, isControlled]
     );
 
     const handleInvalid = useCallback(

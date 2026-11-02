@@ -5,9 +5,13 @@ import type React from 'react';
 
 import { MEDIA_QUERY } from '../core/base/breakpoints';
 import { clamp } from '../core/utils';
-import { animationVisibilityMargin } from '../core/base/animation-visibility';
+import { observeAnimationVisibility } from '../core/base/animation-visibility';
 import { motionDefaults } from '../core/base/motion-config';
-import { isPerspective3dSettled, perspectiveFrameEase, type Perspective3dValues as MotionValues } from './perspective3d';
+import {
+  isPerspective3dSettled,
+  perspectiveFrameEase,
+  type Perspective3dValues as MotionValues,
+} from './perspective3d';
 
 const MOTION_STYLE_PROPS = [
   '--perspective3d',
@@ -76,7 +80,9 @@ function formatPerspective(value: number | string): string {
   return /^\d+(\.\d+)?$/.test(normalized) ? `${normalized}px` : normalized;
 }
 
-function normalizePerspective3dConfig(input: Perspective3dInput | undefined): NormalizedPerspective3dConfig | null {
+function normalizePerspective3dConfig(
+  input: Perspective3dInput | undefined,
+): NormalizedPerspective3dConfig | null {
   if (input === undefined || input === null || input === '') {
     return null;
   }
@@ -133,7 +139,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
   const smoothedTargetRef = useRef<MotionValues>({ ...INITIAL_VALUES });
   const isVisibleRef = useRef(true);
   const isMobileRef = useRef(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const stopObservingRef = useRef<(() => void) | null>(null);
   const observedRef = useRef<MotionTarget | null>(null);
   const pointerRectRef = useRef<DOMRect | null>(null);
   const pointerResizeRef = useRef<ResizeObserver | null>(null);
@@ -152,8 +158,11 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
   const followsElement = config?.follow === 'element';
   useEffect(() => {
     if (!followsElement || typeof window === 'undefined') return undefined;
-    const invalidate = () => { pointerRectRef.current = null; };
-    pointerResizeRef.current = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(invalidate);
+    const invalidate = () => {
+      pointerRectRef.current = null;
+    };
+    pointerResizeRef.current =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(invalidate);
     if (nodeRef.current) pointerResizeRef.current?.observe(nodeRef.current);
     window.addEventListener('scroll', invalidate, { passive: true, capture: true });
     window.addEventListener('resize', invalidate);
@@ -203,7 +212,9 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
 
     const mq = window.matchMedia('(pointer: coarse)');
     isMobileRef.current = mq.matches;
-    const handler = () => { isMobileRef.current = mq.matches; };
+    const handler = () => {
+      isMobileRef.current = mq.matches;
+    };
     mq.addEventListener?.('change', handler);
 
     return () => {
@@ -234,7 +245,8 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
         cancelAnimationFrame(frameRef.current);
       }
 
-      observerRef.current?.disconnect();
+      stopObservingRef.current?.();
+      stopObservingRef.current = null;
       clearMotionStyles(nodeRef.current);
     };
   }, []);
@@ -293,7 +305,10 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       }
 
       // Настройки относятся к 60 Hz: одинаковое торможение и на 144 Hz, и после пропуска кадра.
-      const elapsed = lastFrameRef.current === null ? 1 : Math.min((timestamp - lastFrameRef.current) / (1000 / 60), 3);
+      const elapsed =
+        lastFrameRef.current === null
+          ? 1
+          : Math.min((timestamp - lastFrameRef.current) / (1000 / 60), 3);
       lastFrameRef.current = timestamp;
       const frameEase = (value: number) => perspectiveFrameEase(value, elapsed);
       const targetEase = frameEase(Math.min(nextConfig.ease * 3.5, 0.25));
@@ -313,10 +328,13 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       const nextValues: MotionValues = {
         rotateX: currentRef.current.rotateX + (st.rotateX - currentRef.current.rotateX) * ease,
         rotateY: currentRef.current.rotateY + (st.rotateY - currentRef.current.rotateY) * ease,
-        translateX: currentRef.current.translateX + (st.translateX - currentRef.current.translateX) * ease,
-        translateY: currentRef.current.translateY + (st.translateY - currentRef.current.translateY) * ease,
+        translateX:
+          currentRef.current.translateX + (st.translateX - currentRef.current.translateX) * ease,
+        translateY:
+          currentRef.current.translateY + (st.translateY - currentRef.current.translateY) * ease,
         scale: currentRef.current.scale + (st.scale - currentRef.current.scale) * ease,
-        translateZ: currentRef.current.translateZ + (st.translateZ - currentRef.current.translateZ) * ease,
+        translateZ:
+          currentRef.current.translateZ + (st.translateZ - currentRef.current.translateZ) * ease,
       };
 
       currentRef.current = nextValues;
@@ -332,44 +350,42 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     });
   }, []);
 
-  const updateTargetFromPointer = useCallback((
-    node: MotionTarget,
-    clientX: number,
-    clientY: number,
-    follow: 'element' | 'viewport',
-  ) => {
-    const nextConfig = configRef.current;
-    if (!nextConfig) return;
+  const updateTargetFromPointer = useCallback(
+    (node: MotionTarget, clientX: number, clientY: number, follow: 'element' | 'viewport') => {
+      const nextConfig = configRef.current;
+      if (!nextConfig) return;
 
-    let ratioX = 0;
-    let ratioY = 0;
+      let ratioX = 0;
+      let ratioY = 0;
 
-    if (follow === 'viewport') {
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      if (!viewportWidth || !viewportHeight) return;
+      if (follow === 'viewport') {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        if (!viewportWidth || !viewportHeight) return;
 
-      ratioX = (clientX / viewportWidth) * 2 - 1;
-      ratioY = (clientY / viewportHeight) * 2 - 1;
-    } else {
-      const surface = nextConfig.scope ? node.closest(nextConfig.scope) ?? node : node;
-      const rect = pointerRectRef.current ?? surface.getBoundingClientRect();
-      pointerRectRef.current = rect;
-      if (!rect.width || !rect.height) return;
+        ratioX = (clientX / viewportWidth) * 2 - 1;
+        ratioY = (clientY / viewportHeight) * 2 - 1;
+      } else {
+        const surface = nextConfig.scope ? (node.closest(nextConfig.scope) ?? node) : node;
+        const rect = pointerRectRef.current ?? surface.getBoundingClientRect();
+        pointerRectRef.current = rect;
+        if (!rect.width || !rect.height) return;
 
-      ratioX = ((clientX - rect.left) / rect.width) * 2 - 1;
-      ratioY = ((clientY - rect.top) / rect.height) * 2 - 1;
-    }
+        ratioX = ((clientX - rect.left) / rect.width) * 2 - 1;
+        ratioY = ((clientY - rect.top) / rect.height) * 2 - 1;
+      }
 
-    targetRef.current = {
-      rotateX: clamp(-ratioY, -1, 1) * nextConfig.maxRotateX,
-      rotateY: clamp(ratioX, -1, 1) * nextConfig.maxRotateY,
-      translateX: clamp(ratioX, -1, 1) * nextConfig.maxTranslateX,
-      translateY: clamp(ratioY, -1, 1) * nextConfig.maxTranslateY,
-      scale: nextConfig.scale,
-      translateZ: nextConfig.translateZ,
-    };
-  }, []);
+      targetRef.current = {
+        rotateX: clamp(-ratioY, -1, 1) * nextConfig.maxRotateX,
+        rotateY: clamp(ratioX, -1, 1) * nextConfig.maxRotateY,
+        translateX: clamp(ratioX, -1, 1) * nextConfig.maxTranslateX,
+        translateY: clamp(ratioY, -1, 1) * nextConfig.maxTranslateY,
+        scale: nextConfig.scale,
+        translateZ: nextConfig.translateZ,
+      };
+    },
+    [],
+  );
 
   const scope = config?.follow === 'element' ? config.scope : undefined;
   const bindScope = useCallback(() => {
@@ -377,7 +393,13 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     const surface = scope && node?.closest<HTMLElement>(scope);
     if (!node || !surface) return;
     const move = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse' || reducedMotionRef.current || isMobileRef.current || !isVisibleRef.current) return;
+      if (
+        event.pointerType !== 'mouse' ||
+        reducedMotionRef.current ||
+        isMobileRef.current ||
+        !isVisibleRef.current
+      )
+        return;
       activeRef.current = true;
       updateTargetFromPointer(node, event.clientX, event.clientY, 'element');
       scheduleAnimation();
@@ -392,13 +414,20 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       if (reducedMotionRef.current || isMobileRef.current || !isVisibleRef.current) return;
       const rect = surface.getBoundingClientRect();
       activeRef.current = true;
-      updateTargetFromPointer(node, rect.left + rect.width * 0.65, rect.top + rect.height * 0.35, 'element');
+      updateTargetFromPointer(
+        node,
+        rect.left + rect.width * 0.65,
+        rect.top + rect.height * 0.35,
+        'element',
+      );
       scheduleAnimation();
     };
     const blur = (event: FocusEvent) => {
       if (!(event.relatedTarget instanceof Node) || !surface.contains(event.relatedTarget)) reset();
     };
-    const invalidate = () => { pointerRectRef.current = null; };
+    const invalidate = () => {
+      pointerRectRef.current = null;
+    };
     const resize = new ResizeObserver(invalidate);
     resize.observe(surface);
     surface.addEventListener('pointermove', move, { passive: true });
@@ -440,35 +469,36 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     };
   }, [scope, bindScope]);
 
-  const motionHandlers = config && config.follow === 'element' && !config.scope
-    ? {
-        onMouseEnter: (event: React.MouseEvent<MotionTarget>) => {
-          if (reducedMotionRef.current || isMobileRef.current) return;
+  const motionHandlers =
+    config && config.follow === 'element' && !config.scope
+      ? {
+          onMouseEnter: (event: React.MouseEvent<MotionTarget>) => {
+            if (reducedMotionRef.current || isMobileRef.current) return;
 
-          nodeRef.current = event.currentTarget;
-          pointerRectRef.current = null;
-          activeRef.current = true;
-          updateTargetFromPointer(event.currentTarget, event.clientX, event.clientY, 'element');
-          scheduleAnimation();
-        },
-        onMouseMove: (event: React.MouseEvent<MotionTarget>) => {
-          if (reducedMotionRef.current || isMobileRef.current) return;
+            nodeRef.current = event.currentTarget;
+            pointerRectRef.current = null;
+            activeRef.current = true;
+            updateTargetFromPointer(event.currentTarget, event.clientX, event.clientY, 'element');
+            scheduleAnimation();
+          },
+          onMouseMove: (event: React.MouseEvent<MotionTarget>) => {
+            if (reducedMotionRef.current || isMobileRef.current) return;
 
-          nodeRef.current = event.currentTarget;
-          updateTargetFromPointer(event.currentTarget, event.clientX, event.clientY, 'element');
-          scheduleAnimation();
-        },
-        onMouseLeave: (event: React.MouseEvent<MotionTarget>) => {
-          if (reducedMotionRef.current) return;
+            nodeRef.current = event.currentTarget;
+            updateTargetFromPointer(event.currentTarget, event.clientX, event.clientY, 'element');
+            scheduleAnimation();
+          },
+          onMouseLeave: (event: React.MouseEvent<MotionTarget>) => {
+            if (reducedMotionRef.current) return;
 
-          nodeRef.current = event.currentTarget;
-          activeRef.current = false;
-          pointerRectRef.current = null;
-          targetRef.current = { ...INITIAL_VALUES };
-          scheduleAnimation();
-        },
-      }
-    : undefined;
+            nodeRef.current = event.currentTarget;
+            activeRef.current = false;
+            pointerRectRef.current = null;
+            targetRef.current = { ...INITIAL_VALUES };
+            scheduleAnimation();
+          },
+        }
+      : undefined;
 
   const motionStyle = config
     ? ({
@@ -494,24 +524,16 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     const wanted = node && configRef.current ? node : null;
     if (observedRef.current === wanted) return;
 
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
+    stopObservingRef.current?.();
+    stopObservingRef.current = null;
 
     observedRef.current = wanted;
-    if (!wanted || typeof IntersectionObserver === 'undefined') return;
+    if (!wanted) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry) return;
-        isVisibleRef.current = entry.isIntersecting;
-        if (entry.isIntersecting) scheduleAnimation();
-      },
-      { rootMargin: animationVisibilityMargin(wanted) }
-    );
-    observer.observe(wanted);
-    observerRef.current = observer;
+    stopObservingRef.current = observeAnimationVisibility(wanted, (isVisible) => {
+      isVisibleRef.current = isVisible;
+      if (isVisible) scheduleAnimation();
+    });
   }, [scheduleAnimation]);
 
   /**
@@ -519,24 +541,27 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
    * идентичности отцепляет ref (зовёт с null) и цепляет заново — то есть на КАЖДЫЙ ре-рендер
    * потребителя обнулял бы накопленный наклон. Внутри — только ref'ы и стабильная `syncObserver`.
    */
-  const setMotionNode = useCallback((node: MotionTarget | null) => {
-    if (nodeRef.current !== node) {
-      pointerRectRef.current = null;
-      pointerResizeRef.current?.disconnect();
-      if (node) pointerResizeRef.current?.observe(node);
-    }
-    nodeRef.current = node;
-    syncScopeRef.current?.();
-    syncObserver();
+  const setMotionNode = useCallback(
+    (node: MotionTarget | null) => {
+      if (nodeRef.current !== node) {
+        pointerRectRef.current = null;
+        pointerResizeRef.current?.disconnect();
+        if (node) pointerResizeRef.current?.observe(node);
+      }
+      nodeRef.current = node;
+      syncScopeRef.current?.();
+      syncObserver();
 
-    if (!node) {
-      activeRef.current = false;
-      targetRef.current = { ...INITIAL_VALUES };
-      smoothedTargetRef.current = { ...INITIAL_VALUES };
-      currentRef.current = { ...INITIAL_VALUES };
-      isVisibleRef.current = false;
-    }
-  }, [syncObserver]);
+      if (!node) {
+        activeRef.current = false;
+        targetRef.current = { ...INITIAL_VALUES };
+        smoothedTargetRef.current = { ...INITIAL_VALUES };
+        currentRef.current = { ...INITIAL_VALUES };
+        isVisibleRef.current = false;
+      }
+    },
+    [syncObserver],
+  );
 
   // Моушен могли включить пропом уже после монтирования — тогда наблюдатель заводится здесь.
   useEffect(() => {

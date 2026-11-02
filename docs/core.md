@@ -24,9 +24,11 @@ bootstrap восстанавливает исходное состояние э�
 import { pageReadyScript } from '@delba/ui/startup';
 
 <html suppressHydrationWarning>
-  <head><script dangerouslySetInnerHTML={{ __html: pageReadyScript() }} /></head>
+  <head>
+    <script dangerouslySetInnerHTML={{ __html: pageReadyScript() }} />
+  </head>
   <body>{children}</body>
-</html>
+</html>;
 ```
 
 Только атрибутами корня управляет bootstrap вне React, поэтому suppressHydrationWarning
@@ -67,13 +69,13 @@ preload может передаваться HTTP Link, а не только DOM.
 в состоянии потребителя не нужен. Рендерер задаёт доступное имя и состояние кнопки.
 Корень принимает раскладку Flex; без рендерера сохраняются прежние точки.
 
-| Что | Где | Зачем |
-|---|---|---|
-| `splitBoxLayout`, `boxLayout` | `src/core/layout/box.ts` | пропы коробки (отступы, размеры, радиусы, рамка, фон, `grow`) одинаково у любого корня |
-| `resolveFieldLayout`, `fieldLayoutClasses` | `src/core/base/field-layout.ts` | общие умолчания и классы Input/Textarea/Select; размеры и отступы отделяет тот же splitBoxLayout, связь веток типов Select сохраняется |
-| `resolveResponsive`, `getBreakpointIndex`, `resolveResponsiveAtBreakpoint` | `src/core/base/responsive.ts` | кортеж `[desktop, mobile, tablet]` → значения; `null` — пропуск |
-| `ResponsiveInput<T>`, `ResponsiveValue<T>` | там же | вход помощников против типа пропа; строгий режим включает проект через `UiRules` |
-| `createLayoutClasses`, `utilityClasses`, `MEDIA`, `UTILITIES` | `src/core/layout`, `src/core/utilities` | имя класса утилиты = имя пропа; реестр — единственный источник правды |
+| Что                                                                        | Где                                     | Зачем                                                                                                                                  |
+| -------------------------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `splitBoxLayout`, `boxLayout`                                              | `src/core/layout/box.ts`                | пропы коробки (отступы, размеры, радиусы, рамка, фон, `grow`) одинаково у любого корня                                                 |
+| `resolveFieldLayout`, `fieldLayoutClasses`                                 | `src/core/base/field-layout.ts`         | общие умолчания и классы Input/Textarea/Select; размеры и отступы отделяет тот же splitBoxLayout, связь веток типов Select сохраняется |
+| `resolveResponsive`, `getBreakpointIndex`, `resolveResponsiveAtBreakpoint` | `src/core/base/responsive.ts`           | кортеж `[desktop, mobile, tablet]` → значения; `null` — пропуск                                                                        |
+| `ResponsiveInput<T>`, `ResponsiveValue<T>`                                 | там же                                  | вход помощников против типа пропа; строгий режим включает проект через `UiRules`                                                       |
+| `createLayoutClasses`, `utilityClasses`, `MEDIA`, `UTILITIES`              | `src/core/layout`, `src/core/utilities` | имя класса утилиты = имя пропа; реестр — единственный источник правды                                                                  |
 
 `GradientBorder` — декоративный дочерний слой позиционированного Box/Flex/Grid/Button:
 `<GradientBorder gradient={['var(--frame)', 'var(--frame)', 'var(--frame)']} width={[1, 1, 1]} />`.
@@ -484,13 +486,17 @@ reduced motion переключает мгновенно. Старые стро�
 `counter`. Без `startAt` они начинаются одновременно; зависимости не зависят от порядка ключей:
 
 ```tsx
-<Text animate={{
-  when: 'inView',
-  effect: {
-    up: { distance: 'small', duration: 'slow' },
-    counter: { to: 100, duration: 'normal', startAt: { effect: 'up', progress: 0.5 } },
-  },
-}}>100</Text>
+<Text
+  animate={{
+    when: 'inView',
+    effect: {
+      up: { distance: 'small', duration: 'slow' },
+      counter: { to: 100, duration: 'normal', startAt: { effect: 'up', progress: 0.5 } },
+    },
+  }}
+>
+  100
+</Text>
 ```
 
 `progress` — доля времени зависимости от 0 до 1, без её delay и easing. `1` ждёт её завершения.
@@ -519,8 +525,13 @@ Observer отслеживает добавление/удаление детей
 Для изменения состава и порядка сетки есть отдельный режим:
 
 ```tsx
-<Grid columns={[3, 2, 2]} animate={{ when: 'change', effect: 'layout', duration: 'normal', stagger: 'step' }}>
-  {products.map((product) => <GridItem key={product.id}>…</GridItem>)}
+<Grid
+  columns={[3, 2, 2]}
+  animate={{ when: 'change', effect: 'layout', duration: 'normal', stagger: 'step' }}
+>
+  {products.map((product) => (
+    <GridItem key={product.id}>…</GridItem>
+  ))}
 </Grid>
 ```
 
@@ -642,15 +653,21 @@ React 19: при отсоединении вызывает эту очистку
 Передача DOM-узла через `useImperativeHandle(..., [])` не подходит: узел может появиться
 или замениться после монтирования компонента. Ручки с методами — отдельный договор.
 
-| Хук | Что делает |
-|---|---|
-| `useMediaQuery(query)` | подписка на медиазапрос, безопасная на сервере |
-| `useOutsideDismiss(refs, onDismiss, { enabled, escape })` | закрытие по клику вне и по Escape; возвращает `{ onMouseDownCapture }` для корня панели, из которой открываются вложенные слои в своих порталах, и не закрывает по Escape, который уже погасил внутренний слой |
-| `usePresence(show, axis, appear)` | монтирование и размонтирование с анимацией |
-| `useSwapTransition(key, children)` | подмена контента: exit старого, затем enter нового |
-| `useAnchoredFloating` | позиционирование панели относительно якоря |
-| `useSharedMotion`, `useParallaxMotion`, `usePerspective3dMotion`, `useReveal` | параллакс, наклон и появление по скроллу (`reveal`) |
-| `useTextOverflow`, `useTooltip`, `useFancybox`, `useInView`, `useMergedRefs` | по названию |
+| Хук                                                                           | Что делает                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useMediaQuery(query)`                                                        | подписка на медиазапрос, безопасная на сервере                                                                                                                                                                 |
+| `useOutsideDismiss(refs, onDismiss, { enabled, escape })`                     | закрытие по клику вне и по Escape; возвращает `{ onMouseDownCapture }` для корня панели, из которой открываются вложенные слои в своих порталах, и не закрывает по Escape, который уже погасил внутренний слой |
+| `usePresence(show, axis, appear)`                                             | монтирование и размонтирование с анимацией                                                                                                                                                                     |
+| `useSwapTransition(key, children)`                                            | подмена контента: exit старого, затем enter нового                                                                                                                                                             |
+| `useAnchoredFloating`                                                         | позиционирование панели относительно якоря                                                                                                                                                                     |
+| `useSharedMotion`, `useParallaxMotion`, `usePerspective3dMotion`, `useReveal` | параллакс, наклон и появление по скроллу (`reveal`)                                                                                                                                                            |
+| `useTextOverflow`, `useTooltip`, `useFancybox`, `useInView`, `useMergedRefs`  | по названию                                                                                                                                                                                                    |
+
+`useInView(ref, options?)` поддерживает object ref и возвращает `setTarget` для callback ref.
+Object ref читается после commit, поэтому первый mount и замена узла переподключают observer;
+при совместной привязке объединяй refs через `useMergedRefs`. Observer берётся из
+`ownerDocument.defaultView`. Публичный контракт проверяется в browser regression с реальной
+заменой DOM-узла: `tools/browser/regressions.spec.ts`.
 
 ### Смена содержимого и подсказки
 

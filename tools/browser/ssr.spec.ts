@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-test('server HTML hydrates without replacing controls or breaking collapse', async ({ page, request }) => {
+test('server HTML hydrates without replacing controls or breaking collapse', async ({
+  page,
+  request,
+}) => {
   const response = await request.get('/ssr');
   expect(response.ok()).toBe(true);
   const html = await response.text();
@@ -11,6 +14,24 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   expect(html).toContain('Server scroll content');
   expect(html).toContain('ui-duration-picker');
   expect(html).toContain('Текст из CMS');
+  expect(html).toMatch(/<strong>Ссылка с(?: |&nbsp;|\u00a0)жирным текстом<\/strong>/);
+  const linkedCardStart = html.indexOf('<a href="/linked-card" data-testid="ssr-linked-card">');
+  const linkedCardEnd = html.indexOf('</a>', linkedCardStart);
+  expect(linkedCardStart).toBeGreaterThanOrEqual(0);
+  expect(linkedCardEnd).toBeGreaterThan(linkedCardStart);
+  const linkedCardContentStart = html.indexOf('>', linkedCardStart) + 1;
+  expect(html.slice(linkedCardContentStart, linkedCardEnd)).not.toContain('<a ');
+  expect(html).toContain('<a href="https://example.com">Активная ссылка</a>');
+  expect(html).toContain('<p><a href="https://example.com">Legacy active link</a></p>');
+  const legacyCardStart = html.indexOf(
+    '<a href="/legacy-linked-card" data-testid="ssr-legacy-linked-card">',
+  );
+  const legacyCardEnd = html.indexOf('</a>', legacyCardStart);
+  expect(legacyCardStart).toBeGreaterThanOrEqual(0);
+  expect(legacyCardEnd).toBeGreaterThan(legacyCardStart);
+  const legacyCardContentStart = html.indexOf('>', legacyCardStart) + 1;
+  expect(html.slice(legacyCardContentStart, legacyCardEnd)).not.toContain('<a ');
+  expect(html).toContain('<strong>Legacy link</strong> label');
   expect(html).toContain('aria-hidden="true"');
   expect(html).toContain('data-reveal="up"');
   expect(html).toContain('--reveal-delay:20ms');
@@ -29,9 +50,18 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   });
   await page.goto('/ssr');
   await expect(page.getByRole('heading', { name: 'SSR and hydration' })).toBeVisible();
-  await expect(page.getByTestId('ssr-named-slide').locator('.ui-slide-swap')).toHaveCSS('--slide-swap-dur', '190ms');
-  await expect(page.getByTestId('ssr-named-reveal').locator('.ui-reveal')).toHaveCSS('--reveal-dur', '0.19s');
-  await expect(page.getByTestId('ssr-named-clip').locator('.ui-clip')).toHaveCSS('--clip-dur', '190ms');
+  await expect(page.getByTestId('ssr-named-slide').locator('.ui-slide-swap')).toHaveCSS(
+    '--slide-swap-dur',
+    '190ms',
+  );
+  await expect(page.getByTestId('ssr-named-reveal').locator('.ui-reveal')).toHaveCSS(
+    '--reveal-dur',
+    '0.19s',
+  );
+  await expect(page.getByTestId('ssr-named-clip').locator('.ui-clip')).toHaveCSS(
+    '--clip-dur',
+    '190ms',
+  );
   const duration = page.getByRole('spinbutton', { name: 'Minutes', exact: true });
   await expect(duration).toHaveAttribute('aria-valuenow', '30');
   await duration.focus();
@@ -46,10 +76,15 @@ test('server HTML hydrates without replacing controls or breaking collapse', asy
   await expect(page.getByRole('textbox', { name: 'Uncontrolled server field' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Closed field' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Closed field' })).not.toHaveAttribute('inert');
-  await expect.poll(() => page.evaluate(() => ({
-    inputPreserved: document.querySelector('[data-testid="ssr-input"]') === window.__ssrInput,
-    buttonPreserved: document.querySelector('[data-testid="ssr-button"]') === window.__ssrButton,
-    hydrationErrors: window.__hydrationErrors,
-  }))).toEqual({ inputPreserved: true, buttonPreserved: true, hydrationErrors: [] });
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        inputPreserved: document.querySelector('[data-testid="ssr-input"]') === window.__ssrInput,
+        buttonPreserved:
+          document.querySelector('[data-testid="ssr-button"]') === window.__ssrButton,
+        hydrationErrors: window.__hydrationErrors,
+      })),
+    )
+    .toEqual({ inputPreserved: true, buttonPreserved: true, hydrationErrors: [] });
   expect(errors).toEqual([]);
 });

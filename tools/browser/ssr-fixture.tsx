@@ -16,7 +16,11 @@ import { DurationPicker } from '../../src/components/DurationPicker';
 import { NativeCarousel } from '../../src/components/NativeCarousel';
 
 function Glyph(props: SVGProps<SVGSVGElement>) {
-  return <svg viewBox="0 0 16 16" {...props}><path d="M2 8h12M8 2v12" /></svg>;
+  return (
+    <svg viewBox="0 0 16 16" {...props}>
+      <path d="M2 8h12M8 2v12" />
+    </svg>
+  );
 }
 
 export function SsrFixture() {
@@ -34,22 +38,66 @@ export function SsrFixture() {
         <a href="#server-three">Server carousel three</a>
       </NativeCarousel>
       <style>{':root { --t-d-fast: 190ms; }'}</style>
-      <Text data-testid="ssr-named-slide" animate={['textSlide', { mode: 'swap', duration: 'fast' }]}>Named slide</Text>
-      <Text data-testid="ssr-named-reveal" animate={['textReveal', { duration: 'fast' }]}>Named reveal</Text>
-      <Text data-testid="ssr-named-clip" animate={['textClip', { duration: 'fast', steps: ['Named clip', 'Next clip'], currentStep: 0 }]}>Named clip</Text>
+      <Text
+        data-testid="ssr-named-slide"
+        animate={['textSlide', { mode: 'swap', duration: 'fast' }]}
+      >
+        Named slide
+      </Text>
+      <Text data-testid="ssr-named-reveal" animate={['textReveal', { duration: 'fast' }]}>
+        Named reveal
+      </Text>
+      <Text
+        data-testid="ssr-named-clip"
+        animate={[
+          'textClip',
+          { duration: 'fast', steps: ['Named clip', 'Next clip'], currentStep: 0 },
+        ]}
+      >
+        Named clip
+      </Text>
       <DurationPicker value={duration} onValueChange={setDuration} />
-      <ScrollArea fade maxH={[120, 120, 120]} aria-label="Server scroll area">Server scroll content</ScrollArea>
+      <ScrollArea fade maxH={[120, 120, 120]} aria-label="Server scroll area">
+        Server scroll content
+      </ScrollArea>
       <Flex position={['relative', 'relative', 'relative']} r={[24, 16, 20]}>
         <GradientBorder gradient={['var(--primary)', 'var(--primary)', 'var(--primary)']} />
         <Text>Framed server content</Text>
       </Flex>
-      <Text animate={{ effect: 'up', when: 'load', fade: false, duration: 'slow', delay: 'veryFast' }}>Первый кадр</Text>
-      <Text data-testid="ssr-counter" animate={{ when: 'load', effect: 'counter', duration: 'slow' }}>125%</Text>
-      <Text data-testid="ssr-timeline" animate={{ when: 'inView', effect: {
-        up: { duration: 'slow' }, counter: { duration: 'normal', startAt: { effect: 'up', progress: 1 } },
-      } }}>250%</Text>
-      <Flex as="dl" data-testid="ssr-requisites" dir={['column', 'column', 'column']} gap={[8, 8, 8]} m={[0, 0, 0]}>
-        <Flex><Text as="dt">ИНН</Text><Text as="dd">1234567890</Text></Flex>
+      <Text
+        animate={{ effect: 'up', when: 'load', fade: false, duration: 'slow', delay: 'veryFast' }}
+      >
+        Первый кадр
+      </Text>
+      <Text
+        data-testid="ssr-counter"
+        animate={{ when: 'load', effect: 'counter', duration: 'slow' }}
+      >
+        125%
+      </Text>
+      <Text
+        data-testid="ssr-timeline"
+        animate={{
+          when: 'inView',
+          effect: {
+            up: { duration: 'slow' },
+            counter: { duration: 'normal', startAt: { effect: 'up', progress: 1 } },
+          },
+        }}
+      >
+        250%
+      </Text>
+      <Flex
+        as="dl"
+        data-testid="ssr-requisites"
+        dir={['column', 'column', 'column']}
+        gap={[8, 8, 8]}
+        m={[0, 0, 0]}
+      >
+        <Flex>
+          <Text as="dt">ИНН</Text>
+          <Text as="dd">1234567890</Text>
+        </Flex>
       </Flex>
       <Button
         data-testid="ssr-button"
@@ -58,8 +106,14 @@ export function SsrFixture() {
           setOpen((current) => !current);
           void panel.current?.show();
         }}
-      >Открыть</Button>
-      <Box animate={{ effect: 'up', when: 'inView', delay: 0.02 }} parallax={{ mode: 'scroll', distance: 20 }} data-testid="ssr-box">
+      >
+        Открыть
+      </Button>
+      <Box
+        animate={{ effect: 'up', when: 'inView', delay: 0.02 }}
+        parallax={{ mode: 'scroll', distance: 20 }}
+        data-testid="ssr-box"
+      >
         <Text>Содержимое</Text>
       </Box>
       <Flex collapse={{ open, keepMounted: true }} data-testid="ssr-collapse">
@@ -70,9 +124,68 @@ export function SsrFixture() {
         defaultValue="Server state"
         collapse={{ defaultOpen: false, ref: panel, keepMounted: true }}
       />
-      <Text role="alert" collapse={{ open, fade: true }}>Подсказка</Text>
+      <Text role="alert" collapse={{ open, fade: true }}>
+        Подсказка
+      </Text>
       <LexicalText content="<p>Текст из CMS</p>" reveal="up" />
-      <Icon component={Glyph} tooltip="Иконка" aria-label="Icon" w={[16, 16, 16]} h={[16, 16, 16]} />
+      <a href="/linked-card" data-testid="ssr-linked-card">
+        <LexicalText
+          data-testid="ssr-linked-text"
+          links="text"
+          content={{
+            root: {
+              children: [
+                {
+                  type: 'paragraph',
+                  children: [
+                    {
+                      type: 'link',
+                      fields: { url: 'https://example.com' },
+                      children: [{ type: 'text', text: 'Ссылка с жирным текстом', format: 1 }],
+                    },
+                  ],
+                },
+              ],
+            },
+          }}
+        />
+      </a>
+      <LexicalText
+        data-testid="ssr-active-links"
+        content={{
+          root: {
+            children: [
+              {
+                type: 'paragraph',
+                children: [
+                  {
+                    type: 'autolink',
+                    url: 'https://example.com',
+                    children: [{ type: 'text', text: 'Активная ссылка' }],
+                  },
+                ],
+              },
+            ],
+          },
+        }}
+      />
+      <LexicalText
+        data-testid="ssr-active-legacy-links"
+        content={'<p><a href="https://example.com">Legacy active link</a></p>'}
+      />
+      <a href="/legacy-linked-card" data-testid="ssr-legacy-linked-card">
+        <LexicalText
+          links="text"
+          content={'<p><strong>Legacy link</strong> <a href="https://example.com">label</a></p>'}
+        />
+      </a>
+      <Icon
+        component={Glyph}
+        tooltip="Иконка"
+        aria-label="Icon"
+        w={[16, 16, 16]}
+        h={[16, 16, 16]}
+      />
       <Input data-testid="ssr-input" name="name" defaultValue="Иван" label="Имя" />
       <Textarea data-testid="ssr-textarea" defaultValue="Сообщение" label="Сообщение" />
       <PhoneField

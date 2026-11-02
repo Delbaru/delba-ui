@@ -4,8 +4,27 @@ import styles from './RichText.module.scss';
 
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { boxLayout, splitBoxLayout, composeInteractionHandlers, cx, createLayoutClasses, getBreakpointIndex, prefersReducedMotion, resolveResponsiveAtBreakpoint, buildClampStyle, decodeHtmlEntities, sanitizeRichTextHtml, stripHtmlTags, stateLinkProps, resolveRadiusInput, type BoxLayoutProps, type StateLinkInput, type ResponsiveInput, type ResponsiveValue, } from '../../core';
+import {
+  boxLayout,
+  splitBoxLayout,
+  composeInteractionHandlers,
+  cx,
+  createLayoutClasses,
+  getBreakpointIndex,
+  prefersReducedMotion,
+  resolveResponsiveAtBreakpoint,
+  buildClampStyle,
+  decodeHtmlEntities,
+  stripHtmlTags,
+  stateLinkProps,
+  resolveRadiusInput,
+  type BoxLayoutProps,
+  type StateLinkInput,
+  type ResponsiveInput,
+  type ResponsiveValue,
+} from '../../core';
 import type { LexicalDocument } from './types';
+import { flattenLegacyBlocks, parseLegacyRichText, type LegacyTextBlock } from './legacy-html';
 import { renderLexicalContent } from './LexicalRenderer';
 import type { RevealProps } from '../../core/reveal/reveal';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
@@ -15,20 +34,11 @@ import { readMotionDefaultMs } from '../../core/base/motion-config';
 
 const c = createLayoutClasses(styles);
 
-type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
-type Block =
-  | { type: 'heading'; level: HeadingLevel; content: string }
-  | { type: 'paragraph'; parts: string[] }
-  | { type: 'list'; tag: 'ul' | 'ol'; items: string[] };
-
 type LexicalNode = {
   type?: string;
   text?: string;
   children?: LexicalNode[];
 };
-
-const BR_REGEX = /<br\s*\/?>/gi;
-const BLOCK_TAG_REGEX = /<(h[1-6]|p|ul|ol)>([\s\S]*?)<\/\1>/gi;
 
 export type AnimationKey = 'counter' | 'textSlide' | 'textClip';
 
@@ -60,7 +70,9 @@ function parseAnimation(animation: ResponsiveInput<AnimationInput> | undefined):
     return { animation: undefined, textSlideOptions: undefined, textClipOptions: undefined };
   }
 
-  const normalize = (v: AnimationInput): { key: AnimationKey; options?: TextSlideOptions | TextClipOptions } => {
+  const normalize = (
+    v: AnimationInput,
+  ): { key: AnimationKey; options?: TextSlideOptions | TextClipOptions } => {
     if (Array.isArray(v) && v.length >= 1) {
       const key = v[0] as AnimationKey;
       const options = v.length >= 2 ? (v[1] as TextSlideOptions | TextClipOptions) : undefined;
@@ -73,8 +85,8 @@ function parseAnimation(animation: ResponsiveInput<AnimationInput> | undefined):
     const { key, options } = normalize(animation as AnimationInput);
     return {
       animation: key,
-      textSlideOptions: key === 'textSlide' ? options as TextSlideOptions : undefined,
-      textClipOptions: key === 'textClip' ? options as TextClipOptions : undefined,
+      textSlideOptions: key === 'textSlide' ? (options as TextSlideOptions) : undefined,
+      textClipOptions: key === 'textClip' ? (options as TextClipOptions) : undefined,
     };
   }
 
@@ -85,86 +97,43 @@ function parseAnimation(animation: ResponsiveInput<AnimationInput> | undefined):
       AnimationKey | null,
     ];
     const options = animation.map((x) =>
-      x != null && Array.isArray(x) && x.length >= 2 ? (x[1] as TextSlideOptions | TextClipOptions) : undefined
-    ) as [TextSlideOptions | TextClipOptions | undefined, TextSlideOptions | TextClipOptions | undefined, TextSlideOptions | TextClipOptions | undefined];
+      x != null && Array.isArray(x) && x.length >= 2
+        ? (x[1] as TextSlideOptions | TextClipOptions)
+        : undefined,
+    ) as [
+      TextSlideOptions | TextClipOptions | undefined,
+      TextSlideOptions | TextClipOptions | undefined,
+      TextSlideOptions | TextClipOptions | undefined,
+    ];
     return {
       animation: keys as ResponsiveInput<AnimationKey>,
-      textSlideOptions: options.map(o => o && (o as TextSlideOptions)) as ResponsiveInput<TextSlideOptions | undefined>,
-      textClipOptions: options.map(o => o && (o as TextClipOptions)) as ResponsiveInput<TextClipOptions | undefined>,
+      textSlideOptions: options.map((o) => o && (o as TextSlideOptions)) as ResponsiveInput<
+        TextSlideOptions | undefined
+      >,
+      textClipOptions: options.map((o) => o && (o as TextClipOptions)) as ResponsiveInput<
+        TextClipOptions | undefined
+      >,
     };
   }
 
   const { key, options } = normalize(animation as AnimationInput);
   return {
     animation: key,
-    textSlideOptions: key === 'textSlide' ? options as TextSlideOptions : undefined,
-    textClipOptions: key === 'textClip' ? options as TextClipOptions : undefined,
+    textSlideOptions: key === 'textSlide' ? (options as TextSlideOptions) : undefined,
+    textClipOptions: key === 'textClip' ? (options as TextClipOptions) : undefined,
   };
 }
 
-function parseListContent(content: string): string[] {
-  const items: string[] = [];
-  const liRegex = /<li>([\s\S]*?)<\/li>/gi;
-  let match;
-  while ((match = liRegex.exec(content)) !== null) {
-    items.push((match[1] ?? '').trim());
-  }
-  return items;
-}
-
-function normalizeListTags(content: string): string {
-  return content
-    .replace(/<ul[^>]*>/gi, '<ul>')
-    .replace(/<ol[^>]*>/gi, '<ol>')
-    .replace(/<li[^>]*>/gi, '<li>');
-}
-
-function parseRichText(content: string): Block[] {
-  if (!content.trim()) return [];
-  content = sanitizeRichTextHtml(normalizeListTags(content));
-
-  const blocks: Block[] = [];
-  let lastIndex = 0;
-  const re = new RegExp(BLOCK_TAG_REGEX.source, 'gi');
-  let match: RegExpExecArray | null;
-
-  while ((match = re.exec(content)) !== null) {
-    const before = content.slice(lastIndex, match.index).trim();
-    if (before) {
-      const parts = before.split(BR_REGEX).map((s) => s.trim()).filter(Boolean);
-      if (parts.length) blocks.push({ type: 'paragraph', parts });
-    }
-    const [, tag = '', body = ''] = match;
-    if (tag.startsWith('h')) {
-      const level = parseInt(tag.slice(1)) as HeadingLevel;
-      blocks.push({ type: 'heading', level, content: body.trim() });
-    } else if (tag === 'p') {
-      const parts = body.split(BR_REGEX).map((s) => s.trim()).filter(Boolean);
-      if (parts.length) blocks.push({ type: 'paragraph', parts });
-    } else if (tag === 'ul' || tag === 'ol') {
-      const items = parseListContent(body);
-      blocks.push({ type: 'list', tag, items });
-    }
-    lastIndex = re.lastIndex;
-  }
-
-  const after = content.slice(lastIndex).trim();
-  if (after) {
-    const parts = after.split(BR_REGEX).map((s) => s.trim()).filter(Boolean);
-    if (parts.length) blocks.push({ type: 'paragraph', parts });
-  }
-
-  return blocks;
-}
-
-function renderBlocks(blocks: Block[]): ReactNode[] {
+function renderBlocks(blocks: LegacyTextBlock[]): ReactNode[] {
   return blocks.flatMap((block, blockIndex) => {
     if (block.type === 'heading') {
       const Tag = `h${block.level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
-      return [<Tag
-          key={`heading-${block.level}-${blockIndex}`}
-          dangerouslySetInnerHTML={{ __html: block.content }}
-      />];
+      return [
+        <Tag
+            key={`heading-${block.level}-${blockIndex}`}
+            dangerouslySetInnerHTML={{ __html: block.content }}
+        />,
+      ];
     }
 
     if (block.type === 'list') {
@@ -192,18 +161,6 @@ function renderBlocks(blocks: Block[]): ReactNode[] {
   });
 }
 
-function flattenBlocksToText(blocks: Block[]): string {
-  return blocks
-    .flatMap((block) => {
-      if (block.type === 'heading') return [block.content];
-      if (block.type === 'list') return block.items;
-      return block.parts;
-    })
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function extractLexicalPlainText(node: unknown): string {
   if (!node || typeof node !== 'object') return '';
 
@@ -225,9 +182,20 @@ function extractLexicalPlainText(node: unknown): string {
 }
 
 /** `plain` — без типографики варианта: блоки наследуют шрифт окружения, роль (`role-*`) по-прежнему красит блок. */
-export type LexicalTextVariant = 'default' | 'plain' | 'style-1' | 'style-2' | 'style-3' | 'style-4' | 'style-5';
+export type LexicalTextVariant =
+  | 'default'
+  | 'plain'
+  | 'style-1'
+  | 'style-2'
+  | 'style-3'
+  | 'style-4'
+  | 'style-5';
 
-export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color' | 'content'>, BoxLayoutProps, SharedMotionProps, RevealProps {
+export interface LexicalTextProps
+  extends Omit<HTMLAttributes<HTMLDivElement>, 'color' | 'content'>,
+    BoxLayoutProps,
+    SharedMotionProps,
+    RevealProps {
   /** Безопасная HTML-строка либо документ Lexical с проверяемыми узлами. */
   content?: string | LexicalDocument | null;
   variant?: ResponsiveValue<LexicalTextVariant>;
@@ -239,18 +207,72 @@ export interface LexicalTextProps extends Omit<HTMLAttributes<HTMLDivElement>, '
   className?: string;
   style?: CSSProperties;
 
+  /** Inline links are active by default; `text` keeps link content without nested anchors. */
+  links?: 'active' | 'text';
   linkState?: StateLinkInput;
 }
 
-export function LexicalText({ content, variant = ['default', 'default', 'default'], w, h, animation, animate, rows, ellipsis, bg, color, r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, grow, perspective3d, parallax, reveal, className = '', style, linkState, onMouseEnter, onMouseLeave, ...rest }: LexicalTextProps) {
+export function LexicalText({
+  content,
+  variant = ['default', 'default', 'default'],
+  w,
+  h,
+  animation,
+  animate,
+  rows,
+  ellipsis,
+  bg,
+  color,
+  r,
+  tlr,
+  trr,
+  brr,
+  blr,
+  borderTLR,
+  borderTRR,
+  borderBRR,
+  borderBLR,
+  grow,
+  perspective3d,
+  parallax,
+  reveal,
+  className = '',
+  style,
+  links = 'active',
+  linkState,
+  onMouseEnter,
+  onMouseLeave,
+  ...rest
+}: LexicalTextProps) {
   const { box, rest: props } = splitBoxLayout(rest);
   // Пустой контент узла не рисует, поэтому и прятать нечего: атрибуты появления едут только с узлом.
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate, reveal });
-  const radiusProps = resolveRadiusInput({ r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR });
-  const setRootRef = useCallback((node: HTMLDivElement | null) => {
-    setMotionNode(node);
-  }, [setMotionNode]);
-  const linkedHandlers = stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { ...props, onMouseEnter, onMouseLeave }));
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
+    perspective3d,
+    parallax,
+    animate,
+    reveal,
+  });
+  const radiusProps = resolveRadiusInput({
+    r,
+    tlr,
+    trr,
+    brr,
+    blr,
+    borderTLR,
+    borderTRR,
+    borderBRR,
+    borderBLR,
+  });
+  const setRootRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      setMotionNode(node);
+    },
+    [setMotionNode],
+  );
+  const linkedHandlers = stateLinkProps(
+    linkState,
+    composeInteractionHandlers(motionHandlers, { ...props, onMouseEnter, onMouseLeave }),
+  );
   const hasRows = rows !== undefined;
   const hasSingleLineEllipsis = Boolean(ellipsis) && !hasRows;
   const clampStyle = buildClampStyle(rows);
@@ -259,7 +281,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
     styles.RichText,
     ...boxLayout(c, { ...box, ...radiusProps, w, h, bg, grow }),
     ...c.value('color', color),
-    className
+    className,
   );
   const rootStyle = {
     ...(motionStyle ?? null),
@@ -269,7 +291,8 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
 
   // Брейкпоинт в рантайме нужен, только если вариант или анимация меняются по ширине: иначе
   // каждый экземпляр держал слушатель resize и рендерился на каждом его событии.
-  const responsive = animation !== undefined || (Array.isArray(variant) && new Set(variant).size > 1);
+  const responsive =
+    animation !== undefined || (Array.isArray(variant) && new Set(variant).size > 1);
 
   useEffect(() => {
     if (!responsive || typeof window === 'undefined') return undefined;
@@ -292,8 +315,16 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
 
   const parsed = parseAnimation(animation);
   const resolvedAnim = resolveResponsiveAtBreakpoint(parsed.animation, undefined, breakpointIndex);
-  const resolvedTextSlideOpts = resolveResponsiveAtBreakpoint(parsed.textSlideOptions, undefined, breakpointIndex);
-  const resolvedTextClipOpts = resolveResponsiveAtBreakpoint(parsed.textClipOptions, undefined, breakpointIndex);
+  const resolvedTextSlideOpts = resolveResponsiveAtBreakpoint(
+    parsed.textSlideOptions,
+    undefined,
+    breakpointIndex,
+  );
+  const resolvedTextClipOpts = resolveResponsiveAtBreakpoint(
+    parsed.textClipOptions,
+    undefined,
+    breakpointIndex,
+  );
   const isTextSlide = resolvedAnim === 'textSlide' && resolvedTextSlideOpts?.steps != null;
   const isTextClip = resolvedAnim === 'textClip' && resolvedTextClipOpts?.steps != null;
 
@@ -307,7 +338,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
 
   useEffect(() => {
     if ((isTextSlide || isTextClip) && itemRefs.current.length > 0) {
-      const hs = itemRefs.current.map(el => el?.offsetHeight || 0);
+      const hs = itemRefs.current.map((el) => el?.offsetHeight || 0);
       setHeights(hs);
       if (isTextSlide) {
         const cum = hs.reduce((acc, h) => {
@@ -318,13 +349,22 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
         setContainerHeight(hs[resolvedTextSlideOpts?.currentStep ?? 0] || 0);
       }
     }
-  }, [isTextSlide, isTextClip, resolvedTextSlideOpts?.steps, resolvedTextSlideOpts?.currentStep, resolvedTextClipOpts?.steps]);
+  }, [
+    isTextSlide,
+    isTextClip,
+    resolvedTextSlideOpts?.steps,
+    resolvedTextSlideOpts?.currentStep,
+    resolvedTextClipOpts?.steps,
+  ]);
 
   // Смена шага textClip: шторка закрывается, шаг меняется, шторка открывается. Все таймеры цепочки
   // снимаются при новой смене и размонтировании; иначе запоздалый хвост старой цепочки ставил
   // устаревший шаг. Шаг, на который вернулись до конца хода, просто открывается.
   const clipStep = resolvedTextClipOpts?.currentStep;
-  const clipDurationMs = resolvedTextClipOpts?.duration === undefined ? readMotionDefaultMs('textClip', 'duration') : readMotionTimeMs(resolvedTextClipOpts.duration);
+  const clipDurationMs =
+    resolvedTextClipOpts?.duration === undefined
+      ? readMotionDefaultMs('textClip', 'duration')
+      : readMotionTimeMs(resolvedTextClipOpts.duration);
   const displayedStepRef = useRef(displayedStep);
   displayedStepRef.current = displayedStep;
 
@@ -337,7 +377,9 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
     }
 
     const timers: number[] = [];
-    const later = (run: () => void, ms: number) => { timers.push(window.setTimeout(run, ms)); };
+    const later = (run: () => void, ms: number) => {
+      timers.push(window.setTimeout(run, ms));
+    };
     later(() => {
       setClipPath('inset(0 0 100% 0)');
       later(() => {
@@ -351,7 +393,8 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
   }, [clipStep, clipDurationMs]);
 
   // Detect if content is Lexical JSON (object with root.children) vs HTML string
-  const isLexicalJSON = content && typeof content === 'object' && Array.isArray(content.root?.children);
+  const isLexicalJSON =
+    content && typeof content === 'object' && Array.isArray(content.root?.children);
 
   // If Lexical JSON, render it directly without animation support
   if (isLexicalJSON && content && typeof content === 'object') {
@@ -369,8 +412,12 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
             {...linkedHandlers}
         >
           <p
-              className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)}
-              style={clampStyle}
+            className={cx(
+              styles.previewText,
+              hasRows && styles.clamp,
+              hasSingleLineEllipsis && styles.ellipsis,
+            )}
+            style={clampStyle}
           >
             {previewText}
           </p>
@@ -387,7 +434,7 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
           {...props}
           {...linkedHandlers}
       >
-        {renderLexicalContent(content)}
+        {renderLexicalContent(content, links)}
       </div>
     );
   }
@@ -413,11 +460,13 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
           }}
         >
           {resolvedTextSlideOpts.steps.map((stepContent, index) => {
-            const blocks = parseRichText(decodeHtmlEntities(stepContent));
+            const blocks = parseLegacyRichText(decodeHtmlEntities(stepContent), links);
             return (
               <div
                 key={`step-${index}`}
-                ref={(el) => { itemRefs.current[index] = el; }}
+                ref={(el) => {
+                  itemRefs.current[index] = el;
+                }}
                 className={styles.textItem}
                 style={{
                   position: 'absolute',
@@ -454,11 +503,13 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
           }}
         >
           {resolvedTextClipOpts.steps.map((stepContent, index) => {
-            const blocks = parseRichText(decodeHtmlEntities(stepContent));
+            const blocks = parseLegacyRichText(decodeHtmlEntities(stepContent), links);
             return (
               <div
                 key={`step-${index}`}
-                ref={(el) => { itemRefs.current[index] = el; }}
+                ref={(el) => {
+                  itemRefs.current[index] = el;
+                }}
                 className={styles.clipItem}
                 style={{
                   position: 'absolute',
@@ -477,11 +528,12 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
     );
   }
 
-  const blocks = htmlContent ? parseRichText(decodeHtmlEntities(htmlContent)) : [];
+  const blocks = htmlContent ? parseLegacyRichText(decodeHtmlEntities(htmlContent), links) : [];
   if (blocks.length === 0) return null;
 
   if (hasRows || hasSingleLineEllipsis) {
-    const previewText = stripHtmlTags(flattenBlocksToText(blocks)) || stripHtmlTags(decodeHtmlEntities(htmlContent));
+    const previewText =
+      stripHtmlTags(flattenLegacyBlocks(blocks)) || stripHtmlTags(decodeHtmlEntities(htmlContent));
 
     return (
       <div
@@ -493,8 +545,12 @@ export function LexicalText({ content, variant = ['default', 'default', 'default
           {...linkedHandlers}
       >
         <p
-            className={cx(styles.previewText, hasRows && styles.clamp, hasSingleLineEllipsis && styles.ellipsis)}
-            style={clampStyle}
+          className={cx(
+            styles.previewText,
+            hasRows && styles.clamp,
+            hasSingleLineEllipsis && styles.ellipsis,
+          )}
+          style={clampStyle}
         >
           {previewText}
         </p>

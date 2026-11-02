@@ -6,7 +6,8 @@ import { useNearestCarouselControls } from '../controls';
 import { Flex } from '../../Flex';
 import { Button } from '../../Button';
 import { Icon } from '../../Icon';
-import { cx } from '../../../core';
+import { assetUrl, cx } from '../../../core';
+import arrowIcon from '../../../../assets/icons/ui/arrows/arrow_bold.svg';
 
 export interface CarouselNavProps {
     className?: string;
@@ -45,7 +46,7 @@ export function CarouselNav({ className, carouselId }: CarouselNavProps) {
                         data-carousel-nav-button='prev'
                     >
                         <Icon
-                            src='./ui/arrows/arrow_gold.svg'
+                            src={assetUrl(arrowIcon)}
                             w={[70, 36, null]}
                             h={[40, 20, null]}
                             aria-hidden
@@ -66,7 +67,7 @@ export function CarouselNav({ className, carouselId }: CarouselNavProps) {
                         data-carousel-nav-button='next'
                     >
                         <Icon
-                            src='./ui/arrows/arrow_gold.svg'
+                            src={assetUrl(arrowIcon)}
                             w={[70, 36, null]}
                             h={[40, 20, null]}
                             aria-hidden

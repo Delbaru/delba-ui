@@ -1,16 +1,25 @@
 'use client';
 
-import { createContext, useContext, useId, useState, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 
 import styles from './Accordion.module.scss';
 
 import { Button } from '../Button';
 import { Flex, type FlexProps } from '../Flex';
-import { cx, mergeComponentStates, type WithRef } from '../../core';
+import { cx, mergeComponentStates, useMergedRefs, type WithRef } from '../../core';
 import {
-    resolveAccordionItemTrigger,
-    type AccordionItemTriggerButtonProps,
-    type AccordionItemTriggerOptions,
+  resolveAccordionItemTrigger,
+  type AccordionItemTriggerButtonProps,
+  type AccordionItemTriggerOptions,
 } from './trigger-options';
 
 /** Уровень заголовка-обёртки триггера. */
@@ -18,62 +27,79 @@ export type AccordionHeading = 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
 // Сворачивание, ссылка и своп принадлежат самому аккордеону — снаружи их не пробросить.
 type ShellOmit =
-  | 'children' | 'defaultValue'
-  | 'collapse' | 'collapseGap' | 'collapseFade' | 'collapseAxis' | 'collapseAppear' | 'collapseOverflowVisible'
-  | 'collapseKeepMounted' | 'onCollapseEnd' | 'onCollapseFound'
-  | 'href' | 'target' | 'rel' | 'download' | 'newTab' | 'nofollow' | 'noreferrer' | 'linkState' | 'transitionKey' | 'animate';
+  | 'children'
+  | 'defaultValue'
+  | 'collapse'
+  | 'collapseGap'
+  | 'collapseFade'
+  | 'collapseAxis'
+  | 'collapseAppear'
+  | 'collapseOverflowVisible'
+  | 'collapseKeepMounted'
+  | 'onCollapseEnd'
+  | 'onCollapseFound'
+  | 'href'
+  | 'target'
+  | 'rel'
+  | 'download'
+  | 'newTab'
+  | 'nofollow'
+  | 'noreferrer'
+  | 'linkState'
+  | 'transitionKey'
+  | 'animate';
 type AccordionRootOmit = Exclude<ShellOmit, 'animate'>;
 
 type AccordionShellProps = Omit<FlexProps, AccordionRootOmit> & {
-    children?: ReactNode;
-    /** Иконка-индикатор для всех пунктов (плюс, стрелка): встаёт в триггер справа, `aria-hidden`.
-     *  Поворот и цвет — у проекта по `[state~='open']`. Пункт перебивает своим `indicator`. */
-    indicator?: ReactNode;
-    /** Уровень заголовка над триггером для всех пунктов; по умолчанию `h3`. Пункт перебивает. */
-    headingAs?: AccordionHeading;
+  children?: ReactNode;
+  /** Иконка-индикатор для всех пунктов (плюс, стрелка): встаёт в триггер справа, `aria-hidden`.
+   *  Поворот и цвет — у проекта по `[state~='open']`. Пункт перебивает своим `indicator`. */
+  indicator?: ReactNode;
+  /** Уровень заголовка над триггером для всех пунктов; по умолчанию `h3`. Пункт перебивает. */
+  headingAs?: AccordionHeading;
 };
 
 export type AccordionSingleProps = AccordionShellProps & {
-    /** Несколько открытых пунктов сразу. Без него открыт максимум один. */
-    multiple?: false;
-    /** Открытый пункт (управляемый режим); `null` — все закрыты. */
-    value?: string | null;
-    /** Открытый пункт на старте (неуправляемый режим). */
-    defaultValue?: string | null;
-    /** Пункт открыли или закрыли; `null` — закрыт последний. */
-    onValueChange?: (value: string | null) => void;
-    /** Можно закрыть единственный открытый пункт повторным нажатием. По умолчанию `true`. */
-    collapsible?: boolean;
+  /** Несколько открытых пунктов сразу. Без него открыт максимум один. */
+  multiple?: false;
+  /** Открытый пункт (управляемый режим); `null` — все закрыты. */
+  value?: string | null;
+  /** Открытый пункт на старте (неуправляемый режим). */
+  defaultValue?: string | null;
+  /** Пункт открыли или закрыли; `null` — закрыт последний. */
+  onValueChange?: (value: string | null) => void;
+  /** Можно закрыть единственный открытый пункт повторным нажатием. По умолчанию `true`. */
+  collapsible?: boolean;
 };
 
 export type AccordionMultipleProps = AccordionShellProps & {
-    /** Несколько открытых пунктов сразу: значение — массив. */
-    multiple: true;
-    /** Открытые пункты (управляемый режим). */
-    value?: readonly string[];
-    /** Открытые пункты на старте (неуправляемый режим). */
-    defaultValue?: readonly string[];
-    /** Новый набор открытых пунктов. */
-    onValueChange?: (value: string[]) => void;
-    /** В режиме `multiple` любой пункт закрывается всегда — проп ни на что не влияет. */
-    collapsible?: boolean;
+  /** Несколько открытых пунктов сразу: значение — массив. */
+  multiple: true;
+  /** Открытые пункты (управляемый режим). */
+  value?: readonly string[];
+  /** Открытые пункты на старте (неуправляемый режим). */
+  defaultValue?: readonly string[];
+  /** Новый набор открытых пунктов. */
+  onValueChange?: (value: string[]) => void;
+  /** В режиме `multiple` любой пункт закрывается всегда — проп ни на что не влияет. */
+  collapsible?: boolean;
 };
 
 export type AccordionProps = AccordionSingleProps | AccordionMultipleProps;
 
 interface AccordionContextValue {
-    rootId: string;
-    isOpen: (value: string) => boolean;
-    toggle: (value: string) => void;
-    reveal: (value: string) => void;
-    indicator: ReactNode;
-    headingAs: AccordionHeading;
+  rootId: string;
+  isOpen: (value: string) => boolean;
+  toggle: (value: string) => void;
+  reveal: (value: string) => void;
+  indicator: ReactNode;
+  headingAs: AccordionHeading;
 }
 
 const AccordionContext = createContext<AccordionContextValue | null>(null);
 
 const toList = (value: string | null | readonly string[] | undefined): readonly string[] =>
-    value == null ? [] : typeof value === 'string' ? [value] : value;
+  value == null ? [] : typeof value === 'string' ? [value] : value;
 
 const TRIGGER = 'data-accordion-trigger';
 
@@ -81,29 +107,37 @@ const TRIGGER = 'data-accordion-trigger';
 // не даём ему уйти под шапку (`scroll-padding-top`) и за верх экрана; в остальном окно не трогаем —
 // иначе страница прокручивается на каждый клик. Свой скролл пользователя удержание отменяет.
 const HOLD_MAX_MS = 2000;
+const holdByRoot = new WeakMap<HTMLElement, () => void>();
 
 function holdPosition(el: HTMLElement, root: HTMLElement | null) {
-    const floor = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
-    const until = performance.now() + HOLD_MAX_MS;
-    let frame = 0;
-    let settled = 0;
-    const stop = () => {
-        cancelAnimationFrame(frame);
-        window.removeEventListener('wheel', stop);
-        window.removeEventListener('touchstart', stop);
-    };
-    const tick = () => {
-        const shift = Math.min(el.getBoundingClientRect().top - floor, 0);
-        // `instant`: при `scroll-behavior: smooth` каждый кадр перезапускал бы плавный перелёт.
-        if (Math.abs(shift) >= 1) window.scrollBy({ top: shift, behavior: 'instant' });
-        const moving = (root?.getAnimations({ subtree: true }).length ?? 0) > 0;
-        settled = moving || Math.abs(shift) >= 1 ? 0 : settled + 1;
-        if (settled < 3 && performance.now() < until) frame = requestAnimationFrame(tick);
-        else stop();
-    };
-    window.addEventListener('wheel', stop, { passive: true });
-    window.addEventListener('touchstart', stop, { passive: true });
-    frame = requestAnimationFrame(tick);
+  if (!root) return;
+  holdByRoot.get(root)?.();
+  const document = root.ownerDocument;
+  const view = document.defaultView;
+  if (!view) return;
+  const floor = parseFloat(view.getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+  const until = view.performance.now() + HOLD_MAX_MS;
+  let frame = 0;
+  let settled = 0;
+  const stop = () => {
+    view.cancelAnimationFrame(frame);
+    view.removeEventListener('wheel', stop);
+    view.removeEventListener('touchstart', stop);
+    if (holdByRoot.get(root) === stop) holdByRoot.delete(root);
+  };
+  holdByRoot.set(root, stop);
+  const tick = () => {
+    const shift = Math.min(el.getBoundingClientRect().top - floor, 0);
+    // `instant`: при `scroll-behavior: smooth` каждый кадр перезапускал бы плавный перелёт.
+    if (Math.abs(shift) >= 1) view.scrollBy({ top: shift, behavior: 'instant' });
+    const moving = (root?.getAnimations({ subtree: true }).length ?? 0) > 0;
+    settled = moving || Math.abs(shift) >= 1 ? 0 : settled + 1;
+    if (settled < 3 && view.performance.now() < until) frame = view.requestAnimationFrame(tick);
+    else stop();
+  };
+  view.addEventListener('wheel', stop, { passive: true });
+  view.addEventListener('touchstart', stop, { passive: true });
+  frame = view.requestAnimationFrame(tick);
 }
 
 /**
@@ -113,86 +147,108 @@ function holdPosition(el: HTMLElement, root: HTMLElement | null) {
  * разделители, иконку, цвета и кольцо фокуса задаёт проект — классами и `[state~='open']`.
  */
 export function Accordion(props: WithRef<AccordionProps, HTMLElement>) {
-    // Колбэк зовём через `props`: так TS сужает union по `multiple`, у деструктуры сужения нет.
-    const { ref, className, multiple, value, defaultValue, onValueChange: _onValueChange, collapsible, indicator, headingAs = 'h3', ...rest } = props;
-    const rootId = useId();
-    const [inner, setInner] = useState<readonly string[]>(() => toList(defaultValue));
-    const controlled = value !== undefined;
-    const openList = controlled ? toList(value) : inner;
+  // Колбэк зовём через `props`: так TS сужает union по `multiple`, у деструктуры сужения нет.
+  const {
+    ref,
+    className,
+    multiple,
+    value,
+    defaultValue,
+    onValueChange: _onValueChange,
+    collapsible,
+    indicator,
+    headingAs = 'h3',
+    ...rest
+  } = props;
+  const rootId = useId();
+  const rootRef = useRef<HTMLElement | null>(null);
+  const setRootNode = useCallback((node: HTMLElement | null) => {
+    const previousRoot = rootRef.current;
+    if (previousRoot && previousRoot !== node) holdByRoot.get(previousRoot)?.();
+    rootRef.current = node;
+  }, []);
+  const setRootRef = useMergedRefs(setRootNode, ref);
+  const [inner, setInner] = useState<readonly string[]>(() => toList(defaultValue));
+  const controlled = value !== undefined;
+  const openList = controlled ? toList(value) : inner;
 
-    const commit = (next: readonly string[]) => {
-        if (!controlled) setInner(next);
-        if (props.multiple) props.onValueChange?.([...next]);
-        else props.onValueChange?.(next[0] ?? null);
-    };
+  const commit = (next: readonly string[]) => {
+    if (!controlled) setInner(next);
+    if (props.multiple) props.onValueChange?.([...next]);
+    else props.onValueChange?.(next[0] ?? null);
+  };
 
-    const isOpen = (item: string) => openList.includes(item);
+  const isOpen = (item: string) => openList.includes(item);
 
-    const toggle = (item: string) => {
-        if (isOpen(item)) {
-            if (multiple) commit(openList.filter((v) => v !== item));
-            else if (collapsible ?? true) commit([]);
-        } else {
-            commit(multiple ? [...openList, item] : [item]);
-        }
-    };
+  const toggle = (item: string) => {
+    if (isOpen(item)) {
+      if (multiple) commit(openList.filter((v) => v !== item));
+      else if (collapsible ?? true) commit([]);
+    } else {
+      commit(multiple ? [...openList, item] : [item]);
+    }
+  };
 
-    const reveal = (item: string) => {
-        if (!isOpen(item)) toggle(item);
-    };
+  const reveal = (item: string) => {
+    if (!isOpen(item)) toggle(item);
+  };
 
-    // Триггеры ищем по id своего корня: у вложенного аккордеона он другой, и его стрелки сюда не доходят.
-    const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-        rest.onKeyDown?.(event);
-        const target = event.target as HTMLElement;
-        if (event.defaultPrevented || target.getAttribute(TRIGGER) !== rootId) return;
+  // Триггеры ищем по id своего корня: у вложенного аккордеона он другой, и его стрелки сюда не доходят.
+  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    rest.onKeyDown?.(event);
+    const target = event.target as HTMLElement;
+    if (event.defaultPrevented || target.getAttribute(TRIGGER) !== rootId) return;
 
-        const triggers = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(`[${TRIGGER}="${CSS.escape(rootId)}"]:not(:disabled)`));
-        const index = triggers.indexOf(target);
-        const last = triggers.length - 1;
-        const moves: Record<string, number> = {
-            ArrowDown: index >= last ? 0 : index + 1,
-            ArrowUp: index <= 0 ? last : index - 1,
-            Home: 0,
-            End: last,
-        };
-        const nextIndex = moves[event.key];
-        if (nextIndex === undefined) return;
-
-        event.preventDefault();
-        triggers[nextIndex]?.focus();
-    };
-
-    return (
-        <AccordionContext.Provider value={{ rootId, isOpen, toggle, reveal, indicator, headingAs }}>
-            <Flex
-                ref={ref}
-                {...rest}
-                className={cx(styles.Accordion, className)}
-                data-accordion={rootId}
-                onKeyDown={onKeyDown}
-            />
-        </AccordionContext.Provider>
+    const triggers = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        `[${TRIGGER}="${CSS.escape(rootId)}"]:not(:disabled)`,
+      ),
     );
+    const index = triggers.indexOf(target);
+    const last = triggers.length - 1;
+    const moves: Record<string, number> = {
+      ArrowDown: index >= last ? 0 : index + 1,
+      ArrowUp: index <= 0 ? last : index - 1,
+      Home: 0,
+      End: last,
+    };
+    const nextIndex = moves[event.key];
+    if (nextIndex === undefined) return;
+
+    event.preventDefault();
+    triggers[nextIndex]?.focus();
+  };
+
+  return (
+    <AccordionContext.Provider value={{ rootId, isOpen, toggle, reveal, indicator, headingAs }}>
+      <Flex
+          ref={setRootRef}
+          {...rest}
+          className={cx(styles.Accordion, className)}
+          data-accordion={rootId}
+          onKeyDown={onKeyDown}
+      />
+    </AccordionContext.Provider>
+  );
 }
 
 export interface AccordionItemProps extends Omit<FlexProps, ShellOmit> {
-    /** Ключ пункта: им пункт значится в `value` аккордеона. Уникален в пределах аккордеона. */
-    value: string;
-    /** Содержимое кнопки-триггера или её настройки с `content`; настройки объекта имеют приоритет над `triggerProps`. */
-    trigger: ReactNode | AccordionItemTriggerOptions;
-    /** Содержимое панели. */
-    children?: ReactNode;
-    /** Уровень заголовка над триггером; по умолчанию — `headingAs` аккордеона. */
-    headingAs?: AccordionHeading;
-    /** Иконка-индикатор этого пункта; по умолчанию — `indicator` аккордеона. `null` — без иконки. */
-    indicator?: ReactNode;
-    /** Пункт не раскрывается и пропускается стрелками. */
-    disabled?: boolean;
-    /** Совместимые пропсы кнопки-триггера. При конфликте настройки `trigger` имеют приоритет; `className` объединяется. aria, disabled и обработчик задаёт кит. */
-    triggerProps?: AccordionItemTriggerButtonProps;
-    /** Пропсы панели (раскладка, отступы содержимого). Сворачивание и роль ставит кит. */
-    panelProps?: Omit<FlexProps, ShellOmit | 'id' | 'role' | 'aria-labelledby'>;
+  /** Ключ пункта: им пункт значится в `value` аккордеона. Уникален в пределах аккордеона. */
+  value: string;
+  /** Содержимое кнопки-триггера или её настройки с `content`; настройки объекта имеют приоритет над `triggerProps`. */
+  trigger: ReactNode | AccordionItemTriggerOptions;
+  /** Содержимое панели. */
+  children?: ReactNode;
+  /** Уровень заголовка над триггером; по умолчанию — `headingAs` аккордеона. */
+  headingAs?: AccordionHeading;
+  /** Иконка-индикатор этого пункта; по умолчанию — `indicator` аккордеона. `null` — без иконки. */
+  indicator?: ReactNode;
+  /** Пункт не раскрывается и пропускается стрелками. */
+  disabled?: boolean;
+  /** Совместимые пропсы кнопки-триггера. При конфликте настройки `trigger` имеют приоритет; `className` объединяется. aria, disabled и обработчик задаёт кит. */
+  triggerProps?: AccordionItemTriggerButtonProps;
+  /** Пропсы панели (раскладка, отступы содержимого). Сворачивание и роль ставит кит. */
+  panelProps?: Omit<FlexProps, ShellOmit | 'id' | 'role' | 'aria-labelledby'>;
 }
 
 /**
@@ -200,74 +256,81 @@ export interface AccordionItemProps extends Omit<FlexProps, ShellOmit> {
  * стилизуется через триггер (`[state~='open'] > …`). Свой `state` пункта и `triggerProps.state` склеиваются с ним.
  */
 export function AccordionItem({
-    ref,
-    value,
-    trigger,
-    children,
-    headingAs,
-    indicator,
-    disabled,
-    triggerProps,
-    panelProps,
-    className,
-    ...props
+  ref,
+  value,
+  trigger,
+  children,
+  headingAs,
+  indicator,
+  disabled,
+  triggerProps,
+  panelProps,
+  className,
+  ...props
 }: WithRef<AccordionItemProps, HTMLElement>) {
-    const ctx = useContext(AccordionContext);
-    const baseId = useId();
-    if (!ctx) throw new Error('AccordionItem живёт только внутри Accordion');
+  const ctx = useContext(AccordionContext);
+  const baseId = useId();
+  if (!ctx) throw new Error('AccordionItem живёт только внутри Accordion');
 
-    const open = ctx.isOpen(value);
-    const state = open ? 'open' : undefined;
-    const Heading = headingAs ?? ctx.headingAs;
-    const icon = indicator === undefined ? ctx.indicator : indicator;
-    const triggerConfig = resolveAccordionItemTrigger(trigger);
-    const triggerId = `${baseId}-trigger`;
-    const panelId = `${baseId}-panel`;
+  const open = ctx.isOpen(value);
+  const state = open ? 'open' : undefined;
+  const Heading = headingAs ?? ctx.headingAs;
+  const icon = indicator === undefined ? ctx.indicator : indicator;
+  const triggerConfig = resolveAccordionItemTrigger(trigger);
+  const triggerId = `${baseId}-trigger`;
+  const panelId = `${baseId}-panel`;
 
-    return (
-        <Flex
-            ref={ref}
-            {...props}
-            className={cx(styles.item, className)}
-            state={mergeComponentStates(state, props.state)}
-            data-disabled={disabled || undefined}
+  return (
+    <Flex
+        ref={ref}
+        {...props}
+        className={cx(styles.item, className)}
+        state={mergeComponentStates(state, props.state)}
+        data-disabled={disabled || undefined}
+    >
+      <Heading className={styles.heading}>
+        <Button
+          {...triggerProps}
+          {...triggerConfig.props}
+          className={cx(styles.trigger, triggerProps?.className, triggerConfig.props.className)}
+          id={triggerId}
+          aria-expanded={open}
+          aria-controls={panelId}
+          disabled={disabled}
+          state={mergeComponentStates(state, triggerProps?.state, triggerConfig.props.state)}
+          data-accordion-trigger={ctx.rootId}
+          onClick={(event) => {
+            ctx.toggle(value);
+            holdPosition(
+              event.currentTarget,
+              event.currentTarget.closest<HTMLElement>(
+                `[data-accordion="${CSS.escape(ctx.rootId)}"]`,
+              ),
+            );
+          }}
         >
-            <Heading className={styles.heading}>
-                <Button
-                    {...triggerProps}
-                    {...triggerConfig.props}
-                    className={cx(styles.trigger, triggerProps?.className, triggerConfig.props.className)}
-                    id={triggerId}
-                    aria-expanded={open}
-                    aria-controls={panelId}
-                    disabled={disabled}
-                    state={mergeComponentStates(state, triggerProps?.state, triggerConfig.props.state)}
-                    data-accordion-trigger={ctx.rootId}
-                    onClick={(event) => {
-                        ctx.toggle(value);
-                        holdPosition(event.currentTarget, event.currentTarget.closest<HTMLElement>(`[data-accordion="${CSS.escape(ctx.rootId)}"]`));
-                    }}
-                >
-                    <span className={styles.label}>{triggerConfig.content}</span>
-                    {icon != null && <span aria-hidden className={styles.indicator}>{icon}</span>}
-                </Button>
-            </Heading>
-            <Flex
-                {...panelProps}
-                className={cx(styles.panel, panelProps?.className)}
-                id={panelId}
-                role='region'
-                aria-labelledby={triggerId}
-                state={mergeComponentStates(state, panelProps?.state)}
-                collapse={{
-                    open,
-                    fade: true,
-                    keepMounted: true,
-                    onFound: () => ctx.reveal(value),
-                }}
-            >
-                {children}
-            </Flex>
-        </Flex>
-    );
+          <span className={styles.label}>{triggerConfig.content}</span>
+          {icon != null && (
+            <span aria-hidden className={styles.indicator}>{icon}</span>
+          )}
+        </Button>
+      </Heading>
+      <Flex
+        {...panelProps}
+        className={cx(styles.panel, panelProps?.className)}
+        id={panelId}
+        role="region"
+        aria-labelledby={triggerId}
+        state={mergeComponentStates(state, panelProps?.state)}
+        collapse={{
+          open,
+          fade: true,
+          keepMounted: true,
+          onFound: () => ctx.reveal(value),
+        }}
+      >
+        {children}
+      </Flex>
+    </Flex>
+  );
 }

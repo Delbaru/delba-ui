@@ -46,12 +46,12 @@ export function Skeleton({ w = ['100%', null, null], h = [16, null, null], r = [
     }
 
     return (
-        <Flex dir={['column', null, null]} gap={gap} w={w} className={className}>
+        <Flex dir={['column', 'column', 'column']} gap={gap} w={w} className={className}>
             {Array.from({ length: rows }, (_row, index) => (
                 <Flex
                     key={index}
                     // Последняя строка короче остальных: рваный край читается как текст (см. JSDoc).
-                    w={index === rows - 1 ? ['70%', null, null] : ['100%', null, null]}
+                    w={index === rows - 1 ? ['70%', '70%', '70%'] : ['100%', '100%', '100%']}
                     h={h}
                     r={r}
                     bg={['var(--line)', 'var(--line)', 'var(--line)']}

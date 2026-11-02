@@ -348,7 +348,7 @@ function ModalSurface({
         onKeyDown={handleKeyDown}
       >
         <div
-            {...scrollbarProps({ width: 4, color: 'var(--primary)', inset: 8, gutter: 'auto', ...scroll?.scrollbar })}
+            {...scrollbarProps(scroll?.scrollbar)}
             className={cx('ui-scrollbar', styles.inner, overflowVisible && styles.innerOverflowVisible, scroll?.gutter === false && styles.noGutter, ...boxLayout(c, scroll ?? {}))}
         >
           {typeof children === 'function' ? children(onClose) : children}

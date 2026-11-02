@@ -8,6 +8,7 @@ import { parseCountContent } from './parseContent';
 import type { TextAnimationContext } from '../types';
 import type { CounterOptions } from './types';
 import { motionDefaults } from '../../../../core/base/motion-config';
+import { useMergedRefs } from '../../../../core';
 
 /**
  * Анимация счётчика: число едет от start к to. trigger='onView' (по умолчанию) запускает анимацию,
@@ -25,7 +26,8 @@ import { motionDefaults } from '../../../../core/base/motion-config';
 export function Counter({ options, content }: TextAnimationContext<CounterOptions>) {
   const ref = useRef<HTMLSpanElement | null>(null);
   const valueRef = useRef<HTMLSpanElement | null>(null);
-  const { isInView } = useInView(ref, { threshold: motionDefaults.counter.threshold });
+  const { isInView, setTarget } = useInView(ref, { threshold: motionDefaults.counter.threshold });
+  const rootRef = useMergedRefs(ref, setTarget);
 
   const parsed = options?.to == null ? parseCountContent(content) : null;
   const to = options?.to ?? parsed?.to ?? 0;
@@ -42,7 +44,7 @@ export function Counter({ options, content }: TextAnimationContext<CounterOption
   useCountUpNode(valueRef, to, { duration: options?.duration, start }, shouldStart, !isInView, text);
 
   return (
-    <span ref={ref} className={'ui-counter'}>
+    <span ref={rootRef} className={'ui-counter'}>
       <span aria-hidden className={'ui-counter-reserve'}>
         {prefix}
         {format(to)}

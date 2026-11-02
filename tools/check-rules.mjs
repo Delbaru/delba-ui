@@ -14,60 +14,178 @@ const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'generated', 'public
 const GRID_PROPS = 'w|h|minW|maxW|minH|maxH|p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|r';
 
 export const RULES = {
-  'jsx-format': { ext: /\.tsx$/, ast: jsxFormatRule, hint: 'короткий тег — в строку, длинный — по одному пропу на строку. Исправить: npm run ui:test --silent -- --fix' },
+  'jsx-format': {
+    ext: /\.tsx$/,
+    ast: jsxFormatRule,
+    hint: 'короткий тег — в строку, длинный — по одному пропу на строку. Исправить: npm run ui:test --silent -- --fix',
+  },
   'raw-button': { ext: /\.tsx$/, test: (line) => /<button[\s>]/.test(line), hint: 'SharedButton*' },
-  'raw-input': { ext: /\.tsx$/, test: (line) => /<input[\s/>]/.test(line), hint: 'SharedInput / SharedCheckbox / SharedRadio' },
-  'raw-anchor': { ext: /\.tsx$/, test: (line) => /<a[\s>]/.test(line), hint: "Text as='a' или Button href" },
-  'inline-svg': { ext: /\.tsx$/, test: (line) => /<svg[\s>]/.test(line), hint: 'файл в public/icons + Icon' },
+  'raw-input': {
+    ext: /\.tsx$/,
+    test: (line) => /<input[\s/>]/.test(line),
+    hint: 'SharedInput / SharedCheckbox / SharedRadio',
+  },
+  'raw-anchor': {
+    ext: /\.tsx$/,
+    test: (line) => /<a[\s>]/.test(line),
+    hint: "Text as='a' или Button href",
+  },
+  'inline-svg': {
+    ext: /\.tsx$/,
+    test: (line) => /<svg[\s>]/.test(line),
+    hint: 'файл в public/icons + Icon',
+  },
   // Появление по интерактивному состоянию анимируется; CMS-данные сами по себе не требуют motion.
-  'unanimated-conditional': { ext: /\.tsx$/, client: true, ast: unanimatedConditionalRule, hint: 'collapse / transitionKey' },
+  'unanimated-conditional': {
+    ext: /\.tsx$/,
+    client: true,
+    ast: unanimatedConditionalRule,
+    hint: 'collapse / transitionKey',
+  },
   'off-grid-number': {
     ext: /\.tsx$/,
     // Одно место — одно нарушение: полный кортеж `[6, 6, 6]` — это одно число, а не три.
-    count: (line) => [...line.matchAll(new RegExp(`\\b(${GRID_PROPS})=\\{(\\[[^\\]]*\\]|-?\\d+)\\}`, 'g'))]
-      .reduce((total, m) => total + new Set((m[2].replace(/'[^']*'|"[^"]*"/g, '').match(/-?\d+/g) ?? []).filter((n) => {
-        const size = Math.abs(Number(n));
-        // Тонкая линия — геометрия, а не шаг отступов. Не разрешаем 1–2px padding/gap.
-        return size % 4 !== 0 && !(/^(w|h|minW|maxW|minH|maxH)$/.test(m[1]) && (size === 1 || size === 2));
-      })).size, 0),
+    count: (line) =>
+      [...line.matchAll(new RegExp(`\\b(${GRID_PROPS})=\\{(\\[[^\\]]*\\]|-?\\d+)\\}`, 'g'))].reduce(
+        (total, m) =>
+          total +
+          new Set(
+            (m[2].replace(/'[^']*'|"[^"]*"/g, '').match(/-?\d+/g) ?? []).filter((n) => {
+              const size = Math.abs(Number(n));
+              // Тонкая линия — геометрия, а не шаг отступов. Не разрешаем 1–2px padding/gap.
+              return (
+                size % 4 !== 0 &&
+                !(/^(w|h|minW|maxW|minH|maxH)$/.test(m[1]) && (size === 1 || size === 2))
+              );
+            }),
+          ).size,
+        0,
+      ),
     hint: 'размер кратный 4',
   },
   'raw-transition': {
     ext: /\.scss$/,
-    test: (line) => /transition[\w-]*\s*:/.test(line) && /\b\d*\.?\d+m?s\b/.test(line) && !line.includes('var(--t'),
+    test: (line) =>
+      /transition[\w-]*\s*:/.test(line) &&
+      /\b\d*\.?\d+m?s\b/.test(line) &&
+      !line.includes('var(--t'),
     hint: 'var(--t-fast|--t-normal|--t-slow)',
   },
-  'media-query': { ext: /\.scss$/, test: (line) => /@media\b/.test(line), hint: 'кортеж пропа или data-hide-*' },
+  'media-query': {
+    ext: /\.scss$/,
+    test: (line) => /@media\b/.test(line),
+    hint: 'кортеж пропа или data-hide-*',
+  },
   // Проп раньше SCSS (docs/rules.md): то, что говорится пропом, в модуле — брак, который ревью ловило много раз.
-  'scss-zero-spacing': { ext: /\.scss$/, test: (line) => /^\s*(margin|padding)(-[a-z]+)?\s*:\s*0\s*;/.test(line), hint: 'проп m / p = [0, 0, 0]' },
-  'scss-flex-none': { ext: /\.scss$/, test: (line) => /^\s*flex\s*:\s*none\b/.test(line), hint: 'minW / minH у элемента' },
+  'scss-zero-spacing': {
+    ext: /\.scss$/,
+    test: (line) => /^\s*(margin|padding)(-[a-z]+)?\s*:\s*0\s*;/.test(line),
+    hint: 'проп m / p = [0, 0, 0]',
+  },
+  'scss-flex-none': {
+    ext: /\.scss$/,
+    test: (line) => /^\s*flex\s*:\s*none\b/.test(line),
+    hint: 'minW / minH у элемента',
+  },
   'scss-theme-rescope': {
     ext: /\.module\.scss$/,
-    test: (line) => /^\s*--(text|text-muted|background|primary|secondary|tertiary)(-[a-z0-9]+)?\s*:/.test(line),
+    test: (line) =>
+      /^\s*--(text|text-muted|background|primary|secondary|tertiary)(-[a-z0-9]+)?\s*:/.test(line),
     hint: 'цвет пропом color у текста, а не переопределением токена темы',
   },
-  'margin-between': { ext: /\.tsx$/, test: (line) => /\s(mt|mb)=\{/.test(line), hint: 'gap у Flex-родителя' },
+  'margin-between': {
+    ext: /\.tsx$/,
+    test: (line) => /\s(mt|mb)=\{/.test(line),
+    hint: 'gap у Flex-родителя',
+  },
   // Генератор утилит видит только литералы на месте вызова: константа даёт мёртвый класс.
-  'const-tuple': { ext: /\.tsx$/, test: (line) => /\s[a-zA-Z]+=\{\[?\s*[A-Z][A-Z0-9_]{2,}\s*[,\]}]/.test(line), hint: 'литерал на месте вызова' },
+  'const-tuple': {
+    ext: /\.tsx$/,
+    test: (line) => /\s[a-zA-Z]+=\{\[?\s*[A-Z][A-Z0-9_]{2,}\s*[,\]}]/.test(line),
+    hint: 'литерал на месте вызова',
+  },
   // Корневой класс модуля = имя компонента: виджет находится в DOM по имени.
   'module-root-class': {
     ext: /\.module\.scss$/,
-    file: (lines, file) => (lines.some((line) => line.startsWith(`.${path.basename(file, '.module.scss')} `)) ? 0 : 1),
+    file: (lines, file) => moduleRootClassViolation(lines.join('\n'), file),
     hint: 'корневой класс = имя компонента',
   },
 };
 
+function stripScssComments(source) {
+  let result = '';
+  let quote;
+  let blockComment = false;
+  let lineComment = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1];
+    if (lineComment) {
+      if (character === '\n') {
+        result += character;
+        lineComment = false;
+      }
+      continue;
+    }
+    if (blockComment) {
+      if (character === '*' && next === '/') {
+        blockComment = false;
+        index += 1;
+      } else if (character === '\n') {
+        result += character;
+      }
+      continue;
+    }
+    if (quote) {
+      result += character;
+      if (character === '\\') {
+        result += next ?? '';
+        index += 1;
+      } else if (character === quote) {
+        quote = undefined;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      result += character;
+    } else if (character === '/' && next === '*') {
+      blockComment = true;
+      index += 1;
+    } else if (character === '/' && next === '/' && (index === 0 || /\s/.test(source[index - 1]))) {
+      lineComment = true;
+      index += 1;
+    } else {
+      result += character;
+    }
+  }
+  return result;
+}
+
+function moduleRootClassViolation(source, file) {
+  const stylesheet = stripScssComments(source);
+  if (!stylesheet.includes('{')) return 0;
+
+  const componentName = path.basename(file, '.module.scss').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const rootSelector = new RegExp(`(?:^|[}\\n])\\s*\\.${componentName}(?=[\\s.#:[,{])`);
+  return rootSelector.test(stylesheet) ? 0 : 1;
+}
+
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   if (fs.statSync(dir).isFile()) {
-    if (/\.(tsx|scss)$/.test(dir) && !/\.(test|typecheck|type-test)\.tsx?$/.test(dir)) out.push(dir);
+    if (/\.(tsx|scss)$/.test(dir) && !/\.(test|typecheck|type-test)\.tsx?$/.test(dir))
+      out.push(dir);
     return out;
   }
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const abs = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) walk(abs, out);
-    } else if (/\.(tsx|scss)$/.test(entry.name) && !/\.(test|typecheck|type-test)\.tsx?$/.test(entry.name)) {
+    } else if (
+      /\.(tsx|scss)$/.test(entry.name) &&
+      !/\.(test|typecheck|type-test)\.tsx?$/.test(entry.name)
+    ) {
       out.push(abs);
     }
   }
@@ -117,7 +235,8 @@ export function countViolations(dirs) {
   return { counts, places };
 }
 
-const isMain = process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join('tools', 'check-rules.mjs'));
+const isMain =
+  process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join('tools', 'check-rules.mjs'));
 
 if (isMain) {
   const args = process.argv.slice(2);
@@ -144,7 +263,9 @@ if (isMain) {
 
   if (update || !fs.existsSync(baselineFile)) {
     fs.writeFileSync(baselineFile, `${JSON.stringify(counts, null, 2)}\n`);
-    const summary = Object.keys(RULES).map((rule) => `${rule} ${total(rule, counts)}`).join(', ');
+    const summary = Object.keys(RULES)
+      .map((rule) => `${rule} ${total(rule, counts)}`)
+      .join(', ');
     console.log(`[ui:rules] планка записана: ${summary}`);
     process.exit(0);
   }
@@ -156,7 +277,9 @@ if (isMain) {
   if (fresh.length) {
     for (const rule of fresh) baseline[rule] = counts[rule];
     fs.writeFileSync(baselineFile, `${JSON.stringify(baseline, null, 2)}\n`);
-    console.log(`[ui:rules] новые правила в планке: ${fresh.map((rule) => `${rule} ${total(rule, counts)}`).join(', ')}`);
+    console.log(
+      `[ui:rules] новые правила в планке: ${fresh.map((rule) => `${rule} ${total(rule, counts)}`).join(', ')}`,
+    );
   }
   let grew = 0;
   for (const [rule, def] of Object.entries(RULES)) {
@@ -164,15 +287,22 @@ if (isMain) {
       const allowed = baseline[rule]?.[file] ?? 0;
       if (n > allowed) {
         grew += n - allowed;
-        console.error(`[ui:rules] ✗ ${rule}: ${file} — было ${allowed}, стало ${n} (строки ${places[rule][file].join(', ')}) → ${def.hint}`);
+        console.error(
+          `[ui:rules] ✗ ${rule}: ${file} — было ${allowed}, стало ${n} (строки ${places[rule][file].join(', ')}) → ${def.hint}`,
+        );
       }
     }
   }
   const lowered = Object.keys(RULES).filter((rule) => total(rule, counts) < total(rule, baseline));
-  const summary = Object.keys(RULES).map((rule) => `${rule} ${total(rule, counts)}`).join(', ');
+  const summary = Object.keys(RULES)
+    .map((rule) => `${rule} ${total(rule, counts)}`)
+    .join(', ');
   if (grew) {
     console.error(`[ui:rules] ✗ новых нарушений красных линий: ${grew}`);
     process.exit(1);
   }
-  console.log(`[ui:rules] ✓ новых нарушений нет (${summary})` + (lowered.length ? `; планку можно опустить: ${lowered.join(', ')} → --update` : ''));
+  console.log(
+    `[ui:rules] ✓ новых нарушений нет (${summary})` +
+      (lowered.length ? `; планку можно опустить: ${lowered.join(', ')} → --update` : ''),
+  );
 }

@@ -14,6 +14,7 @@ test('CI suites cover the complete gate without dropping checks; each starts wit
     const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-check-consumer-'));
     context.after(() => fs.rmSync(project, { recursive: true, force: true }));
     const complete = uiCheckSteps({ project }).map((step: { name: string }) => step.name);
+    assert.ok(complete.includes('Анатомия D-компонентов'));
     const partitioned = ['library', 'project', 'browser'].flatMap((suite) => {
         const steps = uiCheckSteps({ project, suite });
         assert.equal(steps[0]?.name, 'Генерация');

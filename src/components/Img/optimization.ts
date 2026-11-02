@@ -14,7 +14,12 @@ export function imageUnoptimized(
     publicApiPrefixes: readonly string[] = IMAGE_CONFIG.optimizeApi,
 ): boolean | undefined {
     if (explicit !== undefined) return explicit;
-    if (typeof source !== 'string' || !source.startsWith('/api/')) return undefined;
-    const pathname = new URL(source, 'https://ui.invalid').pathname;
+    const url = typeof source === 'string'
+        ? source
+        : source && typeof source === 'object' && 'src' in source && typeof source.src === 'string'
+            ? source.src
+            : undefined;
+    if (!url?.startsWith('/api/')) return undefined;
+    const pathname = new URL(url, 'https://ui.invalid').pathname;
     return !publicApiPrefixes.some((prefix) => pathname.startsWith(prefix));
 }

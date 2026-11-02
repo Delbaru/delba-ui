@@ -15,8 +15,12 @@ const STATES_MODULE = '@delba/ui/skin-states';
 
 type Props = Record<string, unknown>;
 
-const map = (name: string, entries: [string, string][]) => `$${name}: (\n${entries.map(([k, v]) => `  '${k}': ${v},\n`).join('')});\n`;
-const sassMap = (props: Props) => `(${Object.entries(props).map(([k, v]) => `${k}: ${String(v)}`).join(', ')})`;
+const map = (name: string, entries: [string, string][]) =>
+  `$${name}: (\n${entries.map(([k, v]) => `  '${k}': ${v},\n`).join('')});\n`;
+const sassMap = (props: Props) =>
+  `(${Object.entries(props)
+    .map(([k, v]) => `${k}: ${String(v)}`)
+    .join(', ')})`;
 
 function presetRule(name: string, preset: Props, effects_: ReadonlySet<string>): string | null {
   const effects = Object.fromEntries(Object.entries(preset).filter(([k]) => effects_.has(k)));
@@ -24,13 +28,59 @@ function presetRule(name: string, preset: Props, effects_: ReadonlySet<string>):
   const body: string[] = [];
   if (Object.keys(effects).length > 0) body.push(`  @include base(${sassMap(effects)});`);
   if (Object.keys(states).length > 0) {
-    const lines = Object.entries(states).map(([state, props]) => `    ${state}: ${sassMap(props)},`);
+    const lines = Object.entries(states).map(
+      ([state, props]) => `    ${state}: ${sassMap(props)},`,
+    );
     body.push(`  @include states((\n${lines.join('\n')}\n  ));`);
   }
   return body.length > 0 ? `.skin-${name} {\n${body.join('\n')}\n}` : null;
 }
 
-const isSkin = (value: unknown): value is { presets: Record<string, Props> } => typeof value === 'object' && value !== null && 'presets' in value;
+const isSkin = (value: unknown): value is { presets: Record<string, Props> } =>
+  typeof value === 'object' && value !== null && 'presets' in value;
+
+export function skinDefinition(
+  mod: Record<string, unknown>,
+  source: string,
+): { presets: Record<string, Props> } | null {
+  if (Object.hasOwn(mod, 'skin') && mod.skin === null) return null;
+
+  // Из CommonJS экспорты приезжают и поимённо, и одним default.
+  const def = [...Object.values(mod), ...Object.values(mod.default ?? {})].find(isSkin);
+  if (!def) throw new Error(`${source}: нет экспорта defineSkin(...) или skin = null`);
+  return def;
+}
+
+export async function generateComponentSkin(
+  folder: string,
+  skinFile: string,
+  statesModule: string,
+  effects: ReadonlySet<string>,
+): Promise<boolean> {
+  const source = `${path.basename(folder)}/${skinFile}`;
+  const mod = (await import(pathToFileURL(path.join(folder, skinFile)).href)) as Record<
+    string,
+    unknown
+  >;
+  const def = skinDefinition(mod, source);
+  const output = path.join(folder, '_states.scss');
+
+  if (!def) {
+    if (!fs.existsSync(output)) return false;
+    fs.rmSync(output);
+    return true;
+  }
+
+  const rules = Object.entries(def.presets)
+    .map(([name, preset]) => presetRule(name, preset, effects))
+    .filter(Boolean);
+  const content = `${BANNER}@use '${statesModule}' as *;\n${rules
+    .map((rule) => `\n${rule}\n`)
+    .join('')}`;
+  if (fs.existsSync(output) && fs.readFileSync(output, 'utf8') === content) return false;
+  fs.writeFileSync(output, content);
+  return true;
+}
 
 /** Пишет генераты шкур; возвращает число изменённых файлов. */
 export async function generateSkins(root: string, skins: UiSkins): Promise<number> {
@@ -47,9 +97,14 @@ export async function generateSkins(root: string, skins: UiSkins): Promise<numbe
     BANNER +
       [
         map('fills', Object.entries(skins.fills)),
-        map('lines', lines.map(([k, [w, c]]) => [k, `(${w}, ${c})`])),
+        map(
+          'lines',
+          lines.map(([k, [w, c]]) => [k, `(${w}, ${c})`]),
+        ),
         map('texts', Object.entries(skins.texts)),
-        ...Object.entries(skins.maps ?? {}).map(([name, values]) => map(name, Object.entries(values))),
+        ...Object.entries(skins.maps ?? {}).map(([name, values]) =>
+          map(name, Object.entries(values)),
+        ),
       ].join('\n'),
   );
   write(
@@ -57,7 +112,9 @@ export async function generateSkins(root: string, skins: UiSkins): Promise<numbe
     BANNER +
       [
         ...Object.entries(skins.fills).map(([k, v]) => `.${fillClass(k)} { background: ${v}; }`),
-        ...lines.map(([k, [w, c]]) => `.${borderClass(k)} { border: calc(${w} * var(--rpx)) solid ${c}; }`),
+        ...lines.map(
+          ([k, [w, c]]) => `.${borderClass(k)} { border: calc(${w} * var(--rpx)) solid ${c}; }`,
+        ),
         ...Object.entries(skins.texts).map(([k, v]) => `.${textClass(k)} { color: ${v}; }`),
       ].join('\n') +
       '\n',
@@ -74,13 +131,7 @@ export async function generateSkins(root: string, skins: UiSkins): Promise<numbe
     const skinFile = fs.readdirSync(folder).find((f) => f.endsWith('.skin.ts'));
     if (!skinFile) continue;
 
-    const mod = (await import(pathToFileURL(path.join(folder, skinFile)).href)) as Record<string, unknown>;
-    // Из CommonJS экспорты приезжают и поимённо, и одним default.
-    const def = [...Object.values(mod), ...Object.values(mod.default ?? {})].find(isSkin);
-    if (!def) throw new Error(`${entry.name}/${skinFile}: нет экспорта defineSkin(...)`);
-
-    const rules = Object.entries(def.presets).map(([name, preset]) => presetRule(name, preset, effects)).filter(Boolean);
-    write(path.join(folder, '_states.scss'), `${BANNER}@use '${statesModule}' as *;\n${rules.map((rule) => `\n${rule}\n`).join('')}`);
+    if (await generateComponentSkin(folder, skinFile, statesModule, effects)) changed++;
   }
   return changed;
 }

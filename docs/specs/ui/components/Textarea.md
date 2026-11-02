@@ -5,7 +5,7 @@
 ## Назначение и применение
 
 Многострочный обычный текст с подписью, проверкой и счётчиком.
-Используй проектную D*-композицию для повторяемого оформления.
+Используй проектную D\*-композицию для повторяемого оформления.
 Форматируемый документ относится к LexicalTextarea, а не к этому полю.
 
 ## Основной API
@@ -32,8 +32,15 @@ import { Textarea } from '@delba/ui';
 
 export function CommentField() {
   const [comment, setComment] = useState('');
-  return <Textarea label="Комментарий" value={comment}
-    onValueChange={setComment} length={{ max: 500 }} countPlacement="below" />;
+  return (
+    <Textarea
+      label="Комментарий"
+      value={comment}
+      onValueChange={setComment}
+      length={{ max: 500 }}
+      countPlacement="below"
+    />
+  );
 }
 ```
 
@@ -42,6 +49,7 @@ export function CommentField() {
 Loading заменяет ввод скелетоном; `rows` определяет число его строк.
 Ошибка перекрывает комментарий и освобождает ввод при фокусе.
 `seed` изменяет модель при focus/blur; `maxLength` нативного поля берётся из `length.max`.
+У поля с `readOnly` seed не меняет модель при фокусе, уходе или событии ввода.
 Если включить счётчик без максимума, подпись использует знаменатель `1000` —
 это отображение, а не автоматически назначенный лимит ввода.
 

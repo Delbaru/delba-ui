@@ -1,6 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FocusEvent, type MouseEvent, type Ref } from 'react';
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  type ChangeEvent,
+  type FocusEvent,
+  type MouseEvent,
+  type Ref,
+} from 'react';
 import type React from 'react';
 
 import { useFieldControl } from '../../../core';
@@ -9,108 +17,18 @@ import { resolveSeedField } from '../../../core/base/seed';
 import * as phoneMask from './phone-mask';
 import * as datePicker from './date-picker';
 import * as timeMask from './time-mask';
+import { normalizeConstraintValue, normalizeTimeValue } from './input-constraints';
+import { validateInputValue } from './input-validation';
+import { useInputFocus } from './use-input-focus';
+import { useInputSeed } from './use-input-seed';
+import { useInputValues } from './use-input-values';
+import { normalizeNumberOptions } from './number-input';
+import { useInputNumber } from './use-input-number';
+import { useInputPhone } from './use-input-phone';
 import { useDatePicker } from './use-date-picker';
 
-import { EMAIL_PATTERN, EMAIL_REGEX } from '../../../validation';
+import { EMAIL_PATTERN } from '../../../validation';
 export { EMAIL_REGEX } from '../../../validation';
-const DEFAULT_EMAIL_ERROR = 'Неверный формат email';
-const DEFAULT_DATE_MIN_ERROR = 'Дата не может быть раньше';
-const DEFAULT_DATE_MAX_ERROR = 'Дата не может быть позже';
-const DEFAULT_TIME_MIN_ERROR = 'Время не может быть раньше';
-const DEFAULT_TIME_MAX_ERROR = 'Время не может быть позже';
-
-function normalizeConstraintValue(value: React.InputHTMLAttributes<HTMLInputElement>['min' | 'max']) {
-  return typeof value === 'string' ? value : undefined;
-}
-
-function parseTimeValue(value: string) {
-  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value.trim());
-
-  if (!match) {
-    return null;
-  }
-
-  return {
-    hours: Number(match[1]),
-    minutes: Number(match[2]),
-  };
-}
-
-function compareTimeValues(left: string, right: string) {
-  const parsedLeft = parseTimeValue(left);
-  const parsedRight = parseTimeValue(right);
-
-  if (!parsedLeft || !parsedRight) {
-    return 0;
-  }
-
-  return parsedLeft.hours * 60 + parsedLeft.minutes - (parsedRight.hours * 60 + parsedRight.minutes);
-}
-
-function validateDateBounds(value: string, minValue?: string, maxValue?: string) {
-  const parsedValue = datePicker.parseValue(value);
-
-  if (!parsedValue) {
-    return undefined;
-  }
-
-  const parsedMin = minValue ? datePicker.parseValue(minValue) : null;
-
-  if (parsedMin && datePicker.isBeforeDay(parsedValue, parsedMin)) {
-    return `${DEFAULT_DATE_MIN_ERROR} ${datePicker.formatDisplay(parsedMin)}`;
-  }
-
-  const parsedMax = maxValue ? datePicker.parseValue(maxValue) : null;
-
-  if (parsedMax && datePicker.isAfterDay(parsedValue, parsedMax)) {
-    return `${DEFAULT_DATE_MAX_ERROR} ${datePicker.formatDisplay(parsedMax)}`;
-  }
-
-  return undefined;
-}
-
-function validateTimeBounds(value: string, minValue?: string, maxValue?: string) {
-  if (!parseTimeValue(value)) {
-    return undefined;
-  }
-
-  const normalizedMin = minValue ? timeMask.normalize(minValue) : '';
-
-  if (normalizedMin && parseTimeValue(normalizedMin) && compareTimeValues(value, normalizedMin) < 0) {
-    return `${DEFAULT_TIME_MIN_ERROR} ${normalizedMin}`;
-  }
-
-  const normalizedMax = maxValue ? timeMask.normalize(maxValue) : '';
-
-  if (normalizedMax && parseTimeValue(normalizedMax) && compareTimeValues(value, normalizedMax) > 0) {
-    return `${DEFAULT_TIME_MAX_ERROR} ${normalizedMax}`;
-  }
-
-  return undefined;
-}
-
-function getTimeDigitCountBeforeCursor(value: string, cursor: number) {
-  return value.slice(0, cursor).replace(/\D/g, '').length;
-}
-
-function mapTimeCursorPosition(normalizedValue: string, digitCount: number) {
-  return digitCount <= 2
-    ? digitCount
-    : Math.min(normalizedValue.length, digitCount + 1);
-}
-
-function normalizeTimeValue(raw: string, cursor: number | null, selectionEnd: number | null) {
-  const normalizedValue = timeMask.normalize(raw);
-  const start = cursor !== null ? mapTimeCursorPosition(normalizedValue, getTimeDigitCountBeforeCursor(raw, cursor)) : null;
-  const end = selectionEnd !== null ? mapTimeCursorPosition(normalizedValue, getTimeDigitCountBeforeCursor(raw, selectionEnd)) : null;
-
-  return {
-    normalizedValue,
-    selectionStart: start,
-    selectionEnd: end,
-  };
-}
-
 interface UseInputBehaviorOptions {
   ref: Ref<HTMLInputElement> | undefined;
   typeProp?: React.HTMLInputTypeAttribute;
@@ -166,8 +84,6 @@ export function useInputBehavior({
   // он бывает true и у даты, и у анти-автозаполнения — там поле обычное, просто заперто на миг.
   const isReadOnly = Boolean(restInputProps.readOnly);
   const isPhone = inputType === 'tel';
-  const phoneCaret=useRef<{view:Window;frame:number}|null>(null);
-  useEffect(()=>()=>{if(phoneCaret.current)phoneCaret.current.view.cancelAnimationFrame(phoneCaret.current.frame);},[]);
   const isTime = inputType === 'time';
   const isDate = inputType === 'data' || inputType === 'date';
   const isNumber = inputType === 'number';
@@ -178,7 +94,11 @@ export function useInputBehavior({
   // снимаем readonly. type у нас уже не семантический (text), так что autoComplete='off' + readonly
   // вместе надёжно убирают подсказки, не ломая маску (автозаполнения, с которым была гонка, больше нет).
   const lockAutofill =
-    (inputType === 'text' || inputType === 'email' || inputType === 'tel' || inputType === 'search') &&
+    !isReadOnly &&
+    (inputType === 'text' ||
+      inputType === 'email' ||
+      inputType === 'tel' ||
+      inputType === 'search') &&
     restInputProps.autoComplete === 'off';
   const minConstraint = normalizeConstraintValue(restInputProps.min);
   const maxConstraint = normalizeConstraintValue(restInputProps.max);
@@ -189,46 +109,38 @@ export function useInputBehavior({
   const resolvedInputType = isTime || isDate || isPhone || isEmail ? 'text' : inputType;
   const defaultValueString = defaultValueProp == null ? '' : String(defaultValueProp);
   const resolvedNumberOptions = useMemo(() => {
-    if (!numberOptions?.length) {
-      return [];
-    }
-
-    return Array.from(
-      new Set(
-        numberOptions
-          .filter((value) => Number.isFinite(value))
-          .map((value) => Number(value))
-      )
-    ).sort((left, right) => left - right);
+    return normalizeNumberOptions(numberOptions);
   }, [numberOptions]);
+  const {
+    isPhoneControlled,
+    isTimeControlled,
+    isDateControlled,
+    setPhoneUncontrolled,
+    setTimeUncontrolled,
+    setDateUncontrolled,
+    phoneDisplayValue,
+    phoneDisplayValueWithoutPrefix,
+    timeDisplayValue,
+    dateDisplayValue,
+  } = useInputValues({
+    isPhone,
+    isTime,
+    isDate,
+    value: valueProp,
+    defaultValue: defaultValueString,
+    phoneFormat,
+  });
 
   const typeValidate = useCallback(
-    (value: string): string | undefined => {
-      if (inputType === 'email' && value && !EMAIL_REGEX.test(value)) return DEFAULT_EMAIL_ERROR;
-      if (inputType === 'tel' && value) return phoneMask.validate(value, phoneFormat);
-      if (inputType === 'time') {
-        const timeError = timeMask.validate(value);
-
-        if (timeError) {
-          return timeError;
-        }
-
-        return validateTimeBounds(value, minConstraint, maxConstraint) ?? validateProp?.(value);
-      }
-
-      if (inputType === 'data' || inputType === 'date') {
-        const dateError = datePicker.validate(value);
-
-        if (dateError) {
-          return dateError;
-        }
-
-        return validateDateBounds(value, minConstraint, maxConstraint) ?? validateProp?.(value);
-      }
-
-      return validateProp?.(value);
-    },
-    [inputType, maxConstraint, minConstraint, phoneFormat, validateProp]
+    (value: string): string | undefined =>
+      validateInputValue(value, {
+        type: inputType,
+        phoneFormat,
+        min: minConstraint,
+        max: maxConstraint,
+        validate: validateProp,
+      }),
+    [inputType, maxConstraint, minConstraint, phoneFormat, validateProp],
   );
 
   const {
@@ -255,7 +167,10 @@ export function useInputBehavior({
     isEmpty: isPhone ? (value: string) => phoneMask.isEmpty(value, phoneFormat) : undefined,
     onReset: () => {
       if (isPhone && !isPhoneControlled) {
-        setPhoneUncontrolled(phoneMask.formatPhone(defaultValueString, phoneFormat) || phoneMask.emptyValue(phoneFormat));
+        setPhoneUncontrolled(
+          phoneMask.formatPhone(defaultValueString, phoneFormat) ||
+            phoneMask.emptyValue(phoneFormat),
+        );
       }
       if (isTime && !isTimeControlled) setTimeUncontrolled(timeMask.normalize(defaultValueString));
       if (isDate && !isDateControlled) {
@@ -268,59 +183,54 @@ export function useInputBehavior({
   // `seed` — значение по умолчанию, ведущее себя как подсказка. Пока оно стоит в поле, в DOM
   // отдаётся ПУСТОЕ значение, а рисует его `::placeholder`, который браузер сам убирает по фокусу.
   // У полей с маской (телефон/дата/время) подсказкой служит сама маска, поэтому seed там не участвует.
-  const seedField = resolveSeedField({ seed, value: currentValue, placeholder });
-
   const helperText = displayError ?? comment;
   const helperTextColor = displayError ? 'var(--error)' : 'var(--text-muted)';
 
-  const [phoneUncontrolled, setPhoneUncontrolled] = useState(() => {
-    if (!isPhone || valueProp !== undefined || !defaultValueString) return phoneMask.emptyValue(phoneFormat);
-    return phoneMask.formatPhone(defaultValueString, phoneFormat) || phoneMask.emptyValue(phoneFormat);
-  });
-  const [timeUncontrolled, setTimeUncontrolled] = useState(() => (
-    isTime && valueProp === undefined ? timeMask.normalize(defaultValueString) : ''
-  ));
-  const [dateUncontrolled, setDateUncontrolled] = useState(() => (
-    isDate && valueProp === undefined ? datePicker.normalizeDisplayValue(defaultValueString) : ''
-  ));
-  const [isFieldFocused, setIsFieldFocused] = useState(false);
-  // true = поле сейчас readonly, чтобы Chrome не предлагал автозаполнение (только когда lockAutofill).
-  const [isAutofillLocked, setIsAutofillLocked] = useState(true);
+  const {
+    isFocused: isFieldFocused,
+    isAutofillLocked,
+    focus,
+    autofill,
+  } = useInputFocus({ lockAutofill });
 
   const rootRef = useRef<HTMLElement | null>(null);
 
-  const isPhoneControlled = isPhone && valueProp !== undefined;
-  const isTimeControlled = isTime && valueProp !== undefined;
-  const isDateControlled = isDate && valueProp !== undefined;
-  const phoneDisplayValue = isPhone
-    ? (isPhoneControlled ? phoneMask.formatPhone(String(valueProp), phoneFormat) || phoneMask.emptyValue(phoneFormat) : phoneUncontrolled)
-    : undefined;
-  const phoneDisplayValueWithoutPrefix = isPhone
-    ? phoneMask.stripPrefix(phoneDisplayValue ?? '', phoneFormat)
-    : undefined;
-  const timeDisplayValue = isTime
-    ? (isTimeControlled ? timeMask.normalize(String(valueProp)) : timeUncontrolled)
-    : undefined;
-  const dateDisplayValue = isDate
-    ? (isDateControlled ? datePicker.normalizeDisplayValue(String(valueProp)) : dateUncontrolled)
-    : undefined;
   const showTimeMask = isTime && (isFieldFocused || Boolean(timeDisplayValue));
   const timeMaskValue = isTime ? (timeDisplayValue ?? '') : '';
   const timeMaskSuffix = showTimeMask ? timeMask.getMaskSuffix(timeMaskValue) : '';
 
-  const commitPlainValue = useCallback((nextValue: string, details: FieldValueChangeDetails<HTMLInputElement>) => {
-    if (valueProp === undefined) {
-      setUncontrolledValue(nextValue);
-      if (innerRef.current) innerRef.current.value = resolveSeedField({ seed, value: nextValue }).displayValue;
-    }
-    onValueChange?.(nextValue, details);
-  }, [innerRef, onValueChange, seed, setUncontrolledValue, valueProp]);
+  const commitPlainValue = useCallback(
+    (nextValue: string, details: FieldValueChangeDetails<HTMLInputElement>) => {
+      if (valueProp === undefined) {
+        setUncontrolledValue(nextValue);
+        if (innerRef.current)
+          innerRef.current.value = resolveSeedField({ seed, value: nextValue }).displayValue;
+      }
+      onValueChange?.(nextValue, details);
+    },
+    [innerRef, onValueChange, seed, setUncontrolledValue, valueProp],
+  );
 
-  const commitDateValue = useCallback((nextValue: string) => {
-    if (!isDateControlled) setDateUncontrolled(nextValue);
-    setInternalError(validateValue(nextValue));
-    onValueChange?.(nextValue, { reason: 'pick', event: null });
-  }, [isDateControlled, onValueChange, setInternalError, validateValue]);
+  const {
+    field: seedField,
+    activate: activateSeed,
+    restore: restoreSeed,
+  } = useInputSeed({
+    seed,
+    value: currentValue,
+    placeholder,
+    readOnly: isReadOnly,
+    commitValue: commitPlainValue,
+  });
+
+  const commitDateValue = useCallback(
+    (nextValue: string) => {
+      if (!isDateControlled) setDateUncontrolled(nextValue);
+      setInternalError(validateValue(nextValue));
+      onValueChange?.(nextValue, { reason: 'pick', event: null });
+    },
+    [isDateControlled, onValueChange, setInternalError, validateValue],
+  );
 
   const {
     isDatePickerActive,
@@ -350,51 +260,72 @@ export function useInputBehavior({
   });
 
   const isFieldActive = isFieldFocused || isDatePickerActive;
+  const numberInput = useInputNumber({
+    enabled: isNumber,
+    disabled,
+    readOnly: isReadOnly,
+    min: restInputProps.min,
+    max: restInputProps.max,
+    options: resolvedNumberOptions,
+    value: currentValue,
+    valueProp,
+    field: innerRef,
+    setUncontrolledValue,
+    onValueChange,
+    setInternalError,
+    validateValue,
+  });
+  const phoneInput = useInputPhone({
+    enabled: isPhone,
+    controlled: isPhoneControlled,
+    format: phoneFormat,
+    field: innerRef,
+    setUncontrolledValue: setPhoneUncontrolled,
+    onValueChange,
+    onBlur,
+    setInternalError,
+    validateValue,
+  });
+  const { handleChange: handlePhoneChange, handleBlur: handlePhoneBlur } = phoneInput;
+  const {
+    handleChange: handleNumberChange,
+    handleKeyDown: handleNumberKeyDown,
+    step: handleNumberStep,
+  } = numberInput;
 
   const handleFocus = useCallback(
     (event: FocusEvent<HTMLInputElement>) => {
-      setIsFieldFocused(true);
-      // Снимаем readonly-замок автозаполнения. Дополнительно убираем атрибут напрямую из DOM, чтобы
-      // поле стало редактируемым в этот же тик (до ре-рендера) — на случай мгновенного ввода после фокуса.
-      // Только для полей с включённым режимом, чтобы не трогать readonly у date-пикера и т.п.
-      if (lockAutofill && isAutofillLocked) {
-        setIsAutofillLocked(false);
-        event.currentTarget.removeAttribute('readonly');
-      }
-      // Значение по умолчанию — подсказка, а не данные: по фокусу поле пустеет, и модель получает
-      // ''. Иначе ввод «1» в поле с «0» дал бы «01», и человек считал бы, что это его ответ.
-      if (seedField.focusValue !== undefined) commitPlainValue(seedField.focusValue, { reason: 'seed', event });
+      focus.enter();
+      autofill.unlock(event);
+      activateSeed(event);
       onFocus?.(event);
     },
-    [commitPlainValue, lockAutofill, isAutofillLocked, onFocus, seedField.focusValue]
+    [activateSeed, autofill, focus, onFocus],
   );
 
   const handleBlur = useCallback(
     (event: FocusEvent<HTMLInputElement>) => {
       const relatedTarget = event.relatedTarget as Node | null;
       const isFocusInside = Boolean(
-        relatedTarget
-        && (rootRef.current?.contains(relatedTarget) || floatingRef.current?.contains(relatedTarget))
+        relatedTarget &&
+          (rootRef.current?.contains(relatedTarget) ||
+            floatingRef.current?.contains(relatedTarget)),
       );
 
       if (!isFocusInside) {
-        setIsFieldFocused(false);
-        // Поле покинуто — снова запираем от автозаполнения до следующего фокуса (если режим включён).
-        if (lockAutofill) setIsAutofillLocked(true);
+        focus.leave(false);
       }
 
-      if (isPhone) {
-        const formatted = phoneMask.formatPhone(event.target.value, phoneFormat);
-        setInternalError(validateValue(formatted));
-        onBlur?.(event);
-        return;
-      }
+      if (handlePhoneBlur(event)) return;
 
       if (isTime) {
         const nextValue = timeMask.normalize(event.target.value);
-        if (!isTimeControlled) setTimeUncontrolled(nextValue);
-        if (nextValue !== timeDisplayValue) onValueChange?.(nextValue, { reason: 'format', event });
-        setInternalError(validateValue(nextValue));
+        if (!isReadOnly) {
+          if (!isTimeControlled) setTimeUncontrolled(nextValue);
+          if (nextValue !== timeDisplayValue)
+            onValueChange?.(nextValue, { reason: 'format', event });
+          setInternalError(validateValue(nextValue));
+        }
         onBlur?.(event);
         return;
       }
@@ -409,9 +340,9 @@ export function useInputBehavior({
         return;
       }
 
-      if (seedField.blurValue !== undefined) {
-        commitPlainValue(seedField.blurValue, { reason: 'seed', event });
-        setInternalError(validateValue(seedField.blurValue));
+      const restoredSeed = restoreSeed(event);
+      if (restoredSeed !== undefined) {
+        setInternalError(validateValue(restoredSeed));
         onBlur?.(event);
         return;
       }
@@ -419,41 +350,39 @@ export function useInputBehavior({
       setInternalError(validateValue(event.target.value));
       onBlur?.(event);
     },
-    [commitPlainValue, dateDisplayValue, deactivateDatePicker, floatingRef, isDate, isDatePickerActive, isPhone, isTime, isTimeControlled, lockAutofill, onBlur, onValueChange, phoneFormat, rootRef, seedField.blurValue, setInternalError, timeDisplayValue, validateValue]
+    [
+      dateDisplayValue,
+      deactivateDatePicker,
+      floatingRef,
+      focus,
+      handlePhoneBlur,
+      isDate,
+      isDatePickerActive,
+      isReadOnly,
+      isTime,
+      isTimeControlled,
+      onBlur,
+      onValueChange,
+      rootRef,
+      restoreSeed,
+      setInternalError,
+      timeDisplayValue,
+      validateValue,
+    ],
   );
 
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
+      if (isReadOnly) return;
       const rawValue = event.target.value;
       onChange?.(event);
-      if (isPhone) {
-        const input = event.currentTarget;
-        const next = phoneMask.normalizePhoneInput(rawValue, input.selectionStart, input.selectionEnd, phoneFormat);
-        const formatted = next.formatted, direction = input.selectionDirection;
-        if (!isPhoneControlled) setPhoneUncontrolled(formatted);
-        onValueChange?.(formatted, { reason: 'input', event });
-        const view=input.ownerDocument.defaultView;
-        if(view&&next.selectionStart!==null&&next.selectionEnd!==null){
-          if(phoneCaret.current)phoneCaret.current.view.cancelAnimationFrame(phoneCaret.current.frame);
-          const start=next.selectionStart,end=next.selectionEnd;
-          phoneCaret.current={view,frame:view.requestAnimationFrame(()=>{
-            phoneCaret.current=null;
-            if(innerRef.current===input&&input.value===next.displayValue)input.setSelectionRange(start,end,direction??'none');
-          })};
-        }
-        // Пока номер НАБИРАЮТ, ошибку только гасим, а не поднимаем: «Введите 11 цифр номера»
-        // на третьей цифре — претензия к незаконченному действию. Полную проверку ведёт blur
-        // (handleBlur ниже), а здесь уже показанная ошибка пересчитывается и уходит сама.
-        const nextError = validateValue(formatted);
-        setInternalError((currentError) => (currentError ? nextError : undefined));
-        return;
-      }
+      if (handlePhoneChange(event)) return;
 
       if (isTime) {
         const { normalizedValue, selectionStart, selectionEnd } = normalizeTimeValue(
           rawValue,
           event.target.selectionStart,
-          event.target.selectionEnd
+          event.target.selectionEnd,
         );
 
         if (!isTimeControlled) setTimeUncontrolled(normalizedValue);
@@ -469,18 +398,7 @@ export function useInputBehavior({
         return;
       }
 
-      if (isNumber) {
-        const min = restInputProps.min !== undefined ? Number(restInputProps.min) : undefined;
-        if (min !== undefined && !Number.isNaN(min) && min >= 0 && event.target.value.trim().startsWith('-')) {
-          const sanitizedValue = event.target.value.replace(/^-+/, '');
-          const normalizedValue = sanitizedValue === '-' ? '' : sanitizedValue;
-          if (valueProp === undefined) setUncontrolledValue(normalizedValue);
-          event.target.value = normalizedValue;
-          onValueChange?.(normalizedValue, { reason: 'input', event });
-          setInternalError(validateValue(normalizedValue));
-          return;
-        }
-      }
+      if (handleNumberChange(event)) return;
 
       if (isDate) {
         activateDatePicker();
@@ -495,33 +413,29 @@ export function useInputBehavior({
       const nextError = validateValue(rawValue);
       setInternalError((currentError) => (currentError ? nextError : undefined));
     },
-    [activateDatePicker, isDate, isNumber, isPhone, isPhoneControlled, isTime, isTimeControlled, onChange, onValueChange, phoneFormat, restInputProps.min, setInternalError, setUncontrolledValue, validateValue, valueProp]
+    [
+      activateDatePicker,
+      isDate,
+      isReadOnly,
+      isTime,
+      isTimeControlled,
+      onChange,
+      onValueChange,
+      handleNumberChange,
+      handlePhoneChange,
+      setInternalError,
+      setUncontrolledValue,
+      validateValue,
+      valueProp,
+    ],
   );
 
   const handleInputKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       onInputKeyDown?.(event);
       if (event.defaultPrevented || disabled) return;
-
-      if (isNumber) {
-        const min = restInputProps.min !== undefined ? Number(restInputProps.min) : undefined;
-        const minIsNonNegative = min !== undefined && !Number.isNaN(min) && min >= 0;
-
-        // type=number в Firefox и Safari (в т.ч. на macOS) пропускает буквы прямо в поле —
-        // символы видны, а .value при этом пустеет, поэтому отфильтровать их в onChange нельзя.
-        // Блокируем непечатные символы на нажатии: разрешаем только цифры, разделитель дробной
-        // части, допустимый минус и сочетания с Ctrl/Cmd/Alt (копировать/вставить/выделить/навигация).
-        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-          const isDigit = event.key >= '0' && event.key <= '9';
-          const isDecimalSeparator = event.key === '.' || event.key === ',';
-          const isAllowedMinus = event.key === '-' && !minIsNonNegative;
-
-          if (!isDigit && !isDecimalSeparator && !isAllowedMinus) {
-            event.preventDefault();
-            return;
-          }
-        }
-      }
+      handleNumberKeyDown(event);
+      if (event.defaultPrevented) return;
 
       if (!isDate) return;
 
@@ -529,7 +443,8 @@ export function useInputBehavior({
       // open, the first Tab from the date field enters its controls instead of skipping to the
       // next page-level control. Focus leaving the calendar closes it in Calendar.
       if (isDatePickerActive && event.key === 'Tab' && !event.shiftKey) {
-        const firstControl = floatingRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
+        const firstControl =
+          floatingRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
         if (firstControl) {
           event.preventDefault();
           firstControl.focus();
@@ -550,71 +465,16 @@ export function useInputBehavior({
         deactivateDatePicker(false);
       }
     },
-    [activateDatePicker, deactivateDatePicker, disabled, floatingRef, isDate, isDatePickerActive, isNumber, onInputKeyDown, restInputProps.min]
-  );
-
-  const handleNumberStep = useCallback(
-    (delta: number) => {
-      if (!isNumber || disabled || isReadOnly) return;
-
-      const min = restInputProps.min !== undefined ? Number(restInputProps.min) : undefined;
-      const max = restInputProps.max !== undefined ? Number(restInputProps.max) : undefined;
-      const rawValue = innerRef.current?.value ?? currentValue ?? '';
-      const numericValue = rawValue === '' ? Number.NaN : Number(rawValue);
-      const boundedOptions = resolvedNumberOptions.filter((option) => (
-        (min === undefined || option >= min) &&
-        (max === undefined || option <= max)
-      ));
-
-      let nextValue: number;
-
-      const firstOption = boundedOptions[0];
-      const lastOption = boundedOptions[boundedOptions.length - 1];
-
-      if (firstOption !== undefined && lastOption !== undefined) {
-        if (!Number.isFinite(numericValue)) {
-          nextValue = delta > 0 ? firstOption : lastOption;
-        } else {
-          const exactIndex = boundedOptions.indexOf(numericValue);
-
-          if (exactIndex >= 0) {
-            const nextIndex = Math.min(Math.max(exactIndex + delta, 0), boundedOptions.length - 1);
-            nextValue = boundedOptions[nextIndex] ?? lastOption;
-          } else if (delta > 0) {
-            nextValue = boundedOptions.find((option) => option > numericValue) ?? lastOption;
-          } else {
-            const reversedOptions = [...boundedOptions].reverse();
-            nextValue = reversedOptions.find((option) => option < numericValue) ?? firstOption;
-          }
-        }
-      } else {
-        const nativeField = innerRef.current?.cloneNode(false);
-        if (!(nativeField instanceof HTMLInputElement)) return;
-        nativeField.value = rawValue;
-        try {
-          nativeField.stepUp(delta);
-        } catch {
-          return; // step="any" не определяет дискретного шага.
-        }
-        if (!nativeField.value) return;
-        nextValue = Number(nativeField.value);
-      }
-
-      const nextValueStr = String(nextValue);
-      if (nextValueStr === rawValue) return;
-
-      if (innerRef.current && valueProp === undefined) {
-        innerRef.current.value = nextValueStr;
-      }
-
-      if (valueProp === undefined) {
-        setUncontrolledValue(nextValueStr);
-      }
-
-      onValueChange?.(nextValueStr, { reason: 'step', event: null });
-      setInternalError(validateValue(nextValueStr));
-    },
-    [isNumber, isReadOnly, disabled, restInputProps.min, restInputProps.max, innerRef, currentValue, resolvedNumberOptions, valueProp, setUncontrolledValue, onValueChange, setInternalError, validateValue]
+    [
+      activateDatePicker,
+      deactivateDatePicker,
+      disabled,
+      floatingRef,
+      isDate,
+      isDatePickerActive,
+      handleNumberKeyDown,
+      onInputKeyDown,
+    ],
   );
 
   const handleInvalid = useCallback(
@@ -624,7 +484,7 @@ export function useInputBehavior({
       // у поля своя валидация и свой вывод ошибки, дублировать нативной валидацией не нужно.
       if (!event.defaultPrevented) event.preventDefault();
     },
-    [restInputProps.onInvalid]
+    [restInputProps.onInvalid],
   );
 
   const inputProps: React.InputHTMLAttributes<HTMLInputElement> = {
@@ -645,22 +505,30 @@ export function useInputBehavior({
     placeholder: isPhone
       ? (placeholder ?? phoneMask.placeholderText(phoneFormat))
       : isTime
-          ? (showTimeMask ? '' : (placeholder ?? timeMask.placeholder))
-          : seedField.placeholder,
+        ? showTimeMask
+          ? ''
+          : (placeholder ?? timeMask.placeholder)
+        : seedField.placeholder,
     'aria-invalid': restInputProps['aria-invalid'] ?? (displayError ? true : undefined),
     minLength: isTime ? 5 : (length?.min ?? restInputProps.minLength),
-    maxLength: isPhone ? (length?.max ?? phoneMask.maxLengthOf(phoneFormat)) : isTime ? timeMask.maxLength : isDate ? datePicker.maxLength : (length?.max ?? restInputProps.maxLength),
+    maxLength: isPhone
+      ? (length?.max ?? phoneMask.maxLengthOf(phoneFormat))
+      : isTime
+        ? timeMask.maxLength
+        : isDate
+          ? datePicker.maxLength
+          : (length?.max ?? restInputProps.maxLength),
     inputMode: isTime ? 'numeric' : isPhone ? 'tel' : isEmail ? 'email' : restInputProps.inputMode,
     readOnly: isDate || restInputProps.readOnly || (lockAutofill && isAutofillLocked),
     value: isPhone
       ? phoneDisplayValueWithoutPrefix
       : isTime
-          ? timeDisplayValue
-          : isDate
-              ? dateDisplayValue
-              : valueProp === undefined
-                  ? valueProp
-                  : seedField.displayValue,
+        ? timeDisplayValue
+        : isDate
+          ? dateDisplayValue
+          : valueProp === undefined
+            ? valueProp
+            : seedField.displayValue,
     onChange: handleChange,
     onFocus: handleFocus,
     onBlur: handleBlur,
@@ -668,31 +536,44 @@ export function useInputBehavior({
     ...(inputType === 'email' && { pattern: restInputProps.pattern ?? EMAIL_PATTERN }),
   };
 
-  const handleFieldClick = useCallback((event: MouseEvent<HTMLElement>) => {
-    if (disabled) return;
-    if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;
+  const handleFieldClick = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      if (disabled) return;
+      if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;
 
-    const target = event.target as HTMLElement;
-    if (target.closest('[data-input-action="true"]')) return;
+      const target = event.target as HTMLElement;
+      if (target.closest('[data-input-action="true"]')) return;
 
-    if (isDate) {
-      toggleDatePickerActive();
-      return;
-    }
+      if (isDate) {
+        toggleDatePickerActive();
+        return;
+      }
 
-    focusField();
-  }, [disabled, focusField, isDate, toggleDatePickerActive]);
+      focusField();
+    },
+    [disabled, focusField, isDate, toggleDatePickerActive],
+  );
 
   const hasValue = useMemo(
     () =>
       isPhone
-        ? (phoneDisplayValue ?? '').length > 0 && phoneDisplayValue !== phoneMask.emptyValue(phoneFormat)
+        ? (phoneDisplayValue ?? '').length > 0 &&
+          phoneDisplayValue !== phoneMask.emptyValue(phoneFormat)
         : isTime
           ? (timeDisplayValue ?? '').length > 0
           : isDate
             ? (dateDisplayValue ?? '').length > 0
             : currentValue.length > 0,
-    [isPhone, isTime, isDate, phoneDisplayValue, phoneFormat, timeDisplayValue, dateDisplayValue, currentValue]
+    [
+      isPhone,
+      isTime,
+      isDate,
+      phoneDisplayValue,
+      phoneFormat,
+      timeDisplayValue,
+      dateDisplayValue,
+      currentValue,
+    ],
   );
 
   return {

@@ -1,6 +1,22 @@
-"use client";
+'use client';
 
-import { MEDIA_QUERY, boxLayout, cx, createLayoutClasses, resolveRadiusInput, resolveResponsive, sizeClasses, splitBoxLayout, splitRootDomProps, stateLinkProps, type BoxLayoutProps, type StateLinkInput, type ResponsiveValue, type SizeValue, type WithRef, useMergedRefs } from '../../core';
+import {
+  MEDIA_QUERY,
+  boxLayout,
+  cx,
+  createLayoutClasses,
+  resolveRadiusInput,
+  sizeClasses,
+  splitBoxLayout,
+  splitRootDomProps,
+  stateLinkProps,
+  type BoxLayoutProps,
+  type StateLinkInput,
+  type ResponsiveValue,
+  type SizeValue,
+  type WithRef,
+  useMergedRefs,
+} from '../../core';
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -32,12 +48,7 @@ function resolveMediaSource(source?: MediaSource | null): string | undefined {
 
 type VideoBaseProps = Omit<
   React.VideoHTMLAttributes<HTMLVideoElement>,
-  | 'className'
-  | 'style'
-  | 'src'
-  | 'width'
-  | 'height'
-  | 'poster'
+  'className' | 'style' | 'src' | 'width' | 'height' | 'poster'
 >;
 
 type VideoRootSizeProps = {
@@ -47,7 +58,11 @@ type VideoRootSizeProps = {
 
 type VideoElementProps = VideoBaseProps & Record<string, unknown>;
 
-export interface VideoProps extends VideoBaseProps, BoxLayoutProps, VideoRootSizeProps, SharedMotionProps {
+export interface VideoProps
+  extends VideoBaseProps,
+    BoxLayoutProps,
+    VideoRootSizeProps,
+    SharedMotionProps {
   className?: string;
   style?: CSSProperties;
   'data-point-events'?: string;
@@ -63,8 +78,6 @@ export interface VideoProps extends VideoBaseProps, BoxLayoutProps, VideoRootSiz
   aspectRatio?: ResponsiveValue<string>;
   objectFit?: ResponsiveValue<ObjectFitKey>;
   objectPosition?: ResponsiveValue<string>;
-
-
 
   linkState?: StateLinkInput;
   showPlayButton?: boolean;
@@ -134,7 +147,17 @@ export function Video({
     minH: sizeProps.minH,
     maxH: sizeProps.maxH,
   };
-  const radiusProps = resolveRadiusInput({ r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR });
+  const radiusProps = resolveRadiusInput({
+    r,
+    tlr,
+    trr,
+    brr,
+    blr,
+    borderTLR,
+    borderTRR,
+    borderBRR,
+    borderBLR,
+  });
   const { rootProps, elementProps } = splitRootDomProps(props as VideoElementProps);
   /*
     Ролик по полосам выбирается В БРАУЗЕРЕ, а не `<source media>`, как у картинки: у `<video>`
@@ -166,10 +189,11 @@ export function Video({
 
   const resolvedSrc = pickSource(src);
   const resolvedPoster = pickSource(poster);
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
-
-  const [objectFitResolved] = resolveResponsive(objectFit ?? 'cover');
-  const [objectPositionResolved] = resolveResponsive(objectPosition ?? 'center');
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
+    perspective3d,
+    parallax,
+    animate,
+  });
 
   useEffect(() => {
     const node = videoRef.current;
@@ -179,9 +203,12 @@ export function Video({
 
   const setVideoRef = useMergedRefs(videoRef, ref);
 
-  const setRootRef = useCallback((node: HTMLSpanElement | null) => {
-    setMotionNode(node);
-  }, [setMotionNode]);
+  const setRootRef = useCallback(
+    (node: HTMLSpanElement | null) => {
+      setMotionNode(node);
+    },
+    [setMotionNode],
+  );
 
   const handlePlayButtonClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -218,12 +245,10 @@ export function Video({
         styles.VideoRoot,
         ...sizeClasses(c, wrapperSizeProps),
         ...boxLayout(c, { ...box, ...radiusProps, bg, aspectRatio, grow }),
-        className
+        className,
       )}
       style={{
         ...(motionStyle ?? null),
-        ...(objectFitResolved ? ({ '--video-fit': objectFitResolved } as CSSProperties) : null),
-        ...(objectPositionResolved ? ({ '--video-position': objectPositionResolved } as CSSProperties) : null),
         ...style,
       }}
     >
@@ -234,25 +259,31 @@ export function Video({
             aria-label="Запустить видео"
             onClick={handlePlayButtonClick}
         >
-          <span className={styles.VideoPlayButtonIcon} aria-hidden="true">▶</span>
+          <span className={styles.VideoPlayButtonIcon} aria-hidden="true">
+            ▶
+          </span>
         </button>
       ) : null}
 
       <video
-          ref={setVideoRef}
-          className={styles.Video}
-          src={resolvedSrc}
-          poster={resolvedPoster}
-          controls={controls}
-          autoPlay={autoPlay}
-          muted={muted}
-          playsInline={playsInline}
-          loop={loop}
-          preload={preload}
-          onPlay={handlePlay}
-          onPause={handlePause}
-          onEnded={handleEnded}
-          {...elementProps}
+        ref={setVideoRef}
+        className={cx(
+          styles.Video,
+          ...c.value('objectFit', objectFit ?? 'cover'),
+          ...c.value('objectPosition', objectPosition ?? 'center'),
+        )}
+        src={resolvedSrc}
+        poster={resolvedPoster}
+        controls={controls}
+        autoPlay={autoPlay}
+        muted={muted}
+        playsInline={playsInline}
+        loop={loop}
+        preload={preload}
+        onPlay={handlePlay}
+        onPause={handlePause}
+        onEnded={handleEnded}
+        {...elementProps}
       />
     </span>
   );

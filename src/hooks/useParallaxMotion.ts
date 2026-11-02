@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'rea
 
 import { MEDIA_QUERY } from '../core/base/breakpoints';
 import { clamp } from '../core/utils';
-import { animationVisibilityMargin } from '../core/base/animation-visibility';
+import { observeAnimationVisibility } from '../core/base/animation-visibility';
 import { motionDefaults } from '../core/base/motion-config';
 import { frameResponse } from '../core/base/damping';
 
@@ -52,7 +52,9 @@ const INITIAL_VALUES: MotionValues = {
   translateY: 0,
 };
 
-function normalizeParallaxConfig(input: ParallaxInput | undefined): NormalizedParallaxConfig | null {
+function normalizeParallaxConfig(
+  input: ParallaxInput | undefined,
+): NormalizedParallaxConfig | null {
   if (input === undefined || input === null) {
     return null;
   }
@@ -83,8 +85,10 @@ function clearMotionStyles(node: MotionTarget | null) {
 function applyMotionValues(node: MotionTarget, values: MotionValues) {
   const x = `${values.translateX.toFixed(3)}px`;
   const y = `${values.translateY.toFixed(3)}px`;
-  if (node.style.getPropertyValue('--parallax-translate-x') !== x) node.style.setProperty('--parallax-translate-x', x);
-  if (node.style.getPropertyValue('--parallax-translate-y') !== y) node.style.setProperty('--parallax-translate-y', y);
+  if (node.style.getPropertyValue('--parallax-translate-x') !== x)
+    node.style.setProperty('--parallax-translate-x', x);
+  if (node.style.getPropertyValue('--parallax-translate-y') !== y)
+    node.style.setProperty('--parallax-translate-y', y);
 }
 
 function getDirectionAxis(direction: ParallaxDirection): 'x' | 'y' {
@@ -95,7 +99,11 @@ function getDirectionSign(direction: ParallaxDirection): number {
   return direction === 'down' || direction === 'right' ? 1 : -1;
 }
 
-function targetFromViewport(rect: Pick<DOMRectReadOnly, 'top' | 'height'>, config: NormalizedParallaxConfig, translationY: number): MotionValues {
+function targetFromViewport(
+  rect: Pick<DOMRectReadOnly, 'top' | 'height'>,
+  config: NormalizedParallaxConfig,
+  translationY: number,
+): MotionValues {
   const viewportHeight = window.innerHeight;
   if (!viewportHeight || !rect.height) return { ...INITIAL_VALUES };
   // Свой translate уже входит в rect: исключаем его, чтобы движение не влияло на свою цель.
@@ -109,10 +117,22 @@ function targetFromViewport(rect: Pick<DOMRectReadOnly, 'top' | 'height'>, confi
 
 export function useParallaxMotion(parallax: ParallaxInput | undefined) {
   const resolved = useMemo(() => normalizeParallaxConfig(parallax), [parallax]);
-  const ViewTimeline = typeof window === 'undefined' ? undefined : (window as Window & {
-    ViewTimeline?: new (options: { subject: Element; axis: 'block'; inset: string }) => AnimationTimeline;
-  }).ViewTimeline;
-  const native = resolved?.mode === 'scroll' && ViewTimeline !== undefined && CSS.supports('animation-composition', 'add');
+  const ViewTimeline =
+    typeof window === 'undefined'
+      ? undefined
+      : (
+          window as Window & {
+            ViewTimeline?: new (options: {
+              subject: Element;
+              axis: 'block';
+              inset: string;
+            }) => AnimationTimeline;
+          }
+        ).ViewTimeline;
+  const native =
+    resolved?.mode === 'scroll' &&
+    ViewTimeline !== undefined &&
+    CSS.supports('animation-composition', 'add');
   const config = native ? null : resolved;
   const configRef = useRef(config);
   const nodeRef = useRef<MotionTarget | null>(null);
@@ -122,7 +142,7 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
   const currentRef = useRef<MotionValues>({ ...INITIAL_VALUES });
   const targetRef = useRef<MotionValues>({ ...INITIAL_VALUES });
   const isVisibleRef = useRef(true);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const stopObservingRef = useRef<(() => void) | null>(null);
   const observedRef = useRef<MotionTarget | null>(null);
   const nativeSyncRef = useRef<(() => void) | null>(null);
 
@@ -130,20 +150,32 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
     if (!native || !resolved || !ViewTimeline) return undefined;
     const preference = window.matchMedia(MEDIA_QUERY.reducedMotion);
     const offset = resolved.distance * getDirectionSign(resolved.direction);
-    const translate = (value: number) => getDirectionAxis(resolved.direction) === 'x' ? `${value}px 0px` : `0px ${value}px`;
+    const translate = (value: number) =>
+      getDirectionAxis(resolved.direction) === 'x' ? `${value}px 0px` : `0px ${value}px`;
     let animation: Animation | undefined;
     const sync = () => {
       animation?.cancel();
       const node = nodeRef.current;
-      if (!preference.matches && node) animation = node.animate([{ translate: translate(-offset) }, { translate: translate(offset) }], {
-        timeline: new ViewTimeline({ subject: node, axis: 'block', inset: '0px' }),
-        rangeStart: 'entry 0%', rangeEnd: 'exit 100%', fill: 'both', composite: 'add',
-      } as KeyframeAnimationOptions & { rangeStart: string; rangeEnd: string });
+      if (!preference.matches && node)
+        animation = node.animate(
+          [{ translate: translate(-offset) }, { translate: translate(offset) }],
+          {
+            timeline: new ViewTimeline({ subject: node, axis: 'block', inset: '0px' }),
+            rangeStart: 'entry 0%',
+            rangeEnd: 'exit 100%',
+            fill: 'both',
+            composite: 'add',
+          } as KeyframeAnimationOptions & { rangeStart: string; rangeEnd: string },
+        );
     };
     nativeSyncRef.current = sync;
     sync();
     preference.addEventListener('change', sync);
-    return () => { animation?.cancel(); nativeSyncRef.current = null; preference.removeEventListener('change', sync); };
+    return () => {
+      animation?.cancel();
+      nativeSyncRef.current = null;
+      preference.removeEventListener('change', sync);
+    };
   }, [native, resolved, ViewTimeline]);
 
   useEffect(() => {
@@ -204,8 +236,8 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
       frameRef.current = null;
       lastFrameRef.current = null;
 
-      observerRef.current?.disconnect();
-      observerRef.current = null;
+      stopObservingRef.current?.();
+      stopObservingRef.current = null;
       // StrictMode монтирует эффекты дважды: без сброса повторный syncObserver решит, что узел уже наблюдается.
       observedRef.current = null;
       clearMotionStyles(nodeRef.current);
@@ -218,14 +250,19 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
     const syncTargetFromViewport = () => {
       const node = nodeRef.current;
       const nextConfig = configRef.current;
-      if (!node || !node.isConnected || !nextConfig || !isVisibleRef.current || document.hidden) return;
+      if (!node || !node.isConnected || !nextConfig || !isVisibleRef.current || document.hidden)
+        return;
 
       if (reducedMotionRef.current) {
         targetRef.current = { ...INITIAL_VALUES };
         return;
       }
 
-      targetRef.current = targetFromViewport(node.getBoundingClientRect(), nextConfig, currentRef.current.translateY);
+      targetRef.current = targetFromViewport(
+        node.getBoundingClientRect(),
+        nextConfig,
+        currentRef.current.translateY,
+      );
 
       scheduleAnimation();
     };
@@ -262,15 +299,20 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
         return;
       }
 
-      const elapsed = lastFrameRef.current === null ? 1 : clamp((timestamp - lastFrameRef.current) / (1000 / 60), 0, 3);
+      const elapsed =
+        lastFrameRef.current === null
+          ? 1
+          : clamp((timestamp - lastFrameRef.current) / (1000 / 60), 0, 3);
       lastFrameRef.current = timestamp;
       const ease = frameResponse(nextConfig.ease, elapsed * (1000 / 60));
 
       const nextValues: MotionValues = {
         translateX:
-          currentRef.current.translateX + (targetRef.current.translateX - currentRef.current.translateX) * ease,
+          currentRef.current.translateX +
+          (targetRef.current.translateX - currentRef.current.translateX) * ease,
         translateY:
-          currentRef.current.translateY + (targetRef.current.translateY - currentRef.current.translateY) * ease,
+          currentRef.current.translateY +
+          (targetRef.current.translateY - currentRef.current.translateY) * ease,
       };
 
       currentRef.current = nextValues;
@@ -300,35 +342,31 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
     const wanted = node && configRef.current ? node : null;
     if (observedRef.current === wanted) return;
 
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
+    stopObservingRef.current?.();
+    stopObservingRef.current = null;
 
     observedRef.current = wanted;
-    if (!wanted || typeof IntersectionObserver === 'undefined') return;
+    if (!wanted) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry) return;
-        isVisibleRef.current = entry.isIntersecting;
-        if (!entry.isIntersecting) {
-          if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
-          frameRef.current = null;
-          lastFrameRef.current = null;
-          return;
-        }
-        const config = configRef.current;
-        if (!config || reducedMotionRef.current) return;
-        // IO доставляет сохранённый rect позже scroll/rAF. Координата и текущий translate
-        // должны относиться к одному моменту, иначе поздний callback вернёт старую цель.
-        targetRef.current = targetFromViewport(wanted.getBoundingClientRect(), config, currentRef.current.translateY);
-        scheduleAnimation();
-      },
-      { rootMargin: animationVisibilityMargin(wanted) }
-    );
-    observer.observe(wanted);
-    observerRef.current = observer;
+    stopObservingRef.current = observeAnimationVisibility(wanted, (isVisible) => {
+      isVisibleRef.current = isVisible;
+      if (!isVisible) {
+        if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+        lastFrameRef.current = null;
+        return;
+      }
+      const config = configRef.current;
+      if (!config || reducedMotionRef.current) return;
+      // IO доставляет сохранённый rect позже scroll/rAF. Координата и текущий translate
+      // должны относиться к одному моменту, иначе поздний callback вернёт старую цель.
+      targetRef.current = targetFromViewport(
+        wanted.getBoundingClientRect(),
+        config,
+        currentRef.current.translateY,
+      );
+      scheduleAnimation();
+    });
   }, [scheduleAnimation]);
 
   /**
@@ -336,36 +374,49 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
    * отцепляет ref (зовёт с null), то есть на КАЖДЫЙ ре-рендер потребителя сбрасывал бы накопленное
    * смещение. Внутри — только ref'ы и стабильная `syncObserver`.
    */
-  const setMotionNode = useCallback((node: MotionTarget | null) => {
-    nodeRef.current = node;
-    nativeSyncRef.current?.();
-    syncObserver();
+  const setMotionNode = useCallback(
+    (node: MotionTarget | null) => {
+      nodeRef.current = node;
+      nativeSyncRef.current?.();
+      syncObserver();
 
-    if (!node) {
-      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
-      lastFrameRef.current = null;
-      targetRef.current = { ...INITIAL_VALUES };
-      currentRef.current = { ...INITIAL_VALUES };
-      isVisibleRef.current = false;
-      return;
-    }
+      if (!node) {
+        if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+        lastFrameRef.current = null;
+        targetRef.current = { ...INITIAL_VALUES };
+        currentRef.current = { ...INITIAL_VALUES };
+        isVisibleRef.current = false;
+        return;
+      }
 
-    // Без конфига кадр не нужен: включение пропом позже ставит смещение эффектом [config] через syncTargetFromViewport.
-    if (typeof window !== 'undefined' && configRef.current) {
-      requestAnimationFrame(() => {
-        const currentNode = nodeRef.current;
-        if (!currentNode || currentNode !== node || reducedMotionRef.current || !isVisibleRef.current) return;
+      // Без конфига кадр не нужен: включение пропом позже ставит смещение эффектом [config] через syncTargetFromViewport.
+      if (typeof window !== 'undefined' && configRef.current) {
+        requestAnimationFrame(() => {
+          const currentNode = nodeRef.current;
+          if (
+            !currentNode ||
+            currentNode !== node ||
+            reducedMotionRef.current ||
+            !isVisibleRef.current
+          )
+            return;
 
-        const nextConfig = configRef.current;
-        if (!nextConfig) return;
+          const nextConfig = configRef.current;
+          if (!nextConfig) return;
 
-        targetRef.current = targetFromViewport(currentNode.getBoundingClientRect(), nextConfig, currentRef.current.translateY);
+          targetRef.current = targetFromViewport(
+            currentNode.getBoundingClientRect(),
+            nextConfig,
+            currentRef.current.translateY,
+          );
 
-        scheduleAnimation();
-      });
-    }
-  }, [syncObserver]);
+          scheduleAnimation();
+        });
+      }
+    },
+    [syncObserver],
+  );
 
   // Моушен могли включить пропом уже после монтирования — тогда наблюдатель заводится здесь.
   useEffect(() => {

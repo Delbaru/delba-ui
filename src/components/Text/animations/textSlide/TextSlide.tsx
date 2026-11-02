@@ -51,7 +51,7 @@ function TextSlideSequence({ options }: { options: SequenceOptions }) {
     <Flex className={'ui-slide'} style={stageStyle}>
       {options.steps.map((step, index) => (
         <span
-            key={step.slice(0, 60)}
+            key={index}
             ref={(el) => { itemRefs.current[index] = el; }}
             className={'ui-slide-item'}
             style={{ top: cumHeights[index - 1] || 0 }}

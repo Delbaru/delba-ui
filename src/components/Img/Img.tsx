@@ -1,19 +1,46 @@
-"use client";
+'use client';
 
 import Link from 'next/link';
 import Image, { getImageProps, type ImageProps } from 'next/image';
 import { useMemo, useState, type CSSProperties } from 'react';
 import type React from 'react';
 
-import { MEDIA_QUERY, boxLayout, createLayoutClasses, cx, resolveLinkProps, resolveResponsive, shouldUseNextLink, sizeClasses, splitBoxLayout, splitRootDomProps, stateLinkProps, useMergedRefs, type BoxLayoutProps, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef } from '../../core';
-import { imageSizes } from '../../core/base/scale';
+import {
+  MEDIA_QUERY,
+  boxLayout,
+  createLayoutClasses,
+  cx,
+  resolveLinkProps,
+  resolveResponsive,
+  shouldUseNextLink,
+  sizeClasses,
+  splitBoxLayout,
+  splitRootDomProps,
+  stateLinkProps,
+  useMergedRefs,
+  type BoxLayoutProps,
+  type ResponsiveValue,
+  type SizeValue,
+  type StateLinkInput,
+  type WithRef,
+} from '../../core';
 import { SCALE } from '../../core/scale';
 import { useFancybox } from '../../hooks/useFancybox';
-import { isAppearanceAnimate, withoutStagger, type RevealInput, type RevealOptions } from '../../core/reveal/reveal';
-import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import {
+  isAppearanceAnimate,
+  withoutStagger,
+  type RevealInput,
+  type RevealOptions,
+} from '../../core/reveal/reveal';
+import {
+  isSharedMotionAnimate,
+  useSharedMotion,
+  type SharedMotionProps,
+} from '../../hooks/useSharedMotion';
 import { useImgSwap } from './swap/useImgSwap';
 import type { ImgAnimate } from './swap/types';
 import { imageUnoptimized, nativeImageSizes } from './optimization';
+import { imageSourceSizes } from './source-sizing';
 
 const c = createLayoutClasses();
 
@@ -21,10 +48,18 @@ type ObjectFitKey = 'contain' | 'cover' | 'fill' | 'none' | 'scale_down';
 
 type ObjectPositionKey =
   | 'center'
-  | 'top' | 'bottom' | 'left' | 'right'
-  | 'top_left' | 'top_center' | 'top_right'
-  | 'center_left' | 'center_right'
-  | 'bottom_left' | 'bottom_center' | 'bottom_right';
+  | 'top'
+  | 'bottom'
+  | 'left'
+  | 'right'
+  | 'top_left'
+  | 'top_center'
+  | 'top_right'
+  | 'center_left'
+  | 'center_right'
+  | 'bottom_left'
+  | 'bottom_center'
+  | 'bottom_right';
 
 type ImgBaseProps = Omit<
   ImageProps,
@@ -63,7 +98,11 @@ type ImgRootSizeProps = {
 
 type ImgElementProps = ImgBaseProps & Record<string, unknown>;
 
-export interface ImgProps extends ImgBaseProps, BoxLayoutProps, ImgRootSizeProps, SharedMotionProps<ImgAnimate> {
+export interface ImgProps
+  extends ImgBaseProps,
+    BoxLayoutProps,
+    ImgRootSizeProps,
+    SharedMotionProps<ImgAnimate> {
   /** Explicitly override ui.config.images.optimizeApi and the private /api/ default. Only enable optimization for sources accessible without visitor cookies. */
   unoptimized?: boolean;
   className?: string;
@@ -75,7 +114,8 @@ export interface ImgProps extends ImgBaseProps, BoxLayoutProps, ImgRootSizeProps
   /**
    * Картинка. Строка или импорт — как у `next/image`. Кортеж `[desktop, mobile, tablet]` —
    * свой кадр на полосу ширины (`ImgSrcTuple`): внутри рисуется `<picture>`, и браузер сам
-   * меняет кадр при смене ширины окна. Размеры, `sizes`, `objectFit` — общие на все кадры.
+   * меняет кадр при смене ширины окна. Размеры и `objectFit` — общие на все кадры. Если источник
+   * содержит исходные `width`/`height`, `cover` учитывает их при выборе размера после обрезки.
    */
   src: ImgSource | ImgSrcTuple;
 
@@ -98,8 +138,6 @@ export interface ImgProps extends ImgBaseProps, BoxLayoutProps, ImgRootSizeProps
 
   aspectRatio?: ResponsiveValue<string>;
 
-
-
   /** Явная подсказка ресурса. Без неё lazy contain использует native auto с responsive fallback. */
   sizes?: string;
 
@@ -111,7 +149,7 @@ export interface ImgProps extends ImgBaseProps, BoxLayoutProps, ImgRootSizeProps
   sizesWidth?: ResponsiveValue<SizeValue>;
   sizesHeight?: ResponsiveValue<SizeValue>;
 
-  /** Размеры контейнера (wrapper). Полезно, если картинка должна рендериться на 100%, а intrinsic размеры другие. */
+  /** Размеры контейнера (wrapper). Автоматический `sizes` следует за этими фактическими границами. */
   blur?: boolean;
 
   quality?: number;
@@ -136,73 +174,15 @@ export interface ImgProps extends ImgBaseProps, BoxLayoutProps, ImgRootSizeProps
   noreferrer?: boolean;
 }
 
-const parseAspect = (value?: string | null): number | null => {
-  if (!value) return null;
-
-  const parts = value.split(/[/:]/);
-  if (parts.length !== 2) throw new Error(`[Img] aspectRatio must be "w/h". Got: ${value}`);
-
-  const w = Number(parts[0]);
-  const h = Number(parts[1]);
-  if (!Number.isFinite(w) || !Number.isFinite(h) || h === 0) {
-    throw new Error(`[Img] aspectRatio parts must be finite numbers. Got: ${value}`);
-  }
-
-  return w / h;
-};
-
-const required = (value: SizeValue | null | undefined, ctx: string): SizeValue => {
-  if (value === null || value === undefined) throw new Error(`[Img] width is required for ${ctx}`);
-  return value;
-};
-
-const deriveWidthFromHeight = (
-  height: SizeValue | null | undefined,
-  aspect: number | null,
-  ctx: string
-): SizeValue => {
-  if (height === null || height === undefined) {
-    throw new Error(`[Img] cannot derive width for ${ctx}: height is missing`);
-  }
-  if (!Number.isFinite(aspect ?? NaN)) {
-    throw new Error(`[Img] cannot derive width for ${ctx}: aspectRatio is missing or invalid`);
-  }
-
-  if (typeof height === 'number') {
-    return height * (aspect as number);
-  }
-
-  const trimmed = height.toString().trim();
-  if (trimmed.endsWith('%')) {
-    // deriving px from % height is ambiguous → forbid
-    throw new Error(`[Img] cannot derive width from percent height for ${ctx}. Use explicit width.`);
-  }
-
-  throw new Error(`[Img] unsupported height unit for deriving width (${ctx}): ${height}`);
-};
-
-const buildSizes = (
-  width: ResponsiveValue<SizeValue> | undefined,
-  height: ResponsiveValue<SizeValue> | undefined,
-  aspectRatio: ResponsiveValue<string> | undefined
-): string => {
-  const [wd, wm, wt] = resolveResponsive(width ?? null);
-  const [hd, hm, ht] = resolveResponsive(height ?? null);
-  const [ad, am, at] = resolveResponsive(aspectRatio ?? null);
-
-  const widthDesktop = wd ?? deriveWidthFromHeight(hd, parseAspect(ad ?? undefined), 'desktop');
-  const widthMobile = wm ?? deriveWidthFromHeight(hm, parseAspect(am ?? ad ?? undefined), 'mobile');
-  const widthTablet = wt ?? deriveWidthFromHeight(ht, parseAspect(at ?? ad ?? undefined), 'tablet');
-
-  // Число — rpx, а не px: `sizes` пересчитывается в долю окна по базам масштаба проекта.
-  return imageSizes({ desktop: required(widthDesktop, 'desktop'), mobile: required(widthMobile, 'mobile'), tablet: required(widthTablet, 'tablet') }, SCALE);
-};
-
 /**
  * Источники по полосам. Своя `<source>` нужна полосе, только если кадр у неё СВОЙ: совпал с
  * десктопным — браузеру нечего переключать.
  */
-function resolveSources(src: ImgSource | ImgSrcTuple): { desktop: ImgSource; mobile: ImgSource | null; tablet: ImgSource | null } {
+function resolveSources(src: ImgSource | ImgSrcTuple): {
+  desktop: ImgSource;
+  mobile: ImgSource | null;
+  tablet: ImgSource | null;
+} {
   if (!Array.isArray(src)) return { desktop: src, mobile: null, tablet: null };
   const [desktop, mobile, tablet] = src;
   return {
@@ -281,12 +261,35 @@ export function Img({
 }: WithRef<ImgProps, HTMLSpanElement>) {
   const { box, rest: props } = splitBoxLayout(rest);
   // Размеры обёртки — не из коробки: `rootW`/`rootH` перекрывают размеры картинки.
-  const layout = boxLayout(c, { ...box, r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR, bg, aspectRatio, grow });
+  const layout = boxLayout(c, {
+    ...box,
+    r,
+    tlr,
+    trr,
+    brr,
+    blr,
+    borderTLR,
+    borderTRR,
+    borderBRR,
+    borderBLR,
+    bg,
+    aspectRatio,
+    grow,
+  });
   const [isLoaded, setIsLoaded] = useState(false);
   // Каскад у картинки означал бы её внутренние слои — снимаем.
-  const appearanceAnimate = isAppearanceAnimate(animate) ? { ...animate, stagger: 0 } : isSharedMotionAnimate(animate) ? animate : undefined;
+  const appearanceAnimate = isAppearanceAnimate(animate)
+    ? { ...animate, stagger: 0 }
+    : isSharedMotionAnimate(animate)
+      ? animate
+      : undefined;
   const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal: withoutStagger(reveal), animate: appearanceAnimate });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
+    perspective3d,
+    parallax,
+    reveal: withoutStagger(reveal),
+    animate: appearanceAnimate,
+  });
   const imageSizeProps = {
     w,
     minW,
@@ -304,9 +307,14 @@ export function Img({
     maxH: imageSizeProps.maxH,
   };
   const { rootProps, elementProps } = splitRootDomProps(props as ImgElementProps);
-  const automaticSizes = !sizes && sizesWidth === undefined && sizesHeight === undefined &&
-    !priority && elementProps.preload !== true && loading !== 'eager' &&
-    resolveResponsive(objectFit).every(value => value === 'contain');
+  const automaticSizes =
+    !sizes &&
+    sizesWidth === undefined &&
+    sizesHeight === undefined &&
+    !priority &&
+    elementProps.preload !== true &&
+    loading !== 'eager' &&
+    resolveResponsive(objectFit).every((value) => value === 'contain');
 
   // Next fetches originals without visitor cookies. Local API files are private by default;
   // the project may declare public directories once in ui.config.images.optimizeApi.
@@ -315,7 +323,7 @@ export function Img({
   // preload-ссылки, которая у кадров по полосам тянула бы десктопный файл и на телефон.
   const imageProps = {
     ...elementProps,
-    loading: priority ? 'eager' : loading ?? (automaticSizes ? 'lazy' : undefined),
+    loading: priority ? 'eager' : (loading ?? (automaticSizes ? 'lazy' : undefined)),
     fetchPriority: priority ? 'high' : fetchPriority,
     src: sources.desktop,
     unoptimized: imageUnoptimized(sources.desktop, elementProps.unoptimized),
@@ -324,8 +332,12 @@ export function Img({
 
   // Ссылка на самой картинке отменяет лайтбокс: два `<a>` друг в друге — сломанная разметка.
   const isLink = Boolean(href);
-  const Root = (isLink ? (shouldUseNextLink(href, target, download) ? Link : 'a') : 'span') as React.ElementType;
-  const linkProps = isLink ? resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer }) : null;
+  const Root = (
+    isLink ? (shouldUseNextLink(href, target, download) ? Link : 'a') : 'span'
+  ) as React.ElementType;
+  const linkProps = isLink
+    ? resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer })
+    : null;
   const fancyboxGroup = isLink ? undefined : fancybox?.trim();
   const fancyboxHref = useMemo(() => resolveFancyboxHref(sources.desktop), [sources.desktop]);
   const hasFancybox = Boolean(fancyboxGroup && fancyboxHref);
@@ -338,16 +350,47 @@ export function Img({
 
   const computedSizes = useMemo(() => {
     if (sizes) return sizes;
-    const widthForSizes = sizesWidth ?? imageSizeProps.w;
-    const heightForSizes = sizesHeight ?? imageSizeProps.h;
-    const fallback = buildSizes(widthForSizes, heightForSizes, aspectRatio);
+    const fallback = imageSourceSizes({
+      width: sizesWidth ?? wrapperSizeProps.w,
+      height: sizesHeight ?? wrapperSizeProps.h,
+      aspectRatio,
+      objectFit: objectFit ?? 'cover',
+      source: sources.desktop,
+      scale: SCALE,
+    });
     // Lazy contain знает свою реальную рамку после layout. В поддерживающем браузере
     // выбор ресурса нативный; старый браузер использует прежний responsive fallback.
     // Cover и явные подсказки сохраняем: им может требоваться запас под crop/zoom.
     return automaticSizes ? nativeImageSizes(fallback) : fallback;
-  }, [aspectRatio, automaticSizes, imageSizeProps.h, imageSizeProps.w, sizes, sizesHeight, sizesWidth]);
+  }, [
+    aspectRatio,
+    automaticSizes,
+    objectFit,
+    sizes,
+    sizesHeight,
+    sizesWidth,
+    sources.desktop,
+    wrapperSizeProps.h,
+    wrapperSizeProps.w,
+  ]);
+
+  const sizesForSource = (source: ImgSource) => {
+    if (source === sources.desktop) return computedSizes;
+    if (sizes) return sizes;
+    return imageSourceSizes({
+      width: sizesWidth ?? wrapperSizeProps.w,
+      height: sizesHeight ?? wrapperSizeProps.h,
+      aspectRatio,
+      objectFit: objectFit ?? 'cover',
+      source,
+      scale: SCALE,
+    });
+  };
   const normalizedAlt = typeof alt === 'string' ? alt : '';
-  const swapIdentity = typeof sources.desktop === 'string' ? sources.desktop : resolveFancyboxHref(sources.desktop) ?? '';
+  const swapIdentity =
+    typeof sources.desktop === 'string'
+      ? sources.desktop
+      : (resolveFancyboxHref(sources.desktop) ?? '');
   const fancyboxAriaLabel = normalizedAlt || 'Изображение';
 
   if (quality !== undefined && (quality < 1 || quality > 100)) {
@@ -386,7 +429,7 @@ export function Img({
       unoptimized: imageUnoptimized(source, elementProps.unoptimized),
       alt: normalizedAlt,
       fill: true,
-      sizes: computedSizes,
+      sizes: sizesForSource(source),
       quality: normalizedQuality,
     }).props;
 
@@ -401,14 +444,14 @@ export function Img({
         <source
             media={MEDIA_QUERY.mobile}
             srcSet={pictureSource(sources.mobile)}
-            sizes={computedSizes}
+            sizes={sizesForSource(sources.mobile)}
         />
       )}
       {sources.tablet !== null && (
         <source
             media={MEDIA_QUERY.below}
             srcSet={pictureSource(sources.tablet)}
-            sizes={computedSizes}
+            sizes={sizesForSource(sources.tablet)}
         />
       )}
       <img

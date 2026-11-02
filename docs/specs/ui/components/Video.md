@@ -17,7 +17,7 @@ HTML-видео в оболочке layout/motion кита: постер, раз
   затем desktop. Это отдельное правило медиа, не общая нормализация layout.
 - `controls=false`, `autoPlay=false`, `muted=false`, `playsInline=true`.
 - `showPlayButton=false`; true добавляет кнопку запуска до начала воспроизведения.
-- `objectFit` по умолчанию `cover`, `objectPosition` — `center`.
+- `objectFit` по умолчанию `cover`, `objectPosition` — `center`; оба значения поддерживают responsive-кортеж `[desktop, mobile, tablet]`.
 - `w/h` и другие box-props управляют геометрией; `rootW/rootH` уточняют оболочку.
   Доступны `aspectRatio`, motion и нативные video-атрибуты/события.
 - `ref` указывает на `HTMLVideoElement`, а className/style оформляют оболочку.
@@ -28,13 +28,15 @@ HTML-видео в оболочке layout/motion кита: постер, раз
 import { Video } from '@delba/ui';
 
 export function Clip() {
-  return <Video
-    src="/media/process.mp4"
-    poster="/media/process.jpg"
-    controls
-    preload="metadata"
-    aria-label="Процесс печати"
-  />;
+  return (
+    <Video
+      src="/media/process.mp4"
+      poster="/media/process.jpg"
+      controls
+      preload="metadata"
+      aria-label="Процесс печати"
+    />
+  );
 }
 ```
 

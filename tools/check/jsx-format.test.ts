@@ -124,6 +124,7 @@ const styled = <Text tone={ { color : "white" } }>{data.title}</Text>;
 const flex = <Flex dir="row" align="center" gap="12">{items}</Flex>;
 const nested = <Card start={<Icon a="one" b="two" />} role="group" />;
 const typed = <Component<Item> value={value}>{label}</Component>;
+const tuple = <Text className="a deliberately long class value that forces this JSX opening tag to wrap while the responsive value itself stays compact" variant={['small', 'small', 'small']} />;
 const hero = <Hero data={{
     title: 'A short title',
     eyebrow: 'A short eyebrow',
@@ -144,6 +145,7 @@ const hero = <Hero data={{
   assert.match(formatted, /const flex = <Flex dir="row" align="center" gap="12">\{items\}<\/Flex>;/);
   assert.match(formatted, /const nested = <Card start=\{<Icon a="one" b="two" \/>\} role="group" \/>;/);
   assert.match(formatted, /const typed = <Component<Item> value=\{value\}>\{label\}<\/Component>;/);
+  assert.match(formatted, /variant=\{\['small', 'small', 'small'\]\}/);
   assert.match(formatted, /<Text variant="lead" color="white" maxW="52rem">\{d\.hero_eyebrow\}<\/Text>/);
   assert.match(formatted, /eyebrow: 'A short eyebrow'/);
   assert.match(formatted, /\n    <Section\n        first=/);

@@ -10,6 +10,8 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Img } from '../src/components/Img/Img';
 import { imageUnoptimized } from '../src/components/Img/optimization';
+import { imageSizes } from '../src/core/base/scale';
+import { SCALE } from '../src/core/scale';
 import { generateImages, imagesTs, validateImages } from './images';
 
 const publicPrefixes = ['/api/media/file/'];
@@ -19,7 +21,8 @@ test('image policy preserves private API defaults and explicit Next overrides', 
     assert.equal(imageUnoptimized('/api/media/file/photo.webp', undefined, []), true);
     assert.equal(imageUnoptimized('/photo.webp', undefined, []), undefined);
     assert.equal(imageUnoptimized('https://cms.example/api/media/file/photo.webp', undefined, []), undefined);
-    assert.equal(imageUnoptimized({ src: '/api/photo.webp' }, undefined, []), undefined);
+    assert.equal(imageUnoptimized({ src: '/api/photo.webp', width: 640, height: 480 }, undefined, []), true);
+    assert.equal(imageUnoptimized({ src: '/api/media/file/photo.webp', width: 640, height: 480 }, undefined, publicPrefixes), false);
     assert.equal(imageUnoptimized('/api/private/photo.webp', false, []), false);
     assert.equal(imageUnoptimized('/api/media/file/photo.webp', true, publicPrefixes), true);
 });
@@ -93,6 +96,12 @@ test('actual single-source Img SSR preloads the optimized image and protects pri
     }));
     assert.match(privateHtml, /<link rel="preload" as="image" href="\/api\/private\/hero.webp"/);
     assert.doesNotMatch(privateHtml, /\/_next\/image/);
+    const privateWithDimensions = renderToStaticMarkup(createElement(ServerImg, {
+        src: { src: '/api/private/hero.webp', width: 1600, height: 900 }, alt: 'Private with dimensions',
+        sizes: '100vw', preload: true,
+    }));
+    assert.match(privateWithDimensions, /href="\/api\/private\/hero.webp"/);
+    assert.doesNotMatch(privateWithDimensions, /\/_next\/image/);
 });
 
 test('actual contain Img SSR uses native auto sizing but preserves explicit preload', () => {
@@ -112,6 +121,44 @@ test('actual contain Img SSR uses native auto sizing but preserves explicit prel
     assert.match(preloaded, /<link rel="preload"/);
     assert.doesNotMatch(preloaded, /sizes="auto/);
     assert.doesNotMatch(preloaded, /loading="lazy"/);
+});
+
+test('automatic image sizes follow the rendered wrapper dimensions', () => {
+    const { Img: ServerImg } = createRequire(import.meta.url)('../src/components/Img/Img.tsx') as typeof import('../src/components/Img/Img');
+    const wider = renderToStaticMarkup(createElement(ServerImg, {
+        src: '/product.webp', alt: 'Rendered wrapper',
+        w: [80, 80, 80], h: [80, 80, 80],
+        rootW: [160, 160, 160], rootH: [160, 160, 160],
+    }));
+    const heightDerived = renderToStaticMarkup(createElement(ServerImg, {
+        src: '/product.webp', alt: 'Height-derived wrapper',
+        aspectRatio: ['1/1', '1/1', '1/1'], rootH: [160, 160, 160],
+    }));
+    const renderedSizes = imageSizes({ desktop: 160, mobile: 160, tablet: 160 }, SCALE);
+    assert.ok(wider.includes(`sizes="${renderedSizes}"`));
+    assert.ok(heightDerived.includes(`sizes="${renderedSizes}"`));
+    const innerSizes = imageSizes({ desktop: 80, mobile: 80, tablet: 80 }, SCALE);
+    assert.equal(wider.includes(`sizes="${innerSizes}"`), false);
+});
+
+test('cover source sizes account for each known art-direction bitmap ratio', () => {
+    const { Img: ServerImg } = createRequire(import.meta.url)('../src/components/Img/Img.tsx') as typeof import('../src/components/Img/Img');
+    const html = renderToStaticMarkup(createElement(ServerImg, {
+        src: [
+            { src: '/wide.webp', width: 1600, height: 800 },
+            { src: '/tall.webp', width: 800, height: 1600 },
+            null,
+        ],
+        alt: 'Art-directed cover',
+        aspectRatio: ['1/1', '1/1', '1/1'],
+        w: [160, 160, 160], h: [160, 160, 160],
+        objectFit: ['cover', 'cover', 'cover'],
+    }));
+    const wideSizes = imageSizes({ desktop: 320, mobile: 320, tablet: 320 }, SCALE);
+    const tallSizes = imageSizes({ desktop: 160, mobile: 160, tablet: 160 }, SCALE);
+    assert.ok(html.includes(`<source media="(max-width: 767px)" srcSet="`));
+    assert.ok(html.includes(`sizes="${wideSizes}"`));
+    assert.ok(html.includes(`sizes="${tallSizes}"`));
 });
 
 test('image config rejects ambiguous, remote and malformed directory prefixes', () => {

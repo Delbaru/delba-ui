@@ -26,6 +26,7 @@ export function projectSteps(root, config, { update = false, strict = false, fix
     nodeStep('Правила проекта', [script('check-rules.mjs'), '--baseline', config.baseline ?? '.rules-baseline.json', ...(update ? ['--update'] : []), ...(fix ? ['--fix'] : []), ...(config.rules ?? ['src'])], root),
     nodeStep('Тема', [script('check-tokens.mjs'), ...(strict ? ['--strict'] : []), ...(config.themeDefaults ? ['--with-defaults'] : []), ...[config.theme ?? 'theme'].flat(), ...(config.motion ? ['--generated-motion', path.join(KIT, 'src/core/_motion.scss')] : []), ...(config.typography ? ['--typography', config.typography.join(',')] : [])], root),
     nodeStep('Импорты', [script('check-migration.mjs'), ...(config.rules ?? ['src']), ...configs], root),
+    nodeStep('Анатомия D-компонентов', [script('check-d-component-anatomy.mjs')], root),
     astStep('Архитектура проекта', root, { rules: projectRules, dirs: config.rules ?? ['src'] }),
   ];
 }
