@@ -136,43 +136,45 @@ const noopSubscribe = () => () => {};
 
 export function useFetchedSvg(url: string | null, normalizeContent = false): FetchedSvgState {
   const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
-  const [state, setState] = useState<FetchedSvgState>(
-    () =>
-      getInlineSvg(url, normalizeContent) ||
-      (hydrated && getResolvedSvg(url, normalizeContent)) || { content: null, viewBox: undefined, rootFill: undefined }
+  const sourceKey = url ? svgCacheKey(url, normalizeContent) : null;
+  const cached = getInlineSvg(url, normalizeContent) || (hydrated && getResolvedSvg(url, normalizeContent));
+  const currentSource = cached || { content: null, viewBox: undefined, rootFill: undefined };
+  const [state, setState] = useState<FetchedSvgState & { sourceKey: string | null }>(
+    () => ({ sourceKey, ...currentSource }),
   );
 
   useEffect(() => {
     let cancelled = false;
 
     if (!url) {
-      setState({ content: null, viewBox: undefined, rootFill: undefined });
+      setState({ sourceKey, content: null, viewBox: undefined, rootFill: undefined });
       return () => { cancelled = true; };
     }
 
     // Уже разобранный SVG берём синхронно — без повторного fetch и без вспышки пустого состояния.
     const resolved = getResolvedSvg(url, normalizeContent);
     if (resolved) {
-      setState(resolved);
+      setState({ sourceKey, ...resolved });
       return () => { cancelled = true; };
     }
 
-    setState({ content: null, viewBox: undefined, rootFill: undefined });
+    setState({ sourceKey, content: null, viewBox: undefined, rootFill: undefined });
 
     fetchSvgCached(url, normalizeContent)
       .then(({ content, viewBox, rootFill }) => {
         if (!cancelled) {
-          setState({ content, viewBox, rootFill });
+          setState({ sourceKey, content, viewBox, rootFill });
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setState({ content: null, viewBox: undefined, rootFill: undefined });
+          setState({ sourceKey, content: null, viewBox: undefined, rootFill: undefined });
         }
       });
 
     return () => { cancelled = true; };
-  }, [url, normalizeContent]);
+  }, [url, normalizeContent, sourceKey]);
 
-  return state;
+  // A prop change must not report the previous source as the new swap content.
+  return state.sourceKey === sourceKey ? state : currentSource;
 }

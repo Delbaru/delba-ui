@@ -2,6 +2,7 @@ import type { UiScale } from '../src/core/base/scale';
 import type { ScrollbarOptions } from '../src/components/ScrollArea/scrollbar';
 import type { ExtractOptions } from './utilities/extract';
 import type { ObserverMargin } from '../src/core/base/observer-margin';
+import type { UiMessageOverrides } from '../src/core/base/message-defaults';
 import type { CarouselBehaviorDefaults, MotionDefaultOverrides } from '../src/core/base/motion-defaults';
 import type {
     MotionEasingOverrides,
@@ -102,4 +103,6 @@ export interface UiConfig {
     readonly images?: UiImages;
     /** Native scrollbar defaults for ScrollArea, Modal and scrollbarProps. Durations are seconds. */
     readonly scrollbar?: Readonly<ScrollbarOptions>;
+    /** Shared field messages and control labels; partial sections preserve the library defaults. */
+    readonly messages?: UiMessageOverrides;
 }

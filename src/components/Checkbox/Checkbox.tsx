@@ -20,15 +20,13 @@ export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputE
     style?: CSSProperties;
     children?: React.ReactNode;
     indeterminate?: boolean;
-    /** Куда прижат квадрат относительно подписи. По умолчанию по центру; 'start' нужен карточке
-     *  с двухстрочной подписью — там квадрат стоит вровень с ПЕРВОЙ строкой, а не с серединой. */
+    /** Vertical indicator alignment; start follows the first label line. */
     alignItems?: 'center' | 'start';
     gap?: ResponsiveValue<number>;
     state?: ComponentStateValue;
-    // Размер бокса в токенах (дефолт 24). Кортежем — когда квадрат живёт и ниже 1024: скаляр
-    // печатает класс БЕЗ брейкпоинт-префикса, то есть один размер на все ширины.
+    /** Indicator size in theme units; default 24. */
     size?: ResponsiveValue<number>;
-    // Размер галочки внутри бокса в токенах (дефолт 16).
+    /** Checkmark size in theme units; default 16. */
     iconSize?: ResponsiveValue<number>;
     'data-error'?: string;
     'data-point-events'?: string;
@@ -96,19 +94,10 @@ export function Checkbox({
             {...(rootProps as React.LabelHTMLAttributes<HTMLLabelElement>)}
             {...revealAttrs}
             {...(!isDisabled ? stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { onMouseEnter, onMouseLeave, onClick, onFocus, onBlur })) : {})}
-            className={cx(styles.Checkbox, ...layout, className)}
+            className={cx('Checkbox', styles.Checkbox, ...layout, className)}
             style={{ ...(motionStyle ?? null), ...style }}
             {...stateProps(state, isChecked && 'active', dataError && 'error', isDisabled && 'disabled')}
         >
-            {/* Ряд тянется на ширину <label>: `grow` + `minW:0`. Без них базовый размер ряда
-                считается по КОНТЕНТУ, а у карточки с растущей подписью (`w:0 grow:1`) контент
-                вносит ноль — ряд схлопывается, и подпись переносится по одному слову. У
-                контентных вариантов (bare/tile) ширина метки и так равна контенту, поэтому
-                рост ничего не меняет. */}
-            {/* Геометрия квадрата и его ряда записана СКАЛЯРАМИ, а не `[N, null, null]`:
-                скаляр печатает класс без брейкпоинт-префикса и потому действует на всех
-                ширинах. С кортежем ниже 1024 не было ни ширины, ни высоты, ни радиуса — то
-                есть квадрат схлопывался в точку (§12 «Экран, который живёт НИЖЕ 1024»). */}
             <Flex
                 gap={gap ?? [8, 8, 8]}
                 align={[alignItems, alignItems, alignItems]}
@@ -133,11 +122,6 @@ export function Checkbox({
                     r={[8, 8, 8]}
                     align={['center', 'center', 'center']}
                     justify={['center', 'center', 'center']}
-                    // Цвет нити — через переменную с ПРЕЖНИМ дефолтом: класс квадрата
-                    // принадлежит этому модулю и хэшируется, то есть с call-site его не
-                    // перебить ничем (§12 «отдай правило ПЕРЕМЕННОЙ, а не спорь
-                    // специфичностью»). Публичной части нужен `hair` — там квадрат стоит в
-                    // ряду с полями на такой же нити.
                     border={['calc(1 * var(--rpx)) solid var(--checkbox-box-border, var(--text-muted))', 'calc(1 * var(--rpx)) solid var(--checkbox-box-border, var(--text-muted))', 'calc(1 * var(--rpx)) solid var(--checkbox-box-border, var(--text-muted))']}
                     aria-hidden
                     {...stateProps(isChecked && 'active')}

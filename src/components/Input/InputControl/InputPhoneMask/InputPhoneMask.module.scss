@@ -1,0 +1,28 @@
+@use '../../../../core/mixins' as m;
+@use '../../../../core/scss-utils' as utils;
+@use 'sass:map';
+@layer ui.components {
+  .InputPhoneMask {
+    opacity: var(--input-mask-opacity, 1);
+    transition: opacity var(--t-d-fast) var(--t-t-f-ease);
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    height: fit-content;
+    pointer-events: none;
+    white-space: nowrap;
+    font: var(--field-font, #{m.role-font(body)});
+    font-variant-numeric: lining-nums proportional-nums;
+    color: var(--field-placeholder-color);
+  }
+  .dim {
+    color: var(--field-placeholder-color);
+    font-weight: 500;
+    letter-spacing: calc(1.8 * var(--rpx));
+    @media #{map.get(utils.$breakpoints, m)} {
+      letter-spacing: calc(1.4 * var(--rpx));
+    }
+  }
+}

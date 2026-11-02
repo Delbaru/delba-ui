@@ -53,20 +53,19 @@ export function readMotionTimeMs(
 ): number {
     if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value * 1000 : 0;
     const fallback = motionTimeFallbackMs(value, fallbackSeconds);
-    if (!isMotionTimingName(value) || typeof getComputedStyle !== 'function') return fallback;
-
-    const target: Element | undefined = scope
-        ? 'documentElement' in scope
-            ? scope.documentElement
-            : scope
-        : typeof document !== 'undefined'
-          ? document.documentElement
-          : undefined;
-    if (!target) return fallback;
-
-    const css = getComputedStyle(target).getPropertyValue(motionTimingVariable(value)).trim();
+    if (!isMotionTimingName(value)) return fallback;
+    const css = readMotionVariable(motionTimingVariable(value), scope);
     const match = /^(\d+(?:\.\d+)?|\.\d+)(ms|s)$/.exec(css);
     if (!match) return fallback;
     const amount = Number(match[1]);
     return Number.isFinite(amount) ? amount * (match[2] === 's' ? 1000 : 1) : fallback;
+}
+
+/** Reads inherited motion CSS in its owning document; runtime config remains the SSR fallback. */
+export function readMotionVariable(name: string, scope?: Element | Document): string {
+    const target = scope
+        ? 'documentElement' in scope ? scope.documentElement : scope
+        : typeof document === 'undefined' ? undefined : document.documentElement;
+    const view = target?.ownerDocument.defaultView;
+    return target && view ? view.getComputedStyle(target).getPropertyValue(name).trim() : '';
 }

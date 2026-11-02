@@ -1,122 +1,35 @@
 'use client';
 
 import Link from 'next/link';
-import { useLinkPrefetch, type LinkPrefetchProps } from '../../hooks/useLinkPrefetch';
-import { useRef, type CSSProperties } from 'react';
+
+import styles from './Flex.module.scss';
+import { useLinkPrefetch } from '../../hooks/useLinkPrefetch';
+import { useRef } from 'react';
 import type React from 'react';
-import { boxLayout, composeEventHandlers, containerClass, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ContainerProp, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
-import type { Transition } from '../../core';
-import { type RevealProps } from '../../core/reveal/reveal';
-import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
-import type { CollapseHandle } from '../../hooks/useCollapseMotion';
-import { resolveContentAnimate, type ContentAnimate, type ContentAnimation, type ContentEnter } from '../../hooks/contentMotion';
+import {
+  boxLayout,
+  composeEventHandlers,
+  containerClass,
+  createLayoutClasses,
+  cx,
+  resolveLinkProps,
+  shouldUseNextLink,
+  splitBoxLayout,
+  stateLinkProps,
+  stateProps,
+  useMergedRefs,
+  type WithRef,
+} from '../../core';
+import { isSharedMotionAnimate, useSharedMotion } from '../../hooks/useSharedMotion';
+import { resolveContentAnimate } from '../../hooks/contentMotion';
 import { useContentMotion } from '../../hooks/useContentMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { InteractionScope } from '../../core/InteractionScope';
 
-type DirectionKey = 'row' | 'row_reverse' | 'column' | 'column_reverse';
-type WrapKey = 'nowrap' | 'wrap' | 'wrap_reverse';
-type AlignItemsKey = 'stretch' | 'center' | 'flex_start' | 'flex_end' | 'start' | 'end' | 'baseline';
-type JustifyContentKey = 'start' | 'end' | 'center' | 'space_between' | 'space_around' | 'space_evenly';
-/** Вход Flex — общий словарь движения содержимого. */
-export type FlexEnterAnimation = ContentEnter;
-/** Прежний проп `animation` принимал и уходы — они играют один раз при монтировании. */
-export type FlexAnimation = ContentAnimation;
+import type { FlexProps } from './Flex.types';
+export type { FlexProps, FlexAnimation, FlexEnterAnimation } from './Flex.types';
 
 const c = createLayoutClasses();
-
-type FlexCollapseOptions = CollapseOptions;
-
-export interface FlexProps
-  extends Omit<React.HTMLAttributes<HTMLElement>, 'dir' | 'href' | 'target' | 'rel' | 'download'>,
-    Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
-    BoxLayoutProps,
-    ContainerProp,
-    SharedMotionProps<ContentAnimate>,
-    RevealProps, LinkPrefetchProps {
-  children?: React.ReactNode;
-  style?: CSSProperties;
-  state?: ComponentStateValue;
-  /** Добавляет state="interacting" при указателе, фокусе или открытом дочернем контроле.
-   * Порталы Modal/Dropdown учитываются автоматически; без дополнительного DOM-узла. */
-  trackInteraction?: boolean;
-  /** Активность области: указатель, фокус или открытая дочерняя Modal/Dropdown, включая порталы.
-   * Fixed/sticky-панель с top=0 также реагирует на указатель у верхнего края viewport. */
-  onInteractionChange?: (active: boolean) => void;
-  /** Marks the nearest source for descendant animate hover transforms, including non-link cards. */
-  motionScope?: boolean;
-  /** Тег узла без `href`: `header`, `nav`, `footer`… */
-  as?: 'div' | 'header' | 'nav' | 'footer' | 'main' | 'aside' | 'section' | 'ul' | 'li' | 'dl' | 'figure' | 'figcaption';
-
-  gap?: ResponsiveValue<number>;
-  rowGap?: ResponsiveValue<number>;
-  columnGap?: ResponsiveValue<number>;
-
-  /** Сворачивание всего Flex: `collapse={{ open, gap, fade }}`. Прежний boolean сохранён для
-   *  совместимости. Состояние держится снаружи; закрытый контент удаляется после анимации. */
-  collapse?: boolean | FlexCollapseOptions;
-  /** Верхний отступ сворачиваемого блока (дизайн-единицы, responsive — [d, m, t]).
-   *  Анимируется вместе с высотой, поэтому заменяет родительский gap. Работает с collapse. */
-  collapseGap?: ResponsiveValue<number>;
-  /** Колбэк по завершении анимации сворачивания/раскрытия. Нужен потребителям, которым важен момент
-   *  «анимация завершилась» (доизмерение SVG-коннекторов, скролл/фокус после раскрытия). Прерванный
-   *  ход его НЕ зовёт. Аргумента больше нет (ход идёт не на CSS-переходе). Работает с collapse. */
-  onCollapseEnd?: (event?: React.TransitionEvent<HTMLDivElement>) => void;
-  /** Плавное затухание содержимого (opacity 0↔1) синхронно с высотой. Работает с collapse. */
-  collapseFade?: boolean;
-  /** После завершения раскрытия снять overflow:hidden с клипа (для выпадающих меню/дропдаунов
-   *  внутри сворачиваемого блока). Во время анимации overflow остаётся скрытым. Работает с collapse. */
-  collapseOverflowVisible?: boolean;
-  /** Узел, ПОЯВИВШИЙСЯ от действия (новая строка списка), выезжает вместо появления кадром.
-   *  Опт-ин: иначе первый кадр списка стал бы парадом раскрытий. Читается при монтировании. */
-  collapseAppear?: boolean;
-  /** Ось сворачивания: 'row' — по высоте (по умолчанию), 'column' — по ширине. collapseGap при этом
-   *  анимирует padding-left вместо padding-top. Работает с collapse. */
-  collapseAxis?: 'row' | 'column';
-  /** Ручка сворачивания: `ref.current.transition` — ход, который вызвала последняя смена collapse.
-   *  Нужна сценарию, которому важно дождаться хода (`await ref.current.transition`) или собрать его
-   *  с чужими через `motion.together`. Узлом ручка НЕ командует: открыто/закрыто решает состояние. */
-  collapseRef?: React.Ref<CollapseHandle>;
-  /** Тот же ход, но колбэком — когда ручку некуда положить. Зовётся в момент старта. */
-  onTransition?: (transition: Transition) => void;
-  /** Закрытый блок ОСТАЁТСЯ в DOM (опт-ин): после сворачивания обёртка получает `hidden="until-found"` —
-   *  текст видят поисковики и Ctrl+F, а браузер, найдя в нём совпадение, шлёт `beforematch`
-   *  (см. onCollapseFound). Где `until-found` нет — обычный `hidden` + `inert`. Работает с collapse. */
-  collapseKeepMounted?: boolean;
-  /** Браузер нашёл текст в закрытом блоке (поиск по странице, переход по `#:~:text=`): владелец
-   *  состояния ставит collapse={true}. Блок раскрывается сразу, без анимации, — иначе браузер
-   *  прокрутил бы к ещё нулевой высоте. Работает с collapse и collapseKeepMounted. */
-  onCollapseFound?: () => void;
-
-  /** Появление и смена содержимого: `animate="fadeIn"` — вход при монтировании,
-   *  `animate={['fadeIn', { key: tab }]}` — при смене `key` старое уходит зеркальным ходом, затем входит
-   *  новое. Узел тот же (ref и фокус сохраняются), reduced-motion меняет сразу. Если задан, прежние
-   *  `animation` и `transitionKey` не читаются. */
-  animate?: SharedMotionProps<ContentAnimate>['animate'];
-  /** Прежняя запись входа; новая — `animate`. Без transitionKey — играет один раз при монтировании (появление контента).
-   *  С transitionKey — служит enter'ом свопа (exit берётся зеркально). reduced-motion гасит. */
-  animation?: FlexAnimation;
-  /** Прежняя запись ключа свопа; новая — `animate={[вход, { key }]}`. Идентификатор контента для свопа в стиле AnimatePresence mode='wait' БЕЗ библиотеки: при его смене
-   *  старый контент проигрывает exit (зеркало animation), затем подменяется новым с enter. Анимация идёт
-   *  на самом узле Flex (без обёрток и ремоунта). Состояние держите снаружи — своп его не теряет. */
-  transitionKey?: string | number;
-
-  dir?: ResponsiveValue<DirectionKey>;
-  justify?: ResponsiveValue<JustifyContentKey>;
-  align?: ResponsiveValue<AlignItemsKey>;
-  wrap?: ResponsiveValue<WrapKey>;
-
-  /** Краевой fade скролл-контейнера: вешает глобальную утилиту .scrollFadeY (ось Y — при scrollFade или
-   *  scrollFade='y') либо .scrollFadeX (scrollFade='x') — mask + scroll-driven animations, без JS
-   *  (см. tokens.global.scss). Ставится на сам скроллящийся Flex; overflow задаёте как обычно. ВАЖНО:
-   *  mask создаёт stacking context — плавающие оверлеи держите на элементе-обёртке, не на самом скролле. */
-  scrollFade?: boolean | 'x' | 'y';
-
-  linkState?: StateLinkInput;
-  newTab?: boolean;
-  nofollow?: boolean;
-  noreferrer?: boolean;
-}
 
 export function Flex({
   ref,
@@ -124,11 +37,27 @@ export function Flex({
   children,
   className = '',
   style,
-  gap, rowGap, columnGap,
-  collapse, collapseGap, onCollapseEnd, collapseFade, collapseOverflowVisible, collapseAxis, collapseAppear, collapseKeepMounted, onCollapseFound,
-  collapseRef, onTransition,
-  animate, animation, transitionKey,
-  dir, justify, align, wrap,
+  gap,
+  rowGap,
+  columnGap,
+  collapse,
+  collapseGap,
+  onCollapseEnd,
+  collapseFade,
+  collapseOverflowVisible,
+  collapseAxis,
+  collapseAppear,
+  collapseKeepMounted,
+  onCollapseFound,
+  collapseRef,
+  onTransition,
+  animate,
+  animation,
+  transitionKey,
+  dir,
+  justify,
+  align,
+  wrap,
   scrollFade,
   perspective3d,
   parallax,
@@ -138,9 +67,22 @@ export function Flex({
   trackInteraction,
   motionScope,
   onInteractionChange,
-  onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp,
-  onClick, onFocus, onBlur,
-  href, target, rel, download, newTab, nofollow, noreferrer, prefetch,
+  onMouseEnter,
+  onMouseMove,
+  onMouseLeave,
+  onMouseDown,
+  onMouseUp,
+  onClick,
+  onFocus,
+  onBlur,
+  href,
+  target,
+  rel,
+  download,
+  newTab,
+  nofollow,
+  noreferrer,
+  prefetch,
   linkState,
   ...props
 }: WithRef<FlexProps, HTMLElement>) {
@@ -151,11 +93,25 @@ export function Flex({
   const prepare = useLinkPrefetch(prefetch, href, useNextLink && !newTab);
   const Comp = (isLink ? (useNextLink ? Link : 'a') : as) as React.ElementType;
   const resolved = resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer });
-  const anchorProps = isLink ? { ...rest, ...resolved, ...(useNextLink ? { prefetch: prepare.prefetch } : null) } : rest;
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal, animate });
+  const anchorProps = isLink
+    ? { ...rest, ...resolved, ...(useNextLink ? { prefetch: prepare.prefetch } : null) }
+    : rest;
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
+    perspective3d,
+    parallax,
+    reveal,
+    animate,
+  });
   const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
-  const motionInput = contentAnimate !== undefined ? resolveContentAnimate(contentAnimate) : { animation, key: transitionKey };
-  const contentMotion = useContentMotion({ ...motionInput, children, onAnimationEnd: anchorProps.onAnimationEnd });
+  const motionInput =
+    contentAnimate !== undefined
+      ? resolveContentAnimate(contentAnimate)
+      : { animation, key: transitionKey };
+  const contentMotion = useContentMotion({
+    ...motionInput,
+    children,
+    onAnimationEnd: anchorProps.onAnimationEnd,
+  });
   const interactionRef = useRef<HTMLElement>(null);
   const surfaceRef = useMergedRefs(ref, interactionRef);
   const setRefs = useMergedRefs(setMotionNode, contentMotion.ref, surfaceRef);
@@ -164,6 +120,8 @@ export function Flex({
     <Comp
       ref={setRefs}
       className={cx(
+        'Flex',
+        styles.Flex,
         'ui-flex',
         containerClass(container),
         ...layout,
@@ -176,18 +134,22 @@ export function Flex({
         ...c.value('wrap', wrap),
         scrollFade && (scrollFade === 'x' ? 'scrollFadeX' : 'scrollFadeY'),
         contentMotion.className,
-        className
+        className,
       )}
       style={{
         ...(motionStyle ?? null),
         ...style,
+        ...(contentMotion.style ?? null),
       }}
       {...revealAttrs}
       data-motion-scope={motionScope ? '' : undefined}
       {...stateProps(state, trackInteraction && active && 'interacting')}
       {...anchorProps}
       {...stateLinkProps(linkState, {
-        onMouseEnter: composeEventHandlers(composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter), prepare.onIntent),
+        onMouseEnter: composeEventHandlers(
+          composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter),
+          prepare.onIntent,
+        ),
         onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),
         onMouseLeave: composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave),
         onMouseDown,
@@ -202,15 +164,21 @@ export function Flex({
     </Comp>
   );
 
-  const scopedContent = trackInteraction || onInteractionChange
-    ? <InteractionScope target={interactionRef} onChange={onInteractionChange}>{content}</InteractionScope>
-    : content();
+  const scopedContent =
+    trackInteraction || onInteractionChange ? (
+      <InteractionScope target={interactionRef} onChange={onInteractionChange}>
+        {content}
+      </InteractionScope>
+    ) : (
+      content()
+    );
 
   if (collapse === undefined) {
     return scopedContent;
   }
 
-  const collapseOptions: FlexCollapseOptions = typeof collapse === 'boolean' ? { open: collapse } : collapse;
+  const collapseOptions: CollapseOptions =
+    typeof collapse === 'boolean' ? { open: collapse } : collapse;
 
   // По высоте рамку держит сам Flex: он сжимается с треком и клипает своё содержимое. minH
   // сжаться не даст — тогда клипает внутренний слой, как раньше.

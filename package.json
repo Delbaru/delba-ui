@@ -32,7 +32,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --incremental false",
-    "test": "node --import tsx --test \"src/**/*.test.ts\" \"tools/**/*.test.ts\"",
+    "test": "node --import tsx --import ./tools/check/unit-runtime.mjs --test \"src/**/*.test.ts\" \"tools/**/*.test.ts\"",
     "boundary": "node tools/check-boundary.mjs",
     "check": "node tools/check/index.mjs"
   },

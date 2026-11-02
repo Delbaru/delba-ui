@@ -41,7 +41,7 @@ export function Gallery() {
 Кнопки появляются только при разрешённой навигации и достаточном количестве слайдов.
 Обёртка остаётся и без кнопок. Disabled берётся из состояния самой карусели.
 Стандартные кнопки имеют тип `button` и русские доступные имена направлений.
-Стрелки используют ресурс `./ui/arrows/arrow_gold.svg`; доступность этого ресурса
+Стрелки используют встроенный ресурс arrows/arrow_bold.svg; доступность этого ресурса
 и его соответствие теме проверяются в приложении потребителя.
 Собственные иконки или render-функция публичным API не предусмотрены.
 
@@ -54,3 +54,10 @@ export function Gallery() {
 Договор: [реализация и props](../../../../src/components/Carousel/CarouselNav/CarouselNav.tsx),
 [связь контролов](../../../../src/components/Carousel/controls.ts),
 [приёмка](../../verification/acceptance.md).
+
+## Владение и оформление
+
+CarouselNav использует общий controls registry для Carousel и NativeCarousel.
+Disabled и команды принадлежат карусели; у пары стрелок нет второго индекса.
+Свои CarouselNav.module.scss и класс CarouselNav, без импорта стилей родителя.
+Тексты направлений задаются ui.config.messages.carousel.previous/next.

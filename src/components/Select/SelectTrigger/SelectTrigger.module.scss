@@ -1,0 +1,37 @@
+@use '../../../core/mixins' as m;
+@layer ui.components {
+  .SelectTrigger {
+    min-width: 0;
+    cursor: inherit;
+    outline: none;
+  }
+  .TriggerContent {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    color: var(--select-trigger-color, inherit);
+  }
+  .TriggerText {
+    flex: 1;
+    min-width: 0;
+    color: inherit;
+    font: var(--select-trigger-font, #{m.role-font(body)});
+    text-transform: var(--select-trigger-case, none);
+    font-weight: var(--select-trigger-weight, normal);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .Chevron {
+    opacity: var(--select-chevron-opacity, 1);
+    transform: var(--select-chevron-transform, none);
+    path {
+      stroke: var(--select-chevron-stroke);
+    }
+    flex-shrink: 0;
+    pointer-events: none;
+    transition: transform var(--t-d-fast);
+  }
+}

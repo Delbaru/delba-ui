@@ -33,7 +33,8 @@ export function commonAffixes(a: string, b: string): { prefix: number; suffix: n
   let prefix = 0;
   while (prefix < min && A[prefix] === B[prefix]) prefix += 1;
   let suffix = 0;
-  while (suffix < min - prefix && A[A.length - 1 - suffix] === B[B.length - 1 - suffix]) suffix += 1;
+  while (suffix < min - prefix && A[A.length - 1 - suffix] === B[B.length - 1 - suffix])
+    suffix += 1;
   return { prefix, suffix };
 }
 
@@ -44,8 +45,15 @@ export function commonAffixes(a: string, b: string): { prefix: number; suffix: n
  * что уходит, что приходит и когда убрать ушедшее. reduced-motion → мгновенная подмена без анимации.
  * Высоту/ширину держит grid-стек в разметке, поэтому ни измерений, ни rAF здесь нет.
  */
-export function useTextSwap(value: string, { durationMs, staggerMs }: UseTextSwapOptions): TextSwapState {
-  const [state, setState] = useState<TextSwapState>({ current: value, previous: null, generation: 0 });
+export function useTextSwap(
+  value: string,
+  { durationMs, staggerMs }: UseTextSwapOptions,
+): TextSwapState {
+  const [state, setState] = useState<TextSwapState>({
+    current: value,
+    previous: null,
+    generation: 0,
+  });
   // Последний показанный current — чтобы effect срабатывал только на реальную смену value, а не на свои setState.
   const currentRef = useRef(value);
   currentRef.current = state.current;

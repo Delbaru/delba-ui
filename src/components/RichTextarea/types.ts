@@ -1,6 +1,6 @@
 import type { SerializedEditorState } from 'lexical';
 
-import type { VariableNodePayload } from './lexical/VariableNode';
+import type { VariableNodePayload } from './lexical/VariableNode/VariableNode';
 
 export type LexicalTextareaContent =
   | SerializedEditorState

@@ -1,33 +1,79 @@
 # LexicalText
 
-Текущий договор, сверенный по исходнику; runtime-проверка отдельно.
+Статус: реализованный API; типы и unit проверяются отдельно от итоговой браузерной приёмки.
 
-## Назначение и применение
+## Назначение
 
-Вывод редакторского контента: HTML или документа Lexical. Публичное имя — `LexicalText`; папка реализации называется `RichText`. Для обычной подписи или заголовка используй [Text](Text.md), для редактирования — [LexicalTextarea](LexicalTextarea.md).
+Безопасный вывод HTML или сериализованного документа Lexical. Для обычной подписи
+используй Text, для редактирования — LexicalTextarea. Папка реализации называется RichText;
+публичное имя LexicalText сохраняется.
 
-## Основной API
+## Договор
 
-- `content?: string | LexicalDocument | null` — вход; документ содержит `root.children`. Неизвестные узлы проверяет renderer; пустое содержимое не создаёт содержательный блок.
-- `variant` по умолчанию `default` на всех полосах; допустимые варианты определены в исходном типе, это не произвольное имя варианта Text.
-- HTML проходит санитайзер; содержание и права публикации всё равно проверяет система-владелец данных.
-- `links?: 'active' | 'text'` defaults to `active`. Use `text` when a parent already owns the anchor: inline links and autolinks keep their children and formatting but render without nested anchors. Sanitized legacy HTML anchors are unwrapped the same way.
-- В строковом HTML вложенные `ul`/`ol` сохраняют вложенные `li`; соседние блоки после списка не теряются.
-- `rows`, `ellipsis`, `color`, общая геометрия, `animate` и `reveal` оформляют блок. Ссылки и структура внутри документа не должны терять смысл из-за обрезки.
-- Санитайзер и роли без React доступны из `@delba/ui/rich-text`; сам компонент импортируется из `@delba/ui`.
+- content — HTML-строка, LexicalDocument, null или undefined. Пустой вход не создаёт блок.
+  HTML проходит прежний санитайзер; неизвестные JSON-узлы отбрасываются с сохранением соседей.
+- variant — default, plain, style-1…style-5; полный responsive-кортеж, по умолчанию default.
+  plain наследует шрифт окружения; явно заданные роли блоков продолжают действовать.
+- rows задаёт plain-text preview с ограничением строк. ellipsis без rows даёт одну строку.
+  Полный документ остаётся источником данных; сокращённый текст не возвращается в CMS.
+- links='active' сохраняет ссылки. links='text' оставляет содержание без вложенных anchor.
+- Общие layout-пропсы, color, linkState, reveal, perspective3d и parallax сохраняют
+  общий договор Box. Пользовательские DOM-события компонуются его механизмом.
+- Класс LexicalText остаётся на существующем корне; собственный SCSS — LexicalText.module.scss.
+  Прежний RichText-класс и экспорт richTextClasses сохранены как публичный договор типографики.
 
-## Пример
+## Применение
 
 ```tsx
 import { LexicalText } from '@delba/ui';
 
-export function LexicalTextExample() {
-  return <LexicalText content="<p>Срок изготовления зависит от размера детали.</p>" />;
+export function Description({ html }: { html: string }) {
+  return <LexicalText content={html} links="text" rows={[4, 6, 4]} />;
 }
 ```
 
+Новый код задаёт анимацию объектом. Появление использует общий animate с when='load'
+или when='inView'. Последовательность HTML выбирается явно:
+
+```tsx
+import { LexicalText } from '@delba/ui';
+
+export function DeliveryStep({ step }: { step: number }) {
+  return <LexicalText animate={{
+    when: 'change', effect: 'textSlide', currentStep: step,
+    steps: ['<p>Заказ принят</p>', '<p>Заказ отправлен</p>'], duration: 'fast',
+  }} />;
+}
+```
+
+textClip поддерживает тот же выбор steps/currentStep и необязательный clipHeight.
+Длительность — MotionTime, секунды или имя времени. Последовательности применяются к HTML;
+JSON выводится как документ. Старый public animation помечен deprecated и декодируется
+только на входе в тот же контракт последовательности; второго движка нет.
+Прежнее значение counter не создавало счётчик в RichText и не получает нового поведения.
+
+Повторявшиеся стили вариантов сведены в один rich-preset Sass-рецепт с именованными
+различиями пресетов. Итоговый compressed CSS сверен до/после побайтно: типографика
+и каскад сохранены, исходный SCSS сокращён без удаления поддерживаемых вариантов.
+
+## Владельцы
+
+- LexicalText собирает Box, preview или RichTextSequence.
+- useRichText разрешает responsive-вариант, контент и выбор sequence/appearance.
+- RichText.content и LexicalRenderer отвечают за безопасную структуру и роли.
+  Renderer — чистая функция без собственной визуальной оболочки; получает классы владельца.
+- RichTextSequence имеет свою папку/SCSS и владеет измерением высот, ResizeObserver,
+  смещением шагов и отменой таймеров clip. Роли и санитайзер не копируются.
+- Reduced motion отключает переходы и сразу выбирает нужный clip-шаг.
+
 ## Приёмка
 
-Проверь HTML и JSON отдельно: пустой вход, вложенные списки, заголовки, ссылки, неизвестный узел, опасную HTML-вставку и длинный текст. Варианты и переносы проверяются по реальной теме. Смена формата входа не должна нарушать React lifecycle; reduced motion сохраняет доступный контент.
+Проверить HTML и JSON, вложенные списки, неизвестные узлы, опасный HTML, ссылки
+и режим links=text, clamp/ellipsis, responsive-роли, смену HTML↔JSON.
+Для sequence: разные высоты, загрузку шрифта/resize, быстрый новый шаг,
+отмену таймеров при unmount и reduced motion. Браузер выполняется в общем финальном gate.
 
-[LexicalTextProps и реализация](../../../../src/components/RichText/RichText.tsx) · [HTML-парсер](../../../../src/components/RichText/legacy-html.ts) · [документ](../../../../src/components/RichText/types.ts) · [приёмка](../../verification/acceptance.md).
+[Композиция](../../../../src/components/RichText/RichText.tsx) ·
+[Типы](../../../../src/components/RichText/RichText.types.ts) ·
+[HTML-парсер](../../../../src/components/RichText/legacy-html.ts) ·
+[Документ](../../../../src/components/RichText/types.ts).

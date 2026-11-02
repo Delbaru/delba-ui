@@ -1,6 +1,6 @@
 # Textarea
 
-Статус: текущий договор; сверено с исходниками, без подтверждения runtime.
+Статус: текущий договор; сверено с реализацией. Проверки — по критериям ниже и общей приёмке библиотеки.
 
 ## Назначение и применение
 
@@ -61,3 +61,26 @@ Loading заменяет ввод скелетоном; `rows` определя�
 
 [API и реализация](../../../../src/components/Textarea/Textarea.tsx) ·
 [LexicalTextarea](LexicalTextarea.md) · [Приёмка](../../verification/acceptance.md)
+
+## Устройство и порядок событий
+
+Textarea.tsx содержит композицию label → TextareaControl → counter/comment.
+Textarea.model соединяет общий Field engine с геометрией, feedback и motion;
+Textarea.config задаёт чистую multiline-политику. Textarea.types сохраняет публичные
+типы. TextareaControl/ содержит нативную поверхность и собственный SCSS.
+Класс Textarea находится на прежнем корне, TextareaControl — на существующей поверхности.
+Часть не импортирует SCSS родителя.
+
+Field владеет controlled/uncontrolled значением, seed, form/reset и событиями
+для Input и Textarea. Textarea не воспроизводит этот протокол. Ввод сохраняет
+порядок native onChange → проверка → onValueChange; у Input его собственный
+договор порядка. Это явная политика beforeNotify, а не отдельный обработчик хранения.
+Readonly не изменяет модель; custom/length-проверка при blur сохраняется, required
+не заставляет редактировать readonly-поле. Нативные name/form/ref/rows,
+aria-describedby и length limits сохраняются. Loading использует единый
+animate с when='change', effect='fade'; старых animation/transitionKey нет.
+
+Тексты length-проверок задаются ui.config.messages.textarea.minLength/maxLength
+с параметром {count}. emptyMessage и validate остаются точечными переопределениями.
+Счётчик без max сохраняет прежний знаменатель 1000, явно закреплённый в конфиге;
+он не ограничивает количество вводимых символов.

@@ -17,9 +17,9 @@ runtime и визуальная проверка этим документом �
 - `orientation` — `horizontal` по умолчанию; `effect` — `slide`.
   Также доступны `fade`, `cube`, `coverflow`, `flip`.
 - `drag` включён; `mousewheel`, `loop`, `centeredSlides` выключены.
-- `speed` — 300 мс, `initialSlide` — 0 во всех полосах.
+- `speed` — секунды или timing name; без значения используется motion.defaults.carousel.duration. `initialSlide` — 0 во всех полосах.
 - `navigation` по умолчанию `none`, `pagination` — false. Контролы размещаются отдельно.
-- `autoplay` выключен; true означает задержку 3000 мс, остановку после взаимодействия
+- `autoplay` выключен; true использует motion.defaults.carousel.autoplayDelay, остановку после взаимодействия
   и паузу при наведении. Объект уточняет `delay` и `disableOnInteraction`.
 - `apiRef` получает `prev`, `next`, `goTo`, `getNavigationState`;
   `onNavigationStateChange` сообщает доступность направлений.
@@ -58,3 +58,17 @@ reduced motion нужно проверить в сценарии потреби�
 [компонент](../../../../src/components/Carousel/Carousel.tsx),
 [поведение](../../../../src/components/Carousel/useCarousel.ts),
 [приёмка](../../verification/acceptance.md).
+
+## Устройство после рефакторинга
+
+Carousel.tsx читает carousel.root/layout/engine/slides. Типизированный engine.props
+сверяется с SwiperProps; lifecycle и события Swiper не собираются вручную в JSX.
+useCarousel остаётся единственным адаптером Swiper: responsive-замер, loop, команды,
+публикация navigation snapshot. Общие движение и контролы берутся из существующих
+механизмов; параллельного двигателя листания здесь нет. ResizeObserver, computed style
+и viewport берутся из ownerDocument корня.
+
+Собственные Carousel.module.scss и корневой класс Carousel; CarouselNav/Dots имеют
+свои модули. Доступные имена направлений задаются в ui.config.messages.carousel.
+Для карусели без копирования интерактивных детей доступен отдельный
+[NativeCarousel](NativeCarousel.md) из @delba/ui/carousel.

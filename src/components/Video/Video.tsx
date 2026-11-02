@@ -1,8 +1,9 @@
 'use client';
 
+import { UI_MESSAGES } from '../../core/base/messages';
+
 import {
-  MEDIA_QUERY,
-  boxLayout,
+    boxLayout,
   cx,
   createLayoutClasses,
   resolveRadiusInput,
@@ -15,14 +16,13 @@ import {
   type ResponsiveValue,
   type SizeValue,
   type WithRef,
-  useMergedRefs,
 } from '../../core';
 import type React from 'react';
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useCallback, type CSSProperties } from 'react';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 
 import styles from './Video.module.scss';
+import { useVideoMedia } from './Video.model';
 
 const c = createLayoutClasses(styles);
 
@@ -39,12 +39,6 @@ type MediaSource = string | { src: string };
  * `src="…"` строкой обязан работать как раньше.
  */
 export type VideoSrcTuple = [MediaSource, MediaSource | null, MediaSource | null];
-
-function resolveMediaSource(source?: MediaSource | null): string | undefined {
-  if (!source) return undefined;
-
-  return typeof source === 'string' ? source : source.src;
-}
 
 type VideoBaseProps = Omit<
   React.VideoHTMLAttributes<HTMLVideoElement>,
@@ -63,8 +57,11 @@ export interface VideoProps
     BoxLayoutProps,
     VideoRootSizeProps,
     SharedMotionProps {
+  /** Additional wrapper class. */
   className?: string;
+  /** Inline wrapper styles. */
   style?: CSSProperties;
+  /** Pointer-event scope marker for composed media. */
   'data-point-events'?: string;
 
   /**
@@ -75,11 +72,16 @@ export interface VideoProps
   /** Кадр до запуска. Кортеж — свой постер на полосу, по тем же правилам, что у `src`. */
   poster?: MediaSource | VideoSrcTuple;
 
+  /** Wrapper aspect ratio on each responsive band. */
   aspectRatio?: ResponsiveValue<string>;
+  /** How the video fits its frame; defaults to cover. */
   objectFit?: ResponsiveValue<ObjectFitKey>;
+  /** Video alignment inside its frame; defaults to center. */
   objectPosition?: ResponsiveValue<string>;
 
+  /** Connect wrapper interaction to the shared link-state scope. */
   linkState?: StateLinkInput;
+  /** Show an accessible play overlay while paused; defaults to false. */
   showPlayButton?: boolean;
 }
 
@@ -129,8 +131,7 @@ export function Video({
   ...rest
 }: WithRef<VideoProps, HTMLVideoElement>) {
   const { box, rest: props } = splitBoxLayout(rest);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(autoPlay);
+  const media = useVideoMedia({ ref, src, poster, autoPlay, onPlay, onPause, onEnded });
   const sizeProps = {
     w,
     minW,
@@ -159,49 +160,11 @@ export function Video({
     borderBLR,
   });
   const { rootProps, elementProps } = splitRootDomProps(props as VideoElementProps);
-  /*
-    Ролик по полосам выбирается В БРАУЗЕРЕ, а не `<source media>`, как у картинки: у `<video>`
-    источник берётся один раз при загрузке и при смене ширины сам не меняется (media у
-    `<source>` видео поддержан не везде и тоже читается однажды). Поэтому ширину слушает
-    `useMediaQuery` ядра, а смена полосы меняет `src`.
-
-    До монтирования у кортежа адреса НЕТ: сервер экрана не знает, и отдай он десктопный —
-    телефон начал бы качать десктопный ролик до гидратации. Скаляр — как раньше, сразу.
-  */
-  const isMobile = useMediaQuery(MEDIA_QUERY.mobile);
-  const isBelowDesktop = useMediaQuery(MEDIA_QUERY.below);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const pickSource = (source: MediaSource | VideoSrcTuple | undefined): string | undefined => {
-    if (!Array.isArray(source)) return resolveMediaSource(source);
-    if (!mounted) return undefined;
-
-    const [desktop, mobile, tablet] = source;
-    // Телефон — тоже «ниже десктопа»: без своего ролика он берёт планшетный, как по каскаду.
-    if (isMobile && mobile !== null) return resolveMediaSource(mobile);
-    if (isBelowDesktop && tablet !== null) return resolveMediaSource(tablet);
-    return resolveMediaSource(desktop);
-  };
-
-  const resolvedSrc = pickSource(src);
-  const resolvedPoster = pickSource(poster);
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
     perspective3d,
     parallax,
     animate,
   });
-
-  useEffect(() => {
-    const node = videoRef.current;
-
-    setIsPlaying(node ? !node.paused && !node.ended : autoPlay && Boolean(resolvedSrc));
-  }, [autoPlay, resolvedSrc]);
-
-  const setVideoRef = useMergedRefs(videoRef, ref);
 
   const setRootRef = useCallback(
     (node: HTMLSpanElement | null) => {
@@ -209,30 +172,6 @@ export function Video({
     },
     [setMotionNode],
   );
-
-  const handlePlayButtonClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (!resolvedSrc) return;
-
-    videoRef.current?.play().catch(() => null);
-  };
-
-  const handlePlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
-    setIsPlaying(true);
-    onPlay?.(event);
-  };
-
-  const handlePause = (event: React.SyntheticEvent<HTMLVideoElement>) => {
-    setIsPlaying(false);
-    onPause?.(event);
-  };
-
-  const handleEnded = (event: React.SyntheticEvent<HTMLVideoElement>) => {
-    setIsPlaying(false);
-    onEnded?.(event);
-  };
 
   return (
     <span
@@ -242,7 +181,7 @@ export function Video({
       {...revealAttrs}
       {...stateLinkProps(linkState, { ...motionHandlers })}
       className={cx(
-        styles.VideoRoot,
+        styles.Video, 'Video',
         ...sizeClasses(c, wrapperSizeProps),
         ...boxLayout(c, { ...box, ...radiusProps, bg, aspectRatio, grow }),
         className,
@@ -252,12 +191,12 @@ export function Video({
         ...style,
       }}
     >
-      {showPlayButton && resolvedSrc && !isPlaying ? (
+      {showPlayButton && media.source.src && !media.playback.playing ? (
         <button
             type="button"
             className={styles.VideoPlayButton}
-            aria-label="Запустить видео"
-            onClick={handlePlayButtonClick}
+            aria-label={UI_MESSAGES.video.open}
+            onClick={media.playback.start}
         >
           <span className={styles.VideoPlayButtonIcon} aria-hidden="true">
             ▶
@@ -266,23 +205,23 @@ export function Video({
       ) : null}
 
       <video
-        ref={setVideoRef}
+        ref={media.ref}
         className={cx(
-          styles.Video,
+          styles.VideoElement,
           ...c.value('objectFit', objectFit ?? 'cover'),
           ...c.value('objectPosition', objectPosition ?? 'center'),
         )}
-        src={resolvedSrc}
-        poster={resolvedPoster}
+        src={media.source.src}
+        poster={media.source.poster}
         controls={controls}
         autoPlay={autoPlay}
         muted={muted}
         playsInline={playsInline}
         loop={loop}
         preload={preload}
-        onPlay={handlePlay}
-        onPause={handlePause}
-        onEnded={handleEnded}
+        onPlay={media.events.onPlay}
+        onPause={media.events.onPause}
+        onEnded={media.events.onEnded}
         {...elementProps}
       />
     </span>

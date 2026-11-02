@@ -1,0 +1,12 @@
+@layer ui.components {
+  .ChoiceButton { position: relative; }
+  .button {
+    .label { transition: var(--t-fast); }
+    &:hover, &[state~='hover'] { background: var(--primary-light); }
+    &[state~='active'] {
+      background: var(--primary);
+      --choice-info-color: var(--white-100);
+      .label { color: var(--white-100) !important; }
+    }
+  }
+}

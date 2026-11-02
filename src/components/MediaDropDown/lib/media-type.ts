@@ -14,29 +14,64 @@ export type MediaType = 'image' | 'video' | 'audio' | 'file';
  * в нижнем регистре.
  */
 const MEDIA_TYPE_BY_EXTENSION: Readonly<Record<string, MediaType>> = {
-    jpg: 'image', jpeg: 'image', png: 'image', webp: 'image', gif: 'image', bmp: 'image',
-    svg: 'image', avif: 'image', heic: 'image', heif: 'image', tif: 'image', tiff: 'image', ico: 'image',
-    mp4: 'video', webm: 'video', ogv: 'video', mov: 'video', m4v: 'video', mkv: 'video', avi: 'video',
-    mp3: 'audio', wav: 'audio', ogg: 'audio', oga: 'audio', m4a: 'audio', flac: 'audio', aac: 'audio',
-    opus: 'audio', wma: 'audio',
-    pdf: 'file', doc: 'file', docx: 'file', xls: 'file', xlsx: 'file', ppt: 'file', pptx: 'file',
-    txt: 'file', csv: 'file', zip: 'file', rar: 'file', '7z': 'file', json: 'file',
+  jpg: 'image',
+  jpeg: 'image',
+  png: 'image',
+  webp: 'image',
+  gif: 'image',
+  bmp: 'image',
+  svg: 'image',
+  avif: 'image',
+  heic: 'image',
+  heif: 'image',
+  tif: 'image',
+  tiff: 'image',
+  ico: 'image',
+  mp4: 'video',
+  webm: 'video',
+  ogv: 'video',
+  mov: 'video',
+  m4v: 'video',
+  mkv: 'video',
+  avi: 'video',
+  mp3: 'audio',
+  wav: 'audio',
+  ogg: 'audio',
+  oga: 'audio',
+  m4a: 'audio',
+  flac: 'audio',
+  aac: 'audio',
+  opus: 'audio',
+  wma: 'audio',
+  pdf: 'file',
+  doc: 'file',
+  docx: 'file',
+  xls: 'file',
+  xlsx: 'file',
+  ppt: 'file',
+  pptx: 'file',
+  txt: 'file',
+  csv: 'file',
+  zip: 'file',
+  rar: 'file',
+  '7z': 'file',
+  json: 'file',
 };
 
 function mediaTypeFromMime(mime: string): MediaType | undefined {
-    const [kind] = mime.split('/');
+  const [kind] = mime.split('/');
 
-    if (kind === 'image' || kind === 'video' || kind === 'audio') return kind;
+  if (kind === 'image' || kind === 'video' || kind === 'audio') return kind;
 
-    return undefined;
+  return undefined;
 }
 
 /** Расширение имени файла без точки, в нижнем регистре. Нет расширения — пустая строка. */
 function fileExtension(name: string): string {
-    const dot = name.lastIndexOf('.');
+  const dot = name.lastIndexOf('.');
 
-    // `dot > 0`, а не `>= 0`: у «.gitignore» точки-разделителя нет, и «.gitignore» — не расширение.
-    return dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
+  // `dot > 0`, а не `>= 0`: у «.gitignore» точки-разделителя нет, и «.gitignore» — не расширение.
+  return dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
 }
 
 /**
@@ -46,7 +81,9 @@ function fileExtension(name: string): string {
  * в пилюле, и картинка уезжала бы в модель файлом.
  */
 export function resolveMediaTypeFromFile(file: File): MediaType {
-    return mediaTypeFromMime(file.type) ?? MEDIA_TYPE_BY_EXTENSION[fileExtension(file.name)] ?? 'file';
+  return (
+    mediaTypeFromMime(file.type) ?? MEDIA_TYPE_BY_EXTENSION[fileExtension(file.name)] ?? 'file'
+  );
 }
 
 /**
@@ -55,9 +92,9 @@ export function resolveMediaTypeFromFile(file: File): MediaType {
  * покажет имя, а не плеер.
  */
 export function resolveMediaTypeFromUrl(url: string): MediaType {
-    // Запрос и хеш отрезаются: без этого «photo.jpg?w=100» дал бы расширение «jpg?w=100».
-    const [path = ''] = url.trim().split(/[?#]/);
-    const [name = ''] = path.split(/[\\/]/).reverse();
+  // Запрос и хеш отрезаются: без этого «photo.jpg?w=100» дал бы расширение «jpg?w=100».
+  const [path = ''] = url.trim().split(/[?#]/);
+  const [name = ''] = path.split(/[\\/]/).reverse();
 
-    return MEDIA_TYPE_BY_EXTENSION[fileExtension(name)] ?? 'file';
+  return MEDIA_TYPE_BY_EXTENSION[fileExtension(name)] ?? 'file';
 }

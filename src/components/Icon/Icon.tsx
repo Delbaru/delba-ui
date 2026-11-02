@@ -1,125 +1,25 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, type CSSProperties, type SVGProps } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import type React from 'react';
-import { boxLayout, cx, createLayoutClasses, resolveRadiusInput, resolveResponsive, shouldUseNextLink, splitBoxLayout, splitRootDomProps, stateProps as buildStateProps, stateLinkProps, type BoxLayoutProps, type ComponentStateValue, type ResponsiveValue, type SizeValue, type StateLinkInput, type WithRef, composeEventHandlers, useMergedRefs } from '../../core';
+import { boxLayout, cx, createLayoutClasses, resolveRadiusInput, shouldUseNextLink, splitBoxLayout, splitRootDomProps, stateProps as buildStateProps, stateLinkProps, type WithRef, composeEventHandlers, useMergedRefs } from '../../core';
 import { Flex } from '../Flex';
-import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
-import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
-import { useIconTooltip, type IconTooltipDirection } from './IconTooltip';
-import { hasIconSource, parseAspectRatio, resolveIconSource, type IconComponent, type IconSource, type ResolvedIconSource } from './svg';
-import { useIconSwap, componentSwapKey, type IconAnimate } from './swap';
-import { useFetchedSvg, type FetchedSvgState } from './useFetchedSvg';
+import { CollapseWrap } from '../Collapse/CollapseWrap';
+import { isSharedMotionAnimate, useSharedMotion } from '../../hooks/useSharedMotion';
+import { useIconTooltip } from './IconTooltip/IconTooltip';
+import { hasIconSource, parseAspectRatio, resolveIconSource } from './svg';
+import { useIconSwap, componentSwapKey } from './swap';
+import { useFetchedSvg } from './useFetchedSvg';
 
 const c = createLayoutClasses();
 
-// `r` у SVG — радиус окружности; у Icon это радиус коробки (кортежем), поэтому родной убран.
-type IconBaseSvgProps = Omit<SVGProps<SVGSVGElement>, 'width' | 'height' | 'color' | 'rotate' | 'strokeWidth' | 'r' | 'onFocus' | 'onBlur'>;
-type IconElementProps = IconBaseSvgProps & Record<string, unknown>;
+export type { IconProps } from './Icon.types';
+import type { IconProps, IconElementProps } from './Icon.types';
+import { IconGlyph } from './IconGlyph/IconGlyph';
+import styles from './Icon.module.scss';
+import { iconStyles } from './Icon.config';
 
-type IconRootSizeProps = {
-  rootW?: ResponsiveValue<SizeValue>;
-  rootMinW?: ResponsiveValue<SizeValue>;
-  rootMaxW?: ResponsiveValue<SizeValue>;
-  rootH?: ResponsiveValue<SizeValue>;
-  rootMinH?: ResponsiveValue<SizeValue>;
-  rootMaxH?: ResponsiveValue<SizeValue>;
-};
-
-type IconRootStyleProps = {
-  rootR?: ResponsiveValue<number>;
-  rootTLR?: ResponsiveValue<number>;
-  rootTRR?: ResponsiveValue<number>;
-  rootBRR?: ResponsiveValue<number>;
-  rootBLR?: ResponsiveValue<number>;
-  rootBg?: ResponsiveValue<string>;
-  rootClassName?: string;
-};
-
-export interface IconProps extends Omit<IconBaseSvgProps, keyof BoxLayoutProps>, BoxLayoutProps, IconRootSizeProps, IconRootStyleProps, SharedMotionProps<IconAnimate> {
-  /** Focus callbacks receive the actual focusable Icon element, which may be its anchor. */
-  onFocus?: React.FocusEventHandler<Element>;
-  onBlur?: React.FocusEventHandler<Element>;
-  /** Сворачивает слот иконки; по умолчанию — по ширине для кнопок и строк. */
-  collapse?: CollapseOptions;
-  'data-point-events'?: string;
-  // URL иконки или импортированный SVG-компонент
-  // Пример: src="https://example.com/icon.svg"
-  // Пример: src={ArrowIcon}
-  src?: string | IconComponent;
-  
-  // Имя иконки проекта (загружается из его public/icons/{name}.svg). Иконки кита — импортом:
-  // import arrow from '@delba/ui/icons/arrows/arrow_bold.svg' → src={assetUrl(arrow)}
-  // Пример: name="ui/arrows/arrow_bold" -> загружает /icons/ui/arrows/arrow_bold.svg
-  name?: string;
-  
-  // hover-иконка. Поддерживает старую строку с именем файла, path string и object source.
-  // Примеры:
-  // hover="ui/favourite/favourite_white.svg"
-  // hover="/icons/ui/favourite/favourite_white.svg"
-  // hover={FavouriteHoverIcon}
-  // hover={{ src: '/icons/ui/favourite/favourite_white.svg' }}
-  // hover={{ name: 'ui/favourite/favourite_white' }}
-  hover?: string | IconComponent | IconSource;
-  
-  // Или готовый SVG компонент (результат импорта через SVGR из src/assets/icons)
-  // Пример: import ArrowIcon from '@/assets/icons/arrow-right.svg';
-  component?: IconComponent;
-
-  /** Если задан — иконка оборачивается в <a> */
-  href?: string;
-  target?: React.HTMLAttributeAnchorTarget;
-  rel?: string;
-
-  style?: CSSProperties;
-
-  // rotation (in degrees). Example: rotate={-135} or rotate={[-135, null, null]}
-  rotate?: ResponsiveValue<number | string>;
-
-  // layout props (tokens)
-
-  // simple style overrides (single value)
-  color?: string;
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: ResponsiveValue<number | string>;
-  state?: ComponentStateValue;
-  tooltip?: React.ReactNode;
-  tooltipDirection?: IconTooltipDirection;
-  tooltipGap?: number;
-
-  linkState?: StateLinkInput;
-
-  /**
-   * Анимация смены иконки. 'swap' — плавная подмена при изменении src/name/component:
-   * старая уходит (opacity+scale), затем въезжает новая из scale→1.
-   * Опции: animate={['swap', { duration, scale }]}.
-   */
-  animate?: SharedMotionProps<IconAnimate>['animate'];
-}
-
-/**
- * Компонент Icon для отображения SVG иконок.
- * 
- * Использование:
- * 1. С готовым компонентом (SVGR):
- *    import ArrowIcon from '@/assets/icons/arrow-right.svg';
- *    <Icon component={ArrowIcon} w={24} h={24} />
- *    <Icon src={ArrowIcon} w={24} h={24} />
- * 
- * 2. С URL:
- *    <Icon src="https://example.com/icon.svg" w={24} h={24} />
- * 
- * 3. С именем иконки проекта (из его public/icons/{name}.svg; иконки кита — импортом и assetUrl):
- *    <Icon name="ui/arrows/arrow_bold" w={24} h={24} />
- * 
- * 4. С hover эффектом:
- *    <Icon name="ui/favourite/favourite_black" hover="ui/favourite/favourite_white.svg" w={28} h={28} />
- *    <Icon name="ui/favourite/favourite_black" hover={{ src: '/icons/ui/favourite/favourite_white.svg' }} w={28} h={28} />
- * 
- * Всегда рендерит inline SVG, не использует <img>.
- */
 export function Icon({
   ref,
   src,
@@ -280,44 +180,14 @@ export function Icon({
     ...elementProps
   } = rawElementProps;
 
-  const rotateResolved = rotate ? resolveResponsive(rotate) : null;
-  const strokeWidthResolved = strokeWidth ? resolveResponsive(strokeWidth) : null;
-  const formatRotate = (value: string | number | null | undefined): string | undefined => {
-    if (value === null || value === undefined) return undefined;
-    return typeof value === 'number' ? `${value}deg` : value;
-  };
-
-  const rotateVars = rotateResolved
-    ? {
-        '--rotate-d': formatRotate(rotateResolved[0]),
-        '--rotate-m': formatRotate(rotateResolved[1]),
-        '--rotate-t': formatRotate(rotateResolved[2]),
-      }
-    : undefined;
-
-  const formatStrokeWidth = (value: string | number | null | undefined): string | undefined => {
-    if (value === null || value === undefined) return undefined;
-    return typeof value === 'number' ? `${value}px` : value;
-  };
-
-  const strokeWidthVars = strokeWidthResolved
-    ? {
-        '--icon-stroke-width': formatStrokeWidth(strokeWidthResolved[0]) ?? undefined,
-        '--icon-stroke-width-d': formatStrokeWidth(strokeWidthResolved[0]) ?? undefined,
-        '--icon-stroke-width-m': formatStrokeWidth(strokeWidthResolved[1]) ?? undefined,
-        '--icon-stroke-width-t': formatStrokeWidth(strokeWidthResolved[2]) ?? undefined,
-      }
-    : undefined;
+  const { rotation: rotateVars, strokeWidths: strokeWidthVars, paint: commonSvgStyle } =
+    iconStyles.resolve({ rotate, strokeWidth, color, fill, stroke });
 
   const shouldNormalizeFetchedSvg = fill != null || stroke != null || strokeWidth != null;
   const { content: svgContent, viewBox: svgViewBox, rootFill: svgRootFill } = useFetchedSvg(iconUrl, shouldNormalizeFetchedSvg);
   const { content: hoverSvgContent, viewBox: hoverSvgViewBox, rootFill: hoverSvgRootFill } = useFetchedSvg(hoverUrl, shouldNormalizeFetchedSvg);
 
-  // Объект dangerouslySetInnerHTML МЕМОИЗИРУЕМ. React сравнивает этот проп по идентичности
-  // объекта, а не по строке: свежий литерал `{ __html: content }` на каждом рендере заставляет
-  // его переустанавливать innerHTML, то есть УНИЧТОЖАТЬ и создавать заново все path/circle внутри
-  // глифа. Свежевставленный узел рисуется сразу финальным цветом — любой CSS-transition на нём
-  // (перекраска активного пункта навигации) не запускается. См. Frontend.md §12.
+  // Stable innerHTML preserves path nodes and their active CSS transitions.
   const svgHtml = useMemo(() => ({ __html: svgContent ?? '' }), [svgContent]);
   const hoverSvgHtml = useMemo(() => ({ __html: hoverSvgContent ?? '' }), [hoverSvgContent]);
   const rootStateProps = buildStateProps(state);
@@ -387,14 +257,6 @@ export function Icon({
       }
     : undefined;
 
-  // Общие props для SVG: при явных пропсах разрешаем прямое переопределение fill/stroke.
-  const commonSvgStyle = {
-    ...(color && { color }),
-    ...(stroke != null && { '--icon-stroke': stroke, stroke } as CSSProperties),
-    ...(fill != null && { '--icon-fill': fill, fill } as CSSProperties),
-    ...(strokeWidthVars as CSSProperties),
-  } as CSSProperties;
-
   // Коробка глифа: поля, радиус, размер. grow — у глифа, только когда нет root-обёртки (иначе он у неё).
   const glyphLayout = boxLayout(c, { ...(!needsRootWrapper && !linkProps ? box : {}), m, mt, mr, mb, ml, ...resolvedRadiusProps, ...iconSizeProps, grow: needsRootWrapper ? undefined : grow });
   const commonClasses = [...glyphLayout, className];
@@ -407,132 +269,67 @@ export function Icon({
 
   const stackAspectRatio = parseAspectRatio(svgViewBox || elementProps.viewBox || hoverSvgViewBox);
 
-  // Каждый служебный ref — ровно на одном узле: моушен и якорь подсказки — на внешнем узле
-  // контента, `ref` снаружи — на глифе. Колбэки стабильны (useMergedRefs): скачущая
-  // идентичность отцепляла бы узел каждый рендер и сбрасывала моушен в setMotionNode(null).
+  // The public ref belongs to the glyph; motion/tooltip attach to one outer node.
   const motionOnGlyph = !needsRootWrapper && !hasHoverIcon;
   const setSvgRefs = useMergedRefs(ref, motionOnGlyph ? setMotionNode : undefined, motionOnGlyph && !linkProps ? setTooltipAnchor : undefined);
   const setStackRef = useMergedRefs(needsRootWrapper ? undefined : setMotionNode, needsRootWrapper || linkProps ? undefined : setTooltipAnchor);
   const setRootRef = useMergedRefs<HTMLDivElement>(setMotionNode, linkProps ? undefined : setTooltipAnchor);
 
-  const renderStackLayer = (
-    source: ResolvedIconSource,
-    fetched: FetchedSvgState,
-    html: { __html: string },
-    layer: 'default' | 'hover'
-  ): React.ReactElement | null => {
-    const layerProps = layer === 'default' ? elementProps : { 'aria-hidden': true };
-
-    if (source.component) {
-      const LayerComponent = source.component;
-
-      return (
-        <LayerComponent
-            ref={layer === 'default' ? setSvgRefs : undefined}
-            data-icon-layer={layer}
-            {...(layer === 'default' && !needsRootWrapper ? revealAttrs : null)}
-            className={'ui-icon'}
-            style={commonSvgStyle}
-            {...layerProps}
-        />
-      );
-    }
-
-    if (!fetched.content) return null;
-
-    return (
-      <svg
-          ref={layer === 'default' ? setSvgRefs : undefined}
-          data-icon-layer={layer}
-          {...(layer === 'default' && !needsRootWrapper ? revealAttrs : null)}
-          className={'ui-icon'}
-          style={commonSvgStyle}
-          fill={fill == null ? fetched.rootFill : undefined}
-          viewBox={fetched.viewBox || (layer === 'default' ? elementProps.viewBox : undefined)}
-          dangerouslySetInnerHTML={html}
-          {...layerProps}
-      />
-    );
+  const glyphProps = {
+    ...(contentInteractiveProps ?? null),
+    ...(contentRootProps as Record<string, unknown> ?? null),
+    'data-point-events': dataPointEvents,
+    'data-icon-root': 'true',
+    ...(!needsRootWrapper ? revealAttrs : null),
+    className: cx('Icon', styles.Icon, 'ui-icon', ...commonClasses),
+    style: { ...commonSvgStyle, ...commonStyles, ...(contentMotionStyle ?? null) },
+    ...rootStateProps,
+    ...contentHandlers,
+    ...elementProps,
   };
 
-  let content: React.ReactElement | null = null;
-
-  if (baseSource.component && !hasHoverIcon) {
-    const BaseIconComponent = baseSource.component;
-
-    content = (
-      <BaseIconComponent
-        ref={setSvgRefs}
+  let content: React.ReactElement | null = hasHoverIcon ? (
+    <span
+        ref={setStackRef}
         {...(contentInteractiveProps ?? null)}
         {...(contentRootProps as Record<string, unknown> ?? null)}
         data-point-events={dataPointEvents}
-        data-icon-root="true"
-        {...(!needsRootWrapper ? revealAttrs : null)}
-        className={cx('ui-icon', ...commonClasses)}
-        style={{
-          ...commonSvgStyle,
-          ...commonStyles,
-          ...(contentMotionStyle ?? null),
-        } as CSSProperties}
         {...rootStateProps}
+        className={cx('Icon', styles.Icon, 'ui-icon-wrapper', ...commonClasses)}
+        style={{ ...(stackAspectRatio ? { aspectRatio: stackAspectRatio } : null), ...commonStyles, ...(contentMotionStyle ?? null) }}
         {...contentHandlers}
-        {...elementProps}
+        {...(!needsRootWrapper ? revealAttrs : null)}
+        data-icon-root="true"
+        data-icon-stack="true"
+    >
+      <IconGlyph
+          ref={setSvgRefs}
+          source={baseSource}
+          fetched={{ content: svgContent, viewBox: svgViewBox, rootFill: svgRootFill }}
+          html={svgHtml}
+          fill={fill}
+          hiddenUntilReady
+          svgProps={{ 'data-icon-layer': 'default', ...(!needsRootWrapper ? revealAttrs : null), className: 'ui-icon', style: commonSvgStyle, ...elementProps }}
       />
-    );
-  } else if (hasHoverIcon) {
-    const wrapperProps = {
-      ...(contentInteractiveProps ?? null),
-      ...(contentRootProps as Record<string, unknown> ?? null),
-      'data-point-events': dataPointEvents,
-      ...(rootStateProps ?? null),
-      className: cx('ui-icon-wrapper', ...commonClasses),
-      style: {
-        ...(stackAspectRatio ? { aspectRatio: stackAspectRatio } : null),
-        ...commonStyles,
-        ...(contentMotionStyle ?? null),
-      } as CSSProperties,
-    };
-
-    content = (
-      <span
-          ref={setStackRef}
-          {...wrapperProps}
-          {...contentHandlers}
-          {...(!needsRootWrapper ? revealAttrs : null)}
-          data-icon-root="true"
-          data-icon-stack="true"
-      >
-        {renderStackLayer(baseSource, { content: svgContent, viewBox: svgViewBox, rootFill: svgRootFill }, svgHtml, 'default')}
-        {renderStackLayer(hoverSource, { content: hoverSvgContent, viewBox: hoverSvgViewBox, rootFill: hoverSvgRootFill }, hoverSvgHtml, 'hover')}
-      </span>
-    );
-  } else {
-    // Не возвращаем null во время загрузки: рендерим размеренный плейсхолдер, чтобы
-    // коробка иконки занимала финальное место сразу и верстку не «шифтило».
-    content = (
-      <svg
+      <IconGlyph
+          source={hoverSource}
+          fetched={{ content: hoverSvgContent, viewBox: hoverSvgViewBox, rootFill: hoverSvgRootFill }}
+          html={hoverSvgHtml}
+          fill={fill}
+          hiddenUntilReady
+          svgProps={{ 'data-icon-layer': 'hover', className: 'ui-icon', style: commonSvgStyle, 'aria-hidden': true }}
+      />
+    </span>
+  ) : (
+    <IconGlyph
         ref={setSvgRefs}
-        {...(contentInteractiveProps ?? null)}
-        {...(contentRootProps as Record<string, unknown> ?? null)}
-        data-point-events={dataPointEvents}
-        data-icon-root="true"
-        {...(!needsRootWrapper ? revealAttrs : null)}
-        data-icon-loading={svgContent ? undefined : 'true'}
-        className={cx('ui-icon', ...commonClasses)}
-        style={{
-          ...commonSvgStyle,
-          ...commonStyles,
-          ...(contentMotionStyle ?? null),
-        }}
-        {...rootStateProps}
-        {...contentHandlers}
-        fill={fill == null ? svgRootFill : undefined}
-        viewBox={svgViewBox || elementProps.viewBox}
-        dangerouslySetInnerHTML={svgHtml}
-        {...elementProps}
-      />
-    );
-  }
+        source={baseSource}
+        fetched={{ content: svgContent, viewBox: svgViewBox, rootFill: svgRootFill }}
+        html={svgHtml}
+        fill={fill}
+        svgProps={glyphProps}
+    />
+  );
 
   // Идентичность источника для свопа + признак готовности контента (для инлайн-иконок — синхронно).
   const iconIdentity = baseSource.url ?? (baseSource.component ? componentSwapKey(baseSource.component) : null);
@@ -549,7 +346,7 @@ export function Icon({
         data-point-events={dataPointEvents}
         data-icon-root="true"
         className={cx(
-          'ui-icon-root',
+          'Icon', styles.Icon, 'ui-icon-root',
           hasTooltip && 'ui-icon-tooltip-anchor',
           resolvedRootClassName,
           ...c.value('bg', resolvedRootBg),
@@ -586,7 +383,7 @@ export function Icon({
     );
   }
 
-  // Своп-анимация смены иконки (opt-in через animate="swap"): анимируем весь собранный Icon целиком.
+  // Swap includes the configured root, not only the glyph.
   content = useIconSwap(contentAnimate, iconIdentity, iconContentReady, content) as React.ReactElement | null;
 
   if (!hasIconSource(baseSource) || !content) return null;

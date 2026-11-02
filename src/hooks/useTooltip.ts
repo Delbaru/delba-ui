@@ -50,7 +50,7 @@ export interface UseTooltipResult<A extends Element = HTMLElement, F extends HTM
 
 /**
  * Поведение тултипа: видимость по наведению/фокусу + позиционирование через `useAnchoredFloating`
- * + портал в `document.body`. Вынесено из Button/Icon, чтобы не дублировать логику в каждом компоненте.
+ * + портал в body документа якоря. Вынесено из Button/Icon, чтобы не дублировать логику в каждом компоненте.
  * Рендер всплывашки — в общем компоненте `<Tooltip>` (см. UI/Tooltip).
  */
 export function useTooltip<A extends Element = HTMLElement, F extends HTMLElement = HTMLElement>({
@@ -85,8 +85,9 @@ export function useTooltip<A extends Element = HTMLElement, F extends HTMLElemen
 
   useEffect(() => {
     if (lazyPortal && !hasShown) return;
-    setPortalNode(document.body);
-  }, [hasShown, lazyPortal]);
+    const target = anchorRef.current?.ownerDocument.body ?? null;
+    setPortalNode((current) => current === target ? current : target);
+  });
 
   const show = useCallback(() => {
     if (!enabled) return;

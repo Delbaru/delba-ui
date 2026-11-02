@@ -5,7 +5,6 @@ import type { LexicalDocument } from './types';
 import { cx } from '../../core';
 import { bindShortWords } from '../Text/nonBreaking';
 
-import styles from './RichText.module.scss';
 import { isRichRole, roleClassKeys, textVariantClasses } from './roles';
 
 type LexicalTextNode = {
@@ -287,7 +286,7 @@ function renderTextNode(node: LexicalTextNode, key: string): ReactNode {
   return content;
 }
 
-function renderVariableNode(node: LexicalVariableNode, key: string): ReactNode {
+function renderVariableNode(node: LexicalVariableNode, key: string, styles: Record<string, string>): ReactNode {
   return (
     <span
       key={key}
@@ -324,7 +323,7 @@ function resolveLinkHref(node: LexicalLinkNode): string | undefined {
  * (`textVariantClasses`): `.role-h3` модуля и `m_text_p1` утилит одной специфичности, и какая
  * победит на мобилке, решал бы порядок двух разных файлов стилей.
  */
-function roleClass(node: LexicalRoleFields): string | undefined {
+function roleClass(node: LexicalRoleFields, styles: Record<string, string>): string | undefined {
   const roles = [node.role, node.roleM, node.roleT].filter(
     (role) => role !== undefined && role !== null && role !== '',
   );
@@ -335,11 +334,11 @@ function roleClass(node: LexicalRoleFields): string | undefined {
   return classes.length > 0 ? cx(...classes) : undefined;
 }
 
-function renderNode(node: LexicalNode, index: number, links: 'active' | 'text'): ReactNode {
+function renderNode(node: LexicalNode, index: number, links: 'active' | 'text', styles: Record<string, string>): ReactNode {
   const key = `node-${index}`;
 
   if (node.type === 'variable') {
-    return renderVariableNode(node, key);
+    return renderVariableNode(node, key, styles);
   }
 
   if (node.type === 'text') {
@@ -352,8 +351,8 @@ function renderNode(node: LexicalNode, index: number, links: 'active' | 'text'):
 
   if (node.type === 'paragraph' || node.type === 'rich-paragraph') {
     return (
-      <p key={key} className={roleClass(node)}>
-        {node.children?.map((child, i) => renderNode(child, i, links))}
+      <p key={key} className={roleClass(node, styles)}>
+        {node.children?.map((child, i) => renderNode(child, i, links, styles))}
       </p>
     );
   }
@@ -361,8 +360,8 @@ function renderNode(node: LexicalNode, index: number, links: 'active' | 'text'):
   if (node.type === 'heading' || node.type === 'rich-heading') {
     const Tag = node.tag || 'h2';
     return (
-      <Tag key={key} className={roleClass(node)}>
-        {node.children?.map((child, i) => renderNode(child, i, links))}
+      <Tag key={key} className={roleClass(node, styles)}>
+        {node.children?.map((child, i) => renderNode(child, i, links, styles))}
       </Tag>
     );
   }
@@ -380,31 +379,31 @@ function renderNode(node: LexicalNode, index: number, links: 'active' | 'text'):
           } as CSSProperties
         }
       >
-        {node.children?.map((child, i) => renderNode(child, i, links))}
+        {node.children?.map((child, i) => renderNode(child, i, links, styles))}
       </Tag>
     );
   }
 
   if (node.type === 'listitem') {
-    return <li key={key}>{node.children?.map((child, i) => renderNode(child, i, links))}</li>;
+    return <li key={key}>{node.children?.map((child, i) => renderNode(child, i, links, styles))}</li>;
   }
 
   if (node.type === 'quote') {
     return (
       <blockquote key={key}>
-        {node.children?.map((child, i) => renderNode(child, i, links))}
+        {node.children?.map((child, i) => renderNode(child, i, links, styles))}
       </blockquote>
     );
   }
 
   if (node.type === 'link' || node.type === 'autolink') {
     if (links === 'text') {
-      return <span key={key}>{node.children?.map((child, i) => renderNode(child, i, links))}</span>;
+      return <span key={key}>{node.children?.map((child, i) => renderNode(child, i, links, styles))}</span>;
     }
     const href = resolveLinkHref(node);
 
     if (!href) {
-      return node.children?.map((child, i) => renderNode(child, i, links));
+      return node.children?.map((child, i) => renderNode(child, i, links, styles));
     }
 
     const target = node.fields?.newTab ? '_blank' : node.target;
@@ -412,7 +411,7 @@ function renderNode(node: LexicalNode, index: number, links: 'active' | 'text'):
 
     return (
       <a key={key} href={href} target={target} rel={rel} title={node.title}>
-        {node.children?.map((child, i) => renderNode(child, i, links))}
+        {node.children?.map((child, i) => renderNode(child, i, links, styles))}
       </a>
     );
   }
@@ -423,6 +422,7 @@ function renderNode(node: LexicalNode, index: number, links: 'active' | 'text'):
 export function renderLexicalContent(
   content: LexicalDocument | null | undefined,
   links: 'active' | 'text' = 'active',
+  styles: Record<string, string> = {},
 ): ReactNode {
   if (!Array.isArray(content?.root?.children)) return null;
 
@@ -430,7 +430,7 @@ export function renderLexicalContent(
     <>
       {content.root.children.map((value, index) => {
         const node = readNode(value);
-        return node ? renderNode(node, index, links) : null;
+        return node ? renderNode(node, index, links, styles) : null;
       })}
     </>
   );

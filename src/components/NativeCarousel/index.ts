@@ -6,8 +6,10 @@ export { useCarouselController, useCarouselSnapshot } from './useCarouselControl
 export type { NativeSlidesPerView } from './geometry';
 export { CarouselDots } from '../Carousel/CarouselDots';
 export { CarouselNav } from '../Carousel/CarouselNav';
-export { CarouselProgress, CarouselTimer } from './CarouselPlayback';
-export type { CarouselProgressProps, CarouselTimerProps } from './CarouselPlayback';
+export { CarouselProgress } from './CarouselProgress/CarouselProgress';
+export type { CarouselProgressProps } from './CarouselProgress/CarouselProgress';
+export { CarouselTimer } from './CarouselTimer/CarouselTimer';
+export type { CarouselTimerProps } from './CarouselTimer/CarouselTimer';
 export { synchronizeCarousels } from './sync';
 export type { CarouselSynchronizationOptions } from './sync';
 export type { CarouselPlaybackSnapshot } from './playback';

@@ -4,7 +4,7 @@ import { useEffect, useRef, type MutableRefObject } from 'react';
 
 import type { LexicalTextareaChangePayload, LexicalTextareaContent, LexicalTextareaVariable } from '../types';
 import { applyContentToEditor, buildChangePayload, getEditorContentSignature } from './content';
-import { $createVariableNode, $isVariableNode } from './VariableNode';
+import { $createVariableNode, $isVariableNode } from './VariableNode/VariableNode';
 import { findVariableTokenMatch } from './variables';
 
 export function EditorRefPlugin({ editorRef }: { editorRef: MutableRefObject<LexicalEditor | null> }) {
@@ -46,12 +46,7 @@ export function ContentSyncPlugin({
       };
     }
 
-    // ⚠️ Подпись отмечается ПОСЛЕ применения, а не до. В dev React монтирует эффект дважды
-    // (mount → cleanup → mount): первый заход помечал подпись применённой и планировал
-    // микрозадачу, cleanup её отменял, а второй заход видел «уже применено» и выходил — контент
-    // не попадал в редактор ВООБЩЕ. На экране это выглядело так, будто первый шаблон пустой и
-    // «появляется, только когда нажмёшь на другой»: смена шаблона меняет подпись, и ветка
-    // наконец срабатывает. Отметка после применения делает отменённый заход бесследным.
+    // Mark only a committed sync: StrictMode may cancel the first queued microtask.
     queueMicrotask(() => {
       if (cancelled) return;
 
@@ -87,10 +82,12 @@ export function VariableSelectionPlugin() {
           return false;
         }
 
-        const target = event.target instanceof HTMLElement ? event.target : null;
+        const view = editor.getRootElement()?.ownerDocument.defaultView;
+        if (!view) return false;
+        const target = event.target instanceof view.HTMLElement ? event.target : null;
         const chip = target?.closest('[data-variable-key]');
 
-        if (!(chip instanceof HTMLElement)) {
+        if (!(chip instanceof view.HTMLElement)) {
           return false;
         }
 
@@ -98,8 +95,8 @@ export function VariableSelectionPlugin() {
         // его зону по реальным размерам (padding-right + ширина + margin),
         // чтобы попадание не зависело от масштаба rpx.
         const rect = chip.getBoundingClientRect();
-        const chipStyle = getComputedStyle(chip);
-        const crossStyle = getComputedStyle(chip, '::after');
+        const chipStyle = view.getComputedStyle(chip);
+        const crossStyle = view.getComputedStyle(chip, '::after');
         const crossZone =
           (parseFloat(chipStyle.paddingRight) || 0) +
           (parseFloat(crossStyle.width) || 0) +

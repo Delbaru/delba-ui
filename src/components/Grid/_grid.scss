@@ -10,6 +10,12 @@
 .ui-grid-layout {
   position: relative;
 
-  > [data-grid-layout-key] { transform-origin: top left; }
-  > [data-grid-layout-exit] { position: absolute; pointer-events: none; opacity: 0; }
+  > [data-grid-layout-key] {
+    transform-origin: top left;
+  }
+  > [data-grid-layout-exit] {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+  }
 }

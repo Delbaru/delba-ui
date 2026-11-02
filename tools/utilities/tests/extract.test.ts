@@ -1,0 +1,189 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+
+import { extractUtilityRules, type Source } from '../extract';
+
+const classesOf = (sources: Source[], options: Parameters<typeof extractUtilityRules>[1] = {}) =>
+  new Set(extractUtilityRules(sources, options).map((rule) => rule.className));
+
+test('actual GradientBorder forwarding survives import and barrel aliases', () => {
+  for (const declaration of ["import { GradientBorder as Frame } from './border';", "import { Border as Frame } from './barrel';", "import { GradientBorder as Frame } from '@delba/ui';"]) {
+    const classes = classesOf([
+      { file: 'border.tsx', text: readFileSync(new URL('../../../src/components/GradientBorder/GradientBorder.tsx', import.meta.url), 'utf8') },
+      { file: 'barrel.ts', text: "export { GradientBorder as Border } from './border';" },
+      { file: 'page.tsx', text: `${declaration} const Page = () => <Frame width={[37,37,37]} gradient={['var(--unique-frame)','var(--unique-frame)','var(--unique-frame)']} />;` },
+    ]);
+    assert.ok(classes.has('p_37'));
+    assert.ok(classes.has('bg_--unique-frame'));
+  }
+});
+
+test('same-name components and forwarded local bindings remain file scoped', () => {
+  const classes = classesOf([
+    { file: 'a.tsx', text: 'export const Shape = ({ measure }) => <Flex w={measure} />;' },
+    { file: 'b.tsx', text: 'export const Shape = ({ measure }) => <Flex h={measure} />;' },
+    { file: 'wrapper.tsx', text: "import { Shape as Inner } from './a'; const Wrapper = ({ span }) => <Inner measure={span} />; export { Wrapper as Outer };" },
+    { file: 'barrel.ts', text: "export * from './wrapper'; export * from './cycle';" },
+    { file: 'cycle.ts', text: "export * from './barrel';" },
+    { file: 'page.tsx', text: "import { Outer } from './barrel'; import { Shape } from './b'; const Page = () => <><Outer span={37} /><Shape measure={41} /></>;" },
+  ]);
+  assert.ok(classes.has('w_37'));
+  assert.ok(classes.has('h_41'));
+  assert.ok(!classes.has('h_37'));
+  assert.ok(!classes.has('w_41'));
+});
+
+test('conditions and lookup keys do not forward business strings into CSS values', () => {
+  const rules = extractUtilityRules([
+    { file: 'text.tsx', text: `
+      const tones = { error: 'var(--error)', muted: 'var(--muted)' };
+      export function DText({ tone }) { return <Text color={tones[tone]} />; }
+      export function DField({ error }) { return <DText tone={error ? 'error' : 'muted'} />; }
+      export function DirectField({ error }) { return <Text color={error ? 'red' : 'black'} />; }
+      export function Guard({ enabled }) { return <Text color={enabled && 'var(--active)'} />; }
+    ` },
+    { file: 'checkout.tsx', text: `
+      const summary = { parts: [{ name: 'UI review.stl' }] };
+      const errors = { name: 'Please enter your name' };
+      export const Contact = () => <>
+        <DField error={errors.name} /><DirectField error={errors.name} />
+        <DText tone="Not a CSS color.stl" /><Guard enabled="Business guard.stl" />
+      </>;
+    ` },
+  ]);
+  const declarations = new Set(rules.map((rule) => rule.declaration));
+  assert.ok(![...declarations].some((value) => value.includes('UI review.stl') || value.includes('Please enter')));
+  assert.ok(![...declarations].some((value) => value.includes('Not a CSS') || value.includes('Business guard')));
+  for (const color of ['var(--error)', 'var(--muted)', 'var(--active)', 'red', 'black']) {
+    assert.ok(declarations.has(`color: ${color}`), color);
+  }
+});
+test('GradientBorder generates its default thickness and forwarded gradient/width', () => {
+  const classes = classesOf([
+    { file: 'border.tsx', text: readFileSync(new URL('../../../src/components/GradientBorder/GradientBorder.tsx', import.meta.url), 'utf8') },
+    { file: 'page.tsx', text: `import { GradientBorder } from './border'; export const A = () => <><GradientBorder gradient={['var(--frame)', 'var(--frame)', 'var(--frame)']} /><GradientBorder gradient={['var(--frame)', 'var(--frame)', 'var(--frame)']} width={[4, 8, 4]} /></>;` },
+  ]);
+  for (const name of ['p_1', 'bg_--frame', 'p_4', 'm_p_8']) assert.ok(classes.has(name), name);
+});
+
+test('fontSize accepts CSS lengths for layouts constrained by viewport height', () => {
+  const rules = extractUtilityRules([{ file: 'hero.tsx', text: `export const Hero = () => <Text fontSize={['min(calc(var(--rpx) * 92), 10svh)', 40, 64]} />;` }]);
+  assert.ok(rules.some((rule) => rule.declaration === 'font-size: min(calc(var(--rpx) * 92), 10svh)'));
+});
+
+test('литерал в пропе — ровно те классы, что выдаст рантайм', () => {
+  const classes = classesOf([{ file: 'a.tsx', text: 'export const A = () => <Flex p={[8, 0, 0]} gap={[16]} />;' }]);
+  assert.ok(classes.has('p_8') && classes.has('n_p_0') && classes.has('gap_16'));
+  assert.ok(!classes.has('d_p_8'), 'схлопнутый кортеж не печатает брейкпоинт');
+});
+
+test('коробка генерирует responsive фон/координаты и закрытый CSS-словарь динамического hide', () => {
+  const classes = classesOf([
+    { file: 'presets.ts', text: `export const presets = { toast: { position: ['fixed', 'fixed', 'fixed'], top: [20, null, 24], bg: ['var(--paper)', 'var(--background)', 'var(--paper)'], hide: [false, true, false] } };` },
+    { file: 'page.tsx', text: `export function Card({ hidden }) { return <Box hide={[hidden, false, true]} position={['relative','relative','relative']} left={[16,'auto',null]} />; }` },
+  ]);
+  for (const name of ['hide_true', 'd_hide_true', 'n_hide_true', 'm_hide_true', 't_hide_true', 'position_fixed', 'position_relative', 'top_20', 'top_24', 'bg_--paper', 'bg_--background', 'd_left_16', 'm_left_auto']) {
+    assert.ok(classes.has(name), name);
+  }
+});
+
+test('константа, её поле и арифметика вычисляются', () => {
+  const classes = classesOf([
+    {
+      file: 'a.tsx',
+      text: `
+        const PANEL = 670;
+        const COLUMNS = { group: 300 } as const;
+        export const A = () => <><Flex w={[PANEL / 2, null, null]} /><Flex w={[COLUMNS.group, null, null]} /></>;
+      `,
+    },
+  ]);
+  assert.ok(classes.has('d_w_335') && classes.has('d_w_300'));
+});
+
+test('импорт константы из соседнего файла', () => {
+  const sources = [
+    { file: '/p/sizes.ts', text: 'export const RAIL = 72;' },
+    { file: '/p/a.tsx', text: "import { RAIL } from './sizes'; export const A = () => <Flex h={RAIL} />;" },
+  ];
+  const classes = classesOf(sources, { resolveModule: (_from, spec) => (spec === './sizes' ? '/p/sizes.ts' : undefined) });
+  assert.ok(classes.has('h_72'));
+});
+
+test('проброс пропа компонентом: size у Checkbox рождает w и h его Flex', () => {
+  const classes = classesOf([
+    { file: 'checkbox.tsx', text: 'export function Checkbox({ size }) { return <Flex w={size ?? 24} h={size ?? 24} />; }' },
+    { file: 'page.tsx', text: 'export const Page = () => <Checkbox size={[20, null, null]} />;' },
+  ]);
+  assert.ok(classes.has('d_w_20') && classes.has('d_h_20'), 'значение с вызова');
+  assert.ok(classes.has('w_24') && classes.has('h_24'), 'дефолт внутри компонента');
+});
+
+test('общая коробка поля сохраняет padding и классы helper после отделения пропсов', () => {
+  const classes = classesOf([
+    { file: 'field.tsx', text: `
+      import { splitBoxLayout as split, resolveFieldLayout as resolve, fieldLayoutClasses } from './core';
+      export function Field(props) {
+        const { box, rest: fieldProps } = split(props);
+        const { value: text } = fieldProps;
+        const layoutProps = resolve({ ...box });
+        const classes = fieldLayoutClasses(c, layoutProps);
+        return <><input className={classes} value={text} /><Text pl={helper(layoutProps.p, layoutProps.pl)} /></>;
+      }
+    ` },
+    { file: 'a.tsx', text: '<Field p={[0, 12, 0, 12]} pl={[20, 8, 20]} />;' },
+  ]);
+  assert.ok(classes.has('p_0_12_0_12'), 'padding поля не вытесняется пробросом в helper');
+  for (const name of ['pl_12', 'd_pl_20', 'm_pl_8', 't_pl_20']) assert.ok(classes.has(name), name);
+});
+
+test('параметр props поддерживает проброс поля, произвольный адаптер остаётся непрозрачным', () => {
+  const classes = classesOf([
+    { file: 'a.tsx', text: `
+      export function Direct(props) { return <Flex w={props.measure} />; }
+      export function Unknown(props) {
+        const layout = transform(props);
+        return <Flex w={layout.measure} />;
+      }
+      const A = () => <><Direct measure={44} /><Unknown measure={52} /></>;
+    ` },
+  ]);
+  assert.ok(classes.has('w_44'));
+  assert.ok(!classes.has('w_52'));
+});
+
+test('ключ данных: значение из объекта доходит до утилиты через поле', () => {
+  const classes = classesOf([
+    { file: 'data.ts', text: "export const STATS = [{ value: '∞', valueFontSize: [80, 44, 44] }];" },
+    { file: 'stats.tsx', text: 'export const Stats = ({ items }) => items.map((item) => <Text fontSize={item.valueFontSize} />);' },
+  ]);
+  assert.ok(classes.has('fontSize_80') && classes.has('n_fontSize_44'));
+});
+
+test('ключ с большим набором значений — данные, а не токен: не берётся', () => {
+  const items = Array.from({ length: 20 }, (_, i) => `{ width: ${100 + i} }`).join(', ');
+  const classes = classesOf([
+    { file: 'data.ts', text: `export const IMAGES = [${items}];` },
+    { file: 'img.tsx', text: 'export const Pic = ({ image }) => <Flex w={image.width} />;' },
+  ]);
+  assert.ok(!classes.has('w_105'));
+});
+
+test('шаблонная строка с условием вычисляется в обе стороны', () => {
+  const classes = classesOf([
+    { file: 'a.tsx', text: "export const A = ({ on }) => <Flex border={[`calc(1.5 * var(--rpx)) solid ${on ? 'var(--primary)' : 'var(--line)'}`, null, null]} />;" },
+  ]);
+  assert.equal([...classes].filter((name) => name.startsWith('d_border_')).length, 2);
+});
+
+test('поле конфига — база и все брейкпоинты', () => {
+  const classes = classesOf([{ file: 'config.ts', text: 'export const PRESET = { gap: 12, p: [16, 32] };' }]);
+  for (const name of ['gap_12', 'd_gap_12', 'n_gap_12', 'm_gap_12', 't_gap_12', 'p_16_32_16_32', 'n_p_16_32_16_32']) assert.ok(classes.has(name), name);
+});
+
+test('затравка и закрытые словари печатаются без поиска', () => {
+  const classes = classesOf([], { seeds: { r: [24] } });
+  assert.ok(classes.has('r_24') && classes.has('m_r_24'));
+  assert.ok(classes.has('dir_column') && classes.has('n_text_h2') && classes.has('grow_1'));
+});

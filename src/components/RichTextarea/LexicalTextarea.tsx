@@ -1,306 +1,124 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { LinkNode } from '@lexical/link';
 import { ListItemNode, ListNode } from '@lexical/list';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
-import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
-import { ListPlugin } from '@lexical/react/LexicalListPlugin';
-import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
-import type { CSSProperties } from 'react';
-
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
-import { Box } from '../Box';
+import { cx, mergeComponentStates, splitBoxLayout, type WithRef } from '../../core';
+import { UI_MESSAGES } from '../../core/base/messages';
+import { roleFont } from '../../core/base/typography';
 import { Flex } from '../Flex';
 import { Text } from '../Text';
-import { cx, mergeComponentStates, type BoxLayoutProps, type ComponentStateValue, type StateLinkInput, type WithRef } from '../../core';
-import { roleFont } from '../../core/base/typography';
-import richTextStyles from '../RichText/RichText.module.scss';
-import type { LexicalTextVariant } from '../RichText';
-import { LexicalTextareaCounter, LexicalTextareaToolbar } from './LexicalTextareaToolbar';
-import { isAllowedLink } from './lexical/links';
-import { ContentSyncPlugin, EditorRefPlugin, VariableSelectionPlugin, VariablesPlugin } from './lexical/plugins';
-import { VariableNode } from './lexical/VariableNode';
-import styles from './RichTextarea.module.scss';
-import type { LexicalTextareaChangePayload, LexicalTextareaContent, LexicalTextareaHandle, LexicalTextareaVariable } from './types';
+import { CollapseWrap } from '../Collapse/CollapseWrap';
+import { VariableNode } from './lexical/VariableNode/VariableNode';
+import { LexicalTextareaEditor } from './LexicalTextareaEditor/LexicalTextareaEditor';
+import { LexicalTextareaToolbar } from './LexicalTextareaToolbar/LexicalTextareaToolbar';
+import { editorLayout, NO_VARIABLES } from './LexicalTextarea.config';
 import { useLexicalTextarea } from './useLexicalTextarea';
-import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
+import type { LexicalTextareaProps } from './LexicalTextarea.types';
+import type { LexicalTextareaHandle } from './types';
+import styles from './LexicalTextarea.module.scss';
 
-export interface LexicalTextareaProps
-  extends BoxLayoutProps, SharedMotionProps {
-  id?: string;
-  className?: string;
-  style?: CSSProperties;
+export type { LexicalTextareaProps } from './LexicalTextarea.types';
 
-
-  color?: string;
-  placeholder?: string;
-  placeholderColor?: string;
-  label?: string;
-  labelColor?: string;
-  comment?: string;
-  variant?: LexicalTextVariant;
-
-  content?: LexicalTextareaContent | string;
-  variables?: LexicalTextareaVariable[];
-  // Показывать ли в тулбаре кнопку «Ссылка» (по умолчанию — да). На экзамене ссылки запрещены.
-  allowLink?: boolean;
-  onChange?: (payload: LexicalTextareaChangePayload) => void;
-
-  minLength?: number;
-  maxLength?: number;
-
-  error?: string;
-  /** Сворачивать редактор целиком, включая подпись, ошибку и комментарий. */
-  collapse?: CollapseOptions;
-  state?: ComponentStateValue;
-
-  required?: boolean;
-  emptyMessage?: string;
-  validate?: (payload: LexicalTextareaChangePayload) => string | undefined;
-
-  linkState?: StateLinkInput;
-  'data-point-events'?: string;
-}
-
-const DEFAULT_EMPTY_MESSAGE = 'Поле обязательно для заполнения';
-// Общий пустой список: литерал `[]` по умолчанию новый на каждом рендере, и плагины с
-// `variableLookup` в зависимостях перерегистрировались бы на каждом рендере.
-const NO_VARIABLES: LexicalTextareaVariable[] = [];
-
+/** Formatted document editor; the ref exposes document commands rather than a DOM node. */
 export function LexicalTextarea({
-  ref,
-  id: idProp,
-  className = '',
-  style,
-  p,
-  pt,
-  pr,
-  pb,
-  pl,
-  m,
-  mt,
-  mr,
-  mb,
-  ml,
-  r,
-  tlr,
-  trr,
-  brr,
-  blr,
-  borderTLR,
-  borderTRR,
-  borderBRR,
-  borderBLR,
-  border,
-  borderC,
-  borderS,
-  borderW,
-  borderT,
-  borderR,
-  borderB,
-  borderL,
-  grow,
-  perspective3d,
-  parallax,
-  animate,
-  w,
-  minW,
-  maxW,
-  h,
-  minH,
-  maxH,
-  bg,
-  color,
-  placeholder,
-  // Цвет подсказки — токен темы с фолбэком на прежний: библиотеку едят проекты, токен ещё не задавшие.
-placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
-  label,
-  labelColor,
-  comment,
-  variant = 'style-1',
-  content,
-  variables = NO_VARIABLES,
-  allowLink = true,
-  onChange,
-  minLength,
-  maxLength,
-  error,
-  collapse,
-  state,
-  required,
-  emptyMessage = DEFAULT_EMPTY_MESSAGE,
-  validate,
-  linkState,
-  'data-point-events': dataPointEvents,
-  ...rootBox
+  ref, id, className, style, color, placeholder, placeholderColor = 'var(--field-placeholder-color, var(--text-muted))',
+  label, labelColor, comment, variant = 'style-1', content, variables = NO_VARIABLES,
+  allowLink = true, onChange, minLength, maxLength, error, collapse, state, required,
+  emptyMessage = UI_MESSAGES.richTextarea.required, validate, perspective3d, parallax, animate, linkState,
+  'data-point-events': dataPointEvents, ...props
 }: WithRef<LexicalTextareaProps, LexicalTextareaHandle>) {
-  const {
-    id, editorRef, variableLookup, contentSignature, editorMeta, helperError, helperText,
-    helperTextColor, helperTextId, showCounter, hasVariables, handleEditorChange, handleContentSync,
-    handleBlur,
-  } = useLexicalTextarea(ref, {
-    id: idProp, content, variables, onChange, minLength, maxLength, error, comment, required,
-    emptyMessage, validate,
-  });
+  const field = useLexicalTextarea(ref, { id, content, variables, onChange, minLength, maxLength, error, comment, required, emptyMessage, validate });
+  const { box } = splitBoxLayout(props);
+  const layout = editorLayout(box);
+  const fieldState = mergeComponentStates(state, field.feedback.error && 'error');
 
-  const fieldState = mergeComponentStates(state, helperError && 'error');
-  const fieldStyle = {
-    ...(color ? { color } : null),
-    ['--font-p1' as string]: roleFont('body'),
-    ['--font-p2' as string]: roleFont('body'),
-    ['--font-p3' as string]: roleFont('body'),
-  } satisfies CSSProperties;
-  const contentClassName = cx(styles.ContentEditable, richTextStyles.RichText, richTextStyles[variant]);
-
-  const renderedContent = (
-    <Box
-        {...rootBox}
-        className={cx(styles.RichTextareaWrapper, className)}
+  const editor = (
+    <Flex
+        {...layout.root}
+        dir={['column', 'column', 'column']}
+        position={layout.root.position ?? ['relative', 'relative', 'relative']}
+        className={cx('LexicalTextarea', styles.LexicalTextarea, className)}
         style={style}
-        grow={grow}
         perspective3d={perspective3d}
         parallax={parallax}
         animate={animate}
         data-point-events={dataPointEvents}
         linkState={linkState}
     >
-      {label && (
-        <Text id={`${id}-label`} color={labelColor} mb={[8, 4, 8]} required={required}>{label}</Text>
-      )}
-
-      <Box
+      {label && <Text
+          id={`${field.id}-label`}
+          color={labelColor}
+          mb={[8, 4, 8]}
+          required={required}
+      >{label}</Text>}
+      <Flex
+          {...layout.field}
+          dir={['column', 'column', 'column']}
+          position={['relative', 'relative', 'relative']}
+          grow={[1, 1, 1]}
+          minH={layout.field.minH ?? [220, 220, 220]}
           className={styles.Field}
-          style={fieldStyle}
-          p={p}
-          pt={pt}
-          pr={pr}
-          pb={pb}
-          pl={pl}
-          m={m}
-          mt={mt}
-          mr={mr}
-          mb={mb}
-          ml={ml}
-          r={r}
-          tlr={tlr}
-          trr={trr}
-          brr={brr}
-          blr={blr}
-          borderTLR={borderTLR}
-          borderTRR={borderTRR}
-          borderBRR={borderBRR}
-          borderBLR={borderBLR}
-          border={border}
-          borderC={borderC}
-          borderS={borderS}
-          borderW={borderW}
-          borderT={borderT}
-          borderR={borderR}
-          borderB={borderB}
-          borderL={borderL}
-          w={w}
-          minW={minW}
-          maxW={maxW}
-          h={h}
-          minH={minH ?? [220, null, null]}
-          maxH={maxH}
-          bg={bg}
+          style={{ color, '--font-p1': roleFont('body'), '--font-p2': roleFont('body'), '--font-p3': roleFont('body') } as CSSProperties}
           data-state={fieldState ?? undefined}
           role='presentation'
-          onClick={() => editorRef.current?.focus()}
+          onClick={() => field.editor.ref.current?.focus()}
       >
-        <LexicalComposer
-          initialConfig={{
-            namespace: 'SocratLexicalTextarea',
-            onError: (nextError: Error) => {
-              throw nextError;
-            },
-            nodes: [VariableNode, ListNode, ListItemNode, LinkNode],
-            theme: {
-              text: {
-                underline: styles.underline,
-              },
-            },
-          }}
-        >
-          <EditorRefPlugin editorRef={editorRef} />
-          <ContentSyncPlugin
-              content={content}
-              contentSignature={contentSignature}
-              variableLookup={variableLookup}
-              onSync={handleContentSync}
+        <LexicalComposer initialConfig={{
+          namespace: 'SocratLexicalTextarea',
+          onError: nextError => { throw nextError; },
+          nodes: [VariableNode, ListNode, ListItemNode, LinkNode],
+          theme: { text: { underline: styles.underline } },
+        }}>
+          <LexicalTextareaEditor
+              id={field.id}
+              editor={field.editor}
+              feedback={field.feedback}
+              label={label}
+              required={required}
+              placeholder={placeholder}
+              placeholderColor={placeholderColor}
+              variant={variant}
           />
-          <VariablesPlugin variableLookup={variableLookup} />
-          <VariableSelectionPlugin />
-          <HistoryPlugin />
-          <ListPlugin />
-          <LinkPlugin validateUrl={isAllowedLink} />
-          <OnChangePlugin ignoreSelectionChange onChange={handleEditorChange} />
-
-          <Box className={styles.EditorShell}>
-            <RichTextPlugin
-              contentEditable={
-                <ContentEditable
-                    id={id}
-                    className={contentClassName}
-                    aria-labelledby={label ? `${id}-label` : undefined}
-                    aria-describedby={helperTextId}
-                    aria-invalid={Boolean(helperError)}
-                    aria-required={required || undefined}
-                    onBlur={handleBlur}
-                />
-              }
-              placeholder={placeholder ? (
-                <Text
-                    as='div'
-                    variant={['body', null, null]}
-                    color={placeholderColor}
-                    className={styles.Placeholder}
-                >{placeholder}</Text>
-              ) : null}
-              ErrorBoundary={LexicalErrorBoundary}
-            />
-          </Box>
-
           <Flex
-              dir={['row', null, null]}
-              justify={['space_between', null, null]}
-              align={['center', null, null]}
+              dir={['row', 'row', 'row']}
+              justify={['space_between', 'space_between', 'space_between']}
+              align={['center', 'center', 'center']}
               wrap={['wrap', 'wrap', 'wrap']}
               gap={[16, 8, 16]}
               mt={[16, 16, 16]}
               pt={[16, 16, 16]}
-              borderT={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
+              borderT={['calc(1 * var(--rpx)) solid var(--line)', 'calc(1 * var(--rpx)) solid var(--line)', 'calc(1 * var(--rpx)) solid var(--line)']}
           >
-            <LexicalTextareaToolbar hasVariables={hasVariables} allowLink={allowLink} />
-            {showCounter && <LexicalTextareaCounter
-                characters={editorMeta.payload.characters}
-                maxLength={maxLength}
-            />}
+            <LexicalTextareaToolbar hasVariables={field.hasVariables} allowLink={allowLink} />
+            {field.counter.visible && (
+              <Text
+                  variant={['caption', 'caption', 'caption']}
+                  color='var(--text-muted)'
+                  whiteSpace={['nowrap', 'nowrap', 'nowrap']}
+                  lineHeight={[1, 1, 1]}
+              >
+                {maxLength != null ? `${field.counter.characters} / ${maxLength}` : field.counter.characters}
+              </Text>
+            )}
           </Flex>
         </LexicalComposer>
-      </Box>
-
-      {helperText && (
+      </Flex>
+      {field.feedback.text && (
         <Text
             as='div'
             variant={['caption', 'caption', 'caption']}
             mt={[8, 4, 8]}
-            id={helperTextId}
-            color={helperTextColor}
-            role={helperError ? 'alert' : undefined}
-        >{helperText}</Text>
+            id={field.feedback.id}
+            color={field.feedback.color}
+            role={field.feedback.error ? 'alert' : undefined}
+        >
+          {field.feedback.text}
+        </Text>
       )}
-    </Box>
+    </Flex>
   );
 
-  if (!collapse) return renderedContent;
-
-  return (
-    <CollapseWrap {...collapse}>{renderedContent}</CollapseWrap>
-  );
+  return collapse ? <CollapseWrap {...collapse}>{editor}</CollapseWrap> : editor;
 }

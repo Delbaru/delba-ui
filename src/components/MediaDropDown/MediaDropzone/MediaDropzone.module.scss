@@ -1,0 +1,36 @@
+@layer ui.components {
+  .MediaDropzone {
+  }
+  .DropZone {
+    // Рамка зоны едет сама: с неё начинается подсветка «сюда можно положить файл».
+    transition: border-color var(--t-d-fast) var(--t-t-f-ease);
+  }
+  .DropZoneIcon {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    transition: color var(--t-d-fast) var(--t-t-f-ease);
+  }
+}
+@layer ui.states {
+  // Слой состояний, а не покой: правило из `ui.components` проиграло бы утилитам рамки и заливки
+  // (`border_…`, `bg_…` в `ui.utilities`), и подсветка зоны просто не появилась бы.
+  .MediaDropzone .DropZone {
+    &:hover,
+    &:focus-visible {
+      border-color: var(--primary);
+
+      .DropZoneIcon {
+        color: var(--primary);
+      }
+    }
+
+    &[state~='dragging'] {
+      border-color: var(--primary);
+      background: var(--primary-light);
+
+      .DropZoneIcon {
+        color: var(--primary);
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+@use '../../../core/mixins' as m;
+@layer ui.components {
+      // Превью кадра + время над курсором (позиция left ставится императивно, центрируем translateX).
+      .TimelinePreview {
+          position: absolute;
+          bottom: calc(100% + calc(10 * var(--rpx)));
+          left: 0;
+          z-index: 3;
+          background: var(--media-scrim);
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          transform: translate(-50%, calc(4 * var(--rpx)));
+          transition: opacity var(--t-d-fast) var(--t-t-f-ease), transform var(--t-d-fast) var(--t-t-f-ease);
+      }
+
+      .TimelinePreview[data-visible='true'] {
+          opacity: 1;
+          visibility: visible;
+          transform: translate(-50%, 0);
+      }
+
+      .previewVideo {
+          display: block;
+          width: calc(160 * var(--rpx));
+          height: calc(90 * var(--rpx));
+          border-radius: calc(8 * var(--rpx));
+          background: var(--black);
+          object-fit: cover;
+          transition: opacity var(--t-d-fast) var(--t-t-f-ease);
+
+          &[data-framed='false'] {
+              opacity: 0;
+          }
+      }
+
+      // Каретка превью — треугольник, указывающий на курсор (left ставится императивно с офсетом).
+      .previewCaret {
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          width: 0;
+          height: 0;
+          border-left: calc(6 * var(--rpx)) solid transparent;
+          border-right: calc(6 * var(--rpx)) solid transparent;
+          border-top: calc(6 * var(--rpx)) solid var(--media-scrim);
+          transform: translateX(-50%);
+      }
+
+
+@include m.reduced-motion { .TimelinePreview, .previewVideo { transition: none; } }
+}

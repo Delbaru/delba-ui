@@ -1,7 +1,7 @@
 import { $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isRangeSelection, type LexicalEditor } from 'lexical';
 
 import type { LexicalTextareaChangePayload, LexicalTextareaContent, LexicalTextareaVariable } from '../types';
-import { $createVariableNode, type VariableNodePayload } from './VariableNode';
+import { $createVariableNode, type VariableNodePayload } from './VariableNode/VariableNode';
 import { findVariableTokenMatch } from './variables';
 
 // Метка для программной подстановки контента (синхронизация пропа `content`,

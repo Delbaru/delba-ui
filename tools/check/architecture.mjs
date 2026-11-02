@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
+import { componentAnatomyRule } from './rules/component-anatomy.mjs';
 import { collapseRule } from './rules/collapse.mjs';
 import { domRefRule } from './rules/dom-ref.mjs';
 import { jsxFormatRule } from './rules/jsx-format.mjs';
@@ -10,7 +11,7 @@ import { jsxFormatRule } from './rules/jsx-format.mjs';
 const KIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 /** Правила кита; проекту достаются только общие — у него нет `src/components` кита и ядра. */
-export const kitRules = [collapseRule, domRefRule, jsxFormatRule];
+export const kitRules = [collapseRule, domRefRule, jsxFormatRule, componentAnatomyRule];
 export const projectRules = [domRefRule];
 
 function sourceFiles(dir) {

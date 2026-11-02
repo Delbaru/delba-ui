@@ -35,6 +35,9 @@ production-сборки нет. `delba-ui build` пишет генераты: у
 
 Структура находится в `tools/check/`:
 
+- `rules/component-anatomy.mjs` — AST-проверка собственных SCSS и именованных классов визуальных компонентов.
+- `test-placement.mjs` — обязательное размещение unit/static/browser тестов в `tests/`; runtime, fixtures и config не перемещает.
+- `component-catalog.mjs` — инвентарь фактических TSX-экспортов всех package-входов и полнота страниц каталога.
 - `rules/collapse.mjs` — правило: получает TypeScript AST и возвращает нарушения, без вывода.
 - `architecture.mjs` — чтение TS/TSX и список архитектурных правил.
 - `index.mjs` — единый список шагов проверки кита и проекта.

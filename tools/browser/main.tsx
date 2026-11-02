@@ -8,6 +8,7 @@ import 'swiper/css/effect-flip';
 import 'virtual:browser-utilities.css';
 
 import './styles.scss';
+import { ContentFixture } from './content.fixture';
 import { BrowserFixture } from './fixture';
 import { DropdownOpenFixture } from './dropdown-open.fixture';
 import { HoverMotionFixture } from './hover-motion.fixture';
@@ -33,6 +34,7 @@ createRoot(root).render(
     <StrictMode>
       <ModalProvider>{location.search === '?smooth'
         ? <main style={{ height: 2000 }}><h1>Delba UI browser regression fixture</h1></main>
+        : location.search === '?content' ? <ContentFixture />
         : location.search === '?native-carousel-advanced' ? <NativeCarouselAdvancedFixture />
         : location.search === '?native-carousel' ? <NativeCarouselFixture />
         : location.search === '?dropdown-open' ? <DropdownOpenFixture />

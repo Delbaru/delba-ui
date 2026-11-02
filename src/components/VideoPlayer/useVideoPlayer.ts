@@ -30,6 +30,8 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
     let video: HTMLVideoElement | null = null;
     let root: HTMLElement | null = null;
     let rafId = 0;
+    let owner: Document | null = null;
+    const animationView = () => owner?.defaultView;
 
     let snapshot: VideoPlayerSnapshot = {
         playing: false,
@@ -70,28 +72,29 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
     }
 
     function tick(): void {
+        rafId = 0;
         if (!video) return;
 
         const time = video.currentTime;
         timeListeners.forEach((listener) => listener(time));
-        rafId = requestAnimationFrame(tick);
+        if (video && snapshot.playing) startTicking();
     }
 
     function startTicking(): void {
-        if (rafId || typeof requestAnimationFrame === 'undefined') return;
+        if (rafId || !animationView() || timeListeners.size === 0) return;
 
-        rafId = requestAnimationFrame(tick);
+        rafId = animationView()?.requestAnimationFrame(tick) ?? 0;
     }
 
     function stopTicking(): void {
         if (!rafId) return;
 
-        cancelAnimationFrame(rafId);
+        animationView()?.cancelAnimationFrame(rafId);
         rafId = 0;
     }
 
     function isFullscreen(): boolean {
-        return typeof document !== 'undefined' && root !== null && document.fullscreenElement === root;
+        return root !== null && owner?.fullscreenElement === root;
     }
 
     //
@@ -119,6 +122,18 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
         if (!video) return;
 
         setSnapshot({ volume: video.volume, muted: video.muted });
+    };
+
+    const handleRateChange = (): void => {
+        if (video) setSnapshot({ rate: video.playbackRate });
+    };
+
+    const handleEmptied = (): void => {
+        stopTicking();
+        scrubTarget = null;
+        scrubbing = false;
+        setSnapshot({ ready: false, duration: 0, playing: false });
+        pushTime();
     };
 
     const handleDurationChange = (): void => {
@@ -174,7 +189,7 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
     }
 
     function seek(seconds: number): void {
-        if (!video) return;
+        if (!video || !Number.isFinite(seconds)) return;
 
         // Явный (точный) seek отменяет незавершённый скраб.
         scrubTarget = null;
@@ -192,7 +207,7 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
     // Скраб-перемотка: копим последнюю цель и, если сейчас не идёт перемотка, пускаем её. Иначе следующую
     // пустит handleSeeked по завершении текущей — так частота кадров ограничена декодером, а не рендер-кадром.
     function scrubTo(seconds: number): void {
-        if (!video) return;
+        if (!video || !Number.isFinite(seconds)) return;
 
         const max = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : seconds;
         scrubTarget = clamp(seconds, 0, max);
@@ -241,7 +256,7 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
     }
 
     function setVolume(value: number): void {
-        if (!video) return;
+        if (!video || !Number.isFinite(value)) return;
 
         const next = clamp(value, 0, 1);
         video.volume = next;
@@ -265,7 +280,7 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
     }
 
     function setRate(rate: number): void {
-        if (!video) return;
+        if (!video || !Number.isFinite(rate) || rate <= 0) return;
 
         video.playbackRate = rate;
         setSnapshot({ rate });
@@ -277,7 +292,7 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
 
     function exitFullscreen(): void {
         if (isFullscreen()) {
-            document.exitFullscreen?.().catch(() => null);
+            owner?.exitFullscreen?.().catch(() => null);
         }
     }
 
@@ -298,8 +313,10 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
     //
 
     function _attach(nextVideo: HTMLVideoElement, nextRoot: HTMLElement | null): void {
+        _detach();
         video = nextVideo;
         root = nextRoot;
+        owner = nextVideo.ownerDocument ?? nextRoot?.ownerDocument ?? (typeof document === 'undefined' ? null : document);
 
         // Применяем стартовые значения на реальный элемент.
         video.volume = clamp(snapshot.volume, 0, 1);
@@ -313,16 +330,19 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
         video.addEventListener('durationchange', handleDurationChange);
         video.addEventListener('loadedmetadata', handleLoadedMetadata);
         video.addEventListener('seeked', handleSeeked);
+        video.addEventListener('ratechange', handleRateChange);
+        video.addEventListener('emptied', handleEmptied);
 
-        if (typeof document !== 'undefined') {
-            document.addEventListener('fullscreenchange', handleFullscreenChange);
-        }
+        owner?.addEventListener('fullscreenchange', handleFullscreenChange);
 
         setSnapshot({
             duration: Number.isFinite(video.duration) ? video.duration : 0,
             ready: video.readyState >= 1,
             playing: !video.paused && !video.ended,
+            fullscreen: isFullscreen(),
         });
+
+        if (!video.paused && !video.ended) startTicking();
 
         if (options.autoPlay) {
             play();
@@ -342,11 +362,14 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
             video.removeEventListener('durationchange', handleDurationChange);
             video.removeEventListener('loadedmetadata', handleLoadedMetadata);
             video.removeEventListener('seeked', handleSeeked);
+            video.removeEventListener('ratechange', handleRateChange);
+            video.removeEventListener('emptied', handleEmptied);
         }
 
-        if (typeof document !== 'undefined') {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-        }
+        owner?.removeEventListener('fullscreenchange', handleFullscreenChange);
+        scrubTarget = null;
+        scrubbing = false;
+        owner = null;
 
         video = null;
         root = null;
@@ -377,7 +400,11 @@ export function createVideoPlayerController(options: UseVideoPlayerOptions = {})
         subscribeTime: (listener) => {
             timeListeners.add(listener);
             listener(getTime());
-            return () => timeListeners.delete(listener);
+            if (snapshot.playing) startTicking();
+            return () => {
+                timeListeners.delete(listener);
+                if (timeListeners.size === 0) stopTicking();
+            };
         },
         subscribeSeek: (listener) => {
             seekListeners.add(listener);

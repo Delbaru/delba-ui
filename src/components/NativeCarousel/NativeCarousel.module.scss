@@ -1,7 +1,7 @@
 @use '../../core/scss-utils' as utils;
 
 @layer ui.components {
-    .Root {
+    .NativeCarousel {
         position: relative;
         min-width: 0;
         display: block;
@@ -28,18 +28,18 @@
         min-height: 0;
         scroll-snap-align: start;
     }
-    .Root[data-carousel-ready='true'] .Viewport {
+    .NativeCarousel[data-carousel-ready='true'] .Viewport {
         overflow: hidden;
         scroll-snap-type: none;
     }
-    .Root[data-carousel-ready='true'][data-draggable='true'] .Viewport {
+    .NativeCarousel[data-carousel-ready='true'][data-draggable='true'] .Viewport {
         touch-action: pan-y pinch-zoom;
     }
-    .Root[data-dragging='true'] {
+    .NativeCarousel[data-dragging='true'] {
         user-select: none;
         cursor: grabbing;
     }
-    .Root img {
+    .NativeCarousel img {
         -webkit-user-drag: none;
     }
     .Announcement {
@@ -82,7 +82,7 @@
 }
 
 @layer ui.states {
-    .Root:focus-visible {
+    .NativeCarousel:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 4px;
     }

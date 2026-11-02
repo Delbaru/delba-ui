@@ -1,0 +1,109 @@
+@use '../../../core/mixins' as m;
+@layer ui.components {
+  .MediaTabs {
+  }
+  .TypeGrid {}
+  .TypeButton {
+    cursor: pointer;
+    width: 100%;
+    height: calc(var(--rpx) * 32);
+    padding: calc(var(--rpx) * 10) calc(var(--rpx) * 12);
+    background: var(--white-100);
+    border: calc(var(--rpx) * 1) solid var(--line);
+    border-radius: var(--s-8);
+    transition: var(--t-fast);
+
+    &:hover {
+      background: var(--background);
+    }
+  }
+  .TypeButtonActive {
+    background: var(--background);
+  }
+  .TypeIcon {
+    flex-shrink: 0;
+  }
+  .TypeLabel {
+    color: var(--text-muted);
+  }
+  .TypeButtonActive .TypeLabel {
+    color: var(--black);
+  }
+  .UploadSection {
+    width: 100%;
+  }
+  .FileButton {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--rpx) * 8);
+    width: 100%;
+    height: calc(var(--rpx) * 40);
+    padding: calc(var(--rpx) * 10) calc(var(--rpx) * 16);
+    background: var(--primary);
+    border: none;
+    border-radius: var(--s-12);
+    transition: var(--t-fast);
+    outline: none;
+
+    .UploadLabel {
+      color: var(--white-100);
+    }
+
+    .UploadIcon {
+      flex-shrink: 0;
+      color: var(--white-100);
+      transition: transform var(--t-fast);
+    }
+
+    &:hover {
+      background: var(--primary-dark);
+
+      .UploadIcon {
+        transform: scale(1.05);
+      }
+    }
+  }
+  .Divider {
+    width: 100%;
+  }
+  .DividerLine {
+    flex: 1;
+    height: calc(var(--rpx) * 1);
+    background: var(--text-muted);
+  }
+  .DividerText {
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .LinkInput {
+    width: 100%;
+    height: calc(var(--rpx) * 40);
+    padding: var(--s-16);
+    background: var(--white-100);
+    border: calc(var(--rpx) * 1) solid var(--line);
+    border-radius: var(--s-12);
+    color: var(--text-muted);
+    font: m.role-font(micro);
+    outline: none;
+    transition: var(--t-fast);
+
+    &::placeholder {
+      color: var(--text-muted);
+    }
+
+    &:focus {
+      border-color: var(--primary);
+      color: var(--black);
+    }
+  }
+  .LinkHint {
+    color: var(--text-muted);
+    padding: 0 var(--s-8);
+    width: 100%;
+    line-height: 1.1;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

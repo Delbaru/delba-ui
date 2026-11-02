@@ -44,7 +44,12 @@ export function acquireScrollLock(document: Document): () => void {
     const restoreBody = hideOverflow(body.style);
     // Measure the width actually reclaimed: stable scrollbar gutters need no compensation.
     const compensation = Math.max(0, Math.round(layoutWidth() - originalWidth));
-    if (compensation) body.style.setProperty('padding-right', `calc(${computedPadding} + ${compensation}px)`, 'important');
+    if (compensation)
+      body.style.setProperty(
+        'padding-right',
+        `calc(${computedPadding} + ${compensation}px)`,
+        'important',
+      );
 
     lock = {
       count: 0,

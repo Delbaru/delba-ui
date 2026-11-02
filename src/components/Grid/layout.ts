@@ -1,7 +1,7 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
 import type { MotionTime } from '../../core/base/timing';
 import type { MotionDistance } from '../../core/base/distance';
-import type { GridItemProps } from './Grid';
+import type { GridItemProps } from './Grid.types';
 
 export interface GridLayoutAnimate {
   /** Перестроение по ключам прямых GridItem при изменении состава, порядка или колонок. */
@@ -36,10 +36,54 @@ export function layoutEntries(children: ReactNode): LayoutEntry[] {
 
 export function retainLayoutExits(current: LayoutEntry[], next: LayoutEntry[]): LayoutEntry[] {
   const keys = new Set(next.map((entry) => entry.key));
-  return next.concat(current.filter((entry) => !keys.has(entry.key)).map((entry) => ({ ...entry, exiting: true })));
+  return next.concat(
+    current.filter((entry) => !keys.has(entry.key)).map((entry) => ({ ...entry, exiting: true })),
+  );
 }
 
 export function isGridLayoutAnimate(value: unknown): value is GridLayoutAnimate {
-  return Boolean(value && typeof value === 'object' && 'when' in value && value.when === 'change'
-    && 'effect' in value && value.effect === 'layout');
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      'when' in value &&
+      value.when === 'change' &&
+      'effect' in value &&
+      value.effect === 'layout',
+  );
+}
+
+export interface LayoutBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  opacity: number;
+}
+
+/** Interrupted moves start at their painted box, including an unfinished entrance opacity. */
+export function layoutMoveFrames(
+  previous: LayoutBox,
+  next: Pick<LayoutBox, 'left' | 'top' | 'width' | 'height'>,
+): Keyframe[] | null {
+  if (!next.width || !next.height) return null;
+
+  const x = previous.left - next.left;
+  const y = previous.top - next.top;
+  const resized =
+    Math.abs(previous.width - next.width) > 0.5 || Math.abs(previous.height - next.height) > 0.5;
+  if (Math.abs(x) <= 0.5 && Math.abs(y) <= 0.5 && !resized && previous.opacity >= 0.999)
+    return null;
+
+  const frames: Keyframe[] = [
+    {
+      translate: `${x}px ${y}px`,
+      scale: `${previous.width / next.width} ${previous.height / next.height}`,
+    },
+    { translate: '0px 0px', scale: '1 1' },
+  ];
+  if (previous.opacity < 0.999) {
+    frames[0] = { ...frames[0], opacity: previous.opacity };
+    frames[1] = { ...frames[1], opacity: 1 };
+  }
+  return frames;
 }

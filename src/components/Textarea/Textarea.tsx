@@ -1,389 +1,59 @@
 'use client';
-
-import {
-    useCallback,
-    useState,
-    type ChangeEvent,
-    type CSSProperties,
-    type FocusEvent,
-} from 'react';
-import type React from 'react';
-import styles from './Textarea.module.scss';
-import { cx, createLayoutClasses, stateProps, stateLinkProps, useFieldControl, fieldHelperPaddingLeft, type BoxLayoutProps, type ComponentStateValue, type StateLinkInput, type ResponsiveValue, type WithRef, fieldLayoutClasses, fieldRootLayoutClasses, resolveFieldLayout, splitBoxLayout } from '../../core';
-import { resolveSeedField } from '../../core/base/seed';
-import type { FieldValueChangeHandler } from '../../core';
-import { Text } from '../Text';
+import type { WithRef } from '../../core';
 import { Flex } from '../Flex';
-import { Skeleton } from '../Skeleton';
-import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
-import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
-
-type VariantKey = 'primary' | 'secondary';
-type SizeKey = 'default' | 'fullWidth';
-
-const c = createLayoutClasses(styles, { local: { h: 'height' } });
-
-const DEFAULT_MIN_LENGTH_MESSAGE = (min: number) => `Минимум ${min} символов`;
-const DEFAULT_MAX_LENGTH_MESSAGE = (max: number) => `Максимум ${max} символов`;
-
-export interface TextareaProps
-    extends Omit<
-        React.TextareaHTMLAttributes<HTMLTextAreaElement>,
-        'color' | 'placeholder' | 'width' | 'minWidth' | 'maxWidth' | 'height' | 'minHeight' | 'maxHeight'
-    >,
-    BoxLayoutProps,
-    SharedMotionProps {
-    style?: CSSProperties;
-    /** Оформление нативного textarea; style корня относится ко всему полю. */
-    field?: { className?: string; style?: CSSProperties };
-    /** Настоящее событие ввода нативного textarea. */
-    onChange?: React.ChangeEventHandler<HTMLTextAreaElement>;
-    /** Значение модели после ввода или восстановления seed. */
-    onValueChange?: FieldValueChangeHandler<HTMLTextAreaElement>;
-
-    variant?: ResponsiveValue<VariantKey>;
-    size?: ResponsiveValue<SizeKey>;
-
-
-    color?: string;
-
-    placeholder?: string;
-    placeholderColor?: string;
-    /**
-     * Значение по умолчанию, которое ведёт себя как подсказка: пока в поле стоит `seed`, оно
-     * рисуется цветом подсказки и исчезает по фокусу, уход из пустого поля возвращает `seed`.
-     *
-     * Нужен там, где модель уже держит значение по умолчанию: засеянное значение иначе неотличимо
-     * от ответа человека. Модель не меняется, и после blur получает валидное значение.
-     */
-    seed?: string;
-    /**
-     * Значение ещё грузится — вместо него скелетон (см. `Skeleton`, §4).
-     *
-     * У текстового поля он в НЕСКОЛЬКО строк: заглушка обязана занимать столько же места,
-     * сколько займёт контент, а у textarea это абзац, а не строка.
-     */
-    loading?: boolean;
-    label?: string;
-    labelColor?: string;
-    comment?: string;
-
-    rows?: number;
-    length?: { min?: number; max?: number };
-    showCount?: boolean;
-    /**
-     * Где рисовать счётчик символов.
-     *
-     * `inside` (по умолчанию) — абсолютом в правом нижнем углу САМОГО поля: так он нарисован в
-     * макете у многострочных редакторов, и вид тех полей менять нельзя.
-     * `below` — строкой под полем, справа, как в редакторе шаблонов (`LexicalTextarea` держит
-     * счётчик в тулбаре). Нужен там, где значение доходит до правого края и внутренний счётчик
-     * ложится поверх текста: у однострочного авторесайза его из-за этого выключали совсем
-     * (Roadmap D-122).
-     */
-    countPlacement?: 'inside' | 'below';
-
-    error?: string;
-
-    /** Сворачивать поле целиком, включая подпись, ошибку и комментарий. */
-    collapse?: CollapseOptions;
-
-    state?: ComponentStateValue;
-
-    required?: boolean;
-    emptyMessage?: string;
-    validate?: (value: string) => string | undefined;
-
-    linkState?: StateLinkInput;
-    'data-point-events'?: string;
-
-    /** Класс на САМО поле (внутренний .Textarea — тот, что несёт фон/рамку), а не на обёртку
-     *  с label/comment, куда садится className. Нужен скин-обёрткам (SharedTextarea), которые
-     *  красят поле осями из components/system/_axes.scss: без этого класс-ось приземлился бы
-     *  на обёртку и покрасил бы заодно подпись. */
-    fieldClassName?: string;
-}
-
+import { Text } from '../Text';
+import { TextareaControl } from './TextareaControl/TextareaControl';
+import { useTextarea } from './Textarea.model';
+import type { TextareaProps } from './Textarea.types';
+export type { TextareaProps } from './Textarea.types';
 export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
-    const { box, rest: fieldProps } = splitBoxLayout(props);
-    const {
-        ref,
-        className = '',
-        style,
-        variant,
-        size,
-        perspective3d,
-        parallax,
-        animate,
-        color,
-        placeholder,
-        placeholderColor,
-        seed,
-        loading = false,
-        label,
-        labelColor,
-        comment,
-        rows = 3,
-        length,
-        showCount,
-        countPlacement = 'inside',
-        error,
-        collapse,
-        id: idProp,
-        onChange,
-        onValueChange,
-        onFocus,
-        onBlur,
-        required,
-        emptyMessage,
-        validate: validateProp,
-        value: _value,
-        state,
-        linkState,
-        'data-point-events': dataPointEvents,
-        fieldClassName,
-        field,
-        ...rest
-    } = fieldProps;
-    const lengthValidate = useCallback(
-        (value: string): string | undefined => {
-            if (length?.min != null && value.length > 0 && value.length < length.min)
-                return DEFAULT_MIN_LENGTH_MESSAGE(length.min);
-            if (length?.max != null && value.length > length.max)
-                return DEFAULT_MAX_LENGTH_MESSAGE(length.max);
-            return validateProp?.(value);
-        },
-        [length, validateProp]
-    );
-
-    const {
-        id, innerRef, fieldRef, currentValue, isControlled, displayError, errorId,
-        validateValue, setInternalError, setUncontrolledValue, focusField,
-        hasValue,
-    } = useFieldControl<HTMLTextAreaElement>(ref, {
-        id: idProp,
-        value: _value,
-        defaultValue: rest.defaultValue,
-        required,
-        emptyMessage,
-        error,
-        validate: lengthValidate,
-    });
-    const isReadOnly = Boolean(rest.readOnly);
-
-    const showCounter = showCount ?? (length?.max != null);
-    // Проп `seed` — тот же глагол, что у `Input`: пока в поле стоит значение по умолчанию, в DOM
-    // отдаётся ПУСТОЕ значение, а рисует его `::placeholder`, который браузер убирает по фокусу.
-    const seedField = resolveSeedField({ seed, value: currentValue, placeholder });
-    // Подпись одна на оба места: разъехаться формату «сколько/из скольких» негде.
-    const counterLabel = `${currentValue.length}/${length?.max ?? 1000}`;
-    const [isFieldFocused, setIsFieldFocused] = useState(false);
-    const commentId = !displayError && comment ? `${id}-comment` : undefined;
-    const helperTextId = displayError ? errorId : commentId;
-    const textareaDescribedBy = [rest['aria-describedby'], helperTextId].filter(Boolean).join(' ') || undefined;
-    const inlineError = displayError && !isFieldFocused ? displayError : undefined;
-
-    const commitSeedValue = useCallback(
-        (value: string, event: FocusEvent<HTMLTextAreaElement>) => {
-            if (!isControlled) {
-                setUncontrolledValue(value);
-                if (innerRef.current) innerRef.current.value = resolveSeedField({ seed, value }).displayValue;
-            }
-            onValueChange?.(value, { reason: 'seed', event });
-        },
-        [innerRef, isControlled, onValueChange, seed, setUncontrolledValue]
-    );
-
-    const handleFocus = useCallback(
-        (e: FocusEvent<HTMLTextAreaElement>) => {
-            setIsFieldFocused(true);
-            // Значение по умолчанию — подсказка, а не данные: по фокусу поле пустеет, и модель
-            // получает ''. Иначе дописывание к нему давало бы «01» вместо «1».
-            if (!isReadOnly && seedField.focusValue !== undefined) commitSeedValue(seedField.focusValue, e);
-            onFocus?.(e);
-        },
-        [commitSeedValue, isReadOnly, onFocus, seedField.focusValue]
-    );
-
-    const handleBlur = useCallback(
-        (e: FocusEvent<HTMLTextAreaElement>) => {
-            setIsFieldFocused(false);
-            // Уход из пустого поля возвращает значение по умолчанию: после blur модель обязана
-            // получить валидное значение, а не «нет значения».
-            if (!isReadOnly && seedField.blurValue !== undefined) {
-                commitSeedValue(seedField.blurValue, e);
-                setInternalError(validateValue(seedField.blurValue));
-                onBlur?.(e);
-                return;
-            }
-            setInternalError(validateValue(e.target.value));
-            onBlur?.(e);
-        },
-        [commitSeedValue, isReadOnly, onBlur, seedField.blurValue, setInternalError, validateValue]
-    );
-
-    const handleChange = useCallback(
-        (e: ChangeEvent<HTMLTextAreaElement>) => {
-            if (isReadOnly) return;
-            const value = e.target.value;
-            onChange?.(e);
-            if (!isControlled) setUncontrolledValue(value);
-            setInternalError(validateValue(value));
-            onValueChange?.(value, { reason: 'input', event: e });
-        },
-        [isReadOnly, onChange, onValueChange, validateValue, setInternalError, setUncontrolledValue, isControlled]
-    );
-
-    const handleInvalid = useCallback(
-        (event: React.FormEvent<HTMLTextAreaElement>) => {
-            rest.onInvalid?.(event);
-            // Глушим нативный пузырёк-подсказку браузера (текст с точкой на конце генерирует сам браузер):
-            // у поля своя валидация и свой вывод ошибки, дублировать нативной валидацией не нужно.
-            if (!event.defaultPrevented) event.preventDefault();
-        },
-        [rest.onInvalid]
-    );
-
-    const textareaProps: React.TextareaHTMLAttributes<HTMLTextAreaElement> = {
-        ...rest,
-        id,
-        required,
-        placeholder: seedField.placeholder,
-        rows,
-        // Отключаем автоподсказки/автозаполнение браузера по умолчанию; поле может вернуть его явным autoComplete.
-        autoComplete: rest.autoComplete ?? 'off',
-        // Подавляем нативную валидацию-подсказку браузера.
-        onInvalid: handleInvalid,
-        minLength: length?.min,
-        maxLength: length?.max,
-        'aria-invalid': !!displayError,
-        'aria-describedby': textareaDescribedBy,
-        onChange: handleChange,
-        onFocus: handleFocus,
-        onBlur: handleBlur,
-        ...(isControlled ? { value: seedField.displayValue } : {}),
-    };
-    const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
-    const setWrapperRef = useCallback((node: HTMLElement | null) => {
-        setMotionNode(node);
-    }, [setMotionNode]);
-
-    const layoutProps = resolveFieldLayout({ ...box, variant, size, color, placeholderColor });
-    const fieldClasses = fieldLayoutClasses(c, layoutProps);
-
-    const content = (
-        <Flex
-            ref={setWrapperRef}
-            dir={["column", "column", "column"]}
-            gap={[8, 4, 8]}
-            className={cx(styles.TextareaWrapper, ...fieldRootLayoutClasses(c, box), className)}
-            style={{ ...(motionStyle ?? null), ...style }}
-            {...revealAttrs}
-            data-point-events={dataPointEvents}
-            {...stateLinkProps(linkState, { ...motionHandlers })}
-        >
-            {label && (
-                // Звёздочка обязательного поля — как у Input: `required` уже принимался, но
-                // рисовался только в Input, из-за чего textarea-поле в той же форме теряло метку.
-                <Flex dir={['row', 'row', 'row']} gap={[4, 4, 4]}>
-                    <label htmlFor={id}>
-                        <Text as="span" className={styles.Label} color={labelColor}>{label}</Text>
-                    </label>
-                    {required && ( <Text
-                        as="span"
-                        aria-hidden="true"
-                        className={styles.Label}
-                        color="var(--error)"
-                    >*</Text> )}
-                </Flex>
-            )}
-            <div
-                className={cx(styles.Textarea, ...fieldClasses, ...c.value('grow', box.grow), fieldClassName)}
-                data-has-counter={(showCounter && countPlacement === 'inside') || undefined}
-                data-inline-error={inlineError ? 'true' : undefined}
-                {...stateProps(state, displayError && 'error', isFieldFocused && 'active', hasValue && 'filled')}
-                role="presentation"
-                onClick={focusField}
-                onKeyDown={() => {}}
+  const textarea = useTextarea(props);
+  return (
+    <Flex {...textarea.layout} dir={['column', 'column', 'column']} gap={[8, 4, 8]}>
+      {textarea.label && (
+        <Flex dir={['row', 'row', 'row']} gap={[4, 4, 4]}>
+          <Text
+              as="label"
+              htmlFor={textarea.label.htmlFor}
+              variant={['caption', 'caption', 'caption']}
+              color={textarea.label.color}
+          >
+            {textarea.label.text}
+          </Text>
+          {textarea.label.required && (
+            <Text
+                as="span"
+                aria-hidden="true"
+                color="var(--error)"
+                variant={['caption', 'caption', 'caption']}
             >
-                {/* Подмена «скелетон ↔ значение» ЕДЕТ: `transitionKey` — тот самый ответ §8.4
-                    для узла, который меняется другим узлом на том же месте. Голое условие
-                    гасило скелетон кадром. */}
-                <Flex
-                    transitionKey={loading ? 'skeleton' : 'value'}
-                    animation='fadeIn'
-                    w={['100%', '100%', '100%']}
-                >
-                {loading ? (
-                    // Сам `<textarea>` не рендерим: печатать в поле, значение которого ещё
-                    // едет, значит потерять набранное на первом же ответе.
-                    //
-                    // Полос столько же, сколько строк у САМОГО поля: заглушка обязана занимать
-                    // ровно то место, которое займёт контент (§4 «Геометрию задаёт сосед»).
-                    // Зашитая тройка врала однострочному авторесайзу — «Краткое название»
-                    // ждало тремя полосами в поле высотой в одну.
-                    <Skeleton rows={rows} h={[16, 16, 16]} />
-                ) : (
-                    <textarea
-                        ref={fieldRef}
-                        {...textareaProps}
-                        className={cx(styles.TextareaField, field?.className)}
-                        style={field?.style}
-                    />
-                )}
-                </Flex>
-                {inlineError && (
-                    <Text
-                        as='div'
-                        id={errorId}
-                        role='alert'
-                        variant={['body', 'body', 'body']}
-                        color='var(--error)'
-                        className={styles.InlineError}
-                    >{inlineError}</Text>
-                )}
-                {showCounter && countPlacement === 'inside' && (
-                    <Text
-                        variant={["caption", "caption", "caption"]}
-                        fontSize={[8, 8, 8]}
-                        className={styles.Counter}
-                        color="var(--text-muted)"
-                        aria-live="polite"
-                    >{counterLabel}</Text>
-                )}
-            </div>
-
-            {/* Счётчик ПОД полем — тот же приём, что у редактора шаблонов (`LexicalTextarea`
-                держит его строкой в тулбаре). Нужен там, где значение доходит до правого края:
-                внутренний счётчик рисуется абсолютом в углу САМОГО поля и ложится поверх текста,
-                из-за чего у однострочного «Краткого названия» его пришлось выключить вовсе
-                (Roadmap D-122). Кегль и цвет — как у подписи-комментария под полем: это строка
-                того же ряда, а не украшение внутри рамки. */}
-            {showCounter && countPlacement === 'below' && (
-                <Text
-                    as='div'
-                    variant={['caption', 'caption', 'caption']}
-                    color='var(--text-muted)'
-                    textAlign={['right', 'right', 'right']}
-                    w={['100%', '100%', '100%']}
-                    aria-live='polite'
-                >{counterLabel}</Text>
-            )}
-            {!displayError && comment && (
-                <Text
-                    as='div'
-                    variant={['caption', 'caption', 'caption']}
-                    id={commentId}
-                    color='var(--text-muted)'
-                    pl={fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl)}
-                >{comment}</Text>
-            )}
+              *
+            </Text>
+          )}
         </Flex>
-    );
-
-    if (!collapse) return content;
-
-    return (
-        <CollapseWrap {...collapse}>{content}</CollapseWrap>
-    );
+      )}
+      <TextareaControl control={textarea.control} />
+      {textarea.counter.visible && textarea.counter.placement === 'below' && (
+        <Text
+            variant={['caption', 'caption', 'caption']}
+            color="var(--text-muted)"
+            textAlign={['right', 'right', 'right']}
+            w={['100%', '100%', '100%']}
+            aria-live="polite"
+        >
+          {textarea.counter.text}
+        </Text>
+      )}
+      {textarea.comment.text && (
+        <Text
+            id={textarea.comment.id}
+            color={textarea.comment.color}
+            pl={textarea.comment.paddingLeft}
+            variant={['caption', 'caption', 'caption']}
+        >
+          {textarea.comment.text}
+        </Text>
+      )}
+    </Flex>
+  );
 }

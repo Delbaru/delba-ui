@@ -22,44 +22,69 @@ export interface TimelineCounter extends EffectTiming {
 }
 type AppearanceMap = { [K in RevealKey]?: TimelineAppearance };
 // Один эффект коробки: up/left/scale и т. п. управляют одними CSS-свойствами.
-type OneAppearance = { [K in RevealKey]: Required<Pick<AppearanceMap, K>> & Partial<Record<Exclude<RevealKey, K>, never>> }[RevealKey];
-export type TextTimelineAnimate = Pick<RevealOptions, 'once' | 'threshold' | 'rootMargin' | 'delay'> & {
+type OneAppearance = {
+  [K in RevealKey]: Required<Pick<AppearanceMap, K>> &
+    Partial<Record<Exclude<RevealKey, K>, never>>;
+}[RevealKey];
+export type TextTimelineAnimate = Pick<
+  RevealOptions,
+  'once' | 'threshold' | 'rootMargin' | 'delay'
+> & {
   when: 'inView' | 'load';
-  effect: (OneAppearance & { counter?: TimelineCounter }) | (Partial<Record<RevealKey, never>> & { counter: TimelineCounter });
+  effect:
+    | (OneAppearance & { counter?: TimelineCounter })
+    | (Partial<Record<RevealKey, never>> & { counter: TimelineCounter });
 };
 
 export function isTextTimeline(value: unknown): value is TextTimelineAnimate {
   if (!value || typeof value !== 'object') return false;
   const input = value as TextTimelineAnimate;
-  return (input.when === 'inView' || input.when === 'load') && !!input.effect && typeof input.effect === 'object' && !Array.isArray(input.effect);
+  return (
+    (input.when === 'inView' || input.when === 'load') &&
+    !!input.effect &&
+    typeof input.effect === 'object' &&
+    !Array.isArray(input.effect)
+  );
 }
 
 export type EffectWindow = { start: number; duration: number; end: number };
 export type TextTimeline = { effects: Partial<Record<TextEffectKey, EffectWindow>>; end: number };
 
 /** Чистый граф зависимостей. readTime резолвит локальные токены темы только после mount. */
-export function resolveTextTimeline(input: TextTimelineAnimate, readTime: (time: MotionTime) => number): TextTimeline {
-  const entries = Object.entries(input.effect).filter(([, options]) => options != null) as [TextEffectKey, EffectTiming][];
+export function resolveTextTimeline(
+  input: TextTimelineAnimate,
+  readTime: (time: MotionTime) => number,
+): TextTimeline {
+  const entries = Object.entries(input.effect).filter(([, options]) => options != null) as [
+    TextEffectKey,
+    EffectTiming,
+  ][];
   if (!entries.length) throw new Error('Text animate.effect must contain an effect');
-  if (entries.filter(([key]) => isRevealKey(key)).length > 1) throw new Error('Text timeline supports one appearance effect');
+  if (entries.filter(([key]) => isRevealKey(key)).length > 1)
+    throw new Error('Text timeline supports one appearance effect');
   const effects: TextTimeline['effects'] = {};
   const visiting = new Set<string>();
   const baseDelay = readTime(input.delay ?? 0);
   const visit = (key: TextEffectKey): EffectWindow => {
     if (effects[key]) return effects[key];
     const options: EffectTiming | undefined = input.effect[key];
-    if (!options || (key !== 'counter' && !isRevealKey(key))) throw new Error(`Unknown Text effect dependency: ${key}`);
+    if (!options || (key !== 'counter' && !isRevealKey(key)))
+      throw new Error(`Unknown Text effect dependency: ${key}`);
     if (visiting.has(key)) throw new Error(`Cyclic Text effect dependency: ${key}`);
     visiting.add(key);
     let start = baseDelay;
     if (options.startAt) {
       const { effect, progress } = options.startAt;
-      if (!Number.isFinite(progress) || progress < 0 || progress > 1) throw new Error('Text startAt.progress must be between 0 and 1');
+      if (!Number.isFinite(progress) || progress < 0 || progress > 1)
+        throw new Error('Text startAt.progress must be between 0 and 1');
       const dependency = visit(effect);
       start = dependency.start + dependency.duration * progress;
     }
     start += readTime(options.delay ?? 0);
-    const duration = readTime(options.duration ?? (key === 'counter' ? motionDefaults.counter.duration : motionDefaults.reveal.duration));
+    const duration = readTime(
+      options.duration ??
+        (key === 'counter' ? motionDefaults.counter.duration : motionDefaults.reveal.duration),
+    );
     const window = { start, duration, end: start + duration };
     effects[key] = window;
     visiting.delete(key);

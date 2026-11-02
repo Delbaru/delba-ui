@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useSyncExternalStore, type CSSProperties } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useSyncExternalStore, type CSSProperties } from 'react';
 import type React from 'react';
 import { flushSync } from 'react-dom';
+
+import styles from './CollapseWrap.module.scss';
 
 import { cx, resolveResponsive, useMergedRefs, type ResponsiveValue, type Transition } from '../../core';
 import { useCollapseMotion, type CollapseHandle } from '../../hooks/useCollapseMotion';
@@ -105,6 +107,8 @@ export function CollapseWrap({
         },
     });
     const { mounted, visualOpen, settled, wrapRef, innerRef } = motion;
+    const setWrapNode = useCallback((node: HTMLElement | null) => { wrapRef.current = node; }, [wrapRef]);
+    const setInnerNode = useCallback((node: HTMLElement | null) => { innerRef.current = node; }, [innerRef]);
     state.motion.current = motion;
     useLayoutEffect(() => {
         state.complete(motion);
@@ -171,10 +175,8 @@ export function CollapseWrap({
 
     return (
         <Tag
-            ref={(node) => {
-                wrapRef.current = node;
-            }}
-            className={cx('ui-collapse', inline && 'ui-collapse-inline', fade && 'ui-collapse-fade')}
+            ref={setWrapNode}
+            className={cx('CollapseWrap', styles.CollapseWrap, 'ui-collapse', inline && 'ui-collapse-inline', fade && 'ui-collapse-fade')}
             data-axis={axis}
             data-gap-side={gapSide}
             data-open={visualOpen || undefined}
@@ -184,9 +186,7 @@ export function CollapseWrap({
             style={collapseStyle as CSSProperties}
         >
             <Tag
-                ref={(node) => {
-                    innerRef.current = node;
-                }}
+                ref={setInnerNode}
                 className={cx('ui-collapse-inner', clip && 'ui-collapse-clip', overflowVisibleWhenOpen && settled && 'ui-collapse-visible')}
             >
                 {children}

@@ -2,6 +2,9 @@
 
 import { useRef } from 'react';
 
+import styles from './Counter.module.scss';
+import { cx } from '../../../../core';
+
 import { useInView } from '../../../../core/useInView';
 import { useCountUpNode } from './useCountUp';
 import { parseCountContent } from './parseContent';
@@ -41,10 +44,17 @@ export function Counter({ options, content }: TextAnimationContext<CounterOption
   const format = (value: number) => (grouped ? value.toLocaleString('ru-RU') : String(value));
   const text = (value: number) => `${prefix}${format(value)}${suffix}`;
 
-  useCountUpNode(valueRef, to, { duration: options?.duration, start }, shouldStart, !isInView, text);
+  useCountUpNode(
+    valueRef,
+    to,
+    { duration: options?.duration, start },
+    shouldStart,
+    !isInView,
+    text,
+  );
 
   return (
-    <span ref={rootRef} className={'ui-counter'}>
+    <span ref={rootRef} className={cx('Counter', styles.Counter, 'ui-counter')}>
       <span aria-hidden className={'ui-counter-reserve'}>
         {prefix}
         {format(to)}

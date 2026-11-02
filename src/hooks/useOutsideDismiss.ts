@@ -58,36 +58,46 @@ export function useOutsideDismiss(
     if (!enabled) return undefined;
 
     const isInside = (target: Node) => nodesRef.current.some((ref) => ref.current?.contains(target));
-    const swallowClick = (event: MouseEvent) => { event.preventDefault(); event.stopPropagation(); };
-    let swallowTimer: ReturnType<typeof setTimeout> | undefined;
+    const documents = new Set(nodesRef.current.map((ref) => ref.current?.ownerDocument));
+    const cleanups: Array<() => void> = [];
 
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (!target || event === insideEventRef.current || isInside(target)) return;
+    for (const ownerDocument of documents) {
+      const view = ownerDocument?.defaultView;
+      if (!ownerDocument || !view) continue;
+      const swallowClick = (event: MouseEvent) => { event.preventDefault(); event.stopPropagation(); };
+      let swallowTimer: ReturnType<typeof setTimeout> | undefined;
 
-      if (blockOutsideClick && event.button === 0) {
-        document.addEventListener('click', swallowClick, { capture: true, once: true });
-        swallowTimer = setTimeout(() => document.removeEventListener('click', swallowClick, true), 300);
-      }
+      const handlePointerDown = (event: MouseEvent) => {
+        const target = event.target;
+        if (!(target instanceof view.Node) || event === insideEventRef.current || isInside(target)) return;
 
-      dismissRef.current();
-    };
+        if (blockOutsideClick && event.button === 0) {
+          ownerDocument.addEventListener('click', swallowClick, { capture: true, once: true });
+          swallowTimer = setTimeout(() => ownerDocument.removeEventListener('click', swallowClick, true), 300);
+        }
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !event.defaultPrevented) dismissRef.current();
-    };
+        dismissRef.current();
+      };
 
-    document.addEventListener('mousedown', handlePointerDown);
-    if (escape) document.addEventListener('keydown', handleKeyDown);
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape' && !event.defaultPrevented) dismissRef.current();
+      };
+
+      ownerDocument.addEventListener('mousedown', handlePointerDown);
+      if (escape) ownerDocument.addEventListener('keydown', handleKeyDown);
+      cleanups.push(() => {
+        ownerDocument.removeEventListener('mousedown', handlePointerDown);
+        if (escape) ownerDocument.removeEventListener('keydown', handleKeyDown);
+        // Keep the pending once listener after a close; it still owns the following click.
+        if (swallowTimer === undefined) ownerDocument.removeEventListener('click', swallowClick, true);
+      });
+    }
 
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      if (escape) document.removeEventListener('keydown', handleKeyDown);
-      // The closing click follows mousedown after this effect's cleanup.
-      // Its once listener or short fallback removes it even if mouseup leaves the window.
-      if (swallowTimer === undefined) document.removeEventListener('click', swallowClick, true);
+      cleanups.forEach((cleanup) => cleanup());
     };
-  }, [enabled, escape, blockOutsideClick]);
+    // Object refs may acquire another target document after any commit.
+  });
 
   return { onMouseDownCapture };
 }

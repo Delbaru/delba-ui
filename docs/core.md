@@ -104,6 +104,27 @@ SCSS-словарь `$breakpoints`, неизвестное имя останав
 начальное состояние эффекта до гидратации без `useMediaQuery` и копирования границ.
 Геометрия, фон и остальные поддерживаемые значения остаются responsive-пропсами.
 
+Общий `Field/Field.model` используется Input и Textarea с их собственными чистыми
+политиками; generic-параметр связывает native props, ref и события с input либо textarea.
+Он предоставляет `value.edit/finish/pick/step/reset`,
+`validation.check` и `focus.request`. Он владеет черновиком, native ref/reset,
+публикацией callbacks, seed и моментом проверки. `core/fields/policy.ts` задаёт
+нейтральный договор преобразования; режим не копирует хранение и DOM commit.
+`core/base/restore-caret.ts` отменяет устаревшее восстановление выделения и
+пользуется документом поля.
+
+`InteractionScope` в `core/InteractionScope.tsx` объединяет pointer/focus и
+дочерние interaction locks без дополнительного DOM. Внутренний
+`observeInteractionTarget` подписывается на документ реального узла, использует
+его Node/getComputedStyle/ResizeObserver и освобождает все подписки. React-владелец
+переподключает наблюдение при замене `target.current` после commit, не перезапуская
+его при каждом обычном рендере. Отсутствие ResizeObserver не отключает pointer/focus.
+
+Существующий useFieldControl остаётся у других компонентов до их отдельной миграции;
+Input не складывает поверх него ещё одно хранилище масок.
+Форматирование телефона принадлежит `core/fields/phone.ts`: его используют поле
+и публичная серверная валидация. Договор Input — на [странице компонента](specs/ui/components/Input.md).
+
 `@delba/ui/validation` — чистый вход без React и стилей: `EMAIL_REGEX`, `EMAIL_PATTERN`,
 `phoneMask`. Его можно использовать в серверных обработчиках и Node-тестах. У
 `phoneMask.validate` успех — `undefined`, ошибка — строка; обязательность и допустимые
@@ -330,7 +351,7 @@ Fixed/sticky-панель с top=0 сохраняет зону возврата 
 состоянием. Для `Icon` по умолчанию используется ось `column`: ширина и `collapse.gap` уходят вместе.
 `gapSide` ставит зазор до или после содержимого, поэтому слот работает по обе стороны подписи.
 Составной компонент кнопки (например, `DButtonIcon` в проекте) сам передаёт размер и сторону зазора:
-вызывающий пишет `icon={{ name, collapse: { open } }}`. `Icon animate="swap"` меняет глиф, а `collapse`
+вызывающий пишет `icon={{ name, collapse: { open } }}`. `Icon animate={{ when: 'change', effect: 'swap' }}` меняет глиф, а `collapse`
 показывает или скрывает слот. `Button` сворачивает кнопку целиком. Для inline-содержимого обёртка
 использует `<span>` и `inline-grid`, а не блочный `<div>` внутри кнопки. У `Flex` для совместимости также остаются boolean `collapse` и прежние
 `collapseGap`, `collapseFade`, `collapseAxis`, `collapseAppear`, `collapseOverflowVisible`,
@@ -667,15 +688,16 @@ React 19: при отсоединении вызывает эту очистку
 Object ref читается после commit, поэтому первый mount и замена узла переподключают observer;
 при совместной привязке объединяй refs через `useMergedRefs`. Observer берётся из
 `ownerDocument.defaultView`. Публичный контракт проверяется в browser regression с реальной
-заменой DOM-узла: `tools/browser/regressions.spec.ts`.
+заменой DOM-узла: `tools/browser/tests/regressions.spec.ts`.
 
 ### Смена содержимого и подсказки
 
-`Box` и `Flex` используют общий `useContentMotion`: `animate="fadeIn"` запускает вход, а
-`animate={['fadeIn', { key }]}` делает своп с уходом старого содержимого и входом нового на том же
-DOM-узле. Это сохраняет ref и фокус; `prefers-reduced-motion` сразу показывает результат.
-У `Flex` прежние `animation` и `transitionKey` остаются совместимой записью и игнорируются,
-если задан новый `animate`.
+`Box` и `Flex` используют общий `useContentMotion`: `animate={{ when: 'load', effect: 'fade' }}`
+запускает вход, а `animate={{ when: 'change', effect: 'fade', key }}` делает своп с уходом
+старого содержимого и входом нового на том же DOM-узле. Это сохраняет ref и фокус;
+`prefers-reduced-motion` сразу показывает результат. Мигрированный код не использует
+`animation`, `transitionKey` или строковые/tuple-формы. Старые публичные входы у ещё
+непереведённых потребителей не служат образцом для новой реализации.
 
 `useTooltip` вместе с `useAnchoredFloating` — общая основа позиционирования и состояния тултипов;
 `Tooltip` выводит bubble через портал. `Button` и `Icon` держат стабильный якорь при смене текста,
@@ -736,3 +758,34 @@ API createUrl текущего маршрута и сохраняет SSR; по�
 всех страниц; очередь, кэш и устранение повторов принадлежат Next. Внешние ссылки,
 скачивания, newTab и disabled-кнопки не запускают подготовку. Реальные запросы Next
 prefetch проверяют на production-сборке: в development эта оптимизация выключена.
+
+### Общая плавающая поверхность
+
+`hooks/useFloatingSurface` — общий владелец portal host, позиции и dismiss для
+Dropdown. InputCalendar подключает этот механизм через внешний якорь Dropdown.
+Hook использует существующие useAnchoredFloating /
+useOutsideDismiss, а не второй движок. Причина закрытия — outside, blur или escape.
+Документ и Modal определяются по anchor.ownerDocument; SSR не читает global document.
+Позиция сохраняется при закрытии для exit-перехода.
+
+Геометрический positionRef и окрашенный surfaceRef могут различаться. Pointer
+outsideRefs задаются отдельно от focus regions: пустая позиционирующая область
+не становится кликабельной частью панели. Dropdown сохраняет trigger, roving
+keyboard, nested ancestors и подтверждение controlled open; InputCalendar —
+проверку даты при уходе, отмену Escape и фокус настоящего поля. Причина закрытия
+не подменяется одинаковым callback без предметной семантики.
+
+### Сообщения интерфейса
+
+ui.config.messages задаёт частичные разделы validation, input, calendar, textarea,
+select, richTextarea, video и carousel. Полный typed-словарь разрешается один раз
+через resolveUiMessages и одинаков для SSR и клиента. Секции и ключи проверяются
+по DEFAULT_UI_MESSAGES, без параллельного списка допустимых секций в генераторе.
+Параметры {count}, {min}, {max}, {rate}, {current}, {duration}, {index} сохраняются
+при переопределении соответствующего шаблона. formatUiMessage подставляет только
+обычный текст; это не HTML и не runtime-система смены локали.
+
+Явные emptyMessage, placeholder, aria-label и другие точечные props компонента
+сохраняют приоритет над общими значениями. PhoneField.locale остаётся его явным
+договором для названий стран и телефонной проверки. Новая секция добавляется
+в typed DEFAULT_UI_MESSAGES, resolver и проверки; неизвестный ключ генератор отклоняет.

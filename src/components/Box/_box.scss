@@ -6,6 +6,10 @@
     overscroll-behavior: contain;
   }
 
-  &[data-scroll='x'] { overflow-y: hidden; }
-  &[data-scroll='y'] { overflow-x: hidden; }
+  &[data-scroll='x'] {
+    overflow-y: hidden;
+  }
+  &[data-scroll='y'] {
+    overflow-x: hidden;
+  }
 }

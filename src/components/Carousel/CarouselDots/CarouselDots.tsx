@@ -1,5 +1,7 @@
 'use client';
 
+import { UI_MESSAGES, formatUiMessage } from '../../../core/base/messages';
+
 import { Fragment, useId, type ReactNode } from 'react';
 
 import styles from './CarouselDots.module.scss';
@@ -37,7 +39,7 @@ export function CarouselDots({ className, carouselId, renderItem, ...props }: Ca
         align={['center', null, null]}
         justify={['center', null, null]}
         gap={[8, null, null]}
-        className={cx(styles.CarouselDots, snapshot.paginationClassName, className)}
+        className={cx(styles.CarouselDots, 'CarouselDots', snapshot.paginationClassName, className)}
         data-carousel-dots
         {...props}
     >
@@ -55,7 +57,7 @@ export function CarouselDots({ className, carouselId, renderItem, ...props }: Ca
                 className={styles.dot}
                 state={isActive ? 'active' : undefined}
                 linkState={isActive ? undefined : dotId}
-                aria-label={`Перейти к слайду ${index + 1}`}
+                aria-label={formatUiMessage(UI_MESSAGES.carousel.goTo, { index: index + 1 })}
                 aria-current={isActive ? 'true' : undefined}
                 onClick={() => snapshot.api?.goTo(index)}
             />

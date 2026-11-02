@@ -1,0 +1,37 @@
+@layer ui.components {
+  .InputActions {
+    .dateToggle {
+      position: relative;
+      &::before {
+        content: '';
+        position: absolute;
+        right: calc(100% + 4 * var(--rpx));
+        top: 50%;
+        transform: translateY(-50%);
+        width: calc(2 * var(--rpx));
+        height: calc(var(--input-height, 100%) - 2 * var(--rpx));
+        background: var(--white-100);
+      }
+    }
+    .passwordToggle {
+      cursor: pointer;
+      flex-shrink: 0;
+      svg path[fill]:not([fill='none']) {
+        fill: var(--text-muted);
+        transition: fill var(--t-d-fast) var(--t-t-f-ease);
+      }
+      &:hover svg path[fill]:not([fill='none']) {
+        fill: var(--black);
+      }
+    }
+    .numberArrows {
+      .btn {
+        cursor: pointer;
+        transition: var(--t-fast);
+      }
+      .up {
+        transform: scaleY(-1);
+      }
+    }
+  }
+}

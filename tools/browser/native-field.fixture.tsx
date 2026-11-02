@@ -6,6 +6,7 @@ import { Select } from '../../src/components/Select/Select';
 import { ChoiceButtons } from '../../src/components/ChoiceButtons/ChoiceButtons';
 import { Section } from '../../src/components/Section/Section';
 import { Text } from '../../src/components/Text/Text';
+import { Calendar } from '../../src/components/Calendar';
 
 function LifecycleContracts() {
   const [cancelReset, setCancelReset] = useState(false);
@@ -54,6 +55,76 @@ function LifecycleContracts() {
   </section>;
 }
 
+function InputDraftChannels() {
+  const [mode, setMode] = useState<'text' | 'time' | 'tel'>('text');
+
+  return <section aria-label="Input draft channel lifecycle">
+    <Input type={mode} defaultValue="initial" aria-label="Switchable uncontrolled input" />
+    <button type="button" onClick={() => setMode('text')}>Use text channel</button>
+    <button type="button" onClick={() => setMode('time')}>Use time channel</button>
+    <button type="button" onClick={() => setMode('tel')}>Use phone channel</button>
+  </section>;
+}
+
+function InlineCalendarFixture() {
+  const [value, setValue] = useState('2025-01-15');
+  const [disabled, setDisabled] = useState(false);
+
+  return <section aria-label="Inline Calendar contracts">
+    <Calendar id="standalone-calendar" aria-label="Standalone date selection"
+      value={value} onValueChange={setValue}
+      minValue="2025-01-10" maxValue="2025-02-20" disabled={disabled} />
+    <output data-testid="standalone-calendar-value">{value}</output>
+    <button type="button" onClick={() => setValue('2025-02-11')}>Set external calendar date</button>
+    <button type="button" onClick={() => setDisabled((current) => !current)}>Toggle standalone calendar disabled</button>
+  </section>;
+}
+
+function FieldEngineContracts() {
+  const [dateValidationCalls, setDateValidationCalls] = useState(0);
+  const [dateCommits, setDateCommits] = useState(0);
+  const [readOnlyValidationCalls, setReadOnlyValidationCalls] = useState(0);
+  const [textareaEventOrder, setTextareaEventOrder] = useState('');
+
+  return <section aria-label="Field engine event contracts">
+    <button type="button">Previous focus target</button>
+    <Input
+        type="date"
+        defaultValue="2025-01-15"
+        min="2025-01-10"
+        max="2025-01-20"
+        aria-label="Date validation field"
+        validate={() => { setDateValidationCalls((count) => count + 1); return undefined; }}
+        onValueChange={(_value, details) => {
+          if (details.reason === 'pick') setDateCommits((count) => count + 1);
+        }}
+    />
+    <button type="button">Dismiss date popup by click</button>
+    <output data-testid="field-date-validation-calls">{dateValidationCalls}</output>
+    <output data-testid="field-date-commits">{dateCommits}</output>
+    <button type="button" onClick={() => { setDateValidationCalls(0); setDateCommits(0); }}>Reset date event counts</button>
+
+    <Textarea
+        readOnly
+        defaultValue="Read only value"
+        aria-label="Read only validated textarea"
+        validate={() => { setReadOnlyValidationCalls((count) => count + 1); return undefined; }}
+    />
+    <button type="button">Leave read only textarea</button>
+    <output data-testid="field-readonly-validation-calls">{readOnlyValidationCalls}</output>
+
+    <Textarea
+        defaultValue=""
+        aria-label="Textarea event order"
+        validate={() => { setTextareaEventOrder((order) => `${order}validate>`); return undefined; }}
+        onChange={() => setTextareaEventOrder((order) => `${order}change>`)}
+        onValueChange={() => setTextareaEventOrder((order) => `${order}value>`)}
+    />
+    <output data-testid="field-textarea-event-order">{textareaEventOrder}</output>
+    <Input aria-label="Inline error value visibility" defaultValue="Existing value" error="Inline error sample" />
+  </section>;
+}
+
 export function NativeFieldFixture() {
   const input = useRef<HTMLInputElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
@@ -61,9 +132,12 @@ export function NativeFieldFixture() {
   const [body, setBody] = useState('');
   const [submits, setSubmits] = useState(0);
   const [refs, setRefs] = useState('');
+  const [invalids, setInvalids] = useState(0);
   return <section className="fixture" aria-label="Native field decoration contracts">
     <form onSubmit={(event) => { event.preventDefault(); setSubmits((value) => value + 1); }}>
       <Input ref={input} aria-label="Decorated native input" required nativeValidation value={text}
+        placeholder="Native input placeholder"
+        onInvalid={() => setInvalids((value) => value + 1)}
         onChange={(event) => setText(event.target.value)}
         field={{ className: 'native-input-contract', style: { paddingLeft: 13 } }} />
       <Textarea ref={textarea} aria-label="Decorated native textarea" required value={body}
@@ -76,8 +150,12 @@ export function NativeFieldFixture() {
       <button type="submit">Submit decorated native fields</button>
       <output data-testid="native-field-submits">{submits}</output>
       <output data-testid="native-field-refs">{refs}</output>
+      <output data-testid="native-field-invalids">{invalids}</output>
     </form>
     <Input aria-label="Default custom required input" required />
+    <InputDraftChannels />
+    <InlineCalendarFixture />
+    <FieldEngineContracts />
     <LifecycleContracts />
   </section>;
 }

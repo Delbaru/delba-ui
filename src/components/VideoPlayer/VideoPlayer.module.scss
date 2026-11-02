@@ -1,20 +1,11 @@
 @use '../../core/mixins' as m;
 @layer ui.components {
-  // Плеер: примитив Video как абсолютная подложка, поверх — слой захвата кликов и в колонку
-  // (space-between) лейбл источника сверху + бар управления снизу. Токена под полупрозрачную тёмную
-  // плашку и трек нет — как намеренное исключение (ср. blur/pill в эталоне) держим локальными
-  // CSS-переменными на корне: media-scrim (плашка) и media-track (пустой трек).
-  .Root {
-      --media-scrim: rgba(43, 47, 51, 0.88);
-      --media-track: rgba(255, 255, 255, 0.4);
-      --media-hover: rgba(255, 255, 255, 0.7);
+  .VideoPlayer {
+      --media-scrim: color-mix(in srgb, var(--text) 88%, transparent);
+      --media-track: color-mix(in srgb, var(--white-100) 40%, transparent);
+      --media-hover: color-mix(in srgb, var(--white-100) 70%, transparent);
 
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
       overflow: hidden;
-      border-radius: calc(24 * var(--rpx));
       user-select: none;
 
       .media {
@@ -104,46 +95,6 @@
           min-width: calc(40 * var(--rpx));
       }
 
-      // Плавная смена двух иконок (crossfade + scale) в фикс-боксе — ширина не скачет.
-      .iconSwap {
-          position: relative;
-          width: calc(24 * var(--rpx));
-          height: calc(24 * var(--rpx));
-      }
-
-      .iconSwapItem {
-          position: absolute;
-          inset: 0;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          transition: opacity var(--t-d-normal) var(--t-t-f-ease), transform var(--t-d-normal) var(--t-t-f-ease);
-      }
-
-      .iconSwap[data-active='a'] {
-          .iconSwapA {
-              opacity: 1;
-              transform: scale(1);
-          }
-
-          .iconSwapB {
-              opacity: 0;
-              transform: scale(0.5);
-          }
-      }
-
-      .iconSwap[data-active='b'] {
-          .iconSwapA {
-              opacity: 0;
-              transform: scale(0.5);
-          }
-
-          .iconSwapB {
-              opacity: 1;
-              transform: scale(1);
-          }
-      }
-
       // Таймлайн: увеличенная зона захвата, внутри — тонкий трек с заполнением.
       .timeline {
           position: relative;
@@ -211,59 +162,6 @@
           transform: translate(-50%, -50%) scale(1.25);
       }
 
-      // Превью кадра + время над курсором (позиция left ставится императивно, центрируем translateX).
-      .preview {
-          position: absolute;
-          bottom: calc(100% + calc(10 * var(--rpx)));
-          left: 0;
-          z-index: 3;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: calc(6 * var(--rpx));
-          padding: calc(6 * var(--rpx));
-          border-radius: calc(12 * var(--rpx));
-          background: var(--media-scrim);
-          opacity: 0;
-          visibility: hidden;
-          pointer-events: none;
-          transform: translate(-50%, calc(4 * var(--rpx)));
-          transition: opacity var(--t-d-fast) var(--t-t-f-ease), transform var(--t-d-fast) var(--t-t-f-ease);
-      }
-
-      .preview[data-visible='true'] {
-          opacity: 1;
-          visibility: visible;
-          transform: translate(-50%, 0);
-      }
-
-      .previewVideo {
-          display: block;
-          width: calc(160 * var(--rpx));
-          height: calc(90 * var(--rpx));
-          border-radius: calc(8 * var(--rpx));
-          background: var(--black);
-          object-fit: cover;
-          transition: opacity var(--t-d-fast) var(--t-t-f-ease);
-
-          &[data-framed='false'] {
-              opacity: 0;
-          }
-      }
-
-      // Каретка превью — треугольник, указывающий на курсор (left ставится императивно с офсетом).
-      .previewCaret {
-          position: absolute;
-          top: 100%;
-          left: 50%;
-          width: 0;
-          height: 0;
-          border-left: calc(6 * var(--rpx)) solid transparent;
-          border-right: calc(6 * var(--rpx)) solid transparent;
-          border-top: calc(6 * var(--rpx)) solid var(--media-scrim);
-          transform: translateX(-50%);
-      }
-
       // Громкость: вертикальный поповер над баром; зазор до кнопки перекрыт невидимым мостиком (::after),
       // чтобы hover не рвался по пути. Скрыт через pointer-events (не блокирует клики), не через display.
       .volume {
@@ -326,7 +224,7 @@
   }
 
   @layer ui.states {
-      .Root .volumeTrack:focus-visible {
+      .VideoPlayer .volumeTrack:focus-visible {
           outline: calc(2 * var(--rpx)) solid var(--white-100);
           outline-offset: calc(4 * var(--rpx));
       }
@@ -334,13 +232,11 @@
 
   // Уважаем reduce-motion: без плавных переходов.
   @include m.reduced-motion {
-      .Root .overlay,
-      .Root .button,
-      .Root .iconSwapItem,
-      .Root .preview,
-      .Root .timelineDot,
-      .Root .hoverFill,
-      .Root .volumePopover {
+      .VideoPlayer .overlay,
+      .VideoPlayer .button,
+      .VideoPlayer .timelineDot,
+      .VideoPlayer .hoverFill,
+      .VideoPlayer .volumePopover {
           transition: none;
       }
   }

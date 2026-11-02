@@ -1,14 +1,16 @@
 'use client';
 
-import type { AnimationEventHandler, ReactNode } from 'react';
+import type { AnimationEventHandler, CSSProperties, ReactNode } from 'react';
 
 import { composeEventHandlers } from '../core';
 import { contentAnimationClass, type ContentAnimation, type ContentKey } from './contentMotion';
+import { motionTimeCss, type MotionTime } from '../core/base/timing';
 import { useSwapTransition } from './useSwapTransition';
 
 interface ContentMotionInput {
   animation?: ContentAnimation;
   key?: ContentKey;
+  duration?: MotionTime;
   children: ReactNode;
   /** Обработчик вызывающего: зовётся вместе со своим, своп его не заменяет. */
   onAnimationEnd?: AnimationEventHandler<HTMLElement>;
@@ -19,13 +21,14 @@ interface ContentMotionInput {
  * и ремоунта), содержимое для показа, ref для замера длительности и общий `onAnimationEnd`.
  * Без анимации ключ ни на что не влияет: содержимое меняется сразу, а не после страховки.
  */
-export function useContentMotion({ animation, key, children, onAnimationEnd }: ContentMotionInput) {
+export function useContentMotion({ animation, key, duration, children, onAnimationEnd }: ContentMotionInput) {
   const swapKey = animation ? key : undefined;
   const swap = useSwapTransition(swapKey, children);
   const swapping = swapKey !== undefined;
 
   return {
     className: contentAnimationClass(animation, swapping && swap.exiting),
+    style: duration === undefined ? undefined : ({ animationDuration: motionTimeCss(duration) } satisfies CSSProperties),
     children: swap.displayChildren,
     ref: swap.ref,
     onAnimationEnd: swapping ? composeEventHandlers(swap.onAnimationEnd, onAnimationEnd) : onAnimationEnd,

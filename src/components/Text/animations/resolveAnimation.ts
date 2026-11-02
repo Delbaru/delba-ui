@@ -2,7 +2,13 @@ import type { ComponentType, ReactNode } from 'react';
 
 import type { ResponsiveInput } from '../../../core';
 import { animationRegistry } from './registry';
-import type { AnimationInput, AnimationKey, AnimationOptions, TextAnimate, TextAnimationContext } from './types';
+import type {
+  AnimationInput,
+  AnimationKey,
+  AnimationOptions,
+  TextAnimate,
+  TextAnimationContext,
+} from './types';
 
 export interface ResolvedAnimation {
   active: boolean;
@@ -12,7 +18,10 @@ export interface ResolvedAnimation {
 
 // Разбор пропа `animate`/`animation` в пару (ключ, опции). responsive-форма [d, m, t] — берём desktop
 // (рендер всё равно одноключевой); одиночное значение — ключ или [ключ, опции].
-function parse(input: ResponsiveInput<AnimationInput> | TextAnimate | undefined): { key?: AnimationKey; options?: AnimationOptions } {
+function parse(input: ResponsiveInput<AnimationInput> | TextAnimate | undefined): {
+  key?: AnimationKey;
+  options?: AnimationOptions;
+} {
   if (input == null) return {};
 
   if (typeof input === 'object' && !Array.isArray(input) && 'effect' in input) {
@@ -29,14 +38,38 @@ function parse(input: ResponsiveInput<AnimationInput> | TextAnimate | undefined)
         },
       };
     }
+    if (input.effect === 'textReveal') {
+      const { when: _when, effect: _effect, ...options } = input;
+      return { key: 'textReveal', options };
+    }
+    if (input.when === 'hover') {
+      return { key: 'textSlide', options: { duration: input.duration, hoverColor: input.hoverColor } };
+    }
+    if ('steps' in input) {
+      return {
+        key: input.effect,
+        options: {
+          steps: input.steps,
+          currentStep: input.currentStep,
+          duration: input.duration,
+          clipHeight: input.clipHeight,
+        },
+      };
+    }
     if (input.effect === 'textSlide') {
-      return { key: 'textSlide', options: { mode: 'swap', duration: input.duration, ...(input.by ? { by: input.by } : {}) } };
+      return {
+        key: 'textSlide',
+        options: { mode: 'swap', duration: input.duration, ...(input.by ? { by: input.by } : {}) },
+      };
     }
   }
 
   const normalize = (v: AnimationInput): { key: AnimationKey; options?: AnimationOptions } =>
     Array.isArray(v)
-      ? { key: v[0] as AnimationKey, options: v.length >= 2 ? (v[1] as AnimationOptions) : undefined }
+      ? {
+          key: v[0] as AnimationKey,
+          options: v.length >= 2 ? (v[1] as AnimationOptions) : undefined,
+        }
       : { key: v as AnimationKey };
 
   if (Array.isArray(input) && input.length === 3) {
@@ -53,7 +86,7 @@ function parse(input: ResponsiveInput<AnimationInput> | TextAnimate | undefined)
  */
 export function resolveAnimation(
   input: ResponsiveInput<AnimationInput> | TextAnimate | undefined,
-  content: ReactNode
+  content: ReactNode,
 ): ResolvedAnimation {
   const { key, options } = parse(input);
   const plugin = key ? animationRegistry[key] : undefined;

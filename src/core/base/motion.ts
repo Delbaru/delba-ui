@@ -8,10 +8,10 @@ import { MEDIA_QUERY } from './breakpoints';
 export const MOTION_END_BUFFER_MS = 80;
 
 /** Пользователь просил меньше движения: анимацию заменяем мгновенной подменой. */
-export function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined'
-    && typeof window.matchMedia === 'function'
-    && window.matchMedia(MEDIA_QUERY.reducedMotion).matches;
+export function prefersReducedMotion(view: Window | null | undefined = typeof window === 'undefined' ? undefined : window): boolean {
+  return view != null
+    && typeof view.matchMedia === 'function'
+    && view.matchMedia(MEDIA_QUERY.reducedMotion).matches;
 }
 
 /**
@@ -19,7 +19,8 @@ export function prefersReducedMotion(): boolean {
  * `animation` считаются одинаково, поэтому это один помощник с переключателем, а не два.
  */
 export function readMotionMs(node: HTMLElement, kind: 'transition' | 'animation' = 'transition'): number {
-  const style = getComputedStyle(node);
+  const style = node.ownerDocument.defaultView?.getComputedStyle(node);
+  if (!style) return 0;
 
   const parse = (value: string): number =>
     value.split(',').reduce((max, part) => {

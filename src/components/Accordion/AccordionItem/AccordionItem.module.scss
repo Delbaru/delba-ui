@@ -1,0 +1,9 @@
+@layer ui.components {
+  .AccordionItem,
+  .panel { flex-direction: column; }
+
+  .heading { margin: 0; font: inherit; }
+  .trigger { width: 100%; justify-content: space-between; text-align: start; }
+  .label { flex: 1 1 auto; min-width: 0; }
+  .indicator { display: inline-flex; flex: none; }
+}

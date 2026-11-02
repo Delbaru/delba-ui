@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useId, type CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
 import type React from 'react';
 import styles from './Radio.module.scss';
 import { cx, createLayoutClasses, stateProps, layoutSpaceClasses, radiusClasses, stateLinkProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type ResponsiveValue, type GrowProps, type WithRef } from '../../core';
@@ -69,33 +69,30 @@ export function Radio({
     const id = idProp ?? generatedId;
     const isDisabled = Boolean(props.disabled);
     const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
-    const setRootRef = useCallback((node: HTMLLabelElement | null) => {
-        setMotionNode(node);
-    }, [setMotionNode]);
 
     return (
         <label
-            ref={setRootRef}
+            ref={setMotionNode}
             htmlFor={id}
             data-point-events={dataPointEvents}
             data-tone={tone}
             {...revealAttrs}
             {...(!isDisabled ? stateLinkProps(linkState, { ...motionHandlers }) : {})}
             className={cx(
-                styles.Radio,
+                'Radio', styles.Radio,
                 ...layoutSpaceClasses(c, { p, pt, pr, pb, pl, m, mt, mr, mb, ml }),
                 ...radiusClasses(c, { r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR }),
                 ...c.value('grow', grow),
                 className
             )}
             style={{ ...(motionStyle ?? null), ...(size != null ? { ['--radio-box']: size } : null), ...(dotSize != null ? { ['--radio-dot']: dotSize } : null), ...style }}
-            {...stateProps(state, Boolean(props.checked) && 'active', Boolean(props['aria-invalid']) && 'error', isDisabled && 'disabled')}
+            {...stateProps(state, Boolean(props.checked) && 'active', (props['aria-invalid'] && props['aria-invalid'] !== 'false') && 'error', isDisabled && 'disabled')}
         >
-            <Flex gap={gap ?? [8, null, null]} align={["center", null, null]}>
+            <Flex gap={gap ?? [8, 8, 8]} align={['center', 'center', 'center']}>
                 <input ref={ref} id={id} type="radio" className={styles.Input} {...props} />
-                {indicator && <div className={styles.Box}>
-                    <span className={styles.Dot} aria-hidden />
-                </div>}
+                {indicator && <Flex className={styles.Box} aria-hidden>
+                    <span className={styles.Dot} />
+                </Flex>}
                 {children}
             </Flex>
         </label>

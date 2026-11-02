@@ -1,6 +1,7 @@
 export * from './components/Accordion';
 export * from './components/Box';
 export * from './components/Button';
+export * from './components/Calendar';
 export * from './components/Carousel';
 export * from './components/Carousel/CarouselDots';
 export * from './components/Carousel/CarouselNav';
@@ -14,10 +15,10 @@ export * from './components/GradientBorder';
 export * from './components/Icon';
 export * from './components/Img';
 export * from './components/Input';
-export * as phoneMask from './components/Input/lib/phone-mask';
+export * as phoneMask from './core/fields/phone';
 // Формат адреса нужен и снаружи — форме, которая гасит кнопку до полного ввода. Отдаём тот же,
 // которым проверяет само поле: две копии правила расходятся на первом же уточнении.
-export { EMAIL_REGEX } from './components/Input/lib/use-input-behavior';
+export { EMAIL_REGEX } from './validation';
 export * from './components/Marquee';
 export * from './components/MediaDropDown';
 export * from './components/Modal';

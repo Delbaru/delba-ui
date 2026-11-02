@@ -1,5 +1,10 @@
 export { Text, type TextProps } from './Text';
-export type { AnimationKey, AnimationInput, AnimationOptions, TextAnimate } from './animations/types';
+export type {
+  AnimationKey,
+  AnimationInput,
+  AnimationOptions,
+  TextAnimate,
+} from './animations/types';
 export type { TextTimelineAnimate, EffectStartAt, TextEffectKey } from './animations/timeline';
 export type { CounterOptions, CounterTrigger } from './animations/counter/types';
 export type { TextSlideOptions } from './animations/textSlide/types';

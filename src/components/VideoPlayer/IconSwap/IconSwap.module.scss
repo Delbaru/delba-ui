@@ -1,0 +1,45 @@
+@use '../../../core/mixins' as m;
+@layer ui.components {
+      // Плавная смена двух иконок (crossfade + scale) в фикс-боксе — ширина не скачет.
+      .IconSwap {
+          position: relative;
+          width: calc(24 * var(--rpx));
+          height: calc(24 * var(--rpx));
+      }
+
+      .iconSwapItem {
+          position: absolute;
+          inset: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          transition: opacity var(--t-d-normal) var(--t-t-f-ease), transform var(--t-d-normal) var(--t-t-f-ease);
+      }
+
+      .IconSwap[data-active='a'] {
+          .iconSwapA {
+              opacity: 1;
+              transform: scale(1);
+          }
+
+          .iconSwapB {
+              opacity: 0;
+              transform: scale(0.5);
+          }
+      }
+
+      .IconSwap[data-active='b'] {
+          .iconSwapA {
+              opacity: 0;
+              transform: scale(0.5);
+          }
+
+          .iconSwapB {
+              opacity: 1;
+              transform: scale(1);
+          }
+      }
+
+
+@include m.reduced-motion { .iconSwapItem { transition: none; } }
+}

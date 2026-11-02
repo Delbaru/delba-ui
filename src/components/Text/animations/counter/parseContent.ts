@@ -1,8 +1,8 @@
 export interface ParsedCount {
-    to: number;
-    prefix: string;
-    suffix: string;
-    grouped: boolean;
+  to: number;
+  prefix: string;
+  suffix: string;
+  grouped: boolean;
 }
 
 const NBSP = ' ';
@@ -14,20 +14,23 @@ const NBSP = ' ';
 // не должно остаться в конце строки. Нет цифр («∞») → null, тогда counter неактивен и Text рисует контент
 // как есть. Явный `to` в опциях имеет приоритет над разбором (см. Counter).
 export function parseCountContent(content: unknown): ParsedCount | null {
-    if (typeof content !== 'string') return null;
+  if (typeof content !== 'string') return null;
 
-    const match = content.match(/\d(?:[\d\s]*\d)?/);
-    if (!match) return null;
+  const match = content.match(/\d(?:[\d\s]*\d)?/);
+  if (!match) return null;
 
-    const digits = match[0];
-    const index = match.index ?? 0;
-    const to = Number(digits.replace(/\s/g, ''));
-    if (!Number.isFinite(to)) return null;
+  const digits = match[0];
+  const index = match.index ?? 0;
+  const to = Number(digits.replace(/\s/g, ''));
+  if (!Number.isFinite(to)) return null;
 
-    return {
-        to,
-        grouped: /\s/.test(digits),
-        prefix: content.slice(0, index).trimStart().replace(/\s+$/, NBSP),
-        suffix: content.slice(index + digits.length).trimEnd().replace(/^\s+/, NBSP),
-    };
+  return {
+    to,
+    grouped: /\s/.test(digits),
+    prefix: content.slice(0, index).trimStart().replace(/\s+$/, NBSP),
+    suffix: content
+      .slice(index + digits.length)
+      .trimEnd()
+      .replace(/^\s+/, NBSP),
+  };
 }

@@ -1,0 +1,50 @@
+@layer ui.components {
+.LexicalTextareaToolbarButton {
+        position: relative;
+        transition: var(--t-fast);
+        color: var(--black);
+        flex: 0 0 auto;
+
+        // Подсветка рисуется псевдоэлементом с отрицательным inset:
+        // выходит за пределы кнопки 20x20, не меняя её размер и отступы тулбара.
+        &::before {
+          content: '';
+          position: absolute;
+          inset: calc(-4 * var(--rpx));
+          border-radius: var(--s-8);
+          background: transparent;
+          transition: var(--t-fast);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        > * {
+          position: relative;
+          z-index: 1;
+        }
+
+        &:hover {
+          color: var(--primary);
+
+          path {
+            fill: var(--white-100);
+          }
+
+          &::before {
+            background: var(--primary);
+          }
+        }
+
+        &[state~='active'] {
+          color: var(--primary);
+
+          path {
+            fill: var(--white-100);
+          }
+
+          &::before {
+            background: var(--primary);
+          }
+        }
+      }
+}

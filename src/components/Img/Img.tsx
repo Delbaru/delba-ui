@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import styles from './Img.module.scss';
 import Image, { getImageProps, type ImageProps } from 'next/image';
 import { useMemo, useState, type CSSProperties } from 'react';
 import type React from 'react';
@@ -105,10 +106,14 @@ export interface ImgProps
     SharedMotionProps<ImgAnimate> {
   /** Explicitly override ui.config.images.optimizeApi and the private /api/ default. Only enable optimization for sources accessible without visitor cookies. */
   unoptimized?: boolean;
+  /** Additional root class. */
   className?: string;
+  /** Inline root styles. */
   style?: CSSProperties;
+  /** Pointer-event scope marker for composed media. */
   'data-point-events'?: string;
 
+  /** Text alternative; use an empty string for decorative images. */
   alt: string;
 
   /**
@@ -122,7 +127,7 @@ export interface ImgProps
   /**
    * Анимация смены картинки при смене `src`: `{ when: 'change', effect: 'veil', direction }`.
    * Прежняя картинка держится слоем, пока новая не загрузится и не доедет; первый показ — без хода,
-   * «меньше движения» — мгновенно. Legacy ключи и tuple остаются поддержаны. См. `ImgAnimate`.
+   * «меньше движения» — мгновенно. Объектный API — основной договор. См. `ImgAnimate`.
    */
   animate?: SharedMotionProps<ImgAnimate>['animate'];
 
@@ -133,9 +138,12 @@ export interface ImgProps
    */
   reveal?: RevealInput<Omit<RevealOptions, 'stagger'>>;
 
+  /** How the image fits its frame; defaults to cover. */
   objectFit?: ResponsiveValue<ObjectFitKey>;
+  /** Image alignment inside its frame; defaults to center. */
   objectPosition?: ResponsiveValue<ObjectPositionKey>;
 
+  /** Frame aspect ratio on each responsive band. */
   aspectRatio?: ResponsiveValue<string>;
 
   /** Явная подсказка ресурса. Без неё lazy contain использует native auto с responsive fallback. */
@@ -152,12 +160,17 @@ export interface ImgProps
   /** Размеры контейнера (wrapper). Автоматический `sizes` следует за этими фактическими границами. */
   blur?: boolean;
 
+  /** Next image quality from 1 to 100. */
   quality?: number;
 
+  /** Called after the incoming image is loaded. */
   onLoad?: React.ComponentPropsWithoutRef<'img'>['onLoad'];
+  /** Called after loading fails; releases a pending image transition. */
   onError?: React.ComponentPropsWithoutRef<'img'>['onError'];
 
+  /** Connect root interaction to the shared link-state scope. */
   linkState?: StateLinkInput;
+  /** Optional lightbox group; ignored when href is present. */
   fancybox?: string;
 
   /**
@@ -166,11 +179,17 @@ export interface ImgProps
    * ссылка в ссылке — сломанная разметка; заданный `href` в этом случае выигрывает, лайтбокс молчит.
    */
   href?: string;
+  /** Native link target. */
   target?: string;
+  /** Native link relationship tokens. */
   rel?: string;
+  /** Native download name or flag. */
   download?: boolean | string;
+  /** Open the link in a new browsing context. */
   newTab?: boolean;
+  /** Add nofollow to the link relationship. */
   nofollow?: boolean;
+  /** Suppress the link referrer. */
   noreferrer?: boolean;
 }
 
@@ -276,7 +295,7 @@ export function Img({
     aspectRatio,
     grow,
   });
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadedIdentity, setLoadedIdentity] = useState<string | null>(null);
   // Каскад у картинки означал бы её внутренние слои — снимаем.
   const appearanceAnimate = isAppearanceAnimate(animate)
     ? { ...animate, stagger: 0 }
@@ -399,7 +418,7 @@ export function Img({
   const normalizedQuality = quality === undefined ? undefined : Math.max(1, Math.min(100, quality));
 
   const handleLoad: React.ComponentPropsWithoutRef<'img'>['onLoad'] = (event) => {
-    setIsLoaded(true);
+    setLoadedIdentity(swapIdentity);
     swapLoaded(swapIdentity);
     onLoad?.(event);
   };
@@ -479,6 +498,25 @@ export function Img({
 
   const { node: swapped, loaded: swapLoaded } = useImgSwap(contentAnimate, swapIdentity, mainImage);
 
+  const blurImage = blur && (
+            <Image
+              {...imageProps}
+              alt=""
+              aria-hidden
+              draggable={false}
+              fill
+              sizes="5vw"
+              quality={normalizedQuality}
+              className={cx(
+                'ui-img-image',
+                'ui-img-blur',
+                loadedIdentity === swapIdentity && 'ui-img-blur-hidden',
+                ...c.value('objectFit', objectFit ?? 'cover'),
+                ...c.value('objectPosition', objectPosition ?? 'center'),
+              )}
+            />
+  );
+
   return (
     <Root
       ref={setRefs}
@@ -488,7 +526,7 @@ export function Img({
       {...linkProps}
       {...stateLinkProps(linkState, motionHandlers)}
       {...revealAttrs}
-      className={cx('ui-img', ...sizeClasses(c, wrapperSizeProps), ...layout, className)}
+      className={cx(styles.Img, 'Img', 'ui-img', ...sizeClasses(c, wrapperSizeProps), ...layout, className)}
       style={{
         ...(motionStyle ?? null),
         ...style,
@@ -503,49 +541,11 @@ export function Img({
             draggable={false}
             aria-label={fancyboxAriaLabel}
         >
-          {blur && (
-            <Image
-              {...imageProps}
-              alt=""
-              aria-hidden
-              draggable={false}
-              fill
-              sizes="5vw"
-              quality={normalizedQuality}
-              className={cx(
-                'ui-img-image',
-                'ui-img-blur',
-                isLoaded && 'ui-img-blur-hidden',
-                ...c.value('objectFit', objectFit ?? 'cover'),
-                ...c.value('objectPosition', objectPosition ?? 'center'),
-              )}
-            />
-          )}
+          {blurImage}
           {swapped}
         </a>
-      ) : (
-        <>
-          {blur && (
-            <Image
-              {...imageProps}
-              alt=""
-              aria-hidden
-              draggable={false}
-              fill
-              sizes="5vw"
-              quality={normalizedQuality}
-              className={cx(
-                'ui-img-image',
-                'ui-img-blur',
-                isLoaded && 'ui-img-blur-hidden',
-                ...c.value('objectFit', objectFit ?? 'cover'),
-                ...c.value('objectPosition', objectPosition ?? 'center'),
-              )}
-            />
-          )}
-          {swapped}
-        </>
-      )}
+      ) : blurImage}
+      {!hasFancybox && swapped}
     </Root>
   );
 }

@@ -6,9 +6,12 @@ import { createPortal } from 'react-dom';
 import styles from './Tooltip.module.scss';
 
 import { cx, stateProps, type WithRef } from '../../core';
+import { Flex } from '../Flex';
 import type { TooltipBubbleProps } from '../../hooks/useTooltip';
 
 export interface TooltipProps extends TooltipBubbleProps {
+  /** Inline host for tooltip bubbles rendered by inline controls. Default div. */
+  as?: 'div' | 'span';
   children: ReactNode;
   className?: string;
   /** id всплывашки — чтобы на неё ссылался `aria-describedby` триггера. */
@@ -20,27 +23,35 @@ export interface TooltipProps extends TooltipBubbleProps {
   surface?: boolean;
 }
 
-/**
- * Общая всплывашка-тултип: портал в body + плавное появление/исчезновение + позиционирование из `useTooltip`.
- * Фундамент один на все тултипы (Input, ChoiceButtons, …); различается только контент/скин.
- * Логика (видимость/координаты/fade) живёт в `useTooltip` + `useAnchoredFloating`, здесь — только отрисовка.
- */
-export function Tooltip({ ref, portalNode, style, placement, active, className, id, surface = true, children }: WithRef<TooltipProps, HTMLDivElement>) {
+/** Portal view for the positioning and visibility model supplied by useTooltip. */
+export function Tooltip({
+  ref,
+  portalNode,
+  style,
+  placement,
+  active,
+  className,
+  id,
+  surface = true,
+  as = 'div',
+  children,
+}: WithRef<TooltipProps, HTMLElement>) {
   if (!portalNode) return null;
+  const Surface = as === 'span' ? 'span' : Flex;
 
   return createPortal(
-    <div
+    <Surface
         ref={ref}
         id={id}
-        className={cx(styles.Tooltip, surface && styles.surface, className)}
+        className={cx('Tooltip', styles.Tooltip, surface && styles.surface, className)}
         style={style}
-        role='tooltip'
+        role="tooltip"
         aria-hidden={!active}
         data-placement={placement}
         {...stateProps(active && 'active')}
     >
       {children}
-    </div>,
-    portalNode
+    </Surface>,
+    portalNode,
   );
 }

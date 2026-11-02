@@ -1,6 +1,11 @@
 /** Цель фокуса: узел или объектный `ref` на него (то, что отдают `Input`, `Textarea` и любой `useRef`). */
 export type FocusTarget = HTMLElement | null | undefined | { readonly current: HTMLElement | null };
 
+/** Сохраняет текущий фокус при mousedown на вспомогательном действии. */
+export function preserveFocus(event: Pick<Event, 'preventDefault'>): void {
+  event.preventDefault();
+}
+
 export interface FocusWhenReadyOptions {
   /** Не прокручивать страницу к полю: прокруткой владеет `scrollTo`, а не фокус. По умолчанию `true`. */
   preventScroll?: boolean;
@@ -44,21 +49,25 @@ function isFocusableNow(element: HTMLElement): boolean {
  * Возвращает `true`, если фокус встал; `false` — по тайм-ауту или если человек сам ушёл в другое поле.
  */
 export function focusWhenReady(target: FocusTarget, options: FocusWhenReadyOptions = {}): Promise<boolean> {
-  if (typeof document === 'undefined') return Promise.resolve(false);
+  const ownerDocument = resolveFocusTarget(target)?.ownerDocument
+    ?? (typeof document === 'undefined' ? undefined : document);
+  const view = ownerDocument?.defaultView;
+  if (!ownerDocument || !view) return Promise.resolve(false);
 
   const { preventScroll = true, timeout = DEFAULT_TIMEOUT_MS } = options;
-  const initial = document.activeElement;
+  const initial = ownerDocument.activeElement;
 
   const attempt = (): boolean | null => {
     const element = resolveFocusTarget(target);
 
     if (!element) return null;
-    if (shouldYieldFocus(document.activeElement, element, initial)) return false;
+    if (element.ownerDocument !== ownerDocument) return false;
+    if (shouldYieldFocus(element.ownerDocument.activeElement, element, initial)) return false;
     if (!isFocusableNow(element)) return null;
 
     element.focus({ preventScroll });
 
-    return document.activeElement === element ? true : null;
+    return element.ownerDocument.activeElement === element ? true : null;
   };
 
   const immediate = attempt();
@@ -72,23 +81,23 @@ export function focusWhenReady(target: FocusTarget, options: FocusWhenReadyOptio
       if (settled) return;
       settled = true;
       observer.disconnect();
-      window.clearTimeout(timer);
+      view.clearTimeout(timer);
       resolve(result);
     };
 
-    const observer = new MutationObserver(() => {
+    const observer = new view.MutationObserver(() => {
       const result = attempt();
 
       if (result !== null) finish(result);
     });
 
-    observer.observe(document.documentElement, {
+    observer.observe(ownerDocument.documentElement, {
       subtree: true,
       childList: true,
       attributes: true,
       attributeFilter: BLOCKING_ATTRIBUTES,
     });
 
-    const timer = window.setTimeout(() => finish(attempt() ?? false), timeout);
+    const timer = view.setTimeout(() => finish(attempt() ?? false), timeout);
   });
 }

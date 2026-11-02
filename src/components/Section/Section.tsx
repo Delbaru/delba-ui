@@ -2,37 +2,84 @@
 
 import type React from 'react';
 
+import styles from './Section.module.scss';
+
 import { type CSSProperties } from 'react';
-import { boxLayout, createLayoutClasses, cx, splitBoxLayout, stateLinkProps, useMergedRefs, type BoxLayoutProps, type StateLinkInput, type WithRef } from '../../core';
+import {
+  boxLayout,
+  createLayoutClasses,
+  cx,
+  splitBoxLayout,
+  stateLinkProps,
+  useMergedRefs,
+  type BoxLayoutProps,
+  type StateLinkInput,
+  type WithRef,
+} from '../../core';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { composeInteractionHandlers } from '../../core/composeEventHandlers';
 
 const c = createLayoutClasses();
 
 /** Коробка секции — подмножество общей: из отступов только вертикальные. */
-type SectionBoxKey = 'bg' | 'mt' | 'mb' | 'pt' | 'pb' | 'w' | 'minW' | 'maxW' | 'h' | 'minH' | 'maxH' | 'aspectRatio' | 'grow';
+type SectionBoxKey =
+  | 'bg'
+  | 'mt'
+  | 'mb'
+  | 'pt'
+  | 'pb'
+  | 'w'
+  | 'minW'
+  | 'maxW'
+  | 'h'
+  | 'minH'
+  | 'maxH'
+  | 'aspectRatio'
+  | 'grow';
 
-export interface SectionProps extends React.HTMLAttributes<HTMLElement>, Pick<BoxLayoutProps, SectionBoxKey>, SharedMotionProps {
+export interface SectionProps
+  extends React.HTMLAttributes<HTMLElement>,
+    Pick<BoxLayoutProps, SectionBoxKey>,
+    SharedMotionProps {
   children?: React.ReactNode;
   style?: CSSProperties;
   className?: string;
   linkState?: StateLinkInput;
 }
 
-export function Section({ ref, children, className = '', style, perspective3d, parallax, animate, linkState, onMouseEnter, onMouseLeave, ...props }: WithRef<SectionProps, HTMLElement>) {
+export function Section({
+  ref,
+  children,
+  className = '',
+  style,
+  perspective3d,
+  parallax,
+  animate,
+  linkState,
+  onMouseEnter,
+  onMouseLeave,
+  ...props
+}: WithRef<SectionProps, HTMLElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
+    perspective3d,
+    parallax,
+    animate,
+  });
   const setRefs = useMergedRefs(setMotionNode, ref);
 
   return (
     <section
-        ref={setRefs}
-        className={cx('ui-section', ...layout, className)}
-        style={{ ...(motionStyle ?? null), ...style }}
-        {...rest}
-        {...stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }))}
-        {...revealAttrs}
+      ref={setRefs}
+      className={cx('Section', styles.Section, 'ui-section', ...layout, className)}
+      style={{ ...(motionStyle ?? null), ...style }}
+      {...rest}
+      {...stateLinkProps(
+        linkState,
+        composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }),
+      )}
+      {...revealAttrs}
     >
       {children}
     </section>

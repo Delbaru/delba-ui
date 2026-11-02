@@ -1,0 +1,87 @@
+@use '../../../../core/mixins' as m;
+@layer ui.components {
+  .InputValue {
+  }
+  .timeRoot {
+    flex: 1;
+    font: m.role-font(body);
+    letter-spacing: normal;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+  .field.timeMask {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    pointer-events: none;
+    appearance: none;
+    color: var(--field-placeholder-color, var(--text-muted));
+    -webkit-text-fill-color: var(--field-placeholder-color, var(--text-muted));
+  }
+  .timeFieldMasked {
+    appearance: none;
+    position: relative;
+    z-index: 1;
+  }
+  .field {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    outline: none;
+    color: var(--input-value-color, inherit);
+    -webkit-text-fill-color: var(--input-value-color, currentColor);
+    caret-color: var(--primary);
+    font: var(--field-font, #{m.role-font(body)});
+    // The font shorthand resets numeric variants; keep this after it.
+    font-variant-numeric: lining-nums proportional-nums;
+    transition:
+      color var(--t-d-fast) var(--t-t-f-ease),
+      -webkit-text-fill-color var(--t-d-fast) var(--t-t-f-ease);
+
+    &::placeholder {
+      color: var(--input-placeholder-color, var(--field-placeholder-color, var(--text-muted)));
+    }
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    &[type='number'] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    &:-webkit-autofill,
+    &:-webkit-autofill:hover,
+    &:-webkit-autofill:focus,
+    &:-webkit-autofill:active {
+      -webkit-text-fill-color: var(--input-value-color, inherit);
+      caret-color: var(--primary);
+      transition:
+        background-color 600000s 0s,
+        color 600000s 0s;
+    }
+  }
+  .timeMask,
+  .timeFieldMasked {
+    font: inherit;
+    letter-spacing: inherit;
+    font-variant-numeric: inherit;
+    font-feature-settings: inherit;
+  }
+  .field {
+    height: 100%;
+    cursor: inherit;
+  }
+}
+@layer ui.states {
+  .field:focus::placeholder {
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+}

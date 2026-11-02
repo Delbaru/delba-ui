@@ -2,127 +2,14 @@
 
 import { useId, useRef, useState } from 'react';
 import { useFormReset } from '../../core/useFormReset';
-
-import { Button } from '../Button';
-import { Flex } from '../Flex';
-import { Icon } from '../Icon';
+import { cx } from '../../core';
 import { Select } from '../Select';
 import { TabTrack } from '../TabTrack';
-import { Text } from '../Text';
-import { Tooltip } from '../Tooltip';
-import { assetUrl, cx } from '../../core';
-import { resolveSvgAssetSource } from '../../core/base/svg-asset';
-import { useTooltip } from '../../hooks/useTooltip';
-
+import { ChoiceButton } from './ChoiceButton/ChoiceButton';
+import type { ChoiceButtonsItem, ChoiceButtonsProps } from './ChoiceButtons.types';
 import styles from './ChoiceButtons.module.scss';
-import UpIcon from './assets/up.svg';
 
-import infoIcon from '../../../assets/icons/ui/info/style-1/info.svg';
-
-const tooltipArrowIconSrc = resolveSvgAssetSource(UpIcon);
-
-type ChoiceInfoTooltipProps = {
-    id: string;
-    description: string;
-    infoClassName: string;
-    tooltipClassName: string;
-};
-
-function ChoiceInfoTooltip({
-    id,
-    description,
-    infoClassName,
-    tooltipClassName,
-}: ChoiceInfoTooltipProps) {
-    // Тот же фундамент, что у Input/Button: видимость по наведению + позиционирование + портал + fade.
-    // Свой только скин — карточка с описанием и хвост-указатель (surface={false}).
-    const tooltip = useTooltip<HTMLElement, HTMLDivElement>({
-        direction: 'bottom',
-        align: 'center',
-        gap: 8,
-    });
-
-    return (
-        <Flex
-            ref={tooltip.anchorRef}
-            dir={['row', null, null]}
-            align={['center', null, null]}
-            justify={['center', null, null]}
-            onMouseEnter={tooltip.show}
-            onMouseLeave={tooltip.hide}
-            className={styles.tooltipWrapper}
-        >
-            <Icon
-                src={assetUrl(infoIcon)}
-                w={[20, null, null]}
-                h={[20, null, null]}
-                strokeWidth={[1.25, null, null]}
-                aria-hidden='true'
-                className={cx(styles.info, infoClassName)}
-            />
-
-            <Tooltip
-                ref={tooltip.tooltipRef}
-                id={id}
-                surface={false}
-                className={cx(styles.tooltip, tooltipClassName)}
-                {...tooltip.bubbleProps}
-            >
-                <Flex
-                    p={[16, null, null]}
-                    r={[16, null, null]}
-                    bg={['var(--white-100)', 'var(--white-100)', 'var(--white-100)']}
-                    maxW={[400, null, null]}
-                    minW={[264, null, null]}
-                    border={['calc(1 * var(--rpx)) solid var(--line)', null, null]}
-                    className={styles.card}
-                >
-                    <Text variant={['caption', null, null]}>{description}</Text>
-                </Flex>
-
-                <Icon
-                    src={tooltipArrowIconSrc}
-                    w={[24, null, null]}
-                    h={[24, null, null]}
-                    aria-hidden='true'
-                    className={styles.tail}
-                />
-            </Tooltip>
-        </Flex>
-    );
-}
-
-export interface ChoiceButtonsItem<T extends string = string> {
-    value: T;
-    label: string;
-    description?: string;
-    onSelect?: (value: T) => void;
-}
-
-export interface ChoiceButtonsProps<T extends string = string> {
-    /** Варианты; `as const` сужает `T` до литералов значений. */
-    items: readonly ChoiceButtonsItem<T>[];
-    /** Имя выбранного значения в FormData. */
-    name?: string;
-    /** ID формы для выбора, расположенного вне её DOM-поддерева. */
-    form?: string;
-    /** Выбранное значение. `NoInfer`: `T` выводится только из items, значение мимо вариантов — ошибка типов. */
-    value?: NoInfer<T> | null;
-    /** Начальный выбор неуправляемого режима; проверяется по items так же, как `value`. */
-    defaultValue?: NoInfer<T> | null;
-    /** Отключает выбор и исключает значение из FormData. */
-    disabled?: boolean;
-    /** Обозначает обязательный выбор для доступности и проверки состояния внутри Select. */
-    required?: boolean;
-    /** Зовётся только с выбранным пунктом — значение здесь всегда есть. */
-    onChange?: (value: T, item: ChoiceButtonsItem<T>) => void;
-    className?: string;
-    itemClassName?: string;
-    buttonClassName?: string;
-    textClassName?: string;
-    infoClassName?: string;
-    tooltipClassName?: string;
-}
+export type { ChoiceButtonsItem, ChoiceButtonsProps } from './ChoiceButtons.types';
 
 export function ChoiceButtons<T extends string = string>({
     items,
@@ -142,7 +29,6 @@ export function ChoiceButtons<T extends string = string>({
 }: ChoiceButtonsProps<T>) {
     const isControlled = value !== undefined;
     const [internalValue, setInternalValue] = useState<T | null>(defaultValue);
-    const [hoveredValue, setHoveredValue] = useState<T | null>(null);
     const baseId = useId().replace(/:/g, '');
     const fieldRef = useRef<HTMLDivElement>(null);
     useFormReset(fieldRef, form, () => {
@@ -152,6 +38,7 @@ export function ChoiceButtons<T extends string = string>({
     const selectedValue = isControlled ? value ?? null : internalValue;
 
     const selectItem = (item: ChoiceButtonsItem<T>) => {
+        if (disabled) return;
         if (!isControlled) {
             setInternalValue(item.value);
         }
@@ -180,71 +67,26 @@ export function ChoiceButtons<T extends string = string>({
                 p={[4, null, null]}
                 r={[12, null, null]}
                 bg={['var(--background)', 'var(--background)', 'var(--background)']}
-                className={cx(styles.ChoiceButtons, className)}
+                className={cx('ChoiceButtons', styles.ChoiceButtons, className)}
                 data-hide-mobile
                 data-hide-tablet
                 aria-required={required || undefined}
             >
-                {items.map((item, index) => {
-                    const description = item.description;
-                    const isSelected = item.value === selectedValue;
-                    const isHovered = item.value === hoveredValue;
-                    const buttonState = isSelected
-                        ? (isHovered ? ['active', 'hover'] : 'active')
-                        : (isHovered ? 'hover' : undefined);
-                    const hoverHandlers = {
-                        onMouseEnter: () => setHoveredValue(item.value),
-                        onMouseLeave: () => setHoveredValue((currentValue) => currentValue === item.value ? null : currentValue),
-                    };
-
-                    // Индекс, а не значение: `aria-describedby` — список id через пробел, и значение
-                    // «Без опыта» стало бы двумя ссылками. Пара кнопка↔подсказка берёт индекс из
-                    // одного рендера, поэтому перестановка items её не разводит.
-                    const tooltipId = `${baseId}-tooltip-${index}`;
-
-                    return (
-                        <Flex
-                            key={item.value}
-                            w={['100%', null, null]}
-                            className={cx(styles.item, itemClassName)}
-                        >
-                            <Button
-                                h={[48, null, null]}
-                                w={['100%', null, null]}
-                                r={[12, null, null]}
-                                type='button'
-                                disabled={disabled}
-                                state={buttonState}
-                                aria-pressed={isSelected}
-                                aria-describedby={description ? tooltipId : undefined}
-                                {...hoverHandlers}
-                                onClick={() => selectItem(item)}
-                                className={cx(styles.button, buttonClassName)}
-                            >
-                                <Flex
-                                    dir={['row', null, null]}
-                                    align={['center', null, null]}
-                                    gap={[8, null, null]}
-                                >
-                                    <Text
-                                        variant={['body', null, null]}
-                                        color='var(--text-muted)'
-                                        className={cx(styles.label, textClassName)}
-                                    >{item.label}</Text>
-
-                                    {description && (
-                                        <ChoiceInfoTooltip
-                                            id={tooltipId}
-                                            description={description}
-                                            infoClassName={infoClassName}
-                                            tooltipClassName={tooltipClassName}
-                                        />
-                                    )}
-                                </Flex>
-                            </Button>
-                        </Flex>
-                    );
-                })}
+                {items.map((item, index) => (
+                  <ChoiceButton
+                      key={item.value}
+                      item={item}
+                      selected={item.value === selectedValue}
+                      tooltipId={`${baseId}-tooltip-${index}`}
+                      select={selectItem}
+                      disabled={disabled}
+                      itemClassName={itemClassName}
+                      buttonClassName={buttonClassName}
+                      textClassName={textClassName}
+                      infoClassName={infoClassName}
+                      tooltipClassName={tooltipClassName}
+                  />
+                ))}
             </TabTrack>
 
             <Select
@@ -258,6 +100,7 @@ export function ChoiceButtons<T extends string = string>({
                 visibleOptions={Math.min(items.length, 3)}
                 disabled={disabled}
                 required={required}
+                className={cx('ChoiceButtons', styles.ChoiceButtons)}
                 data-hide-pc
             />
         </>

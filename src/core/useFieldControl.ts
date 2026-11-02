@@ -4,8 +4,7 @@ import { useId, useState, useRef, useCallback, type Ref } from 'react';
 
 import { useMergedRefs } from './useMergedRefs';
 import { useFormReset } from './useFormReset';
-
-const DEFAULT_EMPTY_MESSAGE = 'Поле обязательно для заполнения';
+import { UI_MESSAGES } from './base/messages';
 
 export interface FieldControlConfig {
     id?: string;
@@ -30,7 +29,7 @@ export function useFieldControl<E extends HTMLElement>(
         value: valueProp,
         defaultValue,
         required,
-        emptyMessage = DEFAULT_EMPTY_MESSAGE,
+        emptyMessage = UI_MESSAGES.validation.required,
         error: errorProp,
         validate: validateProp,
         isEmpty: isEmptyProp,

@@ -24,7 +24,8 @@ export interface UseTextOverflowResult<E extends HTMLElement = HTMLElement> {
 const OVERFLOW_TOLERANCE = 1;
 
 function readText(el: HTMLElement): string {
-    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    const view = el.ownerDocument.defaultView;
+    if (view && (el instanceof view.HTMLInputElement || el instanceof view.HTMLTextAreaElement)) {
         return el.value;
     }
 
@@ -63,8 +64,8 @@ export function useTextOverflow<E extends HTMLElement = HTMLElement>(): UseTextO
         if (observed.current === el) return;
         observer.current?.disconnect();
         observed.current = el;
-        observer.current =
-            el && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+        const view = el?.ownerDocument.defaultView;
+        observer.current = view?.ResizeObserver ? new view.ResizeObserver(measure) : null;
         if (el) observer.current?.observe(el);
     }, [measure]);
 

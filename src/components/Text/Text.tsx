@@ -2,73 +2,37 @@
 'use no memo';
 
 import Link from 'next/link';
+
+import styles from './Text.module.scss';
 import type React from 'react';
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 
-import { boxLayout, buildClampStyle, composeInteractionHandlers, createLayoutClasses, cx, normalizeComponentState, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, useMergedRefs, type BoxLayoutProps, type ComponentStateValue, type ResponsiveInput, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
-import type { TextRole, TextVariantName } from '../../core/base/typography';
-import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
-import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
+import {
+  boxLayout,
+  buildClampStyle,
+  composeInteractionHandlers,
+  createLayoutClasses,
+  cx,
+  normalizeComponentState,
+  resolveLinkProps,
+  shouldUseNextLink,
+  splitBoxLayout,
+  stateLinkProps,
+  useMergedRefs,
+  type WithRef,
+} from '../../core';
+import { isSharedMotionAnimate, useSharedMotion } from '../../hooks/useSharedMotion';
+import { CollapseWrap } from '../Collapse/CollapseWrap';
 import { resolveAnimation } from './animations/resolveAnimation';
-import type { AnimationInput, TextAnimate } from './animations/types';
 import { isTextTimeline } from './animations/timeline';
 import { useTextTimeline } from './animations/useTextTimeline';
-import type { LineHeightValue } from './typography';
-import { resolveTextContent, type TextFormat } from './formatContent';
+import { resolveTextContent } from './formatContent';
 import { bindTextContent } from './nonBreaking';
 
-/**
- * Вариант проекта (`UiTypography`), служебная роль кита или 'inherit' — не навязывать типографику:
- * для Text внутри Text (цветные куски чужого заголовка).
- */
-type VariantKey = TextVariantName | TextRole | 'inherit';
-type FontFamilyKey = 'primary' | 'secondary' | 'inherit';
-type TextAlignValue = 'left' | 'right' | 'center' | 'justify' | 'start' | 'end';
-type WhiteSpaceValue = 'normal' | 'nowrap' | 'pre' | 'pre-wrap' | 'pre-line' | 'break-spaces';
+import type { TextProps } from './Text.types';
+export type { TextProps } from './Text.types';
 
 const c = createLayoutClasses();
-
-export interface TextProps
-  extends Omit<React.HTMLAttributes<HTMLElement>, 'color'>,
-    Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
-    Omit<BoxLayoutProps, 'aspectRatio'>,
-    SharedMotionProps<ResponsiveInput<AnimationInput> | TextAnimate> {
-  children?: React.ReactNode;
-  style?: CSSProperties;
-  format?: ResponsiveValue<TextFormat>;
-  /** Появление, эффект текста или композиция: `{ when: 'inView', effect: { up: {}, counter: { to: 100 } } }`. */
-  animate?: SharedMotionProps<ResponsiveInput<AnimationInput> | TextAnimate>['animate'];
-  required?: boolean;
-
-  newTab?: boolean;
-  nofollow?: boolean;
-  noreferrer?: boolean;
-
-  as?: keyof React.JSX.IntrinsicElements;
-  variant?: ResponsiveValue<VariantKey>;
-  animation?: ResponsiveInput<AnimationInput>;
-  /** Сворачивание текста с сохранением содержимого до конца анимации закрытия. Для блочного текста. */
-  collapse?: CollapseOptions;
-
-  /** Размер в rpx либо CSS-длина (`min(…, 10svh)`, `var(…)`); поверх variant. */
-  fontSize?: ResponsiveValue<number | string>;
-  fontWeight?: ResponsiveValue<number>;
-  lineHeight?: ResponsiveValue<LineHeightValue>;
-  fontFamily?: ResponsiveValue<FontFamilyKey>;
-
-  color?: string;
-  textTransform?: ResponsiveValue<string>;
-  /** Межбуквенный интервал: число в rpx либо CSS-длина, например '-0.03em'. */
-  letterSpacing?: ResponsiveValue<number | string>;
-  textAlign?: ResponsiveValue<TextAlignValue>;
-  whiteSpace?: ResponsiveValue<WhiteSpaceValue>;
-  rows?: ResponsiveValue<number>;
-  ellipsis?: boolean;
-
-  state?: ComponentStateValue;
-
-  linkState?: StateLinkInput;
-}
 
 export function Text({
   ref,
@@ -112,7 +76,11 @@ export function Text({
   };
   const { href, target, rel, download, newTab, nofollow, noreferrer, ...anchorRestProps } = aProps;
 
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
+    perspective3d,
+    parallax,
+    animate,
+  });
 
   const internalRef = useRef<HTMLElement | null>(null);
   const setRef = useMergedRefs(internalRef, setMotionNode, ref);
@@ -140,12 +108,19 @@ export function Text({
   };
 
   const normalizedState = normalizeComponentState(state);
-  const sharedHandlerProps = stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }));
+  const sharedHandlerProps = stateLinkProps(
+    linkState,
+    composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }),
+  );
 
   const effectiveAs = href ? 'a' : as;
   const isAnchor = effectiveAs === 'a';
-  const Comp = (isAnchor && shouldUseNextLink(href, target, download) ? Link : effectiveAs) as React.ElementType;
-  const linkProps = isAnchor ? resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer }) : {};
+  const Comp = (
+    isAnchor && shouldUseNextLink(href, target, download) ? Link : effectiveAs
+  ) as React.ElementType;
+  const linkProps = isAnchor
+    ? resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer })
+    : {};
   const anchorProps = isAnchor ? { ...anchorRestProps, ...linkProps } : rest;
 
   const coreClasses = [
@@ -164,14 +139,16 @@ export function Text({
 
   // clamp/ellipsis/required не сочетаются с анимациями — добавляем их только в неанимированном пути.
   const classNames = anim.active
-    ? cx('ui-text', ...coreClasses, className)
+    ? cx('Text', styles.Text, 'ui-text', ...coreClasses, className)
     : cx(
+        'Text',
+        styles.Text,
         'ui-text',
         ...coreClasses,
         required && 'ui-text-required',
         hasRows && 'ui-text-clamp',
         hasSingleLineEllipsis && 'ui-text-ellipsis',
-        className
+        className,
       );
 
   if (!hasChildren && !collapse) return null;
@@ -192,18 +169,26 @@ export function Text({
           <span aria-hidden className="ui-counter-reserve">{timeline.finalText}</span>
           <span ref={timeline.valueRef} className="ui-counter-value">{timeline.finalText}</span>
         </span>
-      ) : anim.active && anim.Inner ? <anim.Inner content={content} options={anim.options} /> : bindTextContent(content)}
+      ) : anim.active && anim.Inner ? (
+        <anim.Inner content={content} options={anim.options} />
+      ) : (
+        bindTextContent(content)
+      )}
     </Comp>
   );
 
   if (!collapse) return textNode;
 
-  return (
-    <CollapsibleText collapse={collapse} hasChildren={hasChildren}>{textNode}</CollapsibleText>
-  );
+  return <CollapsibleText collapse={collapse} hasChildren={
+    hasChildren
+  }>{textNode}</CollapsibleText>;
 }
 
-function CollapsibleText({ collapse, hasChildren, children }: {
+function CollapsibleText({
+  collapse,
+  hasChildren,
+  children,
+}: {
   collapse: NonNullable<TextProps['collapse']>;
   hasChildren: boolean;
   children: React.ReactNode;

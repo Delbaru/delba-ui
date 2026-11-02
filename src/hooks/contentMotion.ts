@@ -1,6 +1,8 @@
 // Появление, уход и смена содержимого примитива раскладки (Flex, Box). Чистая часть: словарь
 // классов (keyframes — в core/_content-motion.scss) и шаги свопа. Хук — useContentMotion.
 
+import type { MotionTime } from '../core/base/timing';
+
 export type ContentEnter = 'fadeIn' | 'fadeInUp' | 'fadeInDown' | 'fadeInScale';
 export type ContentExit = 'fadeOut' | 'fadeOutUp' | 'fadeOutDown' | 'fadeOutScale';
 export type ContentAnimation = ContentEnter | ContentExit;
@@ -11,8 +13,16 @@ export interface ContentAnimateOptions {
   key?: ContentKey;
 }
 
+export interface ContentChangeAnimate {
+  when: 'change';
+  effect: 'fade';
+  key: ContentKey;
+  duration?: MotionTime;
+}
+
 /** Проп `animate`: ключ, `[ключ]` или `[ключ, опции]` — та же форма, что у Img, Icon и Text. */
 export type ContentAnimate = ContentEnter | [ContentEnter] | [ContentEnter, ContentAnimateOptions];
+export type FlexContentAnimate = ContentAnimate | ContentChangeAnimate;
 
 const classOf: Record<ContentAnimation, string> = {
   fadeIn: 'ui-anim-fadeIn',
@@ -33,8 +43,13 @@ const exitOf: Partial<Record<ContentAnimation, ContentExit>> = {
   fadeInScale: 'fadeOutScale',
 };
 
-export function resolveContentAnimate(input: ContentAnimate | undefined): { animation?: ContentEnter; key?: ContentKey } {
+export function resolveContentAnimate(
+  input: FlexContentAnimate | undefined,
+): { animation?: ContentEnter; key?: ContentKey; duration?: MotionTime } {
   if (input === undefined) return {};
+  if (typeof input === 'object' && !Array.isArray(input)) {
+    return { animation: 'fadeIn', key: input.key, duration: input.duration };
+  }
   if (typeof input === 'string') return { animation: input };
   return { animation: input[0], key: input.length === 2 ? input[1].key : undefined };
 }

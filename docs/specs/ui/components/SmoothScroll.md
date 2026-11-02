@@ -61,3 +61,21 @@ scrollTo принимает число, HTMLElement, `#id` или CSS-селек
 Договор: [props и контекст](../../../../src/components/SmoothScroll/SmoothScroll.tsx),
 [движок](../../../../src/components/SmoothScroll/engine.ts),
 [приёмка](../../verification/acceptance.md).
+
+## Устройство и единый владелец
+
+SmoothScroll — provider без DOM: собственные SCSS/корневой wrapper ему не нужны.
+SmoothScroll.types хранит публичные настройки и команды; компонент создаёт один
+движок после mount, обновляет его configure без прерывания текущего хода,
+регистрирует API в общем core scrollTo и освобождает регистрацию/движок при unmount.
+Стабильная дверь useSmoothScroll возвращает scrollTo/stop/scrollY/subscribe.
+Общая подписка scroll-events не копируется в каждом потребителе.
+
+engine — низкий уровень окна: native wheel routing, позиция/кадры, якоря и cleanup.
+Чистые расчёты clamp/lerp/offset/tween остаются в smooth-scroll и проверяются unit.
+Эта необходимая алгоритмическая часть не размножается в UI-компонентах и не
+переносится в общее ядро без второго реального потребителя.
+Настройки времени/easing/offset/lerp читаются из motion.scroll; публичные override
+экземпляра сохраняются. Подписка не обещает реактивный React-render scrollY.
+
+[Публичные типы](../../../../src/components/SmoothScroll/SmoothScroll.types.ts).

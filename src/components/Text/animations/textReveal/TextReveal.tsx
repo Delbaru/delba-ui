@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 
 import { cx, MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../../core';
 import { flattenAnimatableText } from '../flattenText';
@@ -8,34 +8,13 @@ import { useTextSwap, commonAffixes } from './useTextSwap';
 import type { TextAnimationContext } from '../types';
 import type { TextRevealOptions } from './types';
 import { motionDefaults } from '../../../../core/base/motion-config';
+import styles from './TextReveal.module.scss';
+import { TextRevealLayer } from './TextRevealLayer/TextRevealLayer';
 import { useMotionTime } from '../../../../hooks/useMotionTime';
-
-// База задержки входящего слоя = доля от dur: на одной позиции старый/новый символ имеют ~равный --t, поэтому
-// маленького сдвига хватает, чтобы новый проявлялся ПОСЛЕ ухода старого (без наложения), не удлиняя переход.
+// Incoming letters start after outgoing letters have begun to leave.
 const IN_DELAY_FACTOR = motionDefaults.textReveal.inDelayFactor;
-// При схлопывании откладываем старт ресайза высоты (доля волны), чтобы уходящий текст успел погаснуть и его не
-// срезало снизу (в нормальной волне сверху-слева нижние строки гаснут последними).
 const COLLAPSE_SIZE_DELAY_FACTOR = motionDefaults.textReveal.collapseDelayFactor;
-
-// Разрывный пробел = любой whitespace, КРОМЕ nbsp ( ). По нему рвём строку на токены (между словами
-// перенос допустим). nbsp — неразрывный: остаётся ВНУТРИ слова и склеивает соседей в один nowrap-сегмент,
-// поэтому "к следующему" не переносится (в классе символов стоит именно nbsp, не обычный пробел).
-const NBSP = String.fromCharCode(0xa0); // U+00A0, строим регэксп в рантайме — без литерала nbsp в исходнике
-const SPLIT_WS = new RegExp('([^\\S' + NBSP + ']+)');
-const IS_WS = new RegExp('^[^\\S' + NBSP + ']+$');
-
-type LayerMode = 'in' | 'out' | 'idle';
-
-// Бьём строку на слова и разрывные пробелы (через capture-split). Слово (в т.ч. склеенное nbsp) не переносится
-// по буквам (inline-block + nowrap), разрывный пробел — отдельный токен, чтобы перенос был допустим между словами.
-function toTokens(text: string): string[] {
-  return text.split(SPLIT_WS).filter((part) => part.length > 0);
-}
-
-// Единый волновой фронт по диагонали: задержку буквы задаём как нормализованное расстояние от ВЕРХНЕГО-ЛЕВОГО
-// угла (0 — стартует первой) к НИЖНЕМУ-ПРАВОМУ (1 — последней). Меряем offset-координаты ПОСЛЕ раскладки
-// (перенос уже случился), поэтому знаем реальные позиции букв. Один метод для всех: на одной строке y постоянна
-// → диагональ вырождается в обычное слева-направо. Задержку в секундах даёт CSS-var --reveal-span (капнут).
+/** Layout coordinates keep the wave stable under transformed ancestors. */
 function applyWaveOrder(layer: Element) {
   const chars = layer.querySelectorAll<HTMLElement>('[data-reveal-char]');
   if (chars.length === 0) return;
@@ -63,112 +42,32 @@ function applyWaveOrder(layer: Element) {
   });
 }
 
-interface LayerProps {
-  text: string;
-  mode: LayerMode;
-  /** Сколько ведущих/замыкающих символов — общие с соседним слоем (рендерим статично, без анимации). */
-  staticPrefix: number;
-  staticSuffix: number;
-}
-
-function Layer({ text, mode, staticPrefix, staticSuffix }: LayerProps) {
-  // Токены + глобальный старт-индекс каждого (символ считаем и в пробелах) — чтобы сопоставить с prefix/suffix.
-  const { tokens, starts, total } = useMemo(() => {
-    const tks = toTokens(text);
-    let acc = 0;
-    const st = tks.map((t) => {
-      const s = acc;
-      acc += Array.from(t).length;
-      return s;
-    });
-    return { tokens: tks, starts: st, total: acc };
-  }, [text]);
-
-  return (
-    <span
-        data-reveal-layer=""
-        data-reveal-mode={mode}
-        className={cx('ui-reveal-layer', mode === 'in' && 'ui-reveal-in', mode === 'out' && 'ui-reveal-out')}
-        aria-hidden={mode === 'out' ? true : undefined}
-    >
-      {tokens.map((token, tokenIdx) => {
-        if (IS_WS.test(token)) {
-          return (
-            <span key={`s-${tokenIdx}`} className={'ui-reveal-space'}>{token}</span>
-          );
-        }
-
-        const start = starts[tokenIdx] ?? 0;
-        return (
-          <span key={`w-${tokenIdx}`} className={'ui-reveal-word'}>
-            {Array.from(token).map((ch, i) => {
-              const gi = start + i;
-              // Статичный символ (общий край) не несёт data-reveal-char → не анимируется и не участвует в волне.
-              const isStatic = gi < staticPrefix || gi >= total - staticSuffix;
-              return (
-                <span
-                    key={i}
-                    {...(isStatic ? null : { 'data-reveal-char': '' })}
-                    className={'ui-reveal-char'}
-                >{ch}</span>
-              );
-            })}
-          </span>
-        );
-      })}
-    </span>
-  );
-}
-
-/**
- * Плавная смена текста по-буквенно: при изменении контента старые буквы уезжают вверх с затуханием, новые
- * приходят снизу — со stagger-волной. Стейт свопа держит useTextSwap. Задержки букв раскладываются по
- * диагонали верх-лево → низ-право (на одной строке = слева-направо) и капаются по длине (--reveal-span).
- *
- * Размеры: в ПОКОЕ вьюпорт всегда `width/height: auto` — grid-стек сам сайзится по входящему слою (уходящий
- * абсолютен и в расчёт не идёт), перенос наследуется от host-Text. Это делает вёрстку нативной и устойчивой
- * к ресайзу/смене брейкпоинта/догрузке шрифта — без замеров-зеркал. Чтобы контейнер при
- * смене текста НЕ щёлкал, на время свопа делаем transient-FLIP: пиним старый размер → транзишеним к новому
- * (в такт волне) → по завершении РЕЛИЗИМ обратно в auto. Пин живёт только 0.37s, поэтому вне свопа (и при
- * любом ресайзе) размер честно нативный. Первый рендер и reduced-motion — без анимации размера.
- * ResizeObserver здесь только ЗАПОМИНАЕТ размер покоя (`from` следующего свопа), размер он не задаёт.
- */
+/** Character wave with transient size pinning; natural layout resumes after the swap. */
 export function TextReveal({ content, options }: TextAnimationContext<TextRevealOptions>) {
   const text = flattenAnimatableText(content) ?? '';
   const viewportRef = useRef<HTMLSpanElement | null>(null);
   const duration = useMotionTime('textReveal', 'duration', viewportRef, options?.duration) / 1000;
   const stagger = useMotionTime('textReveal', 'stagger', viewportRef, options?.stagger) / 1000;
   const shift = options?.shift ?? motionDefaults.textReveal.shift;
-  const maxDuration = useMotionTime('textReveal', 'maxDuration', viewportRef, options?.maxDuration) / 1000;
-
-  // Капнутый разброс задержек: базовый разброс = stagger·(N−1), но не длиннее (maxDuration − duration).
-  // Эффективный stagger отдаём в useTextSwap, чтобы его таймер снятия ушедшего слоя совпал с реальной волной.
-  const capSpan = (chars: number) => Math.min(Math.max(0, chars - 1) * stagger, Math.max(0, maxDuration - duration));
+  const maxDuration =
+    useMotionTime('textReveal', 'maxDuration', viewportRef, options?.maxDuration) / 1000;
+  const capSpan = (chars: number) =>
+    Math.min(Math.max(0, chars - 1) * stagger, Math.max(0, maxDuration - duration));
   const effStagger = text.length > 1 ? capSpan(text.length) / (text.length - 1) : stagger;
 
   const { current, previous, generation } = useTextSwap(text, {
     durationMs: duration * 1000,
     staggerMs: effStagger * 1000,
   });
-
-  // Последний натуральный размер вьюпорта (для старта FLIP при следующем свопе). В покое его пишет
-  // ResizeObserver, во время свопа — сам своп (цель `to`).
   const lastSizeRef = useRef<{ w: number; h: number } | null>(null);
-  // Идёт своп: ResizeObserver молчит, иначе промежуточные кадры глайда затёрли бы `to`.
   const swappingRef = useRef(false);
-  // На вьюпорте висит FLIP-пин, который ещё не отпустили: только тогда уборке есть что релизить.
   const pinnedRef = useRef(false);
-
-  // Размер покоя снимаем ResizeObserver'ом, а НЕ синхронным замером в layout-эффекте монтирования: замер
-  // чередовался с записью стилей у каждого экземпляра и форсил пересчёт стилей и раскладки всего документа
-  // (31 экземпляр на главной = 31 принудительная раскладка в задаче гидрации). Наблюдатель отдаёт размеры
-  // пачкой после штатной раскладки кадра, ничего не форсируя. contentRect — вёрсточный размер (трансформы
-  // предков на него не влияют, дробность сохранена) — та же система координат, что getComputedStyle ниже;
-  // у скрытого узла он 0×0, как и `|| 0` в rect().
   useLayoutEffect(() => {
     const vp = viewportRef.current;
     if (!vp) return undefined;
-    const ro = new ResizeObserver((entries) => {
+    const view = vp.ownerDocument.defaultView;
+    if (!view) return;
+    const ro = new view.ResizeObserver((entries) => {
       if (swappingRef.current) return;
       const entry = entries[entries.length - 1];
       if (!entry) return;
@@ -177,23 +76,10 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
     ro.observe(vp);
     return () => ro.disconnect();
   }, []);
-
-  // Размеры гоним столько же, сколько живёт волна (dur + капнутый разброс по самой длинной строке), иначе
-  // контейнер садится раньше, чем догорают буквы, и уходящий текст торчит за краем.
   const span = capSpan(Math.max(current.length, previous?.length ?? 0));
-
-  // Смена текста → раскладываем задержки букв по диагонали (оба слоя) и, если это реальный своп, плавно
-  // ведём размер контейнера от старого к новому (transient-FLIP c релизом в auto — см. док компонента).
   useLayoutEffect(() => {
     const vp = viewportRef.current;
     if (!vp) return undefined;
-
-    // Свопа нет (первый рендер / уборка ушедшего слоя): анимации в дереве не осталось, `--t` не читает
-    // никто. На монтировании пина нет — стили не трогаем и НЕ меряем: размер покоя (`from` следующего
-    // свопа) снимет ResizeObserver выше (Frontend.md §12 «Скролл главной»). На уборке релизим пин,
-    // если таймер релиза не успел (его гасит смена `previous`), — с принудительной раскладкой между
-    // `transition: none` и возвратом транзишена: под унаследованным `interpolate-size: allow-keywords`
-    // переход px → auto иначе анимировался бы. Это раз на своп, не на монтирование.
     if (previous === null) {
       swappingRef.current = false;
       if (pinnedRef.current) {
@@ -208,30 +94,10 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
       return undefined;
     }
     swappingRef.current = true;
-
-    // Снимаем возможный остаточный пин от прошлого свопа и меряем натуральный размер БЕЗ анимации:
-    //   natural — как текст ляжет по родителю (наследуя white-space: перенос → высота растёт).
-    // Однострочный размер (nowrap) отдельно НЕ меряем: если входящий текст не переносится, inline-grid
-    // сайзится по max-content, и natural побайтово равен nowrap-замеру (одно слово шире родителя — тоже:
-    // min-content = max-content). Переносится ли текст, видно по тому, что первое и последнее слово
-    // входящего слоя легли на разные строки, — это чтение offsetTop на уже чистой после natural раскладке,
-    // второго пересчёта оно не стоит (D-199: был второй rect() с записью nowrap между ними).
-    //
-    // Меряем getComputedStyle, а НЕ getBoundingClientRect: замеренное мы пишем обратно как вёрсточные
-    // пиксели (vp.style.width/height), а rect отдаёт бокс ПОСЛЕ трансформов предков. Под живым
-    // 3D-трансформом (perspective3d с follow:'viewport' пересчитывается на каждое движение мыши) это
-    // разные системы координат: from/to снимались бы при разной проекции → FLIP срабатывал бы на
-    // неизменившейся вёрстке (дёрганье по высоте), а сохранённый nowrap-замер однострочного текста
-    // пиньтся на следующем свопе и раскладывает многострочный текст в одну строку.
-    // Computed-значения — вёрсточные: трансформ на них не влияет, поэтому БЕЗ трансформа у предка
-    // результат побайтово тот же, что у rect (у .viewport нет padding/border → content box = border box),
-    // и дробность сохраняется — offsetWidth не подходит, он округляет до целого и давал рывок на релизе.
-    // Соседний applyWaveOrder тоже меряет вёрстку (offsetLeft/offsetTop) — теперь весь файл в одной системе.
-    // `|| 0` — у скрытого узла (display:none) computed width = 'auto' → NaN; нули повторяют то, что в
-    // этом случае отдавал rect, поэтому FLIP просто не запускается, как и раньше.
+    // Computed sizes exclude ancestor transforms; boundingClientRect does not.
     const rect = () => {
-      const cs = getComputedStyle(vp);
-      return { w: parseFloat(cs.width) || 0, h: parseFloat(cs.height) || 0 };
+      const cs = vp.ownerDocument.defaultView?.getComputedStyle(vp);
+      return { w: parseFloat(cs?.width ?? '') || 0, h: parseFloat(cs?.height ?? '') || 0 };
     };
     vp.style.transition = 'none';
     vp.style.width = '';
@@ -243,33 +109,18 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
     const words = vp.querySelectorAll<HTMLElement>('[data-reveal-mode="in"] .ui-reveal-word');
     const firstWord = words[0];
     const lastWord = words[words.length - 1];
-    const wraps = firstWord !== undefined && lastWord !== undefined && lastWord.offsetTop > firstWord.offsetTop;
-    // Многострочный, если переносится ТЕКУЩИЙ текст ИЛИ переносился предыдущий (from выше одной строки). Второе
-    // важно для схлопывания многострочный→короткий: цель однострочная, но пин-nowrap развернул бы уходящий
-    // многострочный слой в одну строку (и обрезал по ширине). При многострочном ширину не трогаем (width: auto).
-    // Высота одной строки = natural.h, когда текущий текст не переносится; когда переносится, multiline и так true.
+    const wraps =
+      firstWord !== undefined && lastWord !== undefined && lastWord.offsetTop > firstWord.offsetTop;
     const wasMultiline = lastSizeRef.current !== null && lastSizeRef.current.h > natural.h * 1.5;
     const multiline = wraps || wasMultiline;
-
-    // Однострочный лейбл: цель — ширина одной строки, height ≈ 1 строка. Многострочный: ширину не трогаем
-    // (течёт по родителю, width: auto), плавно ведём только высоту (смена числа строк). В обоих случаях цель —
-    // natural: у непереносящегося текста он и есть однострочный размер (см. выше).
     const to = natural;
     const from = lastSizeRef.current;
     lastSizeRef.current = to;
 
+    // Shrinking waits for outgoing letters so the surface does not clip their wave.
     const collapsing = from !== null && to.h < from.h - 2;
     const sizeDelay = collapsing ? span * COLLAPSE_SIZE_DELAY_FACTOR : 0;
-    // Старт ресайза откладываем только при схлопывании (чтобы уходящий текст успел погаснуть и его не срезало
-    // снизу); при росте — сразу (delay=0). Ставим до глайда, т.к. delay читается из CSS-переменной транзишеном.
     vp.style.setProperty('--reveal-size-delay', `${sizeDelay}s`);
-
-    // Уходящий МНОГОСТРОЧНЫЙ слой фиксируем на его старую ширину (from.w) с собственным переносом. Он абсолютен
-    // и в покое ширину контейнера не задаёт (её ведёт входящий слой), поэтому при схлопывании контейнер
-    // мгновенно сужается, а уходящий длинный текст рефлоу-ится в узкое (много коротких строк) — тот самый
-    // «резкий сдвиг влево поверх нового текста». Пин ширины держит его прежнюю раскладку, пока он затухает
-    // (слой всё равно размонтируется после свопа). Ставим ДО applyWaveOrder — чтобы диагональ волны считалась
-    // по реальным позициям букв старой раскладки, а не по схлопнутой.
     if (from !== null && multiline) {
       const outLayer = vp.querySelector<HTMLElement>('[data-reveal-mode="out"]');
       if (outLayer) {
@@ -277,31 +128,16 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
         outLayer.style.whiteSpace = 'normal';
       }
     }
-
-    // Раскладываем задержки букв по диагонали НА НАТУРАЛЬНОЙ раскладке (пины сняты выше). Волна ВСЕГДА
-    // сверху-слева → низ-право (для обоих слоёв): уходящий текст исчезает в порядке чтения. Наложение старого
-    // и нового снято смещением прозрачности (in-delay + форма keyframes), а не обратной волной; срез снизу при
-    // схлопывании гасится отложенным стартом ресайза (--reveal-size-delay).
     vp.querySelectorAll<HTMLElement>('[data-reveal-layer]').forEach((layer) => {
       applyWaveOrder(layer);
     });
 
     vp.style.transition = '';
-
-    // Первый своп в жизни узла (мерить `from` было не с чего) / reduced-motion → оставляем нативный
-    // auto, без анимации размера.
-    if (from === null || prefersReducedMotion()) return undefined;
-
-    // Ширину пиним и глайдим: однострочному — всегда (с nowrap на миг, чтобы длинный текст не переносился на
-    // промежуточной ширине); многострочному — ТОЛЬКО при схлопывании (collapse), чтобы контейнер плавно
-    // сужался вместе с зафиксированным уходящим слоем, а не прыгал в узкое рывком. Многострочный РОСТ ширину
-    // не трогает — входящий слой сам течёт и переносится по родителю.
+    if (from === null || prefersReducedMotion(vp.ownerDocument.defaultView)) return undefined;
     const animW = Math.abs(from.w - to.w) > 0.5 && (!multiline || collapsing);
     const animH = Math.abs(from.h - to.h) > 0.5;
     const useNowrap = animW && !multiline; // nowrap только для однострочного глайда
     if (!animW && !animH) return undefined;
-
-    // FLIP: старт со старого размера (без транзишена) → следующий кадр к новому (транзишен из таблицы стилей).
     vp.style.transition = 'none';
     if (useNowrap) vp.style.whiteSpace = 'nowrap';
     if (animW) vp.style.width = `${from.w}px`;
@@ -311,12 +147,10 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
     pinnedRef.current = true;
     if (animW) vp.style.width = `${to.w}px`;
     if (animH) vp.style.height = `${to.h}px`;
-
-    // По завершении волны (с учётом отложенного ресайза и сдвига входящего слоя) РЕЛИЗИМ размер и перенос в
-    // auto/inherit — в покое вёрстка снова нативная. size-delay ставим на элемент ЗДЕСЬ (до глайда, где знаем
-    // collapsing): при схлопывании откладываем старт ресайза, чтобы уходящий текст успел погаснуть.
-    const releaseMs = (Math.max(sizeDelay, duration * IN_DELAY_FACTOR) + duration + span) * 1000 + MOTION_END_BUFFER_MS;
-    const timer = window.setTimeout(() => {
+    const releaseMs =
+      (Math.max(sizeDelay, duration * IN_DELAY_FACTOR) + duration + span) * 1000 +
+      MOTION_END_BUFFER_MS;
+    const timer = setTimeout(() => {
       pinnedRef.current = false;
       vp.style.transition = 'none';
       vp.style.width = '';
@@ -326,7 +160,7 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
       vp.style.transition = '';
     }, releaseMs);
 
-    return () => window.clearTimeout(timer);
+    return () => clearTimeout(timer);
   }, [current, previous, duration, span]);
 
   const vars = {
@@ -334,18 +168,18 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
     '--reveal-span': `${span}s`,
     '--reveal-shift': `${shift}em`,
     '--reveal-width-dur': `${duration + span}s`,
-    // Сдвиг входящей волны (снятие наложения). Размерный delay (--reveal-size-delay) ставит эффект — он зависит
-    // от collapsing, который известен только после замера.
     '--reveal-in-delay': `${duration * IN_DELAY_FACTOR}s`,
   } as CSSProperties;
-
-  // Общие края previous/current не анимируем — иначе неизменная часть текста перерисовывается заново (задвоение).
   const affixes = previous !== null ? commonAffixes(previous, current) : { prefix: 0, suffix: 0 };
 
   return (
-    <span ref={viewportRef} className={'ui-reveal'} style={vars}>
+    <span
+        ref={viewportRef}
+        className={cx('TextReveal', styles.TextReveal, 'ui-reveal')}
+        style={vars}
+    >
       {previous !== null && (
-        <Layer
+        <TextRevealLayer
             key={`out-${generation}`}
             text={previous}
             mode="out"
@@ -354,7 +188,7 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
         />
       )}
 
-      <Layer
+      <TextRevealLayer
           key={`in-${generation}`}
           text={current}
           mode={previous === null ? 'idle' : 'in'}

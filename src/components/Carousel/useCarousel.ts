@@ -1,5 +1,7 @@
+import { UI_MESSAGES } from '../../core/base/messages';
 import { Children, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Ref } from 'react';
 import type { Swiper as SwiperInstance } from 'swiper';
+import type { SwiperProps } from 'swiper/react';
 import { A11y, Autoplay, EffectCoverflow, EffectCube, EffectFade, EffectFlip, FreeMode, Mousewheel } from 'swiper/modules';
 
 import { publishCarouselControlsSnapshot, resetCarouselControlsSnapshot } from './controls';
@@ -79,15 +81,15 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
   const slidesPerViewSignature = String(slidesPerViewKey);
 
   const measureResponsiveValues = useCallback(() => {
-    if (typeof window === 'undefined') return;
     const rootNode = rootRef.current;
-    if (!rootNode) return;
+    const view = rootNode?.ownerDocument.defaultView;
+    if (!rootNode || !view) return;
 
-    const layoutViewportWidth = rootNode.ownerDocument.documentElement.clientWidth || window.innerWidth;
+    const layoutViewportWidth = rootNode.ownerDocument.documentElement.clientWidth || view.innerWidth;
 
     setBreakpointIndex(getBreakpointIndex(layoutViewportWidth));
 
-    const computed = window.getComputedStyle(rootNode);
+    const computed = view.getComputedStyle(rootNode);
     const gapPx = parseFloat(computed.gap || '0');
     setCurrentGapPx(Number.isFinite(gapPx) ? gapPx : 0);
     setCurrentContainerWidthPx(rootNode.clientWidth);
@@ -106,15 +108,16 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     measureResponsiveValues();
 
     const node = rootRef.current;
-    if (!node || typeof window === 'undefined') return;
+    const view = node?.ownerDocument.defaultView;
+    if (!node || !view) return;
 
-    const resizeObserver = new ResizeObserver(measureResponsiveValues);
+    const resizeObserver = new view.ResizeObserver(measureResponsiveValues);
     resizeObserver.observe(node);
-    window.addEventListener('resize', measureResponsiveValues);
+    view.addEventListener('resize', measureResponsiveValues);
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener('resize', measureResponsiveValues);
+      view.removeEventListener('resize', measureResponsiveValues);
     };
   }, [measureResponsiveValues, slidesPerViewSignature, slides.length]);
 
@@ -407,11 +410,50 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
 
   const setRootRefs = useMergedRefs(rootRef, setMotionNode, ref);
 
+  const engineProps = {
+    modules,
+    onSwiper: handleSwiper,
+    onSlideChange: handleSwiperUpdate,
+    onResize: handleSwiperUpdate,
+    onBreakpoint: handleSwiperUpdate,
+    onLock: handleSwiperUpdate,
+    onUnlock: handleSwiperUpdate,
+    onReachBeginning: handleSwiperUpdate,
+    onReachEnd: handleSwiperUpdate,
+    onFromEdge: handleSwiperUpdate,
+    onSlideChangeTransitionEnd: handleSwiperTransitionEnd,
+    a11y: { enabled: true, prevSlideMessage: UI_MESSAGES.carousel.previous, nextSlideMessage: UI_MESSAGES.carousel.next },
+    allowTouchMove: currentDrag,
+    autoplay: autoplayConfig,
+    direction: currentOrientation,
+    effect: swiperEffect,
+    fadeEffect: { crossFade: true },
+    cubeEffect: { shadow: false, slideShadows: false },
+    coverflowEffect: { slideShadows: false },
+    flipEffect: { slideShadows: false },
+    freeMode,
+    grabCursor: false,
+    centeredSlides: currentCenteredSlides,
+    initialSlide: currentInitialSlide,
+    loop: loopEnabled,
+    mousewheel: currentMousewheel ? { forceToAxis: true, releaseOnEdges: !loopEnabled } : false,
+    noSwipingSelector: 'button, input, textarea, select, option, label, summary, [role="button"], [data-carousel-no-drag]',
+    observeParents: true, observer: true, preventClicks: true, preventClicksPropagation: true, resizeObserver: true,
+    simulateTouch: currentDrag,
+    slidesPerView: currentSlidesPerView,
+    slidesOffsetAfter: currentOffsetAfterPx,
+    slidesOffsetBefore: currentOffsetBeforePx,
+    spaceBetween: currentGapPx,
+    speed: currentSpeed,
+    threshold: 6,
+    touchStartPreventDefault: currentDrag,
+    watchOverflow: true,
+  } satisfies SwiperProps;
+
   return {
-    carouselId, setRootRefs, motionHandlers, motionStyle, revealAttrs, slidesPerViewKey, swiperKey, modules,
-    handleSwiper, handleSwiperUpdate, handleSwiperTransitionEnd, autoplayConfig, renderedSlides,
-    currentDrag, currentOrientation, currentCenteredSlides, currentInitialSlide, loopEnabled,
-    currentMousewheel, currentSlidesPerView, currentOffsetAfterPx, currentOffsetBeforePx,
-    currentGapPx, currentSpeed, swiperEffect, freeMode,
+    root: { id: carouselId, ref: setRootRefs, motionHandlers, motionStyle, revealAttrs },
+    layout: { slidesPerViewKey },
+    engine: { key: swiperKey, props: engineProps },
+    slides: renderedSlides,
   };
 }

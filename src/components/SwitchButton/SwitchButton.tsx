@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useId, type CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
 import type React from 'react';
 import styles from './SwitchButton.module.scss';
 import { cx, createLayoutClasses, stateProps, layoutSpaceClasses, stateLinkProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type ResponsiveValue, type GrowProps, type WithRef } from '../../core';
@@ -48,19 +48,16 @@ export function SwitchButton({
   const id = idProp ?? generatedId;
   const isDisabled = Boolean(props.disabled);
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
-  const setRootRef = useCallback((node: HTMLLabelElement | null) => {
-    setMotionNode(node);
-  }, [setMotionNode]);
 
   return (
     <label
-      ref={setRootRef}
+      ref={setMotionNode}
       htmlFor={id}
       data-point-events={dataPointEvents}
       {...revealAttrs}
       {...(!isDisabled ? stateLinkProps(linkState, { ...motionHandlers }) : {})}
       className={cx(
-        styles.SwitchButton,
+        'SwitchButton', styles.SwitchButton,
         ...layoutSpaceClasses(c, { p, pt, pr, pb, pl, m, mt, mr, mb, ml }),
         ...c.value('grow', grow),
         className

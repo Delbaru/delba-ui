@@ -1,79 +1,90 @@
 'use client';
 
-import { useRef } from 'react';
-import type { PointerEvent as ReactPointerEvent } from 'react';
-
+import { useEffect, useRef, type PointerEvent } from 'react';
 import { clamp01 } from '../../core/utils';
 
 interface UsePointerRatioOptions {
-    // 'x' — слева-направо (таймлайн); 'y' — снизу-вверх (вертикальная громкость).
+    /** x: left to right; y: bottom to top. */
     orientation?: 'x' | 'y';
     onChange: (ratio: number) => void;
     onStart?: () => void;
     onEnd?: () => void;
-    // Наведение (любое движение над треком, независимо от драга) — для превью таймлайна.
     onHover?: (ratio: number) => void;
     onLeave?: () => void;
 }
 
-// Драг по треку → доля 0..1. Общий механизм для таймлайна и слайдера громкости. isDragging отдаём
-// наружу, чтобы rAF-обновление таймлайна не перебивало позицию курсора во время перетаскивания.
+/** Converts pointer coordinates into a bounded fraction; empty tracks cannot produce NaN. */
+export function pointerRatio(position: number, start: number, size: number, reversed = false): number {
+    if (!(size > 0)) return 0;
+    const fraction = clamp01((position - start) / size);
+    return reversed ? 1 - fraction : fraction;
+}
+
+/** One captured pointer owns the drag until release, cancellation or lost capture. */
 export function usePointerRatio({ orientation = 'x', onChange, onStart, onEnd, onHover, onLeave }: UsePointerRatioOptions) {
     const isDragging = useRef(false);
+    const pointer = useRef<number | null>(null);
+    const capture = useRef<HTMLElement | null>(null);
 
-    function computeRatio(event: ReactPointerEvent<HTMLElement>): number {
+    function ratio(event: PointerEvent<HTMLElement>) {
         const rect = event.currentTarget.getBoundingClientRect();
-
-        if (orientation === 'y') {
-            return clamp01(1 - (event.clientY - rect.top) / rect.height);
-        }
-
-        return clamp01((event.clientX - rect.left) / rect.width);
+        return orientation === 'y'
+            ? pointerRatio(event.clientY, rect.top, rect.height, true)
+            : pointerRatio(event.clientX, rect.left, rect.width);
     }
 
-    const bind = {
-        onPointerDown(event: ReactPointerEvent<HTMLElement>) {
-            isDragging.current = true;
-            event.currentTarget.setPointerCapture?.(event.pointerId);
-            onStart?.();
-            onChange(computeRatio(event));
-        },
-        onPointerMove(event: ReactPointerEvent<HTMLElement>) {
-            const ratio = computeRatio(event);
+    function finish() {
+        if (!isDragging.current) return;
+        isDragging.current = false;
+        const id = pointer.current;
+        const node = capture.current;
+        pointer.current = null;
+        capture.current = null;
+        if (id !== null && node?.hasPointerCapture?.(id)) node.releasePointerCapture(id);
+        onEnd?.();
+    }
 
-            onHover?.(ratio);
+    useEffect(() => () => {
+        const id = pointer.current;
+        const node = capture.current;
+        isDragging.current = false;
+        pointer.current = null;
+        capture.current = null;
+        if (id !== null && node?.hasPointerCapture?.(id)) node.releasePointerCapture(id);
+    }, []);
 
-            if (isDragging.current) {
-                onChange(ratio);
-            }
-        },
-        onPointerUp(event: ReactPointerEvent<HTMLElement>) {
-            if (!isDragging.current) return;
-
-            isDragging.current = false;
-
-            try {
-                event.currentTarget.releasePointerCapture?.(event.pointerId);
-            } catch {
-                // pointer уже отпущен — игнорируем.
-            }
-
-            onEnd?.();
-        },
-        onPointerCancel() {
-            if (isDragging.current) {
-                isDragging.current = false;
-                onEnd?.();
-            }
-
-            onLeave?.();
-        },
-        onPointerLeave() {
-            if (!isDragging.current) {
+    return {
+        isDragging,
+        bind: {
+            onPointerDown(event: PointerEvent<HTMLElement>) {
+                if (event.button !== 0 || pointer.current !== null) return;
+                pointer.current = event.pointerId;
+                capture.current = event.currentTarget;
+                isDragging.current = true;
+                event.currentTarget.setPointerCapture?.(event.pointerId);
+                onStart?.();
+                onChange(ratio(event));
+            },
+            onPointerMove(event: PointerEvent<HTMLElement>) {
+                if (pointer.current !== null && pointer.current !== event.pointerId) return;
+                const value = ratio(event);
+                onHover?.(value);
+                if (isDragging.current) onChange(value);
+            },
+            onPointerUp(event: PointerEvent<HTMLElement>) {
+                if (event.pointerId === pointer.current) finish();
+            },
+            onPointerCancel(event: PointerEvent<HTMLElement>) {
+                if (event.pointerId !== pointer.current) return;
+                finish();
                 onLeave?.();
-            }
+            },
+            onLostPointerCapture(event: PointerEvent<HTMLElement>) {
+                if (event.target === event.currentTarget && event.pointerId === pointer.current) finish();
+            },
+            onPointerLeave() {
+                if (!isDragging.current) onLeave?.();
+            },
         },
     };
-
-    return { isDragging, bind };
 }

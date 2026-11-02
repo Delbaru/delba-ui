@@ -1,19 +1,50 @@
 'use client';
 
 import { type CSSProperties } from 'react';
+
+import styles from './Box.module.scss';
 import type React from 'react';
-import { boxLayout, composeEventHandlers, containerClass, createLayoutClasses, cx, splitBoxLayout, stateLinkProps, useMergedRefs, type BoxLayoutProps, type ContainerProp, type ResponsiveValue, type StateLinkInput, type WithRef } from '../../core';
+import {
+  boxLayout,
+  composeEventHandlers,
+  containerClass,
+  createLayoutClasses,
+  cx,
+  splitBoxLayout,
+  stateLinkProps,
+  useMergedRefs,
+  type BoxLayoutProps,
+  type ContainerProp,
+  type ResponsiveValue,
+  type StateLinkInput,
+  type WithRef,
+} from '../../core';
 import { type RevealProps } from '../../core/reveal/reveal';
-import { resolveContentAnimate, type ContentAnimate } from '../../hooks/contentMotion';
+import { resolveContentAnimate, type FlexContentAnimate } from '../../hooks/contentMotion';
 import { useContentMotion } from '../../hooks/useContentMotion';
-import { isSharedMotionAnimate, useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
+import {
+  isSharedMotionAnimate,
+  useSharedMotion,
+  type SharedMotionProps,
+} from '../../hooks/useSharedMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 
-type JustifyContentKey = 'start' | 'end' | 'center' | 'space_between' | 'space_around' | 'space_evenly';
+type JustifyContentKey =
+  | 'start'
+  | 'end'
+  | 'center'
+  | 'space_between'
+  | 'space_around'
+  | 'space_evenly';
 
 const c = createLayoutClasses();
 
-export interface BoxProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayoutProps, ContainerProp, SharedMotionProps<ContentAnimate>, RevealProps {
+export interface BoxProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    BoxLayoutProps,
+    ContainerProp,
+    SharedMotionProps<FlexContentAnimate>,
+    RevealProps {
   children?: React.ReactNode;
   style?: CSSProperties;
 
@@ -23,10 +54,8 @@ export interface BoxProps extends React.HTMLAttributes<HTMLDivElement>, BoxLayou
   /** Native scroll surface with the kit scrollbar; constrain its size using layout props. */
   scroll?: 'x' | 'y' | 'both';
 
-  /** Появление и смена содержимого: `animate="fadeIn"` — вход при монтировании,
-   *  `animate={['fadeIn', { key: tab }]}` — при смене `key` старое уходит зеркальным ходом, затем
-   *  входит новое. Узел тот же (ref и фокус сохраняются), reduced-motion меняет сразу. */
-  animate?: SharedMotionProps<ContentAnimate>['animate'];
+  /** Появление: { when: 'load', effect: 'fade' }. Смена содержимого: { when: 'change', effect: 'fade', key }. */
+  animate?: SharedMotionProps<FlexContentAnimate>['animate'];
 
   justify?: ResponsiveValue<JustifyContentKey>;
   linkState?: StateLinkInput;
@@ -59,17 +88,35 @@ export function Box({
 }: WithRef<BoxProps, HTMLDivElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, reveal, animate });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
+    perspective3d,
+    parallax,
+    reveal,
+    animate,
+  });
   const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
-  const contentMotion = useContentMotion({ ...resolveContentAnimate(contentAnimate), children, onAnimationEnd });
+  const contentMotion = useContentMotion({
+    ...resolveContentAnimate(contentAnimate),
+    children,
+    onAnimationEnd,
+  });
   const setRefs = useMergedRefs(setMotionNode, contentMotion.ref, ref);
 
   const content = (
     <div
       ref={setRefs}
       data-scroll={scroll}
-      className={cx('ui-box', containerClass(container), ...layout, ...c.value('justify', justify), contentMotion.className, className)}
-      style={{ ...(motionStyle ?? null), ...style }}
+      className={cx(
+        'Box',
+        styles.Box,
+        'ui-box',
+        containerClass(container),
+        ...layout,
+        ...c.value('justify', justify),
+        contentMotion.className,
+        className,
+      )}
+      style={{ ...(motionStyle ?? null), ...style, ...(contentMotion.style ?? null) }}
       {...revealAttrs}
       {...rest}
       {...stateLinkProps(linkState, {

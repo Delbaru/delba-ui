@@ -3,6 +3,9 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
+import styles from './TextClip.module.scss';
+import { cx } from '../../../../core';
+
 import { Flex } from '../../../Flex';
 import type { TextAnimationContext } from '../types';
 import type { TextClipOptions } from './types';
@@ -26,19 +29,31 @@ export function TextClip({ options }: TextAnimationContext<TextClipOptions>) {
   displayedRef.current = displayedStep;
 
   useEffect(() => {
-    if (itemRefs.current.length === 0) return;
-    setHeights(itemRefs.current.map((el) => el?.offsetHeight || 0));
+    const items = itemRefs.current.slice(0, options?.steps.length ?? 0);
+    const view = stageRef.current?.ownerDocument.defaultView;
+    if (!view) return;
+
+    const measure = () => {
+      const next = items.map((node) => node?.offsetHeight ?? 0);
+      setHeights((previous) => previous.length === next.length && previous.every((height, index) => height === next[index]) ? previous : next);
+    };
+    const observer = new view.ResizeObserver(measure);
+    items.forEach((node) => { if (node) observer.observe(node); });
+    measure();
+    return () => observer.disconnect();
   }, [options?.steps]);
 
   useEffect(() => {
     if (requestedStep === undefined) return;
-    if (requestedStep === displayedRef.current || durationMs === 0 || prefersReducedMotion()) {
+    if (requestedStep === displayedRef.current || durationMs === 0 || prefersReducedMotion(stageRef.current?.ownerDocument.defaultView)) {
       setDisplayedStep(requestedStep);
       setClipPath('inset(0 0 0 0)');
       return;
     }
     const timers: ReturnType<typeof setTimeout>[] = [];
-    const later = (callback: () => void, delay: number) => { timers.push(setTimeout(callback, delay)); };
+    const later = (callback: () => void, delay: number) => {
+      timers.push(setTimeout(callback, delay));
+    };
     later(() => {
       setClipPath('inset(0 0 100% 0)');
       later(() => {
@@ -58,19 +73,22 @@ export function TextClip({ options }: TextAnimationContext<TextClipOptions>) {
   const maxHeight = heights.length > 0 ? Math.max(...heights) : 0;
   // Измеренная высота — значение рантайма: класса утилиты под него нет, поэтому стилем.
   const stageStyle = {
-    height: maxHeight ? `${maxHeight}px` : options.clipHeight ?? 'auto',
+    height: maxHeight ? `${maxHeight}px` : (options.clipHeight ?? 'auto'),
     clipPath,
     '--clip-dur': `${durationMs}ms`,
   } as CSSProperties;
 
   return (
-    <Flex ref={stageRef} className={'ui-clip'} style={stageStyle}>
+    <Flex ref={stageRef} className={cx('TextClip', styles.TextClip, 'ui-clip')} style={stageStyle}>
       {options.steps.map((step, index) => (
         <span
-            key={step.slice(0, 60)}
-            ref={(el) => { itemRefs.current[index] = el; }}
-            className={'ui-clip-item'}
-            style={{ opacity: index === displayedStep ? 1 : 0 }}
+          key={index}
+            aria-hidden={index !== displayedStep || undefined}
+          ref={(el) => {
+            itemRefs.current[index] = el;
+          }}
+          className={'ui-clip-item'}
+          style={{ opacity: index === displayedStep ? 1 : 0 }}
         >
           {step}
         </span>

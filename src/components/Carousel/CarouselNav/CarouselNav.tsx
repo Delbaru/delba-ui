@@ -1,5 +1,7 @@
 'use client';
 
+import { UI_MESSAGES } from '../../../core/base/messages';
+
 import styles from './CarouselNav.module.scss';
 
 import { useNearestCarouselControls } from '../controls';
@@ -10,7 +12,9 @@ import { assetUrl, cx } from '../../../core';
 import arrowIcon from '../../../../assets/icons/ui/arrows/arrow_bold.svg';
 
 export interface CarouselNavProps {
+    /** Additional root class. */
     className?: string;
+    /** Identifier of the carousel controlled by these arrows. */
     carouselId?: string;
 }
 
@@ -27,7 +31,7 @@ export function CarouselNav({ className, carouselId }: CarouselNavProps) {
             align={['center', 'center', null]}
             justify={['end', null, null]}
             gap={[8, 4, null]}
-            className={cx(styles.CarouselNav, snapshot.navigationClassName, className)}
+            className={cx(styles.CarouselNav, 'CarouselNav', snapshot.navigationClassName, className)}
             data-carousel-navigation
         >
             {shouldRender ? (
@@ -42,7 +46,7 @@ export function CarouselNav({ className, carouselId }: CarouselNavProps) {
                         onClick={() => snapshot.api?.prev()}
                         disabled={prevDisabled}
                         className={cx(styles.nav, styles.prev)}
-                        aria-label='Предыдущий слайд'
+                        aria-label={UI_MESSAGES.carousel.previous}
                         data-carousel-nav-button='prev'
                     >
                         <Icon
@@ -63,7 +67,7 @@ export function CarouselNav({ className, carouselId }: CarouselNavProps) {
                         onClick={() => snapshot.api?.next()}
                         disabled={nextDisabled}
                         className={cx(styles.nav, styles.next)}
-                        aria-label='Следующий слайд'
+                        aria-label={UI_MESSAGES.carousel.next}
                         data-carousel-nav-button='next'
                     >
                         <Icon

@@ -43,10 +43,11 @@ function resolvePlacement(
   anchorRect: DOMRect,
   floatingRect: DOMRect,
   gap: number,
-  viewportPadding: number
+  viewportPadding: number,
+  view: Window,
 ): FloatingPlacement {
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  const viewportWidth = view.innerWidth;
+  const viewportHeight = view.innerHeight;
   const spaceTop = anchorRect.top - viewportPadding;
   const spaceRight = viewportWidth - anchorRect.right - viewportPadding;
   const spaceBottom = viewportHeight - anchorRect.bottom - viewportPadding;
@@ -73,10 +74,11 @@ function resolveAlignedPosition(
   anchorRect: DOMRect,
   floatingRect: DOMRect,
   gap: number,
-  viewportPadding: number
+  viewportPadding: number,
+  view: Window,
 ): FloatingPosition {
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  const viewportWidth = view.innerWidth;
+  const viewportHeight = view.innerHeight;
   const maxLeft = Math.max(viewportPadding, viewportWidth - floatingRect.width - viewportPadding);
   const maxTop = Math.max(viewportPadding, viewportHeight - floatingRect.height - viewportPadding);
 
@@ -124,9 +126,10 @@ function resolveAvailableHeight(
   placement: FloatingPlacement,
   anchorRect: DOMRect,
   gap: number,
-  viewportPadding: number
+  viewportPadding: number,
+  view: Window,
 ): number {
-  const viewportHeight = window.innerHeight;
+  const viewportHeight = view.innerHeight;
 
   if (placement === 'top') {
     return Math.max(0, anchorRect.top - gap - viewportPadding);
@@ -157,7 +160,14 @@ export function useAnchoredFloating({
   viewportPadding = 8,
   keepPositionWhenInactive = false,
 }: UseAnchoredFloatingOptions) {
-  const frameRef = useRef<number | null>(null);
+  const frameRef = useRef<{ view: Window; id: number } | null>(null);
+  const connection = useRef<{
+    anchor: Element;
+    floating: HTMLElement;
+    view: Window;
+    schedule(): void;
+    dispose(): void;
+  } | null>(null);
   const hasEverPositionedRef = useRef(false);
   const [snapshot, setSnapshot] = useState<FloatingSnapshot>({
     placement: preferredPlacement,
@@ -167,11 +177,12 @@ export function useAnchoredFloating({
   });
 
   const updatePosition = useCallback(() => {
-    if (typeof window === 'undefined' || !isActive) return;
-
     const anchorNode = anchorRef.current;
     const floatingNode = floatingRef.current;
-    if (!anchorNode || !floatingNode) return;
+    const view = anchorNode?.ownerDocument.defaultView;
+    if (!isActive || !anchorNode || !floatingNode || !view) return;
+    // A portal can move documents after its anchor; wait for both refs to agree.
+    if (floatingNode.ownerDocument !== anchorNode.ownerDocument) return;
 
     const anchorRect = anchorNode.getBoundingClientRect();
     // Ширину якоря публикуем ДО замера панели: комбобокс тянет список ровно по ширине поля
@@ -179,9 +190,9 @@ export function useAnchoredFloating({
     // посчитается по контентной ширине панели, и кламп у края экрана уедет.
     floatingNode.style.setProperty('--floating-anchor-width', `${Math.round(anchorRect.width)}px`);
     const floatingRect = floatingNode.getBoundingClientRect();
-    const nextPlacement = resolvePlacement(preferredPlacement, anchorRect, floatingRect, gap, viewportPadding);
+    const nextPlacement = resolvePlacement(preferredPlacement, anchorRect, floatingRect, gap, viewportPadding, view);
     const nextSnapshot = {
-      ...resolveAlignedPosition(nextPlacement, align, anchorRect, floatingRect, gap, viewportPadding),
+      ...resolveAlignedPosition(nextPlacement, align, anchorRect, floatingRect, gap, viewportPadding, view),
       isPositioned: true,
     };
 
@@ -189,7 +200,7 @@ export function useAnchoredFloating({
     floatingNode.style.setProperty('--floating-top', `${Math.round(nextSnapshot.top)}px`);
     floatingNode.style.setProperty(
       '--floating-available',
-      `${Math.round(resolveAvailableHeight(nextPlacement, anchorRect, gap, viewportPadding))}px`
+      `${Math.round(resolveAvailableHeight(nextPlacement, anchorRect, gap, viewportPadding, view))}px`
     );
     hasEverPositionedRef.current = true;
 
@@ -197,56 +208,73 @@ export function useAnchoredFloating({
       areSnapshotsEqual(currentSnapshot, nextSnapshot) ? currentSnapshot : nextSnapshot
     ));
   }, [align, anchorRef, floatingRef, gap, isActive, preferredPlacement, viewportPadding]);
+  const updateRef = useRef(updatePosition);
+  updateRef.current = updatePosition;
 
   const scheduleUpdatePosition = useCallback(() => {
-    if (typeof window === 'undefined') return;
+    const view = anchorRef.current?.ownerDocument.defaultView;
+    if (!view) return;
     if (frameRef.current !== null) return;
 
-    frameRef.current = window.requestAnimationFrame(() => {
-      frameRef.current = null;
-      updatePosition();
-    });
-  }, [updatePosition]);
+    frameRef.current = {
+      view,
+      id: view.requestAnimationFrame(() => {
+        frameRef.current = null;
+        updateRef.current();
+      }),
+    };
+  }, [anchorRef]);
 
   useLayoutEffect(() => {
     updatePosition();
-  }, [updatePosition]);
+  });
 
   useEffect(() => {
     if (!isActive) {
       setSnapshot((currentSnapshot) => (
         currentSnapshot.isPositioned ? { ...currentSnapshot, isPositioned: false } : currentSnapshot
       ));
-      return;
     }
+  }, [isActive]);
 
-    if (typeof window === 'undefined') return;
-
-    updatePosition();
+  // Refs can change targets after a commit without changing the ref object itself.
+  useEffect(() => {
     const anchorNode = anchorRef.current;
     const floatingNode = floatingRef.current;
-    const resizeObserver = typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(scheduleUpdatePosition)
-      : null;
+    const view = anchorNode?.ownerDocument.defaultView;
+    const previous = connection.current;
+    const unchanged = previous?.anchor === anchorNode && previous?.floating === floatingNode
+      && previous?.view === view && previous?.schedule === scheduleUpdatePosition;
+    if (isActive && unchanged) return;
+    previous?.dispose();
+    connection.current = null;
+    if (!isActive || !anchorNode || !floatingNode || !view) return;
 
-    resizeObserver?.observe(anchorNode ?? document.body);
-    if (floatingNode) resizeObserver?.observe(floatingNode);
+    const resizeObserver = view.ResizeObserver ? new view.ResizeObserver(scheduleUpdatePosition) : null;
+    resizeObserver?.observe(anchorNode);
+    resizeObserver?.observe(floatingNode);
 
-    window.addEventListener('resize', scheduleUpdatePosition);
+    view.addEventListener('resize', scheduleUpdatePosition);
     // Capture includes nested native scrollers, not just the page viewport.
-    window.addEventListener('scroll', scheduleUpdatePosition, true);
+    view.addEventListener('scroll', scheduleUpdatePosition, true);
 
-    return () => {
+    const dispose = () => {
       if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current.view.cancelAnimationFrame(frameRef.current.id);
         frameRef.current = null;
       }
 
       resizeObserver?.disconnect();
-      window.removeEventListener('resize', scheduleUpdatePosition);
-      window.removeEventListener('scroll', scheduleUpdatePosition, true);
+      view.removeEventListener('resize', scheduleUpdatePosition);
+      view.removeEventListener('scroll', scheduleUpdatePosition, true);
     };
-  }, [anchorRef, floatingRef, isActive, scheduleUpdatePosition, updatePosition]);
+    connection.current = { anchor: anchorNode, floating: floatingNode, view, schedule: scheduleUpdatePosition, dispose };
+  });
+
+  useEffect(() => () => {
+    connection.current?.dispose();
+    connection.current = null;
+  }, []);
 
   // При деактивации обычно прячем за экран (анти-флэш до первого замера). С keepPositionWhenInactive
   // оставляем последнюю позицию — чтобы был виден fade-out (но до первого замера всё равно прячем).

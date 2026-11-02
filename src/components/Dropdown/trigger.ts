@@ -5,7 +5,11 @@ export function composeDropdownTriggerClick<E extends { defaultPrevented: boolea
   disabled: boolean | undefined,
   toggle: () => void,
 ): (event: E) => void {
-  return composeEventHandlers(onClick, () => {
-    if (!disabled) toggle();
-  }, { cancelable: true });
+  return composeEventHandlers(
+    onClick,
+    () => {
+      if (!disabled) toggle();
+    },
+    { cancelable: true },
+  );
 }

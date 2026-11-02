@@ -1,0 +1,11 @@
+@layer ui.components {
+  .InputInlineError {
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .text {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}

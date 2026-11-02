@@ -1,6 +1,6 @@
 # PhoneField
 
-Статус: текущий договор; сверено с исходниками, без подтверждения runtime.
+Статус: текущий договор; сверено с реализацией. Проверки — по критериям ниже и общей приёмке библиотеки.
 
 ## Назначение и применение
 
@@ -52,3 +52,21 @@ export function ContactPhone() {
 
 [API](../../../../src/components/PhoneField/PhoneField.tsx) · [Страны](../../../../src/components/PhoneField/countries.ts) ·
 [Input](Input.md) · [Приёмка](../../verification/acceptance.md)
+
+## Устройство
+
+PhoneField.tsx — композиция Input с CountryPicker. PhoneField.model владеет
+согласованием explicit country и autodetection, форматированием и контрактом
+публикации E.164. phoneNumbers объединяет read, country.change, validation.check
+и selection.map над существующими чистыми алгоритмами; это не вторая модель Input.
+
+CountryPicker/ содержит собственный компонент и SCSS. Класс PhoneField добавлен
+на корень Input, CountryPicker — на корень Dropdown. Свойства ref/collapse/slots.end
+передаются прежним публичным способом. Для textarea и Input общая механика Field
+используется напрямую; PhoneField пользуется ей через Input, не создавая ещё draft.
+
+Каретка сопоставляется по цифрам до публичного callback. Восстановление поручено
+общему scheduleCaretRestore с отменой прежней команды, проверкой текущего DOM-узла
+и formatted value, frame своего ownerDocument. Диапазон и направление сохраняются.
+Поиск страны также планирует фокус через документ trigger и отменяет frame при unmount.
+Локаль остаётся явным публичным контрактом, включая страны с общим calling code.

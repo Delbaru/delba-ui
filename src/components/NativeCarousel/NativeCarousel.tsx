@@ -1,6 +1,8 @@
 'use client';
 
-import { Children, isValidElement, useId, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { UI_MESSAGES, formatUiMessage } from '../../core/base/messages';
+
+import { Children, isValidElement, useId, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { composeEventHandlers, createLayoutClasses, cx, resolveResponsive, useMergedRefs, type ResponsiveValue, type WithRef } from '../../core';
 import { Flex, type FlexProps } from '../Flex';
 import { useMotionTime } from '../../hooks/useMotionTime';
@@ -78,17 +80,20 @@ export function NativeCarousel({ ref, children, label, controller: externalContr
     const duration = useMotionTime('carousel', 'duration', root, speed);
     const delay = useMotionTime('carousel', 'autoplayDelay', root, autoplayDelay);
     const inertiaDuration = useMotionTime('carousel', 'inertiaDuration', root, typeof inertia === 'object' ? inertia.duration : undefined);
-    const momentum = {
-        enabled: Boolean(inertia), duration: inertiaDuration,
-        maxSlides: typeof inertia === 'object' ? inertia.maxSlides : undefined,
-        minimumVelocity: typeof inertia === 'object' ? inertia.minimumVelocity : undefined,
-    };
-    const options = useRef<NativeCarouselOptions>({ count: slides.length, initialIndex, duration, easing, drag, rewind, loop, mousewheel, autoplay, delay, onIndexChange, contentKey, pauseInactiveMedia, inertia: momentum });
-    const responsiveSignature = `${String(slidesPerView)}:${String(gap)}:${String(orientation)}`;
+    const momentumEnabled = Boolean(inertia);
+    const maxSlides = typeof inertia === 'object' ? inertia.maxSlides : undefined;
+    const minimumVelocity = typeof inertia === 'object' ? inertia.minimumVelocity : undefined;
+    const settings = useMemo<NativeCarouselOptions>(() => ({
+        count: slides.length, initialIndex, duration, easing, drag, rewind, loop, mousewheel,
+        autoplay, delay, onIndexChange, contentKey, pauseInactiveMedia,
+        inertia: { enabled: momentumEnabled, duration: inertiaDuration, maxSlides, minimumVelocity },
+    }), [slides.length, initialIndex, duration, easing, drag, rewind, loop, mousewheel, autoplay, delay, onIndexChange, contentKey, pauseInactiveMedia, momentumEnabled, inertiaDuration, maxSlides, minimumVelocity]);
+    const options = useRef(settings);
+    const responsiveSignature = String(slidesPerView) + ':' + String(gap) + ':' + String(orientation);
     useLayoutEffect(() => {
-        options.current = { count: slides.length, initialIndex, duration, easing, drag, rewind, loop, mousewheel, autoplay, delay, onIndexChange, contentKey, pauseInactiveMedia, inertia: momentum };
+        options.current = settings;
         engine.current?.update();
-    }, [slides.length, initialIndex, duration, easing, drag, rewind, loop, mousewheel, autoplay, delay, onIndexChange, responsiveSignature, contentKey, pauseInactiveMedia, inertiaDuration, momentum.enabled, momentum.maxSlides, momentum.minimumVelocity]);
+    }, [settings, responsiveSignature]);
     useLayoutEffect(() => {
         if (!root.current || !viewport.current || !track.current) return;
         const driver = createNativeCarousel(root.current, viewport.current, track.current, controller, () => options.current);
@@ -111,7 +116,7 @@ export function NativeCarousel({ ref, children, label, controller: externalContr
         data-native-carousel
         data-draggable={drag ? 'true' : 'false'}
         gap={gap}
-        className={cx(styles.Root, ...c.key('slides-per-view', perView as ResponsiveValue<string>, value => value), ...c.key('orientation', orientation, value => value), className)}
+        className={cx(styles.NativeCarousel, 'NativeCarousel', ...c.key('slides-per-view', perView as ResponsiveValue<string>, value => value), ...c.key('orientation', orientation, value => value), className)}
     >
         <div ref={viewport} className={styles.Viewport}>
             <div ref={track} className={styles.Track}>
@@ -120,7 +125,7 @@ export function NativeCarousel({ ref, children, label, controller: externalContr
                     className={cx(styles.Slide, slideClassName)}
                     role="group"
                     aria-roledescription="слайд"
-                    aria-label={`${index + 1} из ${slides.length}`}
+                    aria-label={formatUiMessage(UI_MESSAGES.carousel.slide, { index: index + 1, count: slides.length })}
                 >{slide}</div>)}
             </div>
         </div>
@@ -128,6 +133,6 @@ export function NativeCarousel({ ref, children, label, controller: externalContr
             className={styles.Announcement}
             aria-live={snapshot.playing ? 'off' : 'polite'}
             aria-atomic="true"
-        >{snapshot.pageCount > 0 ? `Позиция ${snapshot.index + 1} из ${snapshot.pageCount}` : ''}</span>
+        >{snapshot.pageCount > 0 ? formatUiMessage(UI_MESSAGES.carousel.position, { index: snapshot.index + 1, count: snapshot.pageCount }) : ''}</span>
     </Flex>;
 }

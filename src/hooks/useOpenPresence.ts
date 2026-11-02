@@ -15,8 +15,9 @@ export function useOpenPresence(open: boolean, enabled = true) {
       return;
     }
     const node = ref.current;
-    if (!node || !retained) return;
-    if (prefersReducedMotion()) {
+    const view = node?.ownerDocument.defaultView;
+    if (!node || !view || !retained) return;
+    if (prefersReducedMotion(view)) {
       setRetained(false);
       return;
     }
@@ -28,9 +29,9 @@ export function useOpenPresence(open: boolean, enabled = true) {
     });
     const duration = Math.max(readMotionMs(node), readMotionMs(node, 'animation'));
     if (!animations.length && duration === 0) { finish(); return; }
-    const timer = window.setTimeout(finish, duration + MOTION_END_BUFFER_MS);
+    const timer = view.setTimeout(finish, duration + MOTION_END_BUFFER_MS);
     if (animations.length) void Promise.allSettled(animations.map((animation) => animation.finished)).then(finish);
-    return () => { active = false; window.clearTimeout(timer); };
+    return () => { active = false; view.clearTimeout(timer); };
   }, [open, enabled, retained]);
 
   return { ref, present: open || retained };

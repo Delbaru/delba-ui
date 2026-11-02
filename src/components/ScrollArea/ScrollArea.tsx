@@ -1,5 +1,7 @@
 'use client';
 
+import styles from './ScrollArea.module.scss';
+
 import { cx, type WithRef } from '../../core';
 import { Flex, type FlexProps } from '../Flex';
 import { scrollbarProps, type ScrollbarOptions } from './scrollbar';
@@ -24,7 +26,7 @@ export function ScrollArea({ axis = 'y', fade = false, scrollbar, className, sty
             {...props}
             scrollFade={fade ? axis : false}
             data-scroll-axis={axis}
-            className={cx('ui-scroll-area', decoration.className, className)}
+            className={cx('ScrollArea', styles.ScrollArea, 'ui-scroll-area', decoration.className, className)}
             style={{ ...decoration.style, ...style }}
         />
     );

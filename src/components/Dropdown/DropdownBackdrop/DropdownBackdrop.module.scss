@@ -1,0 +1,11 @@
+@layer ui.components {
+  .DropdownBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-under-floating);
+    pointer-events: none;
+    &[data-open] {
+      pointer-events: auto;
+    }
+  }
+}

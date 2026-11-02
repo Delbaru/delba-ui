@@ -54,3 +54,10 @@ export function Gallery() {
 Договор: [компонент и props](../../../../src/components/Carousel/CarouselDots/CarouselDots.tsx),
 [связь контролов](../../../../src/components/Carousel/controls.ts),
 [приёмка](../../verification/acceptance.md).
+
+## Владение и оформление
+
+CarouselDots использует общий controls registry для Carousel и NativeCarousel.
+Он не хранит собственный индекс и вызывает только snapshot.api.goTo. Свои
+CarouselDots.module.scss и класс CarouselDots; тексты кнопок — messages.carousel.goTo.
+Подписка принадлежит документу корня; замена найденной карусели переподключает её.

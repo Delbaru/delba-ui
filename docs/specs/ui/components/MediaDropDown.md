@@ -58,3 +58,18 @@ SelectedItem и тип имеют независимые controlled/uncontrolled
 Источник: [MediaDropDown.tsx](../../../../src/components/MediaDropDown/MediaDropDown.tsx),
 [определение типа](../../../../src/components/MediaDropDown/lib/media-type.ts).
 Договор сверён с исходником, не с браузерным сценарием.
+
+## Композиция и владельцы
+
+MediaDropDown.model разделяет typed двери popup/type/selection/file/link/drag.
+Один select принимает результат файла или ссылки, сохраняя controlled/uncontrolled
+владение типом и выбором. MediaOperationOwner отменяет устаревшее чтение при смене
+операции, disabled и unmount. File input сбрасывается после обработки для повторного
+выбора того же файла. Загрузкой на сервер по-прежнему владеет потребитель.
+
+MediaTrigger, MediaDropzone и MediaTabs находятся в собственных именованных папках
+и импортируют только свои SCSS. Основной компонент соединяет их через общий Dropdown;
+ручного outside-dismiss и второго CSS-движка открытия больше нет. Панель использует
+объектный open animate. Сохраняется прежняя политика MediaDropDown: снаружи закрывается,
+blur/Escape сами по себе не закрывают. Trigger доступен Enter/Space; кнопки preview/clear
+не переключают popup и не отбирают владение выбором у потребителя.

@@ -57,3 +57,15 @@ Autoplay зависит от политики браузера; компонен
 
 Договор: [VideoProps и реализация](../../../../src/components/Video/Video.tsx),
 [VideoPlayer](VideoPlayer.md), [приёмка](../../verification/acceptance.md).
+
+## Устройство после рефакторинга
+
+Video.tsx соединяет оформление, motion и нативный video. Video.model.ts владеет
+responsive source и состоянием optional play-overlay: media.source, media.playback,
+media.events. Нативные play/pause/ended остаются источником playing; пользовательские
+события вызываются после синхронизации overlay. Обещание play() может быть отклонено браузером.
+
+Scalar src доступен при SSR; tuple ждёт hydration, чтобы телефон не скачивал desktop-ролик.
+На mobile пропущенный кадр берётся из tablet, затем desktop; эта политика одинакова для poster.
+Собственный Video.module.scss и класс Video принадлежат wrapper, VideoElement — реальному video.
+Доступное имя кнопки задаёт ui.config.messages.video.open.

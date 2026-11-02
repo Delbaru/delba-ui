@@ -1,231 +1,22 @@
 'use client';
 
-import {
-    useCallback,
-    useEffect,
-    useImperativeHandle,
-    useMemo,
-    useRef,
-    useState,
-    useSyncExternalStore,
-    type CSSProperties,
-    type FocusEvent,
-    type KeyboardEvent,
-} from 'react';
+import { UI_MESSAGES, formatUiMessage } from '../../core/base/messages';
 
-import styles from './VideoPlayer.module.scss';
-
-import { assetUrl, clamp01, pad } from '../../core';
-import { createLayoutClasses, cx, radiusClasses, resolveRadiusInput, sizeClasses, type WithRef, useMergedRefs } from '../../core';
-import { Icon } from '../Icon';
+import type { CSSProperties } from 'react';
+import { createLayoutClasses, cx, resolveRadiusInput, sizeClasses, type WithRef } from '../../core';
 import { Text } from '../Text';
+import { Flex } from '../Flex';
 import { Video } from '../Video';
-
-import { usePointerRatio } from './usePointerRatio';
-import { useVideoPlayer } from './useVideoPlayer';
-import type { MediaSource, VideoPlayerApi, VideoPlayerApiRef, VideoPlayerControlKey, VideoPlayerPreviewSource, VideoPlayerProps } from './types';
-
-import playIcon from '../../../assets/icons/ui/play/style-2/play.svg';
-import pauseIcon from '../../../assets/icons/ui/pause/style-1/pause.svg';
-import volumeIcon from '../../../assets/icons/ui/volume/style-1/volume.svg';
-import volumeMutedIcon from '../../../assets/icons/ui/volume/style-1/volume-muted.svg';
-import fullscreenIcon from '../../../assets/icons/ui/fullscreen/style-1/fullscreen.svg';
-import fullscreenQuitIcon from '../../../assets/icons/ui/fullscreen/style-1/fullscreen-quit.svg';
+import { IconSwap } from './IconSwap/IconSwap';
+import { Icon } from '../Icon';
+import { TimelinePreview } from './TimelinePreview/TimelinePreview';
+import { useVideoPlayerView } from './VideoPlayer.model';
+import { DEFAULT_RATES, ICON, formatClock, formatRate, nextRate } from './VideoPlayer.config';
+import type { VideoPlayerProps } from './types';
+import styles from './VideoPlayer.module.scss';
 
 const c = createLayoutClasses(styles);
 
-const DEFAULT_CONTROLS: VideoPlayerControlKey[] = ['play', 'timeline', 'time', 'volume', 'fullscreen'];
-
-const DEFAULT_RATES = [1, 1.25, 1.5, 2];
-
-// Следующая скорость по кругу; текущей нет в списке — первая.
-function nextRate(rates: number[], current: number): number {
-    const index = rates.indexOf(current);
-
-    return rates[(index + 1) % rates.length] ?? current;
-}
-
-function formatRate(rate: number): string {
-    return `${String(rate).replace('.', ',')}×`;
-}
-
-// Иконки бара — Solar bold, как в макете (node 3284:22814).
-const ICON = {
-    play: assetUrl(playIcon),
-    pause: assetUrl(pauseIcon),
-    volume: assetUrl(volumeIcon),
-    volumeMuted: assetUrl(volumeMutedIcon),
-    fullscreen: assetUrl(fullscreenIcon),
-    fullscreenQuit: assetUrl(fullscreenQuitIcon),
-};
-
-// Через сколько мс простоя прятать управление во время воспроизведения.
-const AUTO_HIDE_MS = 2000;
-// Окно ожидания второго клика (одиночный = play/pause, двойной = фуллскрин).
-const DOUBLE_CLICK_MS = 220;
-// Шаг громкости колесом мыши.
-const WHEEL_VOLUME_STEP = 0.05;
-
-// Перемотка с клавиатуры: стрелки — шаг в секундах, PageUp/PageDown — доля длительности.
-const TIMELINE_STEP_SEC = 5;
-const TIMELINE_PAGE_RATIO = 0.1;
-
-// Часы записи HH:MM:SS с ведущими нулями (нижний бар: «00:32:12 / 01:32:23»).
-function formatClock(totalSeconds: number): string {
-    const safe = Number.isFinite(totalSeconds) && totalSeconds > 0 ? Math.floor(totalSeconds) : 0;
-
-    return `${pad(Math.floor(safe / 3600))}:${pad(Math.floor((safe % 3600) / 60))}:${pad(safe % 60)}`;
-}
-
-function nowMs(): number {
-    return typeof performance !== 'undefined' ? performance.now() : 0;
-}
-
-function resolveSrc(source?: MediaSource): string | undefined {
-    if (!source) return undefined;
-
-    return typeof source === 'string' ? source : source.src;
-}
-
-function assignApiRef(apiRef: VideoPlayerApiRef | undefined, value: VideoPlayerApi | null): void {
-    if (!apiRef) return;
-
-    if (typeof apiRef === 'function') {
-        apiRef(value);
-        return;
-    }
-
-    apiRef.current = value;
-}
-
-// Иконка бара. Solar-глифы залиты (fill), поэтому по умолчанию красим только fill; линейным иконкам
-// (лейбл источника) нужен ещё stroke — включается флагом withStroke.
-function BarIcon({ src, withStroke }: { src: string; withStroke?: boolean }) {
-    return (
-        <Icon
-            src={src}
-            w={[24, null, null]}
-            h={[24, null, null]}
-            fill='var(--white-100)'
-            stroke={withStroke ? 'var(--white-100)' : undefined}
-        />
-    );
-}
-
-// Плавная смена двух иконок (crossfade + scale) в фикс-боксе 24×24 — ширина не скачет.
-function IconSwap({ active, a, b }: { active: boolean; a: string; b: string }) {
-    return (
-        <span className={styles.iconSwap} data-active={active ? 'b' : 'a'}>
-            <span className={cx(styles.iconSwapItem, styles.iconSwapA)}><BarIcon src={a} /></span>
-
-            <span className={cx(styles.iconSwapItem, styles.iconSwapB)}><BarIcon src={b} /></span>
-        </span>
-    );
-}
-
-export interface TimelinePreviewHandle {
-    show(ratio: number, trackWidth: number, time: number): void;
-    hide(): void;
-}
-
-// Превью таймлайна: кадр (скрытое <video>, сикаем throttle-ом через rAF) + время (через Text — родная
-// типографика) + каретка, указывающая на курсор. Позиция бокса и каретки — императивно (без ре-рендера);
-// в state только видимость и целая секунда (ре-рендер лишь при смене секунды).
-function TimelinePreview({ ref, source }: WithRef<{ source?: VideoPlayerPreviewSource }, TimelinePreviewHandle>) {
-    const boxRef = useRef<HTMLDivElement | null>(null);
-    const caretRef = useRef<HTMLSpanElement | null>(null);
-    const videoRef = useRef<HTMLVideoElement | null>(null);
-    const pendingRef = useRef<number | null>(null);
-    const rafRef = useRef(0);
-
-    const [visible, setVisible] = useState(false);
-    const [sec, setSec] = useState(0);
-    const [framed, setFramed] = useState(true);
-    const sourceRef = useRef(source);
-
-    sourceRef.current = source;
-
-    useImperativeHandle(ref, () => ({
-        show(ratio, trackWidth, time) {
-            const box = boxRef.current;
-
-            if (box) {
-                const half = box.offsetWidth / 2;
-                const cursorPx = ratio * trackWidth;
-                const leftPx = Math.min(Math.max(cursorPx, half), Math.max(trackWidth - half, half));
-
-                box.style.left = `${leftPx}px`;
-
-                if (caretRef.current) {
-                    caretRef.current.style.left = `calc(50% + ${cursorPx - leftPx}px)`;
-                }
-            }
-
-            const span = sourceRef.current;
-            const inSpan = !!span && time >= span.from && time <= span.to;
-
-            setFramed((prev) => (prev === inSpan ? prev : inSpan));
-            pendingRef.current = inSpan && span ? time - span.from : null;
-
-            if (!rafRef.current && typeof requestAnimationFrame !== 'undefined') {
-                rafRef.current = requestAnimationFrame(() => {
-                    rafRef.current = 0;
-
-                    const node = videoRef.current;
-                    const pending = pendingRef.current;
-
-                    if (node && pending != null) {
-                        const nodeDuration = node.duration;
-                        node.currentTime = Number.isFinite(nodeDuration) ? Math.min(pending, Math.max(nodeDuration - 0.05, 0)) : pending;
-                    }
-                });
-            }
-
-            const flooredSec = Math.floor(time);
-            setVisible(true);
-            setSec((prev) => (prev === flooredSec ? prev : flooredSec));
-        },
-        hide() {
-            setVisible(false);
-        },
-    }), []);
-
-    useEffect(() => () => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    }, []);
-
-    return (
-        <div
-            ref={boxRef}
-            className={styles.preview}
-            data-visible={visible ? 'true' : 'false'}
-            aria-hidden='true'
-        >
-            {source ? <video
-                ref={videoRef}
-                className={styles.previewVideo}
-                data-framed={framed ? 'true' : 'false'}
-                src={source.src}
-                muted
-                preload='auto'
-                playsInline
-            /> : null}
-
-            <Text
-                variant={['micro', null, null]}
-                color='var(--white-100)'
-                whiteSpace={['nowrap', null, null]}
-            >{formatClock(sec)}</Text>
-
-            <span ref={caretRef} className={styles.previewCaret} aria-hidden='true' />
-        </div>
-    );
-}
-
-// Скин плеера: примитив Video подложкой + оверлеи (лейбл сверху-слева, бар управления снизу).
-// Логика — в контроллере (useVideoPlayer). Тикающее время двигает заливку императивно; таймкод — раз
-// в секунду. YouTube-поведение: автоскрытие (при простое во время игры и при уходе мыши), клик =
-// play/pause, двойной = фуллскрин, превью кадра + время над курсором. interactive=false — ведомый режим.
 export function VideoPlayer({
     ref,
     controller,
@@ -260,263 +51,13 @@ export function VideoPlayer({
     borderBLR,
     grow,
 }: WithRef<VideoPlayerProps, HTMLDivElement>) {
-    const fallbackController = useVideoPlayer(autoPlay ? { autoPlay } : undefined);
-    const player = controller ?? fallbackController;
-
-    const state = useSyncExternalStore(player.subscribe, player.getSnapshot, player.getSnapshot);
-
-    const rootRef = useRef<HTMLDivElement | null>(null);
-    const videoNodeRef = useRef<HTMLVideoElement | null>(null);
-    const fillRef = useRef<HTMLDivElement | null>(null);
-    const volumeRef = useRef<HTMLDivElement | null>(null);
-    const volumeFillRef = useRef<HTMLDivElement | null>(null);
-    const hoverFillRef = useRef<HTMLDivElement | null>(null);
-    const timelineElRef = useRef<HTMLDivElement | null>(null);
-    const dotRef = useRef<HTMLDivElement | null>(null);
-    const previewApiRef = useRef<TimelinePreviewHandle | null>(null);
-
-    const [currentSec, setCurrentSec] = useState(0);
-    const [controlsVisible, setControlsVisible] = useState(true);
-    const lastActivityRef = useRef(0);
-    const hoveringControlsRef = useRef(false);
-    // Фокус клавиатуры внутри панели держит её открытой, как наведение мыши.
-    const focusInControlsRef = useRef(false);
-    const clickTimerRef = useRef<number | null>(null);
-
-    const visibleControls = useMemo(() => new Set(controls ?? DEFAULT_CONTROLS), [controls]);
-    const show = (key: VideoPlayerControlKey) => visibleControls.has(key);
-    const resolvedSrc = resolveSrc(src);
-    const previewSource = useMemo(
-        () => preview ?? (resolvedSrc ? { src: resolvedSrc, from: 0, to: Number.POSITIVE_INFINITY } : undefined),
-        [preview, resolvedSrc],
-    );
-
-    // --- Таймлайн: заливка + точка-playhead императивно, seek — на контроллер, таймкод — currentSec ---
-    const scrub = useCallback((ratio: number) => {
-        const duration = player.duration || 0;
-        const pct = clamp01(ratio) * 100;
-
-        if (fillRef.current) fillRef.current.style.width = `${pct}%`;
-        if (dotRef.current) dotRef.current.style.left = `${pct}%`;
-
-        setCurrentSec(Math.floor(ratio * duration));
-        player.seek(ratio * duration);
-    }, [player]);
-
-    // Наведение на таймлайн → hover-заливка до курсора (другой цвет — куда перематываешь) + превью.
-    const previewAt = useCallback((ratio: number) => {
-        if (hoverFillRef.current) {
-            hoverFillRef.current.style.width = `${clamp01(ratio) * 100}%`;
-        }
-
-        const track = timelineElRef.current;
-        previewApiRef.current?.show(ratio, track ? track.clientWidth : 0, ratio * (player.duration || 0));
-    }, [player]);
-
-    const hidePreview = useCallback(() => previewApiRef.current?.hide(), []);
-
-    const timeline = usePointerRatio({ orientation: 'x', onChange: scrub, onHover: previewAt, onLeave: hidePreview });
-
-    // --- Громкость: заливку двигаем сразу (императивно), чтобы drag был плавным ---
-    const applyVolume = useCallback((next: number) => {
-        const value = clamp01(next);
-
-        if (volumeFillRef.current) {
-            volumeFillRef.current.style.height = `${value * 100}%`;
-        }
-
-        player.setVolume(value);
-    }, [player]);
-
-    const volume = usePointerRatio({ orientation: 'y', onChange: applyVolume });
-
-    // --- refs-проводка ---
-    const setRootRef = useMergedRefs(rootRef, ref);
-
-    const setVideoNode = useCallback((node: HTMLVideoElement | null) => {
-        videoNodeRef.current = node;
-    }, []);
-
-    // Привязка контроллера к реальному <video> (+ корень для фуллскрина).
-    useEffect(() => {
-        const node = videoNodeRef.current;
-
-        if (!node) return;
-
-        player._attach(node, rootRef.current);
-
-        return () => player._detach();
-    }, [player]);
-
-    // Escape-hatch apiRef.
-    useEffect(() => {
-        assignApiRef(apiRef, player);
-
-        return () => assignApiRef(apiRef, null);
-    }, [apiRef, player]);
-
-    // Тикающее время: заливка таймлайна — императивно каждый кадр; таймкод — раз в секунду.
-    useEffect(() => {
-        return player.subscribeTime((time) => {
-            const duration = player.duration || 0;
-            const pct = duration ? clamp01(time / duration) * 100 : 0;
-
-            if (!timeline.isDragging.current) {
-                if (fillRef.current) fillRef.current.style.width = `${pct}%`;
-                if (dotRef.current) dotRef.current.style.left = `${pct}%`;
-            }
-
-            const sec = Math.floor(time);
-            setCurrentSec((prev) => (prev === sec ? prev : sec));
-        });
-    }, [player, timeline.isDragging]);
-
-    // Заливка громкости при внешних изменениях/mute (drag/wheel обновляют её сами).
-    const volumeLevel = state.muted ? 0 : state.volume;
-    useEffect(() => {
-        if (volumeFillRef.current) {
-            volumeFillRef.current.style.height = `${clamp01(volumeLevel) * 100}%`;
-        }
-    }, [volumeLevel]);
-
-    // Колесо мыши над громкостью → шаг громкости. Native listener с passive:false, чтобы гасить
-    // прокрутку страницы.
-    useEffect(() => {
-        const node = volumeRef.current;
-
-        if (!node) return;
-
-        const handleWheel = (event: WheelEvent) => {
-            event.preventDefault();
-            const base = player.muted ? 0 : player.volume;
-            applyVolume(base + (event.deltaY < 0 ? WHEEL_VOLUME_STEP : -WHEEL_VOLUME_STEP));
-        };
-
-        node.addEventListener('wheel', handleWheel, { passive: false });
-
-        return () => node.removeEventListener('wheel', handleWheel);
-    }, [player, applyVolume]);
-
-    // Показать управление и продлить таймер (движение/вход мыши).
-    const revealControls = useCallback(() => {
-        lastActivityRef.current = nowMs();
-        setControlsVisible(true);
-    }, []);
-
-    // Уход мыши — прячем (и на паузе тоже), но не во время перетаскивания трека/громкости.
-    const handleRootLeave = useCallback(() => {
-        if (timeline.isDragging.current || volume.isDragging.current || focusInControlsRef.current) return;
-
-        setControlsVisible(false);
-    }, [timeline.isDragging, volume.isDragging]);
-
-    // Автоскрытие во время воспроизведения: прячем через AUTO_HIDE_MS простоя (если курсор не на баре).
-    // На паузе таймером не прячем — прячет только уход мыши (handleRootLeave).
-    useEffect(() => {
-        if (!state.playing) return;
-
-        lastActivityRef.current = nowMs();
-
-        const intervalId = window.setInterval(() => {
-            if (!hoveringControlsRef.current && !focusInControlsRef.current && nowMs() - lastActivityRef.current >= AUTO_HIDE_MS) {
-                setControlsVisible(false);
-            }
-        }, 300);
-
-        return () => window.clearInterval(intervalId);
-    }, [state.playing]);
-
-    // Клик по видео = play/pause; двойной = фуллскрин (окно DOUBLE_CLICK_MS разводит их).
-    const handleMediaClick = useCallback(() => {
-        revealControls();
-
-        if (clickTimerRef.current !== null) return;
-
-        clickTimerRef.current = window.setTimeout(() => {
-            clickTimerRef.current = null;
-            player.toggle();
-        }, DOUBLE_CLICK_MS);
-    }, [player, revealControls]);
-
-    const handleMediaDoubleClick = useCallback(() => {
-        if (clickTimerRef.current !== null) {
-            window.clearTimeout(clickTimerRef.current);
-            clickTimerRef.current = null;
-        }
-
-        player.toggleFullscreen();
-    }, [player]);
-
-    // Чистим отложенный клик-таймер на размонтировании.
-    useEffect(() => () => {
-        if (clickTimerRef.current !== null) {
-            window.clearTimeout(clickTimerRef.current);
-        }
-    }, []);
-
-    const handleControlsFocus = useCallback(() => {
-        focusInControlsRef.current = true;
-        revealControls();
-    }, [revealControls]);
-
-    const handleControlsBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
-        const next = event.relatedTarget;
-        if (!(next instanceof Node && event.currentTarget.contains(next))) focusInControlsRef.current = false;
-    }, []);
-
-    // Таймлайн с клавиатуры: стрелки ±5 с, PageUp/PageDown ±10 %, Home/End — края. Тот же scrub,
-    // что у мыши, поэтому заливка, точка и таймкод двигаются одинаково.
-    const handleTimelineKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-        const duration = player.duration;
-        if (!(duration > 0)) return;
-
-        const time = player.getTime();
-        const page = duration * TIMELINE_PAGE_RATIO;
-        const targets: Record<string, number> = {
-            ArrowRight: time + TIMELINE_STEP_SEC,
-            ArrowUp: time + TIMELINE_STEP_SEC,
-            ArrowLeft: time - TIMELINE_STEP_SEC,
-            ArrowDown: time - TIMELINE_STEP_SEC,
-            PageUp: time + page,
-            PageDown: time - page,
-            Home: 0,
-            End: duration,
-        };
-        const target = targets[event.key];
-        if (target === undefined) return;
-
-        event.preventDefault();
-        revealControls();
-        scrub(clamp01(target / duration));
-    }, [player, revealControls, scrub]);
-
-    // Громкость — второй слайдер плеера: те же стрелки и края диапазона, что у таймлайна.
-    // applyVolume обновляет визуальную заливку и контроллер; при первом шаге вверх он также снимает mute.
-    const handleVolumeKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-        const targets: Record<string, number> = {
-            ArrowRight: volumeLevel + WHEEL_VOLUME_STEP,
-            ArrowUp: volumeLevel + WHEEL_VOLUME_STEP,
-            ArrowLeft: volumeLevel - WHEEL_VOLUME_STEP,
-            ArrowDown: volumeLevel - WHEEL_VOLUME_STEP,
-            Home: 0,
-            End: 1,
-        };
-        const target = targets[event.key];
-        if (target === undefined) return;
-
-        event.preventDefault();
-        revealControls();
-        applyVolume(target);
-    }, [applyVolume, revealControls, volumeLevel]);
-
-    const isMuted = state.muted || state.volume === 0;
-    const durationSec = Math.floor(state.duration);
+    const view = useVideoPlayerView({ ref, controller, apiRef, src, preview, controls, autoPlay });
+    const { player, state, timeline, volume } = view;
 
     const rootClassName = cx(
-        styles.Root,
-        !controlsVisible && interactive && styles.hidden,
+        styles.VideoPlayer, 'VideoPlayer',
+        !view.root.visible && interactive && styles.hidden,
         ...sizeClasses(c, { w, minW, maxW, h, minH, maxH }),
-        ...radiusClasses(c, resolveRadiusInput({ r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR })),
         ...c.value('ratio', aspectRatio),
         ...c.value('grow', grow),
         className
@@ -527,16 +68,20 @@ export function VideoPlayer({
     };
 
     return (
-        <div
-            ref={setRootRef}
+        <Flex
+            ref={view.root.ref}
+            position={['relative', 'relative', 'relative']}
+            dir={['column', 'column', 'column']}
+            justify={['space_between', 'space_between', 'space_between']}
+            {...resolveRadiusInput({ r: r ?? [24, 24, 24], tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR })}
             className={rootClassName}
             style={rootStyle}
-            onPointerMove={interactive ? revealControls : undefined}
-            onPointerEnter={interactive ? revealControls : undefined}
-            onPointerLeave={interactive ? handleRootLeave : undefined}
+            onPointerMove={interactive ? view.root.reveal : undefined}
+            onPointerEnter={interactive ? view.root.reveal : undefined}
+            onPointerLeave={interactive ? view.root.leave : undefined}
         >
             <Video
-                ref={setVideoNode}
+                ref={view.media.ref}
                 src={src}
                 poster={poster}
                 objectFit={objectFit}
@@ -547,15 +92,21 @@ export function VideoPlayer({
             {interactive ? (
                 <div
                     className={styles.clickLayer}
-                    onClick={handleMediaClick}
-                    onDoubleClick={handleMediaDoubleClick}
+                    onClick={view.media.click}
+                    onDoubleClick={view.media.doubleClick}
                     aria-hidden='true'
                 />
             ) : null}
 
             {label ? (
                 <div className={cx(styles.overlay, styles.labelBar)}>
-                    {labelIcon ? <BarIcon src={labelIcon} withStroke /> : null}
+                    {labelIcon ? <Icon
+                        src={labelIcon}
+                        w={[24, 24, 24]}
+                        h={[24, 24, 24]}
+                        fill="var(--white-100)"
+                        stroke="var(--white-100)"
+                    /> : null}
 
                     <Text
                         variant={['body', null, null]}
@@ -568,67 +119,74 @@ export function VideoPlayer({
             {interactive ? (
                 <div
                     className={cx(styles.overlay, styles.controlBar)}
-                    onMouseEnter={() => { hoveringControlsRef.current = true; revealControls(); }}
-                    onMouseLeave={() => { hoveringControlsRef.current = false; }}
-                    onFocus={handleControlsFocus}
-                    onBlur={handleControlsBlur}
+                    onMouseEnter={view.controls.enter}
+                    onMouseLeave={view.controls.leave}
+                    onFocus={view.controls.focus}
+                    onBlur={view.controls.blur}
                 >
-                    {show('play') ? (
+                    {view.controls.show('play') ? (
                         <button
                             type='button'
                             className={styles.button}
-                            aria-label={state.playing ? 'Пауза' : 'Воспроизвести'}
+                            aria-label={state.playing ? UI_MESSAGES.video.pause : UI_MESSAGES.video.play}
                             onClick={() => player.toggle()}
                         >
                             <IconSwap active={state.playing} a={ICON.play} b={ICON.pause} />
                         </button>
                     ) : null}
 
-                    {show('timeline') ? (
+                    {view.controls.show('timeline') ? (
                         <div
-                            ref={timelineElRef}
+                            ref={timeline.ref}
                             className={styles.timeline}
                             role='slider'
                             tabIndex={0}
-                            aria-label='Перемотка'
+                            aria-label={UI_MESSAGES.video.seek}
                             aria-valuemin={0}
-                            aria-valuemax={durationSec}
-                            aria-valuenow={Math.min(currentSec, durationSec)}
-                            aria-valuetext={`${formatClock(currentSec)} из ${formatClock(durationSec)}`}
-                            aria-disabled={durationSec > 0 ? undefined : true}
-                            onKeyDown={handleTimelineKeyDown}
+                            aria-valuemax={timeline.durationSec}
+                            aria-valuenow={Math.min(timeline.currentSec, timeline.durationSec)}
+                            aria-valuetext={formatUiMessage(UI_MESSAGES.video.time, { current: formatClock(timeline.currentSec), duration: formatClock(timeline.durationSec) })}
+                            aria-disabled={timeline.durationSec > 0 ? undefined : true}
+                            onKeyDown={timeline.keyDown}
                             {...timeline.bind}
                         >
-                            <TimelinePreview ref={previewApiRef} source={previewSource} />
+                            <TimelinePreview
+                                ref={timeline.previewRef}
+                                source={timeline.previewSource}
+                            />
 
                             <div className={styles.track}>
                                 {/* Hover-заливка до курсора (другой цвет) — куда перематываешь */}
-                                <div ref={hoverFillRef} className={styles.hoverFill} />
+                                <div ref={timeline.hoverFillRef} className={styles.hoverFill} />
 
                                 {/* Проигранная часть */}
-                                <div ref={fillRef} className={styles.fill} />
+                                <div ref={timeline.fillRef} className={styles.fill} />
                             </div>
 
                             {/* Точка-playhead на текущей позиции */}
-                            <div ref={dotRef} className={styles.timelineDot} aria-hidden='true' />
+                            <div
+                                ref={timeline.dotRef}
+                                className={styles.timelineDot}
+                                aria-hidden='true'
+                            />
                         </div>
                     ) : null}
 
-                    {show('time') ? (
+                    {view.controls.show('time') ? (
                         <Text
                             variant={['micro', null, null]}
                             color='var(--white-100)'
                             whiteSpace={['nowrap', null, null]}
                         >
-                            {formatClock(currentSec)} / {formatClock(durationSec)}
+                            {formatClock(timeline.currentSec)} / {formatClock(timeline.durationSec)}
                         </Text>
                     ) : null}
 
-                    {show('rate') ? (
+                    {view.controls.show('rate') ? (
                         <button
                             type='button'
                             className={cx(styles.button, styles.rate)}
-                            aria-label={`Скорость ${formatRate(state.rate)}`}
+                            aria-label={formatUiMessage(UI_MESSAGES.video.rate, { rate: formatRate(state.rate) })}
                             onClick={() => player.setRate(nextRate(rates, state.rate))}
                         >
                             <Text
@@ -639,42 +197,46 @@ export function VideoPlayer({
                         </button>
                     ) : null}
 
-                    {show('volume') ? (
-                        <div ref={volumeRef} className={styles.volume}>
+                    {view.controls.show('volume') ? (
+                        <div ref={volume.ref} className={styles.volume}>
                             <div className={styles.volumePopover}>
                                 <div
                                     className={styles.volumeTrack}
                                     role='slider'
                                     tabIndex={0}
-                                    aria-label='Громкость'
+                                    aria-label={UI_MESSAGES.video.volume}
                                     aria-orientation='vertical'
                                     aria-valuemin={0}
                                     aria-valuemax={100}
-                                    aria-valuenow={Math.round(volumeLevel * 100)}
-                                    aria-valuetext={`${Math.round(volumeLevel * 100)}%`}
-                                    onKeyDown={handleVolumeKeyDown}
+                                    aria-valuenow={Math.round(volume.level * 100)}
+                                    aria-valuetext={`${Math.round(volume.level * 100)}%`}
+                                    onKeyDown={volume.keyDown}
                                     {...volume.bind}
                                 >
-                                    <div ref={volumeFillRef} className={styles.volumeFill} />
+                                    <div ref={volume.fillRef} className={styles.volumeFill} />
                                 </div>
                             </div>
 
                             <button
                                 type='button'
                                 className={styles.button}
-                                aria-label={isMuted ? 'Включить звук' : 'Выключить звук'}
+                                aria-label={volume.muted ? UI_MESSAGES.video.unmute : UI_MESSAGES.video.mute}
                                 onClick={() => player.toggleMute()}
                             >
-                                <IconSwap active={isMuted} a={ICON.volume} b={ICON.volumeMuted} />
+                                <IconSwap
+                                    active={volume.muted}
+                                    a={ICON.volume}
+                                    b={ICON.volumeMuted}
+                                />
                             </button>
                         </div>
                     ) : null}
 
-                    {show('fullscreen') ? (
+                    {view.controls.show('fullscreen') ? (
                         <button
                             type='button'
                             className={styles.button}
-                            aria-label={state.fullscreen ? 'Выйти из полного экрана' : 'Полный экран'}
+                            aria-label={state.fullscreen ? UI_MESSAGES.video.exitFullscreen : UI_MESSAGES.video.fullscreen}
                             onClick={() => player.toggleFullscreen()}
                         >
                             <IconSwap
@@ -686,7 +248,7 @@ export function VideoPlayer({
                     ) : null}
                 </div>
             ) : null}
-        </div>
+        </Flex>
     );
 }
 

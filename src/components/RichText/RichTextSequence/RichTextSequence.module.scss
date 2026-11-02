@@ -1,0 +1,16 @@
+@use '../../../core/mixins' as m;
+
+@layer ui.components {
+  .RichTextSequence {
+    position: relative;
+    transition-timing-function: var(--t-t-f-ease);
+    &[data-effect='textSlide'] { transition-property: height, transform; }
+    &[data-effect='textClip'] { transition-property: clip-path; }
+    @include m.reduced-motion { transition: none; }
+  }
+  .item {
+    position: absolute;
+    left: 0;
+    width: 100%;
+  }
+}

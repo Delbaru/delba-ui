@@ -1,0 +1,19 @@
+@layer ui.components {
+  .ChoiceInfoTooltip {
+    --icon-stroke: var(--choice-info-color, var(--text-muted));
+    --icon-fill: var(--choice-info-color, var(--text-muted));
+  }
+  .info { display: inline-flex; align-items: center; justify-content: center; }
+  .tooltip {
+    filter: drop-shadow(0 calc(4 * var(--rpx)) calc(2 * var(--rpx)) rgba(12, 12, 13, 0.05))
+      drop-shadow(0 calc(16 * var(--rpx)) calc(16 * var(--rpx)) rgba(12, 12, 13, 0.1));
+  }
+  .card { position: relative; text-align: start; }
+  .tail {
+    position: absolute; bottom: 100%; left: 0; right: 0; z-index: -1;
+    margin: 0 auto; transform: translateY(calc(12 * var(--rpx)));
+  }
+  .tooltip[data-placement='top'] .tail {
+    bottom: auto; top: 100%; transform: translateY(calc(-12 * var(--rpx))) rotate(180deg);
+  }
+}

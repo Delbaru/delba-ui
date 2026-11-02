@@ -1,0 +1,88 @@
+@use '../../../core/mixins' as m;
+@layer ui.components {
+  .SelectOptions {
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 100%;
+    max-height: inherit;
+
+    &[data-scrolls] {
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-gutter: stable;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--primary);
+    }
+  }
+  .GroupLabel {
+    padding: calc(12 * var(--rpx)) calc(16 * var(--rpx)) calc(4 * var(--rpx));
+    font-weight: 600;
+    pointer-events: none;
+
+    @media (min-width: 768px) and (max-width: 1023px) {
+      padding: calc(12 * var(--rpx)) calc(16 * var(--rpx)) calc(4 * var(--rpx));
+    }
+
+    @media (min-width: 1024px) {
+      padding: calc(12 * var(--rpx)) calc(24 * var(--rpx)) calc(4 * var(--rpx));
+    }
+  }
+  .Option {
+    padding: var(--select-option-padding);
+    cursor: pointer;
+    min-height: var(--select-height);
+    transition:
+      background var(--t-d-fast),
+      color var(--t-d-fast);
+    .OptionCheck {
+      flex-shrink: 0;
+      border: calc(1 * var(--rpx)) solid var(--text-muted);
+      transition:
+        background var(--t-d-fast),
+        border-color var(--t-d-fast);
+
+      .OptionCheckIcon {
+        opacity: 0;
+        transition: opacity var(--t-d-fast);
+      }
+    }
+
+    .OptionContent {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      overflow: visible;
+      color: inherit;
+    }
+
+    .OptionLabel {
+      flex: 1;
+      min-width: 0;
+      color: inherit;
+      font: m.role-font(body);
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      overflow-wrap: anywhere;
+    }
+
+    &:hover,
+    &[state~='focused'],
+    &[state~='hover'],
+    &[state~='selected'] {
+      background: var(--line);
+    }
+
+    &[state~='selected'] .OptionCheck {
+      background: var(--primary);
+      border-color: var(--primary);
+
+      .OptionCheckIcon {
+        opacity: 1;
+      }
+    }
+  }
+}

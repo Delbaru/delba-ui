@@ -19,14 +19,17 @@ export function useFormReset<E extends HTMLElement>(
     useEffect(() => {
         const node = ref.current;
         if (!node) return;
+        const ownerDocument = node.ownerDocument;
+        const view = ownerDocument.defaultView;
+        if (!view) return;
         const owner = () =>
-            node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement
+            node instanceof view.HTMLInputElement || node instanceof view.HTMLTextAreaElement
                 ? node.form
                 : formId !== undefined
-                  ? document.getElementById(formId)
+                  ? ownerDocument.getElementById(formId)
                   : node.closest('form');
         const form = owner();
-        if (!(form instanceof HTMLFormElement)) return;
+        if (!(form instanceof view.HTMLFormElement)) return;
         // A microtask may run between native listeners and React's delegated onReset.
         // The next task observes cancellation after the complete event dispatch.
         const reset = (event: Event) => {

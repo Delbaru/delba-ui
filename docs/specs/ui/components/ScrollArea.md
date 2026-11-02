@@ -34,3 +34,12 @@ export function ScrollAreaExample() {
 Прокрутка работает мышью, touch и клавиатурой; начало/конец и fade соответствуют доступному содержимому. Фокусируемый viewport имеет имя. Маска не обрезает портал/оверлей; footer остаётся неподвижным и доступным при малой высоте окна.
 
 [ScrollAreaProps и реализация](../../../../src/components/ScrollArea/ScrollArea.tsx) · [scrollbar](../../../../src/components/ScrollArea/scrollbar.ts) · [Box](Box.md) · [приёмка](../../verification/acceptance.md).
+
+## Внутренняя композиция
+
+ScrollArea остаётся коротким адаптером Flex. scrollbarProps отвечает за настройки
+нативной полосы, useScrollbarActivity подключает существующего общего владельца
+наблюдения, scrollFade принадлежит Flex. Второй scroll engine или дополнительный
+viewport не создаётся. Собственный ScrollArea.module.scss содержит корневой селектор;
+маркер ScrollArea сохраняется даже при удалении пустого CSS-селектора сборщиком.
+ui-scroll-area и generated utility-классы сохраняют прежний договор темы.

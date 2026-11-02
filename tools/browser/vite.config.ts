@@ -15,18 +15,33 @@ const fixtureFile = path.join(fixtureRoot, 'fixture.tsx');
 const ssrFixtureFile = path.join(fixtureRoot, 'ssr-fixture.tsx');
 const virtualUtilityId = '\0browser-utilities.css';
 
+let cachedRules: ReturnType<typeof extractUtilityRules> = [];
+let cachedSources = '';
+
+function componentFiles(directory: string): string[] {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) return entry.name === 'tests' ? [] : componentFiles(file);
+    return entry.name.endsWith('.tsx') ? [file] : [];
+  });
+}
+
 function fixtureRules() {
-  return extractUtilityRules([
-      { file: fixtureFile, text: fs.readFileSync(fixtureFile, 'utf8') },
-      { file: ssrFixtureFile, text: fs.readFileSync(ssrFixtureFile, 'utf8') },
-      ...['hover-motion.fixture.tsx', 'dropdown-open.fixture.tsx', 'grid-layout.fixture.tsx', 'native-carousel.fixture.tsx', 'native-carousel-advanced.fixture.tsx'].map((name) => {
-        const file = path.join(fixtureRoot, name);
-        return { file, text: fs.readFileSync(file, 'utf8') };
-      }),
-      { file: path.join(fixtureRoot, 'refactor-contracts.fixture.tsx'), text: fs.readFileSync(path.join(fixtureRoot, 'refactor-contracts.fixture.tsx'), 'utf8') },
-      { file: path.join(kitRoot, 'src/components/DurationPicker/DurationPicker.tsx'), text: fs.readFileSync(path.join(kitRoot, 'src/components/DurationPicker/DurationPicker.tsx'), 'utf8') },
-      { file: path.join(kitRoot, 'src/components/GradientBorder/GradientBorder.tsx'), text: fs.readFileSync(path.join(kitRoot, 'src/components/GradientBorder/GradientBorder.tsx'), 'utf8') },
-    ]);
+  const files = [
+    fixtureFile,
+    ssrFixtureFile,
+    ...fs.readdirSync(fixtureRoot).filter(name => name.endsWith('.fixture.tsx')).map(name => path.join(fixtureRoot, name)),
+    ...componentFiles(path.join(kitRoot, 'src/components')),
+  ];
+  const sources = files.map(file => {
+    const stat = fs.statSync(file);
+    return file + ':' + stat.mtimeMs + ':' + stat.size;
+  }).join('\n');
+  if (sources !== cachedSources) {
+    cachedRules = extractUtilityRules(files.map(file => ({ file, text: fs.readFileSync(file, 'utf8') })));
+    cachedSources = sources;
+  }
+  return cachedRules;
 }
 
 const fixtureUtilities: Plugin = {

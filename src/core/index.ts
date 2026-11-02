@@ -5,7 +5,7 @@
 export { getBreakpointIndex, resolveResponsive, resolveResponsiveAtBreakpoint } from './base/responsive';
 export { BREAKPOINT, MEDIA_QUERY } from './base/breakpoints';
 export { MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs } from './base/motion';
-export { focusWhenReady, type FocusTarget, type FocusWhenReadyOptions } from './base/focus';
+export { focusWhenReady, preserveFocus, type FocusTarget, type FocusWhenReadyOptions } from './base/focus';
 export { resolveSeedField, type SeedField, type SeedFieldInput } from './base/seed';
 export { Transition, createTransition, motion, parseDurationMs, readMotionTiming } from './base/transition';
 export type { GroupTiming, MotionPart, TransitionResult, TransitionStatus, TransitionStep, TransitionTime } from './base/transition';

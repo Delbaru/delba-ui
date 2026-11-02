@@ -9,6 +9,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type SVGProps,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 import { Button } from '../../src/components/Button/Button';
 import { Accordion, AccordionItem } from '../../src/components/Accordion';
@@ -175,6 +176,206 @@ function recordValueChange(
   window.__fieldLogs[key] = [...(window.__fieldLogs[key] ?? []), log];
   const output = document.querySelector<HTMLOutputElement>(`[data-log="${key}"]`);
   if (output) output.value = JSON.stringify(window.__fieldLogs[key]);
+}
+
+function InputRefactorContracts() {
+  const [time, setTime] = useState('');
+  const [number, setNumber] = useState('');
+  const [numberSeed, setNumberSeed] = useState('0');
+  const [seedValue, setSeedValue] = useState('0');
+  const [cancelReset, setCancelReset] = useState(false);
+  const [resetChanges, setResetChanges] = useState(0);
+  const [readonlyChanges, setReadonlyChanges] = useState(0);
+  const [feedback, setFeedback] = useState<'error' | 'comment' | 'empty'>('error');
+  const timeRef = useRef<HTMLInputElement>(null);
+  const dateRef = useRef<HTMLInputElement>(null);
+  const numberRef = useRef<HTMLInputElement>(null);
+  const seedRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <section className="fixture" aria-label="Input refactor contracts">
+      <Input
+        ref={timeRef}
+        form="input-refactor-reset"
+        type="time"
+        aria-label="Controlled refactor time"
+        errorPlacement="below"
+        value={time}
+        onChange={(event) => recordChange('input-refactor-time', event)}
+        onValueChange={(value, details) => {
+          setTime(value);
+          recordValueChange('input-refactor-time', timeRef.current, value, details);
+        }}
+      />
+      <output data-testid="input-refactor-time-model">{time}</output>
+      <Input
+        ref={numberRef}
+        type="number"
+        aria-label="Controlled refactor number"
+        errorPlacement="below"
+        validate={(value) => value && Number(value) < 10 ? 'Refactor number minimum' : undefined}
+        value={number}
+        onChange={(event) => recordChange('input-refactor-number', event)}
+        onValueChange={(value, details) => {
+          setNumber(value);
+          recordValueChange('input-refactor-number', numberRef.current, value, details);
+        }}
+      />
+      <output data-testid="input-refactor-number-model">{number}</output>
+      <Input
+        type="number"
+        aria-label="Refactor number seed"
+        seed="0"
+        value={numberSeed}
+        onValueChange={setNumberSeed}
+      />
+      <output data-testid="input-refactor-number-seed-model">{numberSeed}</output>
+      <Input
+        ref={seedRef}
+        aria-label="Refactor seed with action"
+        seed="0"
+        value={seedValue}
+        slots={{ end: <button type="button">Input refactor seed action</button> }}
+        onValueChange={(value, details) => {
+          setSeedValue(value);
+          recordValueChange('input-refactor-seed', seedRef.current, value, details);
+        }}
+      />
+      <output data-testid="input-refactor-seed-model">{seedValue}</output>
+      <form
+        id="input-refactor-reset"
+        onReset={(event) => {
+          if (cancelReset) event.preventDefault();
+        }}
+      >
+        <button type="reset">Reset Input refactor fields</button>
+      </form>
+      <Input
+        form="input-refactor-reset"
+        aria-label="Uncontrolled refactor text"
+        defaultValue="initial"
+        onValueChange={() => setResetChanges((count) => count + 1)}
+      />
+      <Input
+        form="input-refactor-reset"
+        type="time"
+        aria-label="Uncontrolled refactor time"
+        defaultValue="08:30"
+        onValueChange={() => setResetChanges((count) => count + 1)}
+      />
+      <Input
+        form="input-refactor-reset"
+        type="tel"
+        aria-label="Uncontrolled refactor phone"
+        defaultValue="+79161234567"
+        onValueChange={() => setResetChanges((count) => count + 1)}
+      />
+      <Input
+        ref={dateRef}
+        id="input-refactor-date"
+        form="input-refactor-reset"
+        type="date"
+        aria-label="Uncontrolled refactor date"
+        defaultValue="2025-01-15"
+        onValueChange={(value, details) => {
+          setResetChanges((count) => count + 1);
+          recordValueChange('input-refactor-date', dateRef.current, value, details);
+        }}
+      />
+      <button type="button" onClick={() => setCancelReset((value) => !value)}>
+        Toggle Input refactor reset cancellation
+      </button>
+      <output data-testid="input-refactor-reset-changes">{resetChanges}</output>
+      <Input
+        type="time"
+        readOnly
+        aria-label="Readonly refactor time"
+        defaultValue="08:30"
+        onValueChange={() => setReadonlyChanges((count) => count + 1)}
+      />
+      <output data-testid="input-refactor-readonly-changes">{readonlyChanges}</output>
+      <Input
+        type="date"
+        aria-label="Cancelled refactor date keyboard"
+        defaultValue="2025-01-15"
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown') event.preventDefault();
+        }}
+      />
+      <Input
+        id="input-refactor-feedback"
+        label="Refactor feedback label"
+        className="input-refactor-feedback-root"
+        rowClassName="input-refactor-feedback-row"
+        defaultValue="Feedback value"
+        errorPlacement="below"
+        error={feedback === 'error' ? 'Refactor feedback error' : undefined}
+        comment={feedback === 'empty' ? undefined : 'Refactor feedback comment'}
+        slots={{ end: <button type="button">Input refactor feedback action</button> }}
+      />
+      <button type="button" onClick={() => setFeedback('error')}>Show Input refactor feedback error</button>
+      <button type="button" onClick={() => setFeedback('comment')}>Show Input refactor feedback comment</button>
+      <button type="button" onClick={() => setFeedback('empty')}>Clear Input refactor feedback</button>
+    </section>
+  );
+}
+
+function InputForeignDocumentContracts() {
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+  const [cancelReset, setCancelReset] = useState(false);
+  const [changes, setChanges] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  return (
+    <section className="fixture" aria-label="Input foreign document contracts">
+      <iframe
+        title="Input foreign document"
+        style={{ width: '100%', maxWidth: 480, height: 720 }}
+        srcDoc="<!doctype html><html><body></body></html>"
+        onLoad={(event) => {
+          const frameDocument = event.currentTarget.contentDocument;
+          if (!frameDocument) return;
+          event.currentTarget.ownerDocument.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => {
+            frameDocument.head.append(node.cloneNode(true));
+          });
+          setTarget(frameDocument.body);
+        }}
+      />
+      {target && createPortal(
+        <>
+          <form id="foreign-input-reset" onReset={(event) => {
+            if (cancelReset) event.preventDefault();
+          }}>
+            <button type="reset">Reset foreign Input</button>
+          </form>
+          <Input
+            type="time"
+            aria-label="Foreign uncontrolled time"
+            form="foreign-input-reset"
+            defaultValue="08:30"
+            onValueChange={() => setChanges((count) => count + 1)}
+          />
+          <button type="button" onClick={() => setCancelReset((value) => !value)}>
+            Toggle foreign reset cancellation
+          </button>
+          <output data-testid="foreign-input-changes">{changes}</output>
+          <Input type="date" aria-label="Foreign calendar" defaultValue="2025-01-15" />
+          <button type="button" onClick={() => setLoading((value) => !value)}>
+            Toggle foreign loading
+          </button>
+          <div style={{ marginLeft: 'auto', width: 80 }}>
+            <Input
+              aria-label="Foreign replacement overflow"
+              w={['100%', '100%', '100%']}
+              loading={loading}
+              defaultValue="Foreign overflow follows the replacement input across documents"
+            />
+          </div>
+        </>,
+        target,
+      )}
+    </section>
+  );
 }
 
 function ContractFields() {
@@ -700,6 +901,28 @@ function IconTooltipField() {
         Remove Icon tooltip
       </button>
       <output data-testid="icon-events" />
+    </section>
+  );
+}
+
+function IconDelayedSwapContracts() {
+  const [source, setSource] = useState<string | null>(null);
+
+  return (
+    <section aria-label="Delayed Icon swap contracts" className="fixture">
+      {source && <Icon
+          src={source}
+          w={[24, 24, 24]}
+          h={[24, 24, 24]}
+          animate={{ when: 'change', effect: 'swap', duration: 0.12 }}
+          aria-label="Delayed source icon"
+      />}
+      <button type="button" onClick={() => setSource('/__delba-icon-swap/a.svg')}>
+        Load initial Icon source
+      </button>
+      <button type="button" disabled={!source} onClick={() => setSource('/__delba-icon-swap/b.svg')}>
+        Load delayed Icon source
+      </button>
     </section>
   );
 }
@@ -1847,6 +2070,8 @@ export function BrowserFixture() {
         style={{ position: 'absolute', top: 0, left: 0, width: 1, height: 1, overflow: 'hidden' }}
       />
       <ContractFields />
+      <InputRefactorContracts />
+      <InputForeignDocumentContracts />
       <InViewContracts />
       <InputPartsField />
       <AccordionContracts />
@@ -1860,6 +2085,7 @@ export function BrowserFixture() {
       <ButtonField />
       <MediaDropDownField />
       <IconTooltipField />
+      <IconDelayedSwapContracts />
       <ContentSwapField />
       <LexicalRevealField />
       <LexicalText

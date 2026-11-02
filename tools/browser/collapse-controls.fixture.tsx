@@ -6,7 +6,7 @@ import { Text } from '../../src/components/Text/Text';
 import { Dropdown } from '../../src/components/Dropdown/Dropdown';
 import { Button } from '../../src/components/Button/Button';
 import { Select } from '../../src/components/Select/Select';
-import { Accordion, AccordionItem } from '../../src/components/Accordion/Accordion';
+import { Accordion, AccordionItem } from '../../src/components/Accordion';
 import type { CollapseControls } from '../../src/hooks/useCollapseControls';
 
 declare global {

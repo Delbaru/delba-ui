@@ -9,6 +9,8 @@ export { RICH_ROLES, isRichRole, resolveRole, roleClassKeys, isTextVariantName, 
  * `data-device="mobile" | "tablet"` на узле с классом `RichText` включает роли полосы без
  * медиазапроса — превью устройства при любой ширине окна.
  */
-export { default as richTextClasses } from './RichText.module.scss';
+export { default as richTextClasses } from './LexicalText.module.scss';
 
 export type { LexicalDocument } from './types';
+
+export type { RichTextChangeAnimate } from './RichText.types';

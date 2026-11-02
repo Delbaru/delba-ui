@@ -1,0 +1,35 @@
+@use '../../../core/mixins' as m;
+@layer ui.components {
+  .InputControl {
+    transition: var(--t-fast);
+    .fieldSlot {
+      flex: 1;
+      overflow: hidden;
+    }
+    .phonePrefix {
+      flex-shrink: 0;
+      font: var(--field-font, #{m.role-font(body)});
+      font-variant-numeric: lining-nums proportional-nums;
+    }
+    &[data-inline-error='true'] {
+      --input-value-color: transparent;
+      --input-placeholder-color: transparent;
+      --input-mask-opacity: 0;
+    }
+    &[data-phone-prefix='true'] .fieldSlot {
+      align-self: stretch;
+    }
+    &[state~='error'] {
+      border-color: var(--error);
+    }
+    &[state~='active']:active {
+      border-color: var(--text-muted);
+    }
+    &:not([state~='error']):not([state~='readonly']):hover {
+      border-color: var(--text-muted);
+    }
+    &[state~='readonly'] {
+      cursor: default;
+    }
+  }
+}

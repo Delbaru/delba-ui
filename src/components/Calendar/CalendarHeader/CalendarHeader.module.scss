@@ -1,0 +1,43 @@
+@use 'sass:map';
+@use '../../../core/mixins' as m;
+@use '../../../core/scss-utils' as utils;
+@layer ui.components {
+  .CalendarHeader {
+    .btn {
+      cursor: pointer;
+
+      &:focus-visible {
+        outline: calc(2 * var(--rpx)) solid var(--primary);
+        outline-offset: calc(2 * var(--rpx));
+      }
+
+      &[state~='disabled'] {
+        pointer-events: none;
+
+        svg path {
+          stroke: var(--line);
+        }
+      }
+    }
+    .prev {
+      transform: scaleX(-1);
+    }
+    .monthPick {
+      cursor: pointer;
+
+      &:focus-visible {
+        outline: calc(2 * var(--rpx)) solid var(--primary);
+        outline-offset: calc(2 * var(--rpx));
+      }
+    }
+    .yearPick .btn.prev {
+      transform: scaleY(-1);
+    }
+    @media #{map.get(utils.$breakpoints, d)} {
+      .monthPick,
+      .yearPick {
+        font: m.role-font(body, subtitle);
+      }
+    }
+  }
+}

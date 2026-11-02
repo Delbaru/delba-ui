@@ -47,12 +47,19 @@ export function Details() {
 Не вкладывай самостоятельную кнопку или ссылку в триггер-кнопку.
 Собственное collapse/animate панели не заменяет управление группы.
 
+## Устройство и владельцы
+
+Самостоятельный вид живёт в `AccordionItem/AccordionItem.tsx` со своим
+`AccordionItem.module.scss`. Он собирает заголовок, Button и панель Flex.collapse;
+выбор и удержание позиции принадлежат модели Accordion. Стили родителя не
+импортируются. Существующий корень получает маркер `AccordionItem`, без новой обёртки.
+
 ## Приёмка
 
 Проверь совпадение ключа с выбранным значением, связи ID/ARIA и отсутствие
 disabled-пункта в навигации. Убедись, что объект trigger сохраняет текст
 и оформление, а быстрые переключения не оставляют панель в неверной фазе.
 
-Источник: [Accordion.tsx](../../../../src/components/Accordion/Accordion.tsx),
+Источник: [AccordionItem.tsx](../../../../src/components/Accordion/AccordionItem/AccordionItem.tsx),
 [разбор trigger](../../../../src/components/Accordion/trigger-options.ts).
 Сверка по исходникам; runtime-проверка здесь не заявлена.

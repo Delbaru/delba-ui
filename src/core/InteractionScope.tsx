@@ -33,43 +33,23 @@ export function InteractionScope({ target, edge, onChange, children }: Interacti
   const active = held || pointed || focused;
   useEffect(() => { onChange?.(active); }, [active, onChange]);
 
+  const connection = useRef<{ node: HTMLElement; edge: InteractionScopeProps['edge']; dispose(): void } | null>(null);
   useEffect(() => {
-    let height = target.current?.getBoundingClientRect().height ?? 0;
-    const style = target.current ? getComputedStyle(target.current) : null;
-    // У закреплённой верхней панели сохраняется зона возврата, даже когда она сдвинута за экран.
-    const pointerEdge = edge ?? ((style?.position === 'fixed' || style?.position === 'sticky') && style.top === '0px' ? 'top' : undefined);
-    let near = false;
-    const pointer = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse') return;
-      const next = !!target.current?.contains(event.target as Node) || (pointerEdge === 'top' && event.clientY <= height);
-      if (next !== near) setPointed(next);
-      near = next;
-    };
-    const leave = (event: PointerEvent) => {
-      if (!event.relatedTarget) { near = false; setPointed(false); }
-    };
-    const focus = (event: FocusEvent) => {
-      const node = event.type === 'focusout' ? event.relatedTarget : event.target;
-      setFocused(node instanceof Node && !!target.current?.contains(node));
-    };
-    setFocused(!!target.current?.contains(document.activeElement));
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) height = entry.borderBoxSize[0]?.blockSize ?? entry.contentRect.height;
-    });
-    if (target.current) observer.observe(target.current);
-    document.addEventListener('pointermove', pointer, { passive: true });
-    document.addEventListener('pointerout', leave);
-    document.addEventListener('focusin', focus);
-    document.addEventListener('focusout', focus);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener('pointermove', pointer);
-      document.removeEventListener('pointerout', leave);
-      document.removeEventListener('focusin', focus);
-      document.removeEventListener('focusout', focus);
-    };
-  }, [target, edge]);
+    const node = target.current;
+    const previous = connection.current;
+    if (node && previous?.node === node && previous.edge === edge) return;
+    previous?.dispose();
+    connection.current = null;
+    setPointed(false);
+    setFocused(false);
+    if (!node) return;
+    const dispose = observeInteractionTarget(node, edge, setPointed, setFocused);
+    connection.current = { node, edge, dispose };
+  });
+  useEffect(() => () => {
+    connection.current?.dispose();
+    connection.current = null;
+  }, []);
 
   return <Scope value={report}>{typeof children === 'function' ? children(active) : children}</Scope>;
 }
@@ -82,4 +62,52 @@ export function useInteractionActivity(active: boolean) {
     report?.(id, active);
     return () => report?.(id, false);
   }, [report, id, active]);
+}
+
+/** Document-bound pointer/focus observation; the React owner reconnects when its ref target changes. */
+export function observeInteractionTarget(
+  node: HTMLElement,
+  edge: InteractionScopeProps['edge'],
+  point: (active: boolean) => void,
+  focus: (active: boolean) => void,
+): () => void {
+  const doc = node.ownerDocument;
+  const view = doc.defaultView;
+  if (!view) return () => {};
+  let height = node.getBoundingClientRect().height;
+  const style = view.getComputedStyle(node);
+  const pinnedTop = (style.position === 'fixed' || style.position === 'sticky') && style.top === '0px';
+  const pointerEdge = edge ?? (pinnedTop ? 'top' : undefined);
+  let near = false;
+  const contains = (target: EventTarget | null) => target instanceof view.Node && node.contains(target);
+  const pointer = (event: PointerEvent) => {
+    if (event.pointerType !== 'mouse') return;
+    const next = contains(event.target) || (pointerEdge === 'top' && event.clientY <= height);
+    if (next !== near) point(next);
+    near = next;
+  };
+  const leave = (event: PointerEvent) => {
+    if (event.relatedTarget) return;
+    near = false;
+    point(false);
+  };
+  const focusChanged = (event: FocusEvent) => {
+    focus(contains(event.type === 'focusout' ? event.relatedTarget : event.target));
+  };
+  focus(contains(doc.activeElement));
+  const observer = view.ResizeObserver ? new view.ResizeObserver(([entry]) => {
+    if (entry) height = entry.borderBoxSize[0]?.blockSize ?? entry.contentRect.height;
+  }) : null;
+  observer?.observe(node);
+  doc.addEventListener('pointermove', pointer, { passive: true });
+  doc.addEventListener('pointerout', leave);
+  doc.addEventListener('focusin', focusChanged);
+  doc.addEventListener('focusout', focusChanged);
+  return () => {
+    observer?.disconnect();
+    doc.removeEventListener('pointermove', pointer);
+    doc.removeEventListener('pointerout', leave);
+    doc.removeEventListener('focusin', focusChanged);
+    doc.removeEventListener('focusout', focusChanged);
+  };
 }

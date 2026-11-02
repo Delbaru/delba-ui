@@ -9,7 +9,7 @@ import {
     type MotionDefaults,
     type RuntimeMotionConfig,
 } from './motion-defaults';
-import { readMotionTimeMs, type MotionTime } from './timing';
+import { readMotionVariable, readMotionTimeMs, type MotionTime } from './timing';
 import { DEFAULT_EASING_ROLES, resolveEasingPreset, type MotionEasingRole } from './easing';
 
 // A previous generated artifact may be loaded by ui.config.ts before the first rebuild after an upgrade.
@@ -28,8 +28,7 @@ export const motionScroll = {
 export function readMotionDefaultNumber<G extends MotionDefaultGroup>(
     group: G, key: keyof MotionDefaults[G] & string, scope?: Element,
 ): number {
-    const value = scope && typeof getComputedStyle === 'function'
-        ? getComputedStyle(scope).getPropertyValue(motionDefaultVariable(group, key)).trim() : '';
+    const value = scope ? readMotionVariable(motionDefaultVariable(group, key), scope) : '';
     const parsed = value === '' ? NaN : Number(value);
     const configured = motionDefaults[group][key];
     const fallback = MOTION_DEFAULTS[group][key as keyof (typeof MOTION_DEFAULTS)[G]];
@@ -41,10 +40,7 @@ export function readMotionDefaultMs<G extends MotionDefaultGroup>(
     key: keyof MotionDefaults[G] & string,
     scope?: Element,
 ): number {
-    const value =
-        scope && typeof getComputedStyle === 'function'
-            ? getComputedStyle(scope).getPropertyValue(motionDefaultVariable(group, key)).trim()
-            : '';
+    const value = scope ? readMotionVariable(motionDefaultVariable(group, key), scope) : '';
     const parsed = /^(\d+(?:\.\d+)?|\.\d+)(ms|s)$/.exec(value);
     if (parsed) return Number(parsed[1]) * (parsed[2] === 's' ? 1000 : 1);
     const fallback = MOTION_DEFAULTS[group][key as keyof (typeof MOTION_DEFAULTS)[G]];

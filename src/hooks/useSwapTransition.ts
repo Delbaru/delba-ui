@@ -28,22 +28,24 @@ export function useSwapTransition(key: ContentKey | undefined, children: ReactNo
   if (live) lastShown.current = children;
 
   useEffect(() => {
-    dispatch({ signal: 'sync', latest: key, reduced: prefersReducedMotion() });
+    dispatch({ signal: 'sync', latest: key, reduced: prefersReducedMotion(nodeRef.current?.ownerDocument.defaultView) });
   }, [key, state]);
 
   useEffect(() => {
     if (state.phase === 'idle') return undefined;
+    const view = nodeRef.current?.ownerDocument.defaultView;
+    if (!view) return undefined;
     const ms = nodeRef.current ? readMotionMs(nodeRef.current, 'animation') : 0;
-    const timer = window.setTimeout(() => dispatch({ signal: 'end', latest: latestKey.current, reduced: prefersReducedMotion() }), ms + MOTION_END_BUFFER_MS);
+    const timer = view.setTimeout(() => dispatch({ signal: 'end', latest: latestKey.current, reduced: prefersReducedMotion(nodeRef.current?.ownerDocument.defaultView) }), ms + MOTION_END_BUFFER_MS);
 
-    return () => window.clearTimeout(timer);
+    return () => view.clearTimeout(timer);
   }, [state]);
 
   const phase = state.phase;
   const onAnimationEnd = useCallback((event: AnimationEvent<HTMLElement>) => {
     // Ход вложенного узла всплывает сюда же — свой отличаем по цели.
     if (event.target !== event.currentTarget || phase === 'idle') return;
-    dispatch({ signal: 'end', latest: latestKey.current, reduced: prefersReducedMotion() });
+    dispatch({ signal: 'end', latest: latestKey.current, reduced: prefersReducedMotion(nodeRef.current?.ownerDocument.defaultView) });
   }, [phase]);
 
   return {

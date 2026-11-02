@@ -23,33 +23,35 @@ const BEFORE_DASH = /[ \t]([—–])[ \t]/g;
  * невидимым символом. Цифра классом, а не escape-последовательностью — по той же причине,
  * что и склейка строк: в строковом литерале обратный слэш пришлось бы удваивать.
  */
-const LONE_PAIR = new RegExp('^[(["\'«„]?[A-Za-zА-ЯЁа-яё]{1,3}' + NBSP + '(?![0-9])[^' + NBSP + ']*$');
+const LONE_PAIR = new RegExp(
+  '^[(["\'«„]?[A-Za-zА-ЯЁа-яё]{1,3}' + NBSP + '(?![0-9])[^' + NBSP + ']*$',
+);
 
 const cache = new Map<string, string>();
 const CACHE_LIMIT = 500;
 
 const bind = (input: string): string => {
-    let value = input;
+  let value = input;
 
-    // Соседние короткие слова («не то и не так») цепляются за один проход не все: замена съедает
-    // разделитель, на котором могло начаться следующее совпадение. Три прохода покрывают любую
-    // реальную цепочку, а стабилизация выходит раньше.
-    for (let pass = 0; pass < 3; pass += 1) {
-        const next = value.replace(SHORT_WORD, `$1$2${NBSP}`);
+  // Соседние короткие слова («не то и не так») цепляются за один проход не все: замена съедает
+  // разделитель, на котором могло начаться следующее совпадение. Три прохода покрывают любую
+  // реальную цепочку, а стабилизация выходит раньше.
+  for (let pass = 0; pass < 3; pass += 1) {
+    const next = value.replace(SHORT_WORD, `$1$2${NBSP}`);
 
-        if (next === value) break;
+    if (next === value) break;
 
-        value = next;
-    }
+    value = next;
+  }
 
-    const bound = value.replace(BEFORE_DASH, `${NBSP}$1 `);
+  const bound = value.replace(BEFORE_DASH, `${NBSP}$1 `);
 
-    // Связка предлога МЯГКАЯ: правило запрещает ему висеть в конце строки — но если переносить
-    // строку больше негде, склейка спасает не предлог, а отнимает у подписи перенос вовсе, и
-    // фраза из двух слов вылезает за свой бокс вместо двух строк. Возвращаем исходную.
-    if (!bound.includes(' ') && LONE_PAIR.test(bound)) return input;
+  // Связка предлога МЯГКАЯ: правило запрещает ему висеть в конце строки — но если переносить
+  // строку больше негде, склейка спасает не предлог, а отнимает у подписи перенос вовсе, и
+  // фраза из двух слов вылезает за свой бокс вместо двух строк. Возвращаем исходную.
+  if (!bound.includes(' ') && LONE_PAIR.test(bound)) return input;
 
-    return bound;
+  return bound;
 };
 
 /**
@@ -58,19 +60,19 @@ const bind = (input: string): string => {
  * пересчитывается один раз на всё приложение.
  */
 export function bindShortWords(value: string): string {
-    if (value.length < 3 || !value.includes(' ')) return value;
+  if (value.length < 3 || !value.includes(' ')) return value;
 
-    const hit = cache.get(value);
+  const hit = cache.get(value);
 
-    if (hit !== undefined) return hit;
+  if (hit !== undefined) return hit;
 
-    const bound = bind(value);
+  const bound = bind(value);
 
-    if (cache.size >= CACHE_LIMIT) cache.clear();
+  if (cache.size >= CACHE_LIMIT) cache.clear();
 
-    cache.set(value, bound);
+  cache.set(value, bound);
 
-    return bound;
+  return bound;
 }
 
 /**
@@ -79,11 +81,11 @@ export function bindShortWords(value: string): string {
  * `Text as='span'` обрабатывают свои куски сами.
  */
 export function bindTextContent(content: React.ReactNode): React.ReactNode {
-    if (typeof content === 'string') return bindShortWords(content);
+  if (typeof content === 'string') return bindShortWords(content);
 
-    if (Array.isArray(content)) {
-        return content.map((part) => (typeof part === 'string' ? bindShortWords(part) : part));
-    }
+  if (Array.isArray(content)) {
+    return content.map((part) => (typeof part === 'string' ? bindShortWords(part) : part));
+  }
 
-    return content;
+  return content;
 }

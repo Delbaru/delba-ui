@@ -1,0 +1,31 @@
+@layer ui.components {
+  .CalendarDays {
+    .day {
+      cursor: pointer;
+      transition: var(--t-fast);
+
+      &[disabled],
+      &[state~='disabled'] {
+        cursor: default;
+        pointer-events: none;
+        opacity: 0.45;
+      }
+
+      &[state~='hover']:not([state~='selected']):not([state~='active']):not([state~='disabled']) {
+        background: var(--line) !important;
+      }
+
+      &[state~='active'],
+      &[state~='selected'] {
+        background: var(--primary) !important;
+
+        .dayText {
+          color: var(--white-100) !important;
+        }
+      }
+    }
+    .dayText {
+      transition: var(--t-fast);
+    }
+  }
+}

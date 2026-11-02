@@ -12,10 +12,14 @@ export interface UseCountUpOptions {
   start?: number;
 }
 
-
 // Ход числа по кадрам. Очистка гасит ТЕКУЩИЙ кадр: id первого кадра к середине хода уже устарел,
 // и цепочка продолжалась бы после размонтирования.
-function runCount(to: number, start: number, duration: number, onFrame: (value: number) => void): () => void {
+function runCount(
+  to: number,
+  start: number,
+  duration: number,
+  onFrame: (value: number) => void,
+): () => void {
   const startTime = performance.now();
   const diff = to - start;
   const easing = configuredMotionEasing('counter');
@@ -36,7 +40,7 @@ export function useCountUp(
   to: number,
   options: UseCountUpOptions = {},
   enabled = true,
-  resetOnDisable = false
+  resetOnDisable = false,
 ): number {
   const { duration, start = 0 } = options;
   const [value, setValue] = useState(start);
@@ -61,8 +65,14 @@ export function useCountUp(
       return undefined;
     }
 
-    const milliseconds = duration === undefined ? readMotionDefaultMs('counter', 'duration') : readMotionTimeMs(duration);
-    if (milliseconds <= 0) { setValue(to); return; }
+    const milliseconds =
+      duration === undefined
+        ? readMotionDefaultMs('counter', 'duration')
+        : readMotionTimeMs(duration);
+    if (milliseconds <= 0) {
+      setValue(to);
+      return;
+    }
     return runCount(to, start, milliseconds, setValue);
   }, [enabled, to, start, duration, resetOnDisable]);
 
@@ -80,7 +90,7 @@ export function useCountUpNode(
   { duration, start = 0 }: UseCountUpOptions,
   enabled: boolean,
   resetOnDisable: boolean,
-  format: (value: number) => string
+  format: (value: number) => string,
 ): void {
   const formatRef = useRef(format);
 
@@ -109,7 +119,10 @@ export function useCountUpNode(
       return undefined;
     }
 
-    const durationMs = duration === undefined ? readMotionDefaultMs('counter', 'duration', node) : readMotionTimeMs(duration, node);
+    const durationMs =
+      duration === undefined
+        ? readMotionDefaultMs('counter', 'duration', node)
+        : readMotionTimeMs(duration, node);
     if (durationMs <= 0) {
       write(to);
       return undefined;

@@ -24,6 +24,7 @@
 | --- | --- | --- | --- |
 | Границы, размещение общей механики | [Ядро](architecture/core.md) | [ui-component](../../.agents/skills/ui-component/SKILL.md) | [Приёмка](verification/acceptance.md): границы и потребители |
 | Публичный API, props, совместимость | [API](architecture/api.md) | [ui-component](../../.agents/skills/ui-component/SKILL.md) | Типы, exports, миграция, сценарий потребителя |
+| Читаемость всех уровней, controllers, однократное подключение, аудит | [Читаемый API и чеклист](architecture/readable-api.md) | ui-component, ui-verify | Полная цепочка до ядра, карта покрытия, примеры до реализации |
 | Компонент, проектная композиция D*, карточка применения, DOM, стиль, доступность | [Компоненты](ui/components.md), [страница нужного компонента](ui/components/README.md) | [ui-component](../../.agents/skills/ui-component/SKILL.md) | Граница кит/потребитель, состояния, клавиатура, SSR и браузер |
 | Переход, collapse, отмена | [Движение](ui/motion.md) | [ui-motion](../../.agents/skills/ui-motion/SKILL.md) | Ход, разворот, reduced motion, unmount |
 | Подтверждённое торможение | [Ядро](architecture/core.md), [движение](ui/motion.md), если затронуто | [ui-performance](../../.agents/skills/ui-performance/SKILL.md) | Сопоставимый замер до/после и сохранение поведения |

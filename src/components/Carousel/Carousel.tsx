@@ -7,8 +7,6 @@ import { composeInteractionHandlers, createLayoutClasses, cx, stateLinkProps, ty
 import type { CarouselProps } from './types';
 import { useCarousel } from './useCarousel';
 
-const DRAG_START_THRESHOLD_PX = 6;
-
 const c = createLayoutClasses(styles);
 
 /**
@@ -72,30 +70,24 @@ export function Carousel({
 }: WithRef<CarouselProps, HTMLDivElement>) {
   'use no memo';
 
-  const {
-    carouselId, setRootRefs, motionHandlers, motionStyle, revealAttrs, slidesPerViewKey, swiperKey, modules,
-    handleSwiper, handleSwiperUpdate, handleSwiperTransitionEnd, autoplayConfig, renderedSlides,
-    currentDrag, currentOrientation, currentCenteredSlides, currentInitialSlide, loopEnabled,
-    currentMousewheel, currentSlidesPerView, currentOffsetAfterPx, currentOffsetBeforePx,
-    currentGapPx, currentSpeed, swiperEffect, freeMode,
-  } = useCarousel(ref, {
+  const carousel = useCarousel(ref, {
     children, carouselId: explicitCarouselId, slidesPerView, orientation, effect, navigation, pagination,
     autoplay, mousewheel, drag, initialSlide, loop, centeredSlides, offsetBefore, offsetAfter, peekStart,
     peekEnd, speed, scrollBased, perspective3d, parallax, apiRef, onNavigationStateChange, onActiveIndexChange, inertia,
     scrollProgress, paginationClassName, navigationClassName, animate,
   });
 
-  const slidesPerViewClasses = c.key('slides-per-view', slidesPerViewKey as ResponsiveValue<string>, (key) => key);
+  const slidesPerViewClasses = c.key('slides-per-view', carousel.layout.slidesPerViewKey as ResponsiveValue<string>, (key) => key);
 
   return (
     <div
-      ref={setRootRefs}
+      ref={carousel.root.ref}
       data-carousel-root
-      data-carousel-id={carouselId}
+      data-carousel-id={carousel.root.id}
       data-scroll-based={scrollBased ? 'true' : 'false'}
-      {...stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { onMouseEnter, onMouseLeave }))}
+      {...stateLinkProps(linkState, composeInteractionHandlers(carousel.root.motionHandlers, { onMouseEnter, onMouseLeave }))}
       className={cx(
-        styles.Root,
+        styles.Carousel, 'Carousel',
         ...c.value('gap', gap),
         ...c.value('p', padding),
         ...c.value('w', w),
@@ -110,62 +102,18 @@ export function Carousel({
         className
       )}
       style={{
-        ...(motionStyle ?? null),
+        ...(carousel.root.motionStyle ?? null),
         ...style,
       }}
-      {...revealAttrs}
+      {...carousel.root.revealAttrs}
       {...props}
     >
       <SwiperRoot
-        key={swiperKey}
-        modules={modules}
-        className={cx(styles.wrapper, wrapperClassName)}
-        onSwiper={handleSwiper}
-        onSlideChange={handleSwiperUpdate}
-        onResize={handleSwiperUpdate}
-        onBreakpoint={handleSwiperUpdate}
-        onLock={handleSwiperUpdate}
-        onUnlock={handleSwiperUpdate}
-        onReachBeginning={handleSwiperUpdate}
-        onReachEnd={handleSwiperUpdate}
-        onFromEdge={handleSwiperUpdate}
-        onSlideChangeTransitionEnd={handleSwiperTransitionEnd}
-        a11y={{
-          enabled: true,
-          prevSlideMessage: 'Предыдущий слайд',
-          nextSlideMessage: 'Следующий слайд',
-        }}
-        allowTouchMove={currentDrag}
-        autoplay={autoplayConfig}
-        direction={currentOrientation}
-        effect={swiperEffect}
-        fadeEffect={{ crossFade: true }}
-        cubeEffect={{ shadow: false, slideShadows: false }}
-        coverflowEffect={{ slideShadows: false }}
-        flipEffect={{ slideShadows: false }}
-        freeMode={freeMode}
-        grabCursor={false}
-        centeredSlides={currentCenteredSlides}
-        initialSlide={currentInitialSlide}
-        loop={loopEnabled}
-        mousewheel={currentMousewheel ? { forceToAxis: true, releaseOnEdges: !loopEnabled } : false}
-        noSwipingSelector='button, input, textarea, select, option, label, summary, [role="button"], [data-carousel-no-drag]'
-        observeParents
-        observer
-        preventClicks
-        preventClicksPropagation
-        resizeObserver
-        simulateTouch={currentDrag}
-        slidesPerView={currentSlidesPerView}
-        slidesOffsetAfter={currentOffsetAfterPx}
-        slidesOffsetBefore={currentOffsetBeforePx}
-        spaceBetween={currentGapPx}
-        speed={currentSpeed}
-        threshold={DRAG_START_THRESHOLD_PX}
-        touchStartPreventDefault={currentDrag}
-        watchOverflow
+          key={carousel.engine.key}
+          {...carousel.engine.props}
+          className={cx(styles.wrapper, wrapperClassName)}
       >
-        {renderedSlides.map((slide, index) => (
+        {carousel.slides.map((slide, index) => (
           <SwiperSlide
             key={`slide-${index}`}
             className={cx(

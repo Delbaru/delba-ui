@@ -36,10 +36,12 @@ async function loadConfig() {
   const { validateMotion } = await import('./motion.ts');
   const { validateImages } = await import('./images.ts');
   const { validateScrollbar } = await import('./scrollbar.ts');
+  const { validateMessages } = await import('./messages.ts');
   try {
     validateMotion(config.motion);
     validateImages(config.images);
     validateScrollbar(config.scrollbar);
+    validateMessages(config.messages);
   } catch (error) {
     throw new Error(`${path.relative(root, configFile)}: ${error instanceof Error ? error.message : error}`);
   }
@@ -55,6 +57,8 @@ async function load() {
   generateMotion(config.motion);
   const { generateImages } = await import('./images.ts');
   generateImages(config.images);
+  const { generateMessages } = await import('./messages.ts');
+  generateMessages(config.messages);
   const { generateInlineIcons } = await import('./icons.ts');
   generateInlineIcons(root);
   const { generateScrollbar } = await import('./scrollbar.ts');
@@ -131,6 +135,8 @@ async function check() {
   generateMotion(config.motion);
   const { generateImages } = await import('./images.ts');
   generateImages(config.images);
+  const { generateMessages } = await import('./messages.ts');
+  generateMessages(config.messages);
   const { projectSteps } = await import('./check/index.mjs');
   const { runSteps } = await import('./check/run.mjs');
   return runSteps(projectSteps(root, config, { update: argv.includes('--update'), fix: argv.includes('--fix') }));

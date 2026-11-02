@@ -60,3 +60,21 @@ export function Example() {
 
 Источник: [Modal.tsx](../../../../src/components/Modal/Modal.tsx).
 Контракт из исходника; браузерная приёмка не заявлена.
+
+## Внутренние границы
+
+Modal — декларативное подключение к стеку провайдера. ModalSurface/ModalSurface.tsx
+владеет единственным визуальным root и собственным SCSS; чистому адаптеру Modal
+не добавляют искусственный DOM. ModalSurface.model владеет входом/возвратом фокуса,
+Tab trap, Escape и временем exit. Документ и кадры выбираются из документа панели.
+Портальные Dropdown внутри того же слоя входят в Tab-область. DeclarationSlot
+сохраняет существующий display:contents host и имеет свои SCSS/маркер.
+
+Современный вызов: animate={{ when: 'open', effect: 'fade', duration: 'fast' }}.
+Старые публичные параметры сохраняют совместимость существующих потребителей;
+новые примеры и мигрируемые вызовы их не используют.
+
+Единственный inner scroll-host использует Box с блочным потоком: переключение на
+Flex column без запрета shrink у содержимого сжимает длинные блоки и убирает overflow.
+Проверка должна подтверждать scrollHeight>clientHeight и настоящий wheel scrollTop,
+а не только наличие overflow-y:auto в CSS.

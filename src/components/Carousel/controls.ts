@@ -50,7 +50,8 @@ export function publishCarouselControlsSnapshot(node: HTMLElement | null, snapsh
 
   const carouselNode = node as CarouselRootNode;
   carouselNode.__carouselControlsSnapshot = snapshot;
-  carouselNode.dispatchEvent(new CustomEvent(CAROUSEL_CONTROLS_EVENT));
+  const CustomEvent = node.ownerDocument.defaultView?.CustomEvent;
+  if (CustomEvent) carouselNode.dispatchEvent(new CustomEvent(CAROUSEL_CONTROLS_EVENT));
 }
 
 export function resetCarouselControlsSnapshot(node: HTMLElement | null): void {
@@ -103,7 +104,9 @@ export function useNearestCarouselControls(targetCarouselId?: string): {
   }, []);
 
   useEffect(() => {
-    if (!rootNode || typeof document === 'undefined') {
+    const owner = rootNode?.ownerDocument;
+    const view = owner?.defaultView;
+    if (!rootNode || !owner || !view) {
       setCarouselNode(null);
       return;
     }
@@ -117,16 +120,12 @@ export function useNearestCarouselControls(targetCarouselId?: string): {
       return nextCarouselNode;
     };
 
-    const resolvedCarouselNode = updateCarouselNode();
-    if (resolvedCarouselNode || typeof MutationObserver === 'undefined') return;
+    updateCarouselNode();
+    if (!view.MutationObserver) return;
 
-    const observer = new MutationObserver(() => {
-      if (updateCarouselNode()) {
-        observer.disconnect();
-      }
-    });
+    const observer = new view.MutationObserver(updateCarouselNode);
 
-    observer.observe(document.body, {
+    observer.observe(owner.body, {
       childList: true,
       subtree: true,
       attributes: true,

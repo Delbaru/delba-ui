@@ -1,0 +1,317 @@
+@use 'sass:map';
+@use '../../core/mixins' as m;
+@use '../../core/scss-utils' as utils;
+
+// Токены вариантов здесь — с пустым фолбэком (`var(--font-h4,)`): набор вариантов у проекта свой, и
+// тема без токена получает то же, что без фолбэка, — шрифт наследуется от варианта Text. Так они не
+// входят в договор темы.
+
+
+// One typography recipe; presets below declare only their differences.
+@mixin rich-preset($options) {
+  $preset: map.merge((
+    body: p1, paragraph-gap: var(--s-16), list-indent: var(--s-24),
+    list-gap: var(--s-16), item-gap: var(--s-4), quote-font: p1,
+    quote-gap: var(--s-16), quote-padding: var(--s-16), quote-left: var(--s-24),
+    h4-font: h4, h4-gap: var(--s-20),
+  ), $options);
+
+  @for $level from 1 through 6 {
+    h#{$level} {
+      $font: h#{$level};
+      @if $level == 4 { $font: map.get($preset, h4-font); }
+      font: var(--font-#{$font},);
+      @if $level == 4 and map.has-key($preset, h4-size) { font-size: map.get($preset, h4-size); }
+      @if $level == 4 and map.has-key($preset, h4-weight) { font-weight: map.get($preset, h4-weight); }
+      text-transform: var(--tt-h#{$level},);
+      letter-spacing: var(--ls-h#{$level},);
+      &:not(:last-child) {
+        @if $level == 4 { margin-bottom: map.get($preset, h4-gap); }
+        @else { margin-bottom: var(--s-20); }
+      }
+    }
+  }
+
+  p {
+    margin: 0;
+    font: var(--font-#{map.get($preset, body)},);
+    @if map.has-key($preset, body-size) { font-size: map.get($preset, body-size); }
+    @if map.has-key($preset, body-weight) { font-weight: map.get($preset, body-weight); }
+    &:not(:last-child) { margin-bottom: map.get($preset, paragraph-gap); }
+  }
+
+  ul, ol {
+    margin: 0;
+    padding-left: map.get($preset, list-indent);
+    li {
+      font: var(--font-#{map.get($preset, body)},);
+      @if map.has-key($preset, body-size) { font-size: map.get($preset, body-size); }
+      @if map.has-key($preset, body-weight) { font-weight: map.get($preset, body-weight); }
+      &:not(:last-child) { margin-bottom: map.get($preset, item-gap); }
+    }
+    &:not(:last-child) { margin-bottom: map.get($preset, list-gap); }
+  }
+
+  blockquote {
+    margin-left: 0;
+    margin-right: 0;
+    font: var(--font-#{map.get($preset, quote-font)},);
+    @if map.has-key($preset, quote-weight) { font-weight: map.get($preset, quote-weight); }
+    padding: map.get($preset, quote-padding);
+    padding-left: map.get($preset, quote-left);
+    background: var(--white-10);
+    &:not(:first-child) { margin-top: map.get($preset, quote-gap); }
+    &:not(:last-child) { margin-bottom: map.get($preset, quote-gap); }
+  }
+}
+
+@layer ui.components {
+  .LexicalText {}
+  .sequence { overflow: hidden; }
+
+  .previewText {
+    margin: 0;
+  }
+
+  .clamp {
+    display: -webkit-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    -webkit-line-clamp: var(--text-rows-d, 1);
+  }
+
+  .ellipsis {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .variableChip {
+    display: inline-flex;
+    min-height: calc(var(--rpx) * 32);
+    padding: calc(var(--rpx) * 11) calc(var(--rpx) * 12);
+    justify-content: center;
+    align-items: center;
+    gap: calc(var(--rpx) * 8);
+    border-radius: calc(var(--rpx) * 8);
+    border: calc(var(--rpx) * 1) solid var(--rich-text-variable-color, var(--primary));
+    background: var(--white-100);
+    color: var(--rich-text-variable-color, var(--primary));
+    font: m.role-font(caption);
+    line-height: 1;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  @media (max-width: 767px) {
+    .clamp {
+      -webkit-line-clamp: var(--text-rows-m, var(--text-rows-d, 1));
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .clamp {
+      -webkit-line-clamp: var(--text-rows-t, var(--text-rows-d, 1));
+    }
+  }
+
+  .RichText {
+    li::marker { color: var(--rich-list-marker-color, currentColor); }
+    @media (max-width: 767px) {
+      &.default {
+        @include rich-preset((
+          body: title,
+          paragraph-gap: var(--rich-text-gap, var(--s-8)),
+          list-gap: var(--rich-text-gap, var(--s-8)),
+          quote-font: title,
+          quote-gap: var(--rich-text-gap, var(--s-8)),
+          quote-padding: var(--s-8),
+          quote-left: var(--s-12),
+        ));
+      }
+
+      &.style-1 {
+        @include rich-preset((
+          paragraph-gap: var(--rich-text-gap, var(--s-8)),
+          list-gap: var(--rich-text-gap, var(--s-8)),
+          quote-gap: var(--rich-text-gap, var(--s-8)),
+          quote-padding: var(--s-8),
+          quote-left: var(--s-12),
+        ));
+      }
+
+      &.style-2 {
+        @include rich-preset((
+          body: p3,
+          h4-font: p2,
+          h4-gap: var(--s-8),
+          h4-size: var(--s-12),
+        ));
+      }
+
+      &.style-3 {
+        @include rich-preset((
+          body: p3,
+          h4-font: p2,
+          h4-gap: var(--s-8),
+          body-size: calc(14 * var(--rpx)),
+          h4-size: var(--s-12),
+        ));
+      }
+    }
+
+    @media (min-width: 768px) and (max-width: 1023px) {
+      &.default {
+        @include rich-preset((
+          body: title,
+          paragraph-gap: var(--s-12),
+          list-indent: var(--s-32),
+          list-gap: var(--s-12),
+          item-gap: var(--rich-text-gap, var(--s-8)),
+          quote-font: title,
+          quote-gap: var(--s-12),
+          quote-padding: var(--s-12),
+          quote-left: var(--s-16),
+        ));
+      }
+
+      &.style-1 {
+        @include rich-preset((
+          paragraph-gap: var(--s-12),
+          list-indent: var(--s-32),
+          list-gap: var(--s-12),
+          item-gap: var(--rich-text-gap, var(--s-8)),
+          quote-gap: var(--s-12),
+          quote-padding: var(--s-12),
+          quote-left: var(--s-16),
+        ));
+      }
+
+      &.style-2 {
+        @include rich-preset((
+          list-indent: var(--s-36),
+          item-gap: var(--rich-text-gap, var(--s-8)),
+          h4-font: p3,
+          h4-gap: var(--s-8),
+        ));
+      }
+
+      &.style-3 {
+        @include rich-preset((
+          body: p3,
+          h4-font: p2,
+          h4-gap: var(--s-8),
+          h4-size: var(--s-12),
+        ));
+      }
+    }
+
+    @media (min-width: 1024px) {
+      &.default {
+        @include rich-preset((
+          body: title,
+          paragraph-gap: var(--rich-text-gap, var(--s-8)),
+          list-indent: var(--s-40),
+          item-gap: var(--rich-text-gap, var(--s-8)),
+          quote-font: title,
+        ));
+      }
+
+      &.style-1 {
+        @include rich-preset((
+          list-indent: var(--s-40),
+          item-gap: var(--rich-text-gap, var(--s-8)),
+          h4-weight: 700,
+        ));
+      }
+
+      &.style-2 {
+        @include rich-preset((
+          body: p2,
+          paragraph-gap: var(--s-12),
+          list-indent: var(--s-36),
+          item-gap: var(--rich-text-gap, var(--s-8)),
+          h4-font: p2,
+          h4-gap: var(--s-8),
+          body-weight: 400,
+          quote-weight: 400,
+        ));
+      }
+
+      &.style-3 {
+        @include rich-preset((
+          body: p3,
+          h4-font: p2,
+          h4-gap: var(--s-8),
+          h4-size: var(--s-12),
+        ));
+      }
+    }
+  }
+}
+
+// ─── Роли блока ─────────────────────────────────────────────────────────────
+// Роль — выбранный в редакторе стиль блока («Крупный», «Подзаголовок»…), развязанный с его
+// тегом (см. `roles.ts`). Класс получает ТОЛЬКО блок, у которого роль задана в данных.
+//
+// Слой утилит, а не покоя: роль — это «проп» блока, пришедший из данных, и обязана выиграть
+// у варианта текста при любой специфичности. В одном слое с вариантом она проигрывала бы
+// ему: `.RichText.default p` весит (0,2,1), класс роли — (0,1,0).
+$rich-roles: h1, h2, h3, title, subtitle, p, small, dop;
+
+// У роли `p` токены регистра и трекинга в договоре темы названы `--tt-p1` / `--ls-p1`
+// (шрифт при этом `--font-p`). Суффикс сводится здесь, договор темы не трогается.
+@function rich-role-suffix($role) {
+  @if $role == p {
+    @return p1;
+  }
+  @return $role;
+}
+
+@mixin rich-role($role) {
+  font: var(--font-#{$role},);
+  text-transform: var(--tt-#{rich-role-suffix($role)},);
+  letter-spacing: var(--ls-#{rich-role-suffix($role)},);
+}
+
+@layer ui.utilities {
+  @each $role in $rich-roles {
+    .role-#{$role} { @include rich-role($role); }
+  }
+
+  // Переопределения по ширине — после базовых: полосы не пересекаются, специфичность у
+  // всех одна, и порядок решает в пользу нужной ширины.
+  @media #{map.get(utils.$breakpoints, t)} {
+    @each $role in $rich-roles {
+      .role-t-#{$role} { @include rich-role($role); }
+    }
+  }
+
+  @media #{map.get(utils.$breakpoints, m)} {
+    @each $role in $rich-roles {
+      .role-m-#{$role} { @include rich-role($role); }
+    }
+  }
+}
+
+// Превью устройства: `data-device` на корне включает роли полосы БЕЗ медиазапроса — редактор
+// показывает мобилку и планшет при любой ширине окна. Только под явным атрибутом: корень без
+// него не совпадает ни с одним правилом ниже. Слой тот же, специфичность (0,3,0) бьёт и базовую
+// роль, и роль полосы из медиазапроса (0,1,0).
+@layer ui.utilities {
+  .RichText[data-device='tablet'] {
+    @each $role in $rich-roles {
+      .role-t-#{$role} { @include rich-role($role); }
+    }
+  }
+
+  .RichText[data-device='mobile'] {
+    @each $role in $rich-roles {
+      .role-m-#{$role} { @include rich-role($role); }
+    }
+  }
+}

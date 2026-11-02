@@ -15,43 +15,4 @@
     visibility: hidden;
     pointer-events: none;
   }
-
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: var(--z-under-floating);
-    pointer-events: none;
-    &[data-open] { pointer-events: auto; }
-  }
-
-  .panel {
-    position: absolute;
-    // The collapse grid must size to its content, not shrink to the trigger.
-    width: max-content;
-    max-width: 100vw;
-    top: calc(var(--dropdown-anchor-bottom, 100%) + var(--dropdown-offset));
-    z-index: var(--z-under-floating);
-    pointer-events: none;
-
-    &[data-open] { pointer-events: auto; }
-    &[data-side='start'] { left: var(--dropdown-anchor-start, 0); }
-    &[data-side='center'] { left: var(--dropdown-anchor-center, 50%); translate: -50% 0; }
-    &[data-side='end'] { left: var(--dropdown-anchor-end, 100%); translate: -100% 0; }
-    &[data-match-width] { width: var(--dropdown-anchor-width, 100%); }
-
-    &.portalPanel {
-      position: fixed;
-      right: auto;
-      bottom: auto;
-      max-width: calc(100vw - 2 * var(--dropdown-viewport-padding));
-      &[data-side] { translate: none; }
-      &[data-match-width] { width: var(--floating-anchor-width); }
-    }
-  }
-
-  .surface { min-width: 0; max-width: 100%; }
-  .surface[hidden] { display: none; }
 }
-
-// Collapse's structural column rule is unlayered. This single surface must shrink horizontally.
-.panel > :global(.ui-collapse) > :global(.ui-collapse-inner) { flex-direction: row; }

@@ -1,0 +1,9 @@
+@layer ui.components {
+  .DurationPicker {}
+
+  .SelectedBand {
+    transform: translateY(-50%);
+    pointer-events: none;
+    background: var(--line);
+  }
+}

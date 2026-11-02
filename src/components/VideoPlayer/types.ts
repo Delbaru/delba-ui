@@ -1,23 +1,17 @@
 import type { GrowProps, RadiusInput, ResponsiveValue, SizeInput } from '../../core';
 import type { CSSProperties } from 'react';
-
-// Источник медиа — как в примитиве Video: строка-URL либо объект с полем src (совместимо структурно).
 export type MediaSource = string | { src: string };
 
 export type VideoPlayerObjectFit = 'contain' | 'cover' | 'fill' | 'none' | 'scale_down';
-
-// Источник кадров для превью таймлайна и отрезок времени плеера (сек), который он покрывает.
 export interface VideoPlayerPreviewSource {
+    /** Media source URL or source object. */
     src: string;
+    /** Start of the represented timeline segment, in seconds. */
     from: number;
+    /** End of the represented timeline segment, in seconds. */
     to: number;
 }
-
-// Какие контролы показывать в баре. Управляет только видимостью, не расположением (порядок фиксирован макетом).
-// 'rate' в набор по умолчанию не входит: включается явно через `controls`.
 export type VideoPlayerControlKey = 'play' | 'timeline' | 'time' | 'rate' | 'volume' | 'fullscreen';
-
-// Дискретное состояние плеера — реактивная часть (ре-рендеры редкие). Тикающее currentTime сюда НЕ входит.
 export interface VideoPlayerSnapshot {
     playing: boolean;
     volume: number;
@@ -27,16 +21,11 @@ export interface VideoPlayerSnapshot {
     fullscreen: boolean;
     ready: boolean;
 }
-
-// Императивный API — «команды» плеера. Дёргаются откуда угодно (аналог CarouselApi).
 export interface VideoPlayerApi {
     play(): void;
     pause(): void;
     toggle(): void;
     seek(seconds: number): void;
-    // Скраб-перемотка: как seek, но с гейтингом по событию 'seeked' (следующая цель пускается только
-    // когда предыдущая перемотка завершилась) + fastSeek, где есть. Для плавной покадровой перемотки при
-    // драге каретки — не «долбит» currentTime быстрее, чем декодер успевает (иначе кадр замирает).
     scrubTo(seconds: number): void;
     seekBy(deltaSeconds: number): void;
     setVolume(value: number): void;
@@ -48,11 +37,7 @@ export interface VideoPlayerApi {
     exitFullscreen(): void;
     toggleFullscreen(): void;
 }
-
-// Контроллер = команды + читаемое состояние (геттеры) + подписки + внутренняя привязка к <video>.
-// Создаётся хук'ом useVideoPlayer и передаётся в <VideoPlayer controller={...} />.
 export interface VideoPlayerController extends VideoPlayerApi {
-    // Реактивное дискретное состояние (геттеры поверх текущего snapshot).
     readonly playing: boolean;
     readonly volume: number;
     readonly muted: boolean;
@@ -60,49 +45,48 @@ export interface VideoPlayerController extends VideoPlayerApi {
     readonly rate: number;
     readonly fullscreen: boolean;
     readonly ready: boolean;
-
-    // Быстрое время (не реактивно — чтение по запросу, без ре-рендера).
     readonly time: number;
     getTime(): number;
-
-    // Подписки: discrete-состояние (для useSyncExternalStore), тикающее время (для скина) и явные
-    // перемотки (для слоя синхронизации — чтобы отличить пользовательский seek от обычного тика).
     subscribe(listener: () => void): () => void;
     getSnapshot(): VideoPlayerSnapshot;
     subscribeTime(listener: (time: number) => void): () => void;
     subscribeSeek(listener: (time: number) => void): () => void;
-
-    // Внутренняя проводка — вызывается скином VideoPlayer, вручную не трогаем.
     _attach(video: HTMLVideoElement, root: HTMLElement | null): void;
     _detach(): void;
 }
 
 export interface UseVideoPlayerOptions {
+    /** Initial volume from zero to one; defaults to one. */
     initialVolume?: number;
+    /** Initial muted state; defaults to false. */
     initialMuted?: boolean;
+    /** Initial playback rate; defaults to one. */
     initialRate?: number;
+    /** Request playback when the internal controller attaches. */
     autoPlay?: boolean;
 }
-
-// Escape-hatch для императивного доступа без хука (консистентно с CarouselApiRef).
 export type VideoPlayerApiRef = { current: VideoPlayerApi | null } | ((api: VideoPlayerApi | null) => void);
 
 export interface VideoPlayerProps extends SizeInput, RadiusInput, GrowProps {
-    // Контроллер из useVideoPlayer(). Не передан — компонент создаёт внутренний (работает «из коробки»).
+    /** Stable playback owner; omitted to create an internal controller. */
     controller?: VideoPlayerController;
+    /** Receives commands while mounted and null during cleanup. */
     apiRef?: VideoPlayerApiRef;
 
+    /** Media source URL or source object. */
     src?: MediaSource;
+    /** Poster URL or source object. */
     poster?: MediaSource;
-
-    // Лейбл источника (верх-слева): текст + иконка.
+    /** Optional source label above the media. */
     label?: string;
+    /** Optional icon resource beside the source label. */
     labelIcon?: string;
 
+    /** Responsive fit of media inside its frame. */
     objectFit?: ResponsiveValue<VideoPlayerObjectFit>;
+    /** Responsive player aspect ratio. */
     aspectRatio?: ResponsiveValue<string>;
-
-    // Набор видимых контролов. По умолчанию — все, кроме 'rate'.
+    /** Visible controls; defaults to play, timeline, time, volume and fullscreen. */
     controls?: VideoPlayerControlKey[];
 
     /**
@@ -113,12 +97,13 @@ export interface VideoPlayerProps extends SizeInput, RadiusInput, GrowProps {
 
     /** Скорости кнопки 'rate' по кругу, клик ставит следующую. По умолчанию `[1, 1.25, 1.5, 2]`. */
     rates?: number[];
+    /** Request playback when the internal controller attaches. */
     autoPlay?: boolean;
-
-    // false — «ведомый» режим: без бара управления и кликов по видео (только медиа + лейбл). Такой
-    // плеер управляется снаружи через свой контроллер (например слоем синхронизации). По умолчанию true.
+    /** Enable the control bar and media clicks; defaults to true. */
     interactive?: boolean;
 
+    /** Additional root class. */
     className?: string;
+    /** Inline root styles. */
     style?: CSSProperties;
 }

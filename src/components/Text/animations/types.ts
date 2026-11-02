@@ -30,6 +30,13 @@ export type AnimationInput =
 /** Общая объектная форма анимаций содержимого Text. Время здесь в секундах или именем темы. */
 export type TextAnimate =
   | TextTimelineAnimate
+  | ({ when: 'change'; effect: 'textReveal' } & TextRevealOptions)
+  | {
+      when: 'hover';
+      effect: 'textSlide';
+      duration?: MotionTime;
+      hoverColor?: string;
+    }
   | {
       /** Запуск при входе в экран или сразу после монтирования. */
       when: 'inView' | 'load';
@@ -45,6 +52,15 @@ export type TextAnimate =
       suffix?: string;
       /** Разделять разряды по ru-RU. */
       grouped?: boolean;
+    }
+  | {
+      /** Sequence selection changes; the selected step owns the visible content. */
+      when: 'change';
+      effect: 'textSlide' | 'textClip';
+      steps: string[];
+      currentStep: number;
+      duration?: MotionTime;
+      clipHeight?: string;
     }
   | {
       /** Смена по изменению содержимого Text. */
@@ -85,6 +101,8 @@ export interface AnyTextAnimation {
  * Объявление плагина: на входе проверяется строгий по ключу контракт (Inner ↔ опции этого ключа),
  * на выходе — тип-стёртое AnyTextAnimation для реестра. Небезопасное приведение заперто здесь.
  */
-export function defineAnimation<K extends AnimationKey>(animation: TextAnimation<K>): AnyTextAnimation {
+export function defineAnimation<K extends AnimationKey>(
+  animation: TextAnimation<K>,
+): AnyTextAnimation {
   return animation as unknown as AnyTextAnimation;
 }

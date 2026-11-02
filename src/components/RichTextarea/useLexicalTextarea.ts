@@ -1,12 +1,11 @@
 import { useCallback, useId, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import type { LexicalEditor } from 'lexical';
+import { validateEditorContent } from './LexicalTextarea.config';
 
 import { PROGRAMMATIC_CONTENT_TAG, applyContentToEditor, buildChangePayload, insertVariableAtSelection } from './lexical/content';
 import { createVariableLookup, resolveVariableDefinition } from './lexical/variables';
 import type { LexicalTextareaChangePayload, LexicalTextareaContent, LexicalTextareaHandle, LexicalTextareaVariable } from './types';
 
-const DEFAULT_MIN_LENGTH_MESSAGE = (minLength: number) => `Минимум ${minLength} символов`;
-const DEFAULT_MAX_LENGTH_MESSAGE = (maxLength: number) => `Максимум ${maxLength} символов`;
 const EMPTY_CHANGE_PAYLOAD: LexicalTextareaChangePayload = {
   json: null,
   plainText: '',
@@ -62,24 +61,15 @@ export function useLexicalTextarea(ref: Ref<LexicalTextareaHandle> | undefined, 
   const showCounter = minLength != null || maxLength != null;
   const hasVariables = variables.length > 0;
 
-  const validatePayload = useCallback(
-    (payload: LexicalTextareaChangePayload): string | undefined => {
-      if (required && payload.isEmpty) {
-        return emptyMessage;
-      }
+  const receive = useCallback((payload: LexicalTextareaChangePayload, nextError?: string) => {
+    valueRef.current = payload.json;
+    metaRef.current = payload;
+    setEditorMeta({ payload, error: nextError });
+  }, []);
 
-      if (!payload.isEmpty && minLength != null && payload.characters < minLength) {
-        return DEFAULT_MIN_LENGTH_MESSAGE(minLength);
-      }
-
-      if (maxLength != null && payload.characters > maxLength) {
-        return DEFAULT_MAX_LENGTH_MESSAGE(maxLength);
-      }
-
-      return validate?.(payload);
-    },
-    [emptyMessage, maxLength, minLength, required, validate]
-  );
+  const validatePayload = useCallback((payload: LexicalTextareaChangePayload) =>
+    validateEditorContent(payload, { required, emptyMessage, minLength, maxLength, validate }),
+  [emptyMessage, maxLength, minLength, required, validate]);
 
   const handleEditorChange = useCallback(
     (editorState: ReturnType<LexicalEditor['getEditorState']>, _editor: LexicalEditor, tags: Set<string>) => {
@@ -93,13 +83,11 @@ export function useLexicalTextarea(ref: Ref<LexicalTextareaHandle> | undefined, 
       const payload = buildChangePayload(editorState);
       const nextError = didSyncRef.current ? validatePayload(payload) : undefined;
 
-      valueRef.current = payload.json;
-      metaRef.current = payload;
-      setEditorMeta({ payload, error: nextError });
+      receive(payload, nextError);
       onChange?.(payload);
       didSyncRef.current = true;
     },
-    [onChange, validatePayload]
+    [onChange, receive, validatePayload]
   );
 
   const handleInsertVariable = useCallback((variable: string | LexicalTextareaVariable) => {
@@ -117,56 +105,28 @@ export function useLexicalTextarea(ref: Ref<LexicalTextareaHandle> | undefined, 
     });
   }, []);
 
-  const handleContentSync = useCallback((payload: LexicalTextareaChangePayload) => {
-    valueRef.current = payload.json;
-    metaRef.current = payload;
-    setEditorMeta({ payload, error: undefined });
-  }, []);
+const replaceContent = useCallback((nextContent: LexicalTextareaContent | string | undefined) => {
+    const editor = editorRef.current;
+    if (!editor) return;
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      focus: () => {
-        editorRef.current?.focus();
-      },
-      reset: () => {
-        const editor = editorRef.current;
+    applyContentToEditor(editor, nextContent, variableLookupRef.current);
+    const payload = buildChangePayload(editor.getEditorState());
+    receive(payload);
+    onChange?.(payload);
+    didSyncRef.current = false;
+  }, [onChange, receive]);
 
-        if (!editor) {
-          return;
-        }
-
-        applyContentToEditor(editor, latestContentRef.current, variableLookupRef.current);
-        const payload = buildChangePayload(editor.getEditorState());
-
-        valueRef.current = payload.json;
-        metaRef.current = payload;
-        setEditorMeta({ payload, error: undefined });
-        onChange?.(payload);
-        didSyncRef.current = false;
-      },
-      setContent: (nextContent) => {
-        const editor = editorRef.current;
-
-        if (!editor) {
-          return;
-        }
-
-        applyContentToEditor(editor, nextContent, variableLookupRef.current);
-        const payload = buildChangePayload(editor.getEditorState());
-
-        latestContentRef.current = nextContent;
-        valueRef.current = payload.json;
-        metaRef.current = payload;
-        setEditorMeta({ payload, error: undefined });
-        onChange?.(payload);
-        didSyncRef.current = false;
-      },
-      insertVariable: handleInsertVariable,
-      getValue: () => valueRef.current,
-    }),
-    [handleInsertVariable, onChange]
-  );
+  useImperativeHandle(ref, () => ({
+    focus: () => editorRef.current?.focus(),
+    reset: () => replaceContent(latestContentRef.current),
+    setContent: nextContent => {
+      if (!editorRef.current) return;
+      latestContentRef.current = nextContent;
+      replaceContent(nextContent);
+    },
+    insertVariable: handleInsertVariable,
+    getValue: () => valueRef.current,
+  }), [handleInsertVariable, replaceContent]);
 
   const handleBlur = () => {
     setEditorMeta((currentMeta) => ({
@@ -176,8 +136,20 @@ export function useLexicalTextarea(ref: Ref<LexicalTextareaHandle> | undefined, 
   };
 
   return {
-    id, editorRef, variableLookup, contentSignature, editorMeta, helperError, helperText,
-    helperTextColor, helperTextId, showCounter, hasVariables, handleEditorChange, handleContentSync,
-    handleBlur,
+    id,
+    editor: {
+      ref: editorRef,
+      content,
+      signature: contentSignature,
+      variables: variableLookup,
+      change: handleEditorChange,
+      sync: receive,
+      blur: handleBlur,
+    },
+    feedback: { error: helperError, text: helperText, color: helperTextColor, id: helperTextId },
+    counter: { visible: showCounter, characters: editorMeta.payload.characters, maxLength },
+    hasVariables,
   };
 }
+
+export type LexicalTextareaModel = ReturnType<typeof useLexicalTextarea>;

@@ -64,6 +64,15 @@ export const MOTION_DEFAULTS = {
         edgeResistance: 0.2,
         wheelCooldownDuration: 0.18,
     },
+    videoPlayer: {
+        autoHideDuration: 2,
+        doubleClickDuration: 0.22,
+        controlsPollDuration: 0.3,
+        volumeStep: 0.05,
+        timelineStep: 5,
+        timelinePageRatio: 0.1,
+        driftTolerance: 0.3,
+    },
     buttonIdle: {
         duration: 8,
         strength: 1,
