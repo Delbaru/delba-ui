@@ -65,7 +65,14 @@ export const unanimatedConditionalRule = {
       const declaration = symbol.declarations?.find(ts.isVariableDeclaration);
       return declaration?.initializer ? resolve(declaration.initializer, new Set(seen).add(symbol)) : node;
     };
-    const property = (object, name) => object && ts.isObjectLiteralExpression(object) ? object.properties.find(item => ts.isPropertyAssignment(item) && item.name.getText(source).replace(/['"]/g, '') === name)?.initializer : null;
+    const property = (object, name) => {
+      if (!object || !ts.isObjectLiteralExpression(object)) return null;
+      const entry = object.properties.find(item =>
+        (ts.isPropertyAssignment(item) || ts.isShorthandPropertyAssignment(item))
+          && item.name.getText(source).replace(/['"]/g, '') === name);
+      if (entry && ts.isPropertyAssignment(entry)) return entry.initializer;
+      return entry && ts.isShorthandPropertyAssignment(entry) ? entry.name : null;
+    };
     const reads = expression => {
       const paths = new Set();
       const visit = node => {

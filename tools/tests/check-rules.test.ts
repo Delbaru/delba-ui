@@ -168,6 +168,20 @@ test('conditional JSX respects direct and keyed layout ownership, not unrelated 
   ]) assert.equal(count(wrap(body), 'Panel.tsx').length, 1, body);
 });
 
+test('collapse shorthand open owns a conditional column without exempting an unrelated object', () => {
+  const count = RULES['unanimated-conditional'].ast.count;
+  const source = `function FooterColumn({ column, expandable, open }: {
+    column: { text: string } | null; expandable: boolean; open: boolean;
+  }) {
+    return <Flex>{column && expandable && (
+      <Flex collapse={{ open, fade: true }}><Text>{column.text}</Text></Flex>
+    )}</Flex>;
+  }`;
+  assert.equal(count(source, 'FooterColumn.tsx').length, 0);
+  assert.equal(count(source.replace('collapse={{ open, fade: true }}', 'collapse={{ fade: true }}'), 'FooterColumn.tsx').length, 1);
+  assert.equal(count(source.replace('collapse={{ open, fade: true }}', 'data-state={{ open, fade: true }}'), 'FooterColumn.tsx').length, 1);
+});
+
 
 test('a native range owner is declared, styled and rooted; ordinary range inputs remain forbidden', () => {
   const count = RULES['raw-input'].ast.count;

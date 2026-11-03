@@ -17,4 +17,5 @@ test('generated motion scale and easing roles are kit-owned, while colors remain
   assert.ok(contract.tokens.has('--primary'));
   // Scrollbar config may refer to a consumer-only color, just like generated skins.
   assert.equal(contract.tokens.has('--scrollbar-thumb'), false);
+  assert.equal([...contract.attributes.keys()].some((name) => name.startsWith('data-hide-')), false);
 });

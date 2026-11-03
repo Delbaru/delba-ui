@@ -7,12 +7,13 @@ import { componentAnatomyRule } from './rules/component-anatomy.mjs';
 import { collapseRule } from './rules/collapse.mjs';
 import { domRefRule } from './rules/dom-ref.mjs';
 import { jsxFormatRule } from './rules/jsx-format.mjs';
+import { responsiveHideRule } from './rules/responsive-hide.mjs';
 
 const KIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 /** Правила кита; проекту достаются только общие — у него нет `src/components` кита и ядра. */
-export const kitRules = [collapseRule, domRefRule, jsxFormatRule, componentAnatomyRule];
-export const projectRules = [domRefRule];
+export const kitRules = [collapseRule, domRefRule, jsxFormatRule, componentAnatomyRule, responsiveHideRule];
+export const projectRules = [domRefRule, responsiveHideRule];
 
 function sourceFiles(dir) {
   if (!fs.existsSync(dir)) return [];

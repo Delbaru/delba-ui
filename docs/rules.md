@@ -59,7 +59,7 @@ borderT={['calc(var(--rpx) * 1) solid var(--line)', 'calc(var(--rpx) * 1) solid 
 ## 5. Кортежи и сетка
 
 Респонсив-проп — полный кортеж `[desktop, mobile, tablet]`; `null` — пропуск, а не «как desktop».
-Числа кратны 4 **[check]**. `@media` в SCSS нет — кортежи и `data-hide-*` **[check]**. Транзишн —
+Числа кратны 4 **[check]**. `@media` в SCSS нет — кортежи, включая `hide={[desktop, mobile, tablet]}` **[check]**. Транзишн —
 `var(--t-fast|normal|slow)` **[check]**.
 
 ## 6. Ссылка-карточка

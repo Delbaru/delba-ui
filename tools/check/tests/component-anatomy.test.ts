@@ -25,9 +25,9 @@ test('visual owner requires its own stylesheet, even when all geometry is props'
   assert.match(inspect('Panel/Panel.tsx')[0]?.message ?? '', /отсутствует собственный Panel.module.scss/);
 }));
 
-test('empty named selector plus stable DOM marker is valid without dummy CSS', () => fixture((_root, write, inspect) => {
+test('empty named selector plus owning module class is valid without dummy CSS or global marker', () => fixture((_root, write, inspect) => {
   write('Panel/Panel.module.scss', '@layer ui.components { .Panel {} }');
-  write('Panel/Panel.tsx', `import local from './Panel.module.scss'; export function Panel() { return <Flex className={cx('Panel', local.Panel)} />; }`);
+  write('Panel/Panel.tsx', `import local from './Panel.module.scss'; export function Panel() { return <Flex className={local.Panel} />; }`);
   assert.deepEqual(inspect('Panel/Panel.tsx'), []);
 }));
 
@@ -48,7 +48,7 @@ test('className can be owned by the component model/config, never by a sibling',
 test('comments, strings, class on another component and stripped-selector-only markers do not prove anatomy', () => fixture((_root, write, inspect) => {
   write('Panel/Panel.module.scss', '/* .Panel {} */ .other {}');
   write('Panel/Panel.tsx', `import styles from './Panel.module.scss'; export function Panel() { return <Flex className={styles.Panel} />; }`);
-  assert.equal(inspect('Panel/Panel.tsx').length, 2);
+  assert.equal(inspect('Panel/Panel.tsx').length, 1);
 }));
 
 test('hooks, children-only providers, fragment passthrough and render helpers do not get artificial DOM', () => {

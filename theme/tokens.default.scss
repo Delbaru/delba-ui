@@ -94,10 +94,6 @@
     @include typography;
   }
 
-  [data-hide-mobile] {
-    display: none !important;
-  }
-
   @for $i from 1 through 10 {
     [data-order-mobile='#{$i}'] {
       order: $i;
@@ -109,10 +105,6 @@
   :where(:root) {
     --s-container: calc(24 * var(--rpx));
     @include typography;
-  }
-
-  [data-hide-tablet] {
-    display: none !important;
   }
 
   @for $i from 1 through 10 {
@@ -129,7 +121,4 @@
     @include typography;
   }
 
-  [data-hide-pc] {
-    display: none !important;
-  }
 }

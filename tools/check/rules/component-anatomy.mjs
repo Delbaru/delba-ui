@@ -49,7 +49,7 @@ function moduleImports(source) {
     ts.isStringLiteralLike(node.moduleSpecifier) && node.moduleSpecifier.text.endsWith('.module.scss'));
 }
 
-/** Prove both the stable name and CSS-module reference are used in a className value, not in a comment/example. */
+/** Prove the owning CSS-module reference is used in a className value, not in a comment/example. */
 function hasNamedClass(source, name, stylesheet) {
   const bindings = moduleImports(source).filter((node) =>
     path.resolve(path.dirname(source.fileName), node.moduleSpecifier.text) === stylesheet)
@@ -61,11 +61,9 @@ function hasNamedClass(source, name, stylesheet) {
       : ts.isPropertyAssignment(node) && (ts.isIdentifier(node.name) || ts.isStringLiteralLike(node.name)) && node.name.text === 'className' ? node.initializer
         : undefined;
     if (value) {
-      let literal = false;
       let scoped = false;
       const followed = new Set();
       const inspect = (child) => {
-        if (ts.isStringLiteralLike(child) && child.text.split(/\s+/).includes(name)) literal = true;
         if (ts.isPropertyAccessExpression(child) && ts.isIdentifier(child.expression)
           && bindings.includes(child.expression.text) && child.name.text === name) scoped = true;
         if (ts.isElementAccessExpression(child) && ts.isIdentifier(child.expression)
@@ -82,7 +80,7 @@ function hasNamedClass(source, name, stylesheet) {
         ts.forEachChild(child, inspect);
       };
       inspect(value);
-      if (literal && scoped) found = true;
+      if (scoped) found = true;
     }
     ts.forEachChild(node, visit);
   };
@@ -120,8 +118,8 @@ export const componentAnatomyRule = {
       const owners = [source, parse(path.join(path.dirname(source.fileName), `${name}.model.ts`)),
         parse(path.join(path.dirname(source.fileName), `${name}.config.ts`))].filter(Boolean);
       if (!owners.some((owner) => hasNamedClass(owner, name, own))) report(node,
-        `${name}: className не соединяет стабильный '${name}' с собственным styles.${name}.`,
-        'На существующем корне используйте cx(\'Name\', styles.Name, className). Для модели оформления допустим className в Name.model.ts/config.ts.');
+        `${name}: className не использует собственный styles.${name}.`,
+        'На существующем корне используйте styles.Name или cx(styles.Name, className). Для модели оформления допустим className в Name.model.ts/config.ts.');
     }
     return diagnostics;
   },

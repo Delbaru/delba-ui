@@ -67,9 +67,8 @@ export function ChoiceButtons<T extends string = string>({
                 p={[4, null, null]}
                 r={[12, null, null]}
                 bg={['var(--background)', 'var(--background)', 'var(--background)']}
-                className={cx('ChoiceButtons', styles.ChoiceButtons, className)}
-                data-hide-mobile
-                data-hide-tablet
+                className={cx(styles.ChoiceButtons, className)}
+                hide={[false, true, true]}
                 aria-required={required || undefined}
             >
                 {items.map((item, index) => (
@@ -100,8 +99,8 @@ export function ChoiceButtons<T extends string = string>({
                 visibleOptions={Math.min(items.length, 3)}
                 disabled={disabled}
                 required={required}
-                className={cx('ChoiceButtons', styles.ChoiceButtons)}
-                data-hide-pc
+                className={styles.ChoiceButtons}
+                hide={[true, false, false]}
             />
         </>
     );

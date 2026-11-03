@@ -10,7 +10,7 @@
 //     библиотекой (её `--collapse-gap-*`, `--inline-*` и т.п. — внутренние, не в счёт);
 //   • семейство, которое читается через интерполяцию (`var(--font-#{$variant})`) — хватает
 //     хотя бы одного токена с таким префиксом;
-//   • атрибутное правило (`[data-hide-mobile]`), которое ставят компоненты библиотеки.
+//   • атрибутные правила порядка (`[data-order-mobile]`); hide генерируется из layout-пропа.
 //   • служебные роли типографики (`--font-body`…, `TEXT_ROLES` в core/base/typography.ts), хоть кит
 //     и читает их с фолбэком на прежний вариант: фолбэк — для тем, написанных до ролей.
 // Токен, стоящий фолбэком другого (`var(--a, var(--b))`), в договор не входит.
@@ -127,7 +127,7 @@ export function readContract() {
       if (m[1] !== '--t-d-') internalPrefixes.add(m[1]);
     }
     if (!PROP_PREFIX_LIST.test(code)) {
-      for (const m of code.matchAll(/\b(data-(?:hide|order)-(?:mobile|tablet|pc))\b/g)) add(attributes, m[1], user);
+      for (const m of code.matchAll(/\b(data-order-(?:mobile|tablet|pc))\b/g)) add(attributes, m[1], user);
     }
   }
 

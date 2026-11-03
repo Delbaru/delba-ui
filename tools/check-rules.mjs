@@ -77,7 +77,7 @@ export const RULES = {
   'media-query': {
     ext: /\.scss$/,
     test: (line, file = '', text = '', offset = 0) => /@media\b/.test(line) && !ownsResponsiveTokens(text, file, offset),
-    hint: 'кортеж пропа или data-hide-*',
+    hint: 'responsive-кортеж пропа; для скрытия hide={[desktop, mobile, tablet]}',
   },
   // Проп раньше SCSS (docs/rules.md): то, что говорится пропом, в модуле — брак, который ревью ловило много раз.
   'scss-zero-spacing': {

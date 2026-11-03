@@ -60,8 +60,10 @@ export function ImgExample() {
 не возвращает размытие поверх уже загруженного нового. `error` завершает ожидание
 смены и вызывает пользовательский обработчик, сохраняя прежнюю политику blur.
 
-`data-hide-*`, `data-order-*`, `data-fancybox-*`, `data-carousel-*` идут на корень;
+`data-hide-scrollbar`, `data-order-*`, `data-fancybox-*`, `data-carousel-*` идут на корень;
 остальные native props и события — на изображение. `href` исключает вложенный lightbox.
+Responsive-скрытие задаётся `hide={[desktop, mobile, tablet]}` на корневой коробке.
+Legacy `data-hide-mobile/tablet/pc/desktop` не является договором Img.
 Art direction сохраняет порядок mobile → tablet; `priority` означает eager/high,
 а явный `preload` продолжает управляться Next. Ручные `sizes` в потребителях не добавляются.
 

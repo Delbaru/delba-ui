@@ -31,7 +31,6 @@ export function ownsResponsiveTokens(text, file, offset) {
   if (!children.some(block => block.header === ':root')) return false;
   for (const child of children) {
     if (child.header === ':root') { if (text.slice(child.start + 1, child.end).split(';').some(declaration => declaration.trim() && !/^--[\w-]+\s*:/.test(declaration.trim()))) return false; }
-    else if (/^\[data-hide-(mobile|tablet|desktop|pc)\]$/.test(child.header)) { if (!/^\s*display\s*:\s*none(?:\s*!important)?\s*;?\s*$/.test(text.slice(child.start + 1, child.end))) return false; }
     else if (/^@for\s+\$i\s+from\s+1\s+through\s+10$/.test(child.header)) continue;
     else if (/^\[data-order-(mobile|tablet|desktop|pc)=['"]#\{\$i\}['"]\]$/.test(child.header)) { if (!/^\s*order\s*:\s*\$i\s*;?\s*$/.test(text.slice(child.start + 1, child.end))) return false; }
     else return false;

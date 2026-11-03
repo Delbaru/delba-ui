@@ -17,6 +17,32 @@ async function openFixture(page: Page) {
   ).toBeVisible();
 }
 
+test('ChoiceButtons retains one selection across desktop, mobile and tablet without legacy hide attributes', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Form data contracts' });
+  await scope.getByRole('button', { name: 'Two', exact: true }).click();
+  await expect(scope.getByRole('button', { name: 'Two', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+  await page.setViewportSize({ width: 640, height: 800 });
+  const trigger = scope.getByRole('button', { name: 'Выберите значение', exact: true });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger).toHaveText('Two');
+  await expect(scope.getByRole('button', { name: 'One', exact: true })).toHaveCount(0);
+  await trigger.click();
+  await page.getByRole('option', { name: 'One', exact: true }).click();
+
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger).toHaveText('One');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(scope.getByRole('button', { name: 'One', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(scope.locator('[data-hide-mobile], [data-hide-tablet], [data-hide-pc], [data-hide-desktop]')).toHaveCount(0);
+  const values = await scope.getByTestId('external-form').evaluate((form: HTMLFormElement) =>
+    new FormData(form).getAll('topic'));
+  expect(values).toEqual(['one']);
+});
+
 test('Input calendar action padding toggles once without activating the field again', async ({ page }) => {
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
@@ -1941,9 +1967,10 @@ test('number stepping honors min-relative fractional steps and ignores any or re
   await openFixture(page);
 
   const fraction = page.getByTestId('fraction-step');
-  await fraction.locator('xpath=../../..').locator('[data-input-action]').first().click();
+  const field = fraction.locator('xpath=../../..');
+  await field.getByRole('button', { name: 'Увеличить значение', exact: true }).click();
   await expect(fraction).toHaveValue('0.7');
-  await fraction.locator('xpath=../../..').locator('[data-input-action]').last().click();
+  await field.getByRole('button', { name: 'Уменьшить значение', exact: true }).click();
   await expect(fraction).toHaveValue('0.2');
   expect(await page.evaluate(() => window.__numberChanges)).toBe(2);
 
@@ -3321,7 +3348,7 @@ test('Input calendar month and year controls are keyboard-operable', async ({ pa
   await openFixture(page);
   const date = page.getByTestId('keyboard-date');
   const calendarField = page.getByTestId('calendar-control');
-  await calendarField.locator('[data-input-action="true"]').click();
+  await calendarField.getByRole('button', { name: 'Открыть календарь', exact: true }).click();
 
   const calendar = page.getByRole('group', { name: 'Открыть календарь', exact: true });
   const chooseMonth = calendar.getByRole('button', { name: 'Choose month' });
@@ -3412,7 +3439,7 @@ test('date calendar inside Modal stays in its focus scope and Escape restores th
   const date = page.getByTestId('modal-date');
   const field = page.getByTestId('modal-calendar-control');
   await expect(modal).toBeVisible();
-  await field.locator('[data-input-action="true"]').click();
+  await field.getByRole('button', { name: 'Открыть календарь', exact: true }).click();
   await expect(date).toBeFocused();
 
   const calendar = page.getByRole('group', { name: 'Открыть календарь', exact: true });

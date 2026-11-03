@@ -1,4 +1,5 @@
-const ROOT_DATA_PROP_PREFIXES = ['data-hide-', 'data-order-', 'data-fancybox-', 'data-carousel-'] as const;
+const ROOT_DATA_PROP_PREFIXES = ['data-order-', 'data-fancybox-', 'data-carousel-'] as const;
+const ROOT_DATA_PROPS = new Set(['data-hide-scrollbar']);
 
 export function splitRootDomProps<T extends Record<string, unknown>>(props: T): {
   rootProps: Partial<T>;
@@ -8,7 +9,7 @@ export function splitRootDomProps<T extends Record<string, unknown>>(props: T): 
   const rootProps: Partial<T> = {};
 
   for (const key of Object.keys(props)) {
-    if (!ROOT_DATA_PROP_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+    if (!ROOT_DATA_PROPS.has(key) && !ROOT_DATA_PROP_PREFIXES.some((prefix) => key.startsWith(prefix))) {
       continue;
     }
 

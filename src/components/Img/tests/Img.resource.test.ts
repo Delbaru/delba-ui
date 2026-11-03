@@ -66,11 +66,11 @@ test('real Img routes root markers and native image attributes without nested li
   const html = renderToStaticMarkup(createElement(Img, {
     src: { default: { src: '/api/private/photo.webp', width: 800, height: 400 } },
     w: [160, 160, 160], alt: 'Photo', fancybox: 'gallery', href: '/catalog', title: 'Image title',
-    ...{ 'data-hide-desktop': 'true' },
+    ...{ 'data-hide-scrollbar': 'true' },
   }));
   assert.equal((html.match(/<a\b/g) ?? []).length, 1);
   assert.equal(html.includes('data-fancybox='), false);
-  assert.match(html, /<a[^>]*data-hide-desktop="true"/);
+  assert.match(html, /<a[^>]*data-hide-scrollbar="true"/);
   assert.match(html, /<img[^>]*title="Image title"/);
   assert.equal(/<a[^>]*title=/.test(html), false);
   const lightbox = renderToStaticMarkup(createElement(Img, {
