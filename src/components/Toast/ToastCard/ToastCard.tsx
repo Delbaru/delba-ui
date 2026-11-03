@@ -1,13 +1,24 @@
 import { cx } from '../../../core';
+import { useEffect, useRef } from 'react';
 import { Flex } from '../../Flex';
 import { Icon } from '../../Icon';
 import { Text } from '../../Text';
+import { Button } from '../../Button';
 import { TOAST_TONES } from '../Toast.config';
-import type { ToastItem } from '../Toast.types';
+import type { ToastItem, ToastProviderProps } from '../Toast.types';
 import styles from './ToastCard.module.scss';
 
-export function ToastCard({ item, onExited }: { item: ToastItem; onExited: () => void }) {
+export function ToastCard({ item, onExited, onDismiss, renderToast }: {
+  item: ToastItem; onExited: () => void; onDismiss: () => void;
+  renderToast?: ToastProviderProps['renderToast'];
+}) {
   const tone = TOAST_TONES[item.tone ?? 'success'];
+  const entered = useRef(item.open);
+  if (item.open) entered.current = true;
+  useEffect(() => {
+    // An item evicted before its first commit has no exit transition to acknowledge it.
+    if (!item.open && !entered.current) onExited();
+  }, [item.open, onExited]);
 
   return (
     <Flex
@@ -15,7 +26,7 @@ export function ToastCard({ item, onExited }: { item: ToastItem; onExited: () =>
         collapse={{ open: item.open, appear: true, gap: [12, 12, 12], fade: true, onEnd: item.open ? undefined : onExited }}
         dir={['column', 'column', 'column']}
     >
-      <Flex
+      {renderToast ? renderToast(item, onDismiss) : <Flex
           align={['center', 'center', 'center']}
           gap={[12, 12, 12]}
           p={[[16, 20], [16, 20], [16, 20]]}
@@ -44,7 +55,8 @@ export function ToastCard({ item, onExited }: { item: ToastItem; onExited: () =>
               color='var(--text-muted)'
           >{item.description}</Text>}
         </Flex>
-      </Flex>
+        {item.action && <Button onClick={() => { item.action?.onClick(); onDismiss(); }}>{item.action.label}</Button>}
+      </Flex>}
     </Flex>
   );
 }

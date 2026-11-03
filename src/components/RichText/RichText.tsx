@@ -10,11 +10,11 @@ import styles from './LexicalText.module.scss';
 
 const layoutClasses = createLayoutClasses();
 
-export type { LexicalTextProps, LexicalTextVariant, AnimationKey, AnimationInput, TextSlideOptions, TextClipOptions, RichTextChangeAnimate } from './RichText.types';
+export type { LexicalTextProps, LexicalTextVariant, RichTextChangeAnimate } from './RichText.types';
 
 /** Safe rich HTML or a validated Lexical document, with shared layout and motion. */
-export function LexicalText({ content, variant, animation, animate, rows, ellipsis, links = 'active', color, className, style, ...props }: LexicalTextProps) {
-  const text = useRichText({ content, variant, animation, animate, links });
+export function LexicalText({ content, variant, animate, rows, ellipsis, links = 'active', color, className, style, ...props }: LexicalTextProps) {
+  const text = useRichText({ content, variant, animate, links });
   const preview = rows !== undefined || Boolean(ellipsis);
   if (!text.sequence && text.content.empty) return null;
 

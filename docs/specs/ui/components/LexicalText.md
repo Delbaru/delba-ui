@@ -17,7 +17,7 @@
 - rows задаёт plain-text preview с ограничением строк. ellipsis без rows даёт одну строку.
   Полный документ остаётся источником данных; сокращённый текст не возвращается в CMS.
 - links='active' сохраняет ссылки. links='text' оставляет содержание без вложенных anchor.
-- Общие layout-пропсы, color, linkState, reveal, perspective3d и parallax сохраняют
+- Общие layout-пропсы, color, linkState, animate, perspective3d и parallax сохраняют
   общий договор Box. Пользовательские DOM-события компонуются его механизмом.
 - Класс LexicalText остаётся на существующем корне; собственный SCSS — LexicalText.module.scss.
   Прежний RichText-класс и экспорт richTextClasses сохранены как публичный договор типографики.
@@ -48,9 +48,8 @@ export function DeliveryStep({ step }: { step: number }) {
 
 textClip поддерживает тот же выбор steps/currentStep и необязательный clipHeight.
 Длительность — MotionTime, секунды или имя времени. Последовательности применяются к HTML;
-JSON выводится как документ. Старый public animation помечен deprecated и декодируется
-только на входе в тот же контракт последовательности; второго движка нет.
-Прежнее значение counter не создавало счётчик в RichText и не получает нового поведения.
+JSON выводится как документ. `animation` и его строковые/tuple/responsive-входы
+удалены; последовательность задаётся только объектным `animate`. Счётчик относится к Text.
 
 Повторявшиеся стили вариантов сведены в один rich-preset Sass-рецепт с именованными
 различиями пресетов. Итоговый compressed CSS сверен до/после побайтно: типографика

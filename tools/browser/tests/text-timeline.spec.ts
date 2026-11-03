@@ -94,7 +94,9 @@ test('release between entry and clock registration cancels pending completion wo
       released = true;
     });
     observer.observe(node, { attributes: true, attributeFilter: ['data-reveal-state'] });
-    armReveal(node, resolveReveal('up'));
+    const config = resolveReveal({ effect: 'up' });
+    if (!config) throw new Error('Could not resolve reveal fixture configuration');
+    armReveal(node, config);
     try {
       await new Promise(resolve => setTimeout(resolve, 150));
       return { released, state: node.getAttribute('data-reveal-state'), animations: node.getAnimations().length };
@@ -137,7 +139,8 @@ test('batched reveal preserves expired hold, fresh hold and release before initi
   const states = await page.evaluate(async () => {
     const fixturePath = '/text-timeline.fixture.tsx';
     const { armReveal, releaseReveal, resolveReveal } = await import(fixturePath);
-    const config = resolveReveal('up');
+    const config = resolveReveal({ effect: 'up' });
+    if (!config) throw new Error('Could not resolve reveal fixture configuration');
     const nodes = [0, 1, 2, 3].map(index => {
       const node = document.createElement('div');
       node.dataset.reveal = 'up';

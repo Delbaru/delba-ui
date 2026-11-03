@@ -59,7 +59,7 @@ async function load() {
   generateImages(config.images);
   const { generateMessages } = await import('./messages.ts');
   generateMessages(config.messages);
-  const { generateInlineIcons } = await import('./icons.ts');
+  const { generateInlineIcons, iconSourceNotices } = await import('./icons.ts');
   generateInlineIcons(root);
   const { generateScrollbar } = await import('./scrollbar.ts');
   generateScrollbar(config.scrollbar);
@@ -67,9 +67,8 @@ async function load() {
   const { generateSkins } = await import('./skin.ts');
   const utilities = createUtilities(root, { scan: [...(config.scan ?? ['src']), path.relative(root, KIT)], seeds: config.seeds, typography: config.typography, scale: config.scale });
 
-  // Иконки кита — импорты в его компонентах; копия в public проекта от кита 1.x больше не нужна.
-  if (config.public || existsSync(path.resolve(root, 'public', 'icons', 'ui'))) {
-    console.warn('[ui] public/icons/ui и `public` в ui.config.ts больше не нужны: иконки кита приходят импортом (README кита, «Переход на 2.0»)');
+  for (const { level, message } of iconSourceNotices(root, Object.hasOwn(config, 'public'))) {
+    console[level](message);
   }
 
   if (config.skins) {

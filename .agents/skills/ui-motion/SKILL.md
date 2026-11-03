@@ -24,7 +24,9 @@ description: 'Общая механика анимаций @delba/ui: appearance
 | Время, расстояния, reduced motion | core/base/timing, distance, motion и конфиг потребителя |
 
 Перед новым эффектом найди соседний реализованный сценарий и потребителей.
-Общий API — объект animate с when/effect; совместимость legacy объясняется отдельно.
+Общий API — только объект animate с when/effect. Публичные animation/transitionKey,
+reveal и строковые/tuple-входы удалены; переход описан в docs/motion-migration.md.
+Внутренние normalized options, CSS и observer общего движка сохраняются.
 Корневой collapse относится ко всему компоненту, объект части — к части.
 
 - Один владелец controlled-состояния; фаза движения не становится второй моделью open.

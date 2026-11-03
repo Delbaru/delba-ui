@@ -3,11 +3,11 @@ import test from 'node:test';
 
 import { contentAnimationClass, resolveContentAnimate, stepSwap, type ContentKey, type SwapState } from '../contentMotion';
 
-test('animate: ключ, [ключ] и [ключ, { key }] дают один и тот же вход', () => {
-    assert.deepEqual(resolveContentAnimate(undefined), {});
-    assert.deepEqual(resolveContentAnimate('fadeIn'), { animation: 'fadeIn' });
-    assert.deepEqual(resolveContentAnimate(['fadeInUp']), { animation: 'fadeInUp', key: undefined });
-    assert.deepEqual(resolveContentAnimate(['fadeInScale', { key: 'tab-2' }]), { animation: 'fadeInScale', key: 'tab-2' });
+test('content changes accept only object intent', () => {
+  assert.deepEqual(resolveContentAnimate(undefined), {});
+  assert.deepEqual(resolveContentAnimate({ when: 'change', effect: 'up', key: 'tab-2' }), {
+    animation: 'fadeInUp', key: 'tab-2', duration: undefined,
+  });
 });
 
 test('unified change animation maps fade, key, and duration into content motion', () => {

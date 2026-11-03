@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { generateComponentSkin } from '../skin';
+import { componentSkinSources, generateComponentSkin } from '../skin';
 
 const statesModule = '@delba/ui/skin-states';
 const effects = new Set(['opacity']);
@@ -47,4 +47,33 @@ test('valid defineSkin output continues to generate states', async () => {
       assert.match(fs.readFileSync(path.join(folder, '_states.scss'), 'utf8'), /\.skin-primary/);
     },
   );
+});
+
+test('nested owners generate independent states, without collecting tests or generated fixtures', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-nested-skin-'));
+  try {
+    for (const owner of ['DControl', 'DControl/ControlAction', 'core/DButtonBase', 'tests/Fake', 'generated/Fake', 'node_modules/Fake', '.hidden/Fake']) {
+      const folder = path.join(root, owner);
+      fs.mkdirSync(folder, { recursive: true });
+      fs.writeFileSync(path.join(folder, 'Owner.skin.ts'), 'export const skin = { presets: { selected: { opacity: 0.5 } } };');
+    }
+    const sources = componentSkinSources(root);
+    assert.deepEqual(sources.map(({ folder }) => path.relative(root, folder).replaceAll(path.sep, '/')), [
+      'core/DButtonBase', 'DControl', 'DControl/ControlAction',
+    ]);
+    for (const { folder, file } of sources) {
+      assert.equal(await generateComponentSkin(folder, file, statesModule, effects), true);
+      assert.match(fs.readFileSync(path.join(folder, '_states.scss'), 'utf8'), /\.skin-selected/);
+    }
+    assert.equal(fs.existsSync(path.join(root, 'tests/Fake/_states.scss')), false);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('two skin sources in one owner are rejected instead of silently selecting one', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-duplicate-skin-'));
+  try {
+    fs.writeFileSync(path.join(root, 'First.skin.ts'), 'export const skin = null;');
+    fs.writeFileSync(path.join(root, 'Second.skin.ts'), 'export const skin = null;');
+    assert.throws(() => componentSkinSources(root), /несколько владельцев skin/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

@@ -1,5 +1,4 @@
 'use client';
-import type React from 'react';
 import { assetUrl, cx, composeEventHandlers, useMergedRefs, type WithRef } from '../../../core';
 import { Flex, type FlexProps } from '../../Flex';
 import { Box } from '../../Box';
@@ -7,27 +6,9 @@ import { Text } from '../../Text';
 import { Icon } from '../../Icon';
 import { Skeleton } from '../../Skeleton';
 import type { SelectController } from '../useSelect';
+import { selectContent } from '../Select.content';
 import arrowIcon from '../../../../assets/icons/ui/arrows/arrow-2/arrow.svg';
 import styles from './SelectTrigger.module.scss';
-function isPrimitiveNode(node: React.ReactNode): node is string | number {
-  return typeof node === 'string' || typeof node === 'number';
-}
-
-function renderSelectNode(
-  node: React.ReactNode,
-  textClassName: string | undefined,
-): React.ReactNode {
-  if (isPrimitiveNode(node)) {
-    return (
-      <Text variant={['body', 'body', 'body']} className={textClassName} color="inherit">
-        {node}
-      </Text>
-    );
-  }
-
-  return node;
-}
-
 export function SelectTrigger<T extends string>({
   select,
   loading,
@@ -66,7 +47,7 @@ export function SelectTrigger<T extends string>({
       <Box
         className={styles.TriggerContent}
         style={{
-          color: select.feedback.inline
+          color: select.feedback.inline.text
             ? 'var(--error)'
             : !select.value.hasValue
               ? (placeholderColor ?? 'var(--field-placeholder-color, var(--text-muted))')
@@ -84,10 +65,10 @@ export function SelectTrigger<T extends string>({
         >
           {loading ? (
             <Skeleton h={[16, null, null]} />
-          ) : select.feedback.inline ? (
+          ) : select.feedback.inline.text ? (
             <Text
                 as="div"
-                id={select.feedback.errorId}
+                id={select.feedback.inline.id}
                 role="alert"
                 variant={['body', 'body', 'body']}
                 color="inherit"
@@ -96,7 +77,7 @@ export function SelectTrigger<T extends string>({
               {select.feedback.error}
             </Text>
           ) : (
-            renderSelectNode(select.value.content, styles.TriggerText)
+            selectContent.render(select.value.content, styles.TriggerText)
           )}
         </Flex>
       </Box>

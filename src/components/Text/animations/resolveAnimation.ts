@@ -1,9 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 
-import type { ResponsiveInput } from '../../../core';
 import { animationRegistry } from './registry';
 import type {
-  AnimationInput,
   AnimationKey,
   AnimationOptions,
   TextAnimate,
@@ -16,9 +14,8 @@ export interface ResolvedAnimation {
   options?: AnimationOptions;
 }
 
-// Разбор пропа `animate`/`animation` в пару (ключ, опции). responsive-форма [d, m, t] — берём desktop
-// (рендер всё равно одноключевой); одиночное значение — ключ или [ключ, опции].
-function parse(input: ResponsiveInput<AnimationInput> | TextAnimate | undefined): {
+/** Adapt the object intent to the existing text-effect renderer registry. */
+function parse(input: TextAnimate | undefined): {
   key?: AnimationKey;
   options?: AnimationOptions;
 } {
@@ -64,20 +61,7 @@ function parse(input: ResponsiveInput<AnimationInput> | TextAnimate | undefined)
     }
   }
 
-  const normalize = (v: AnimationInput): { key: AnimationKey; options?: AnimationOptions } =>
-    Array.isArray(v)
-      ? {
-          key: v[0] as AnimationKey,
-          options: v.length >= 2 ? (v[1] as AnimationOptions) : undefined,
-        }
-      : { key: v as AnimationKey };
-
-  if (Array.isArray(input) && input.length === 3) {
-    const desktop = input[0];
-    return desktop != null ? normalize(desktop as AnimationInput) : {};
-  }
-
-  return normalize(input as AnimationInput);
+  return {};
 }
 
 /**
@@ -85,7 +69,7 @@ function parse(input: ResponsiveInput<AnimationInput> | TextAnimate | undefined)
  * Pure (без хуков) — Text вызывает один раз и либо рендерит `Inner`, либо контент как есть.
  */
 export function resolveAnimation(
-  input: ResponsiveInput<AnimationInput> | TextAnimate | undefined,
+  input: TextAnimate | undefined,
   content: ReactNode,
 ): ResolvedAnimation {
   const { key, options } = parse(input);

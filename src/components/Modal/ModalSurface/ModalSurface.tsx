@@ -26,7 +26,6 @@ export function ModalSurface({
   overlayStyle,
   preset = ['default', 'default', 'default'],
   layout = preset,
-  animation,
   closeOnOverlayClick = true,
   closeOn,
   scroll,
@@ -105,11 +104,10 @@ export function ModalSurface({
         'ModalSurface',
         styles.ModalSurface,
         rootClassName,
-        ...c.value('animation', animation),
         ...root,
       )}
       data-open={open}
-      data-entered={dialog.entered}
+      data-entered={open}
       data-closing={closing}
       data-open-motion={isOpenAnimate(animate) || undefined}
       role="presentation"

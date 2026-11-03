@@ -43,11 +43,22 @@ test('fetched SVG retains masks, gradients and local fragment references', async
 });
 
 test('resolveIconSource: имя, относительный путь, абсолютный адрес, объект', () => {
-    assert.deepEqual(resolveIconSource('ui/check'), { url: '/icons/ui/check.svg' });
-    assert.deepEqual(resolveIconSource('./ui/arrows/arrow_gold.svg'), { url: '/icons/ui/arrows/arrow_gold.svg' });
-    assert.deepEqual(resolveIconSource('/icons/ui/x.svg'), { url: '/icons/ui/x.svg' });
-    assert.deepEqual(resolveIconSource({ name: 'ui/eye' }), { component: undefined, url: '/icons/ui/eye.svg' });
+    assert.deepEqual(resolveIconSource('ui/check'), { kind: 'url', url: '/icons/ui/check.svg' });
+    assert.deepEqual(resolveIconSource('./ui/arrows/arrow_gold.svg'), { kind: 'url', url: '/icons/ui/arrows/arrow_gold.svg' });
+    assert.deepEqual(resolveIconSource('/icons/ui/x.svg'), { kind: 'url', url: '/icons/ui/x.svg' });
+    assert.deepEqual(resolveIconSource({ name: 'ui/eye' }), { kind: 'url', url: '/icons/ui/eye.svg' });
     assert.equal(hasIconSource(resolveIconSource(undefined)), false);
+});
+
+test('resolveIconSource: explicit SVG component wins over a URL source', () => {
+    const Component = () => null;
+    assert.deepEqual(resolveIconSource({ src: '/icons/unused.svg', component: Component }), {
+        kind: 'component', component: Component,
+    });
+    assert.deepEqual(resolveIconSource({ src: Component, name: 'unused' }), {
+        kind: 'component', component: Component,
+    });
+    assert.deepEqual(resolveIconSource({ src: '', name: '' }), { kind: 'empty' });
 });
 
 test('parseAspectRatio: пропорция из viewBox, вырожденный — undefined', () => {

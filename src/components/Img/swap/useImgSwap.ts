@@ -2,9 +2,10 @@
 
 import { createElement, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
-import { cx, MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../core';
+import { MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../core';
 import { motionTimeCss, readMotionTimeMs, type MotionTime } from '../../../core/base/timing';
 import { normalizeImgAnimate, type ImgAnimate } from './types';
+import { ImgSwap } from '../ImgSwap/ImgSwap';
 import { readMotionDefaultMs } from '../../../core/base/motion-config';
 
 interface SwapState {
@@ -80,13 +81,10 @@ export function useImgSwap(animate: ImgAnimate | undefined, identity: string, co
     '--img-swap-dir': String(swap.dir),
   } as CSSProperties;
 
-  const node = createElement(
-    'span',
-    { ref: scopeRef, className: 'ui-img-swap', 'data-effect': effect, style },
-    busy && createElement('span', { key: `out-${swap.turn}`, className: cx('ui-img-swap-layer', running && 'ui-img-swap-out'), 'aria-hidden': true }, swap.outgoing),
-    createElement('span', { key: `in-${swap.turn}`, className: cx('ui-img-swap-layer', swap.pending && 'ui-img-swap-pending', running && 'ui-img-swap-in') }, current),
-    running && effect === 'veil' && createElement('span', { key: `veil-${swap.turn}`, className: 'ui-img-swap-veil', 'aria-hidden': true }, config?.veil),
-  );
+  const node = createElement(ImgSwap, {
+    ref: scopeRef, effect, style, turn: swap.turn, busy, running, pending: swap.pending,
+    outgoing: swap.outgoing, current, veil: config?.veil,
+  });
 
   return { node, loaded };
 }

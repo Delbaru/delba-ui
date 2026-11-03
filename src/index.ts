@@ -43,8 +43,10 @@ export {
   assetUrl,
   BREAKPOINT,
   createHandles,
+  composeEventHandlers,
   cx,
   focusWhenReady,
+  preserveFocus,
   MEDIA_QUERY,
   motion,
   Transition,
@@ -78,7 +80,8 @@ export { createUrl, createBrowserUrl, installBrowserUrl, type BrowserUrl } from 
 // Хуки и типы, которые нужны D-компонентам и страницам проекта.
 export * from './components/SmoothScroll';
 export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
-export { useAnchoredFloating, type FloatingAlign, type FloatingPlacement } from './hooks/useAnchoredFloating';
+export { useAnchoredFloating, type FloatingAlign, type FloatingAnchorPoint, type FloatingPlacement } from './hooks/useAnchoredFloating';
+export { useFloatingSurface, type FloatingDismissReason, type UseFloatingSurfaceOptions } from './hooks/useFloatingSurface';
 export { useTooltip, type UseTooltipOptions, type UseTooltipResult, type TooltipBubbleProps } from './hooks/useTooltip';
 export { useMediaQuery } from './hooks/useMediaQuery';
 export { useScroll } from './hooks/useScroll';
@@ -91,9 +94,10 @@ export type { CollapseControls } from './hooks/useCollapseControls';
 export type { CollapseOptions } from './components/Collapse/CollapseWrap';
 export { useInView, type UseInViewOptions } from './core/useInView';
 export type { ComponentStateValue, GrowProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';
+export { useMergedRefs } from './core/useMergedRefs';
 export type { TextRole, TextVariantName } from './core/base/typography';
-export { isAppearanceAnimate, isInViewAnimate, isOpenAnimate, resolveRevealInput } from './core/reveal/reveal';
-export type { AppearanceAnimate, InViewAnimate, OpenAnimate, RevealConfig, RevealInput, RevealKey, RevealOptions, RevealProps } from './core/reveal/reveal';
+export { isAppearanceAnimate, isInViewAnimate, isOpenAnimate } from './core/reveal/reveal';
+export type { AppearanceAnimate, InViewAnimate, OpenAnimate, RevealConfig, RevealKey, RevealOptions } from './core/reveal/reveal';
 export type { MotionTime, MotionTimingName } from './core/base/timing';
 export type { MotionDistance, MotionDistanceName } from './core/base/distance';
 export type { HoverTransformAnimate, HoverTransformOptions, HoverTransformValues } from './core/base/hover-motion';

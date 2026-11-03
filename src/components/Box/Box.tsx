@@ -19,7 +19,7 @@ import {
   type StateLinkInput,
   type WithRef,
 } from '../../core';
-import { type RevealProps } from '../../core/reveal/reveal';
+import { type RevealScopeProps } from '../../core/reveal/reveal';
 import { resolveContentAnimate, type FlexContentAnimate } from '../../hooks/contentMotion';
 import { useContentMotion } from '../../hooks/useContentMotion';
 import {
@@ -44,7 +44,7 @@ export interface BoxProps
     BoxLayoutProps,
     ContainerProp,
     SharedMotionProps<FlexContentAnimate>,
-    RevealProps {
+    RevealScopeProps {
   children?: React.ReactNode;
   style?: CSSProperties;
 
@@ -71,7 +71,6 @@ export function Box({
   animate,
   perspective3d,
   parallax,
-  reveal,
   justify,
   container,
   onMouseEnter,
@@ -91,8 +90,7 @@ export function Box({
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
     perspective3d,
     parallax,
-    reveal,
-    animate,
+      animate,
   });
   const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
   const contentMotion = useContentMotion({

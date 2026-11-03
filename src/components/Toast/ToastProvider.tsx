@@ -1,11 +1,12 @@
 'use client';
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { cx } from '../../core';
 import { Flex } from '../Flex';
 import { ToastCard } from './ToastCard/ToastCard';
 import { useToastQueue } from './Toast.model';
+import { toastChannel } from './Toast.channel';
 import type { ToastApi, ToastProviderProps } from './Toast.types';
 import styles from './ToastProvider.module.scss';
 
@@ -13,15 +14,17 @@ export type { ToastOptions, ToastTone } from './Toast.types';
 const ToastContext = createContext<ToastApi | null>(null);
 
 /** Provider-scoped notification queue; its portal is created after client mount. */
-export function ToastProvider({ children }: ToastProviderProps) {
+export function ToastProvider({ children, className, renderToast }: ToastProviderProps) {
   const queue = useToastQueue();
+
+  useEffect(() => toastChannel.register(document, queue.api), [queue.api]);
 
   return (
     <ToastContext.Provider value={queue.api}>
       {children}
       {queue.host && queue.items.length > 0 && createPortal(
         <Flex
-            className={cx('ToastProvider', styles.ToastProvider)}
+            className={cx('ToastProvider', styles.ToastProvider, className)}
             dir={['column', 'column', 'column']}
             align={['center', 'center', 'center']}
             role='status'
@@ -30,7 +33,9 @@ export function ToastProvider({ children }: ToastProviderProps) {
           {queue.items.map(item => <ToastCard
               key={item.id}
               item={item}
+              onDismiss={() => queue.close(item.id)}
               onExited={() => queue.remove(item.id)}
+              renderToast={renderToast}
           />)}
         </Flex>,
         queue.host,

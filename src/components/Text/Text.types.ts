@@ -3,14 +3,13 @@ import type { CSSProperties } from 'react';
 import type {
   BoxLayoutProps,
   ComponentStateValue,
-  ResponsiveInput,
   ResponsiveValue,
   StateLinkInput,
 } from '../../core';
 import type { TextRole, TextVariantName } from '../../core/base/typography';
 import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
-import type { AnimationInput, TextAnimate } from './animations/types';
+import type { TextAnimate } from './animations/types';
 import type { LineHeightValue } from './typography';
 import type { TextFormat } from './formatContent';
 
@@ -27,12 +26,12 @@ export interface TextProps
   extends Omit<React.HTMLAttributes<HTMLElement>, 'color'>,
     Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
     Omit<BoxLayoutProps, 'aspectRatio'>,
-    SharedMotionProps<ResponsiveInput<AnimationInput> | TextAnimate> {
+    SharedMotionProps<TextAnimate> {
   children?: React.ReactNode;
   style?: CSSProperties;
   format?: ResponsiveValue<TextFormat>;
   /** Появление, эффект текста или композиция: `{ when: 'inView', effect: { up: {}, counter: { to: 100 } } }`. */
-  animate?: SharedMotionProps<ResponsiveInput<AnimationInput> | TextAnimate>['animate'];
+  animate?: SharedMotionProps<TextAnimate>['animate'];
   required?: boolean;
 
   newTab?: boolean;
@@ -43,8 +42,6 @@ export interface TextProps
   /** Associates Text rendered as a label with its native form control. */
   htmlFor?: React.LabelHTMLAttributes<HTMLLabelElement>['htmlFor'];
   variant?: ResponsiveValue<VariantKey>;
-  /** @deprecated Use object animate with an explicit when/effect. */
-  animation?: ResponsiveInput<AnimationInput>;
   /** Сворачивание текста с сохранением содержимого до конца анимации закрытия. Для блочного текста. */
   collapse?: CollapseOptions;
 

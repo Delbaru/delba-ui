@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { Icon } from '../../src/components/Icon/Icon';
 import { parseSvg } from '../../src/components/Icon/svg';
 import { INLINE_ICONS } from '../../src/core/inline-icons';
-import { collectInlineIcons, generateInlineIcons } from '../icons';
+import { collectInlineIcons, generateInlineIcons, iconSourceNotices } from '../icons';
 
 test('generated project icons render their markup on the server before client effects or requests', () => {
     for (const [url, svg] of Object.entries(INLINE_ICONS)) {
@@ -44,4 +44,24 @@ test('public icon manifest includes nested SVGs, updates changed assets and remo
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }
+});
+
+test('local ui icon sources are informative, while the removed public option warns separately', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-icon-ownership-'));
+    try {
+        assert.deepEqual(iconSourceNotices(root, false), []);
+        assert.deepEqual(iconSourceNotices(root, true).map(notice => notice.level), ['warn']);
+        const directory = path.join(root, 'public', 'icons', 'ui');
+        fs.mkdirSync(directory, { recursive: true });
+        const file = path.join(directory, 'cms-only.svg');
+        const source = '<svg viewBox="0 0 8 8"><path d="M1 1"/></svg>';
+        fs.writeFileSync(file, source);
+        const local = iconSourceNotices(root, false);
+        assert.deepEqual(local.map(notice => notice.level), ['info']);
+        assert.match(local[0]?.message ?? '', /локальные исходники проекта/);
+        assert.match(local[0]?.message ?? '', /не означает, что её можно удалить/);
+        assert.deepEqual(iconSourceNotices(root, true).map(notice => notice.level), ['warn', 'info']);
+        assert.deepEqual(collectInlineIcons(root), { '/icons/ui/cms-only.svg': source });
+        assert.equal(fs.readFileSync(file, 'utf8'), source);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

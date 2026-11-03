@@ -19,8 +19,8 @@
 | `aria-label` / `aria-labelledby` | Доступное имя диалога                                                                                                            |
 
 `preset` — прежнее имя layout, deprecated; closeOn имеет приоритет над
-legacy closeOnOverlayClick. `animate` задаёт общий motion; `animation` поддерживает
-прежние fadeInUp/fadeInDown. Геометрия наследует BoxLayoutProps.
+legacy closeOnOverlayClick. Объектный `animate` задаёт motion открытия/закрытия;
+`animation` удалён. Геометрия наследует BoxLayoutProps.
 
 ## Пример
 
@@ -71,8 +71,12 @@ Tab trap, Escape и временем exit. Документ и кадры выб
 сохраняет существующий display:contents host и имеет свои SCSS/маркер.
 
 Современный вызов: animate={{ when: 'open', effect: 'fade', duration: 'fast' }}.
-Старые публичные параметры сохраняют совместимость существующих потребителей;
-новые примеры и мигрируемые вызовы их не используют.
+Прежний `animation` заменяется этим договором: `fadeInUp` → effect `up`,
+`fadeInDown` → effect `down`. Состояние open и ожидание exit остаются у Modal.
+ModalProvider владеет единственной двухкадровой фазой входа: она отделяет скрытый
+DOM от включённого перехода. ModalSurface использует этот `open` без второго rAF.
+Закрытие, повторная регистрация ID и unmount отменяют вход; при закрытии узел и
+scroll lock остаются до измеренного CSS exit.
 
 Единственный inner scroll-host использует Box с блочным потоком: переключение на
 Flex column без запрета shrink у содержимого сжимает длинные блоки и убирает overflow.

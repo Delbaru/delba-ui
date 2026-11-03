@@ -12,6 +12,7 @@ CSS-сетка для двумерной композиции. Использу�
 - `justifyItems`, `alignItems`, `alignContent`, `autoFlow` задают размещение; допустимые слова определяются типами, например `row_dense`, а не CSS-строкой с пробелом.
 - `children` с [GridItem](GridItem.md) — явная композиция. `areas` и `items`/`renderItem` — альтернативный договор описания раскладки; не нужно одновременно дублировать её вручную.
 - `animate={{ when: 'change', effect: 'layout' }}` перестраивает keyed GridItem. Стабильные ключи — часть договора.
+- Появление использует `animate={{ when: 'inView', effect: 'up' }}`. Отдельный `reveal` удалён; [миграция](../../../motion-migration.md) сохраняет observer и каскад.
 - `collapse` раскрывает всю сетку; общие геометрические пропсы и `container` принадлежат её корню.
 
 ## Пример

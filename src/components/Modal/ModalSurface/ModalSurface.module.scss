@@ -101,27 +101,6 @@
       }
     }
   }
-  @mixin animation-classes($p: '') {
-    .ModalSurface.#{$p}animation_fadeInUp .Panel {
-      transform: translateY(var(--s-36));
-    }
-    .ModalSurface.#{$p}animation_fadeInUp[data-open='true'][data-entered='true'] .Panel {
-      transform: translateY(0);
-    }
-    .ModalSurface.#{$p}animation_fadeInUp[data-open='false'] .Panel {
-      transform: translateY(var(--s-36));
-    }
-    .ModalSurface.#{$p}animation_fadeInDown .Panel {
-      transform: translateY(calc(var(--s-36) * -1));
-    }
-    .ModalSurface.#{$p}animation_fadeInDown[data-open='true'][data-entered='true'] .Panel {
-      transform: translateY(0);
-    }
-    .ModalSurface.#{$p}animation_fadeInDown[data-open='false'] .Panel {
-      transform: translateY(calc(var(--s-36) * -1));
-    }
-  }
-
   @mixin preset-classes($p: '') {
     .#{$p}preset_default {
       @media (max-width: 767px) {
@@ -177,7 +156,6 @@
     }
 
     @include preset-classes($p);
-    @include animation-classes($p);
   }
 
   @include modal-classes();

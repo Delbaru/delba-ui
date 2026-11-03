@@ -16,7 +16,7 @@
 - `rows` ограничивает число строк; `ellipsis` — сокращение. Полный текст должен оставаться доступным там, где влияет на решение.
 - `href` делает текст ссылкой; `format` форматирует содержимое. `animate` объединяет появление и эффекты текста, `collapse` — раскрытие блочного текста.
 
-Новый код использует объектный animate. Смена значения: `animate={{ when: 'change', effect: 'textSlide', by: 'text', duration: 'fast' }}`. Для последовательности: `animate={{ when: 'change', effect: 'textClip', steps, currentStep, duration: 'normal' }}`; тот же договор с effect textSlide выбирает сдвиг шагов. Deprecated animation остаётся входом непереведённых потребителей, без второго движка.
+Смена значения: `animate={{ when: 'change', effect: 'textSlide', by: 'text', duration: 'fast' }}`. Для последовательности: `animate={{ when: 'change', effect: 'textClip', steps, currentStep, duration: 'normal' }}`; тот же договор с effect textSlide выбирает сдвиг шагов. Публичный вход только объектный; `animation`, строковые/tuple-формы и их responsive-варианты удалены. [Миграция](../../../motion-migration.md) сохраняет существующий renderer.
 
 ## Пример
 

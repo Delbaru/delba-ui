@@ -27,7 +27,7 @@ import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { InteractionScope } from '../../core/InteractionScope';
 
 import type { FlexProps } from './Flex.types';
-export type { FlexProps, FlexAnimation, FlexEnterAnimation } from './Flex.types';
+export type { FlexProps } from './Flex.types';
 
 const c = createLayoutClasses();
 
@@ -52,8 +52,6 @@ export function Flex({
   collapseRef,
   onTransition,
   animate,
-  animation,
-  transitionKey,
   dir,
   justify,
   align,
@@ -61,7 +59,6 @@ export function Flex({
   scrollFade,
   perspective3d,
   parallax,
-  reveal,
   container,
   state,
   trackInteraction,
@@ -99,16 +96,11 @@ export function Flex({
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
     perspective3d,
     parallax,
-    reveal,
-    animate,
+      animate,
   });
   const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
-  const motionInput =
-    contentAnimate !== undefined
-      ? resolveContentAnimate(contentAnimate)
-      : { animation, key: transitionKey };
   const contentMotion = useContentMotion({
-    ...motionInput,
+    ...resolveContentAnimate(contentAnimate),
     children,
     onAnimationEnd: anchorProps.onAnimationEnd,
   });

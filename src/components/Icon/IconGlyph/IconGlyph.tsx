@@ -21,12 +21,12 @@ export function IconGlyph({ ref, source, fetched, html, fill, hiddenUntilReady, 
   const { className, ...props } = svgProps;
   const classes = cx('IconGlyph', styles.IconGlyph, className);
 
-  if (source.component) {
+  if (source.kind === 'component') {
     const Component = source.component;
     return <Component ref={ref} className={classes} {...props} />;
   }
 
-  if (hiddenUntilReady && !fetched.content) return null;
+  if (source.kind === 'empty' || (hiddenUntilReady && !fetched.content)) return null;
 
   return (
     <svg

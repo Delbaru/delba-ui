@@ -1,54 +1,98 @@
-import { UI_MESSAGES } from '../../core/base/messages';
-import { Children, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Ref } from 'react';
+import {
+  Children,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
 import type { Swiper as SwiperInstance } from 'swiper';
-import type { SwiperProps } from 'swiper/react';
-import { A11y, Autoplay, EffectCoverflow, EffectCube, EffectFade, EffectFlip, FreeMode, Mousewheel } from 'swiper/modules';
 
 import { publishCarouselControlsSnapshot, resetCarouselControlsSnapshot } from './controls';
-import { clamp01, getBreakpointIndex, resolveResponsive, resolveResponsiveAtBreakpoint, useMergedRefs } from '../../core';
+import { clamp01, useMergedRefs } from '../../core';
 import { useSharedMotion } from '../../hooks/useSharedMotion';
-import { DEFAULT_NAVIGATION_STATE, assignCarouselApiRef, buildLoopSlides, canEnableLoop, getLogicalSlideIndex, getPaginationState, getPeekOffsetPx, hasScrollableSlides } from './slides';
-import type { CarouselApi, CarouselNavigationState, CarouselProps, SlidesPerViewValue } from './types';
+import {
+  DEFAULT_NAVIGATION_STATE,
+  assignCarouselApiRef,
+  getLogicalSlideIndex,
+  getPaginationState,
+  hasScrollableSlides,
+} from './slides';
+import type { CarouselApi, CarouselNavigationState, CarouselProps } from './types';
 import { useMotionTime } from '../../hooks/useMotionTime';
+import { carouselLayout } from './Carousel.layout';
+import { carouselEngine } from './Carousel.engine';
 
 export type CarouselConfig = Pick<
   CarouselProps,
-  | 'children' | 'carouselId' | 'slidesPerView' | 'orientation' | 'effect' | 'navigation' | 'pagination'
-  | 'autoplay' | 'mousewheel' | 'drag' | 'initialSlide' | 'loop' | 'centeredSlides' | 'offsetBefore'
-  | 'offsetAfter' | 'peekStart' | 'peekEnd' | 'speed' | 'scrollBased' | 'perspective3d' | 'parallax' | 'animate'
-  | 'apiRef' | 'onNavigationStateChange' | 'onActiveIndexChange' | 'inertia' | 'scrollProgress' | 'paginationClassName'
+  | 'children'
+  | 'carouselId'
+  | 'slidesPerView'
+  | 'orientation'
+  | 'effect'
+  | 'navigation'
+  | 'pagination'
+  | 'autoplay'
+  | 'mousewheel'
+  | 'drag'
+  | 'initialSlide'
+  | 'loop'
+  | 'centeredSlides'
+  | 'offsetBefore'
+  | 'offsetAfter'
+  | 'peekStart'
+  | 'peekEnd'
+  | 'speed'
+  | 'scrollBased'
+  | 'perspective3d'
+  | 'parallax'
+  | 'animate'
+  | 'apiRef'
+  | 'onNavigationStateChange'
+  | 'onActiveIndexChange'
+  | 'inertia'
+  | 'scrollProgress'
+  | 'paginationClassName'
   | 'navigationClassName'
 >;
-
-const EFFECT_MODULES = { fade: EffectFade, cube: EffectCube, coverflow: EffectCoverflow, flip: EffectFlip } as const;
 
 /** Поведение Carousel: замер брейкпоинта и зазора, петля, навигация, API. Вид — в Carousel.tsx. */
 export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: CarouselConfig) {
   'use no memo';
 
   const {
-    children, carouselId: explicitCarouselId, slidesPerView, orientation, effect, navigation, pagination,
-    autoplay, mousewheel, drag, initialSlide, loop, centeredSlides, offsetBefore, offsetAfter, peekStart,
-    peekEnd, speed, scrollBased, perspective3d, parallax, animate, apiRef, onNavigationStateChange, inertia,
-    scrollProgress, paginationClassName, navigationClassName, onActiveIndexChange,
+    children,
+    carouselId: explicitCarouselId,
+    slidesPerView,
+    autoplay,
+    scrollBased,
+    perspective3d,
+    parallax,
+    animate,
+    apiRef,
+    onNavigationStateChange,
+    inertia,
+    scrollProgress,
+    paginationClassName,
+    navigationClassName,
+    onActiveIndexChange,
   } = config;
 
   const slides = useMemo(() => Children.toArray(children), [children]);
   const generatedCarouselId = useId().replace(/:/g, '');
   const carouselId = explicitCarouselId ?? generatedCarouselId;
 
-  const [breakpointIndex, setBreakpointIndex] = useState<0 | 1 | 2>(0);
-  const [currentGapPx, setCurrentGapPx] = useState(0);
-  const [currentContainerWidthPx, setCurrentContainerWidthPx] = useState(0);
-  const [currentSlidesPerView, setCurrentSlidesPerView] = useState<SlidesPerViewValue>(() => {
-    if (slidesPerView === undefined) return 1;
-    return (resolveResponsive(slidesPerView)[0] ?? 1) as SlidesPerViewValue;
-  });
+  const [measurement, setMeasurement] = useState(() => carouselLayout.initial(slidesPerView));
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const swiperRef = useRef<SwiperInstance | null>(null);
-  const lastNavigationStateRef = useRef<CarouselNavigationState | null>(null);
-  const lastActiveIndexRef = useRef(0);
+  const publishedRef = useRef<{ index: number; navigation: CarouselNavigationState | null }>({
+    index: 0,
+    navigation: null,
+  });
   const carouselApiInternalRef = useRef<CarouselApi>({
     prev: () => undefined,
     next: () => undefined,
@@ -57,7 +101,11 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
   });
   const onNavigationStateChangeRef = useRef(onNavigationStateChange);
   const onActiveIndexChangeRef = useRef(onActiveIndexChange);
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
+  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
+    perspective3d,
+    parallax,
+    animate,
+  });
 
   onNavigationStateChangeRef.current = onNavigationStateChange;
   onActiveIndexChangeRef.current = onActiveIndexChange;
@@ -70,7 +118,9 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     };
 
     if (Array.isArray(slidesPerView)) {
-      return slidesPerView.map((value) => (value === null || value === undefined ? null : toKey(value as number | 'auto')));
+      return slidesPerView.map((value) =>
+        value === null || value === undefined ? null : toKey(value as number | 'auto'),
+      );
     }
 
     return toKey(slidesPerView as unknown as number | 'auto');
@@ -81,27 +131,10 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
   const slidesPerViewSignature = String(slidesPerViewKey);
 
   const measureResponsiveValues = useCallback(() => {
-    const rootNode = rootRef.current;
-    const view = rootNode?.ownerDocument.defaultView;
-    if (!rootNode || !view) return;
-
-    const layoutViewportWidth = rootNode.ownerDocument.documentElement.clientWidth || view.innerWidth;
-
-    setBreakpointIndex(getBreakpointIndex(layoutViewportWidth));
-
-    const computed = view.getComputedStyle(rootNode);
-    const gapPx = parseFloat(computed.gap || '0');
-    setCurrentGapPx(Number.isFinite(gapPx) ? gapPx : 0);
-    setCurrentContainerWidthPx(rootNode.clientWidth);
-
-    const rawSlidesPerView = (computed.getPropertyValue('--slides-per-view') || '1').trim();
-    if (rawSlidesPerView === 'auto') {
-      setCurrentSlidesPerView('auto');
-      return;
-    }
-
-    const parsedSlidesPerView = Number(rawSlidesPerView.replace('-', '.'));
-    setCurrentSlidesPerView(Number.isFinite(parsedSlidesPerView) && parsedSlidesPerView > 0 ? parsedSlidesPerView : 1);
+    const root = rootRef.current;
+    if (!root) return;
+    const next = carouselLayout.measure(root);
+    if (next) setMeasurement((previous) => (carouselLayout.same(previous, next) ? previous : next));
   }, []);
 
   useLayoutEffect(() => {
@@ -121,148 +154,100 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     };
   }, [measureResponsiveValues, slidesPerViewSignature, slides.length]);
 
-  const currentOrientation = resolveResponsiveAtBreakpoint(orientation, 'horizontal', breakpointIndex);
-  const currentMousewheel = resolveResponsiveAtBreakpoint(mousewheel, false, breakpointIndex);
-  const currentDrag = !scrollBased && resolveResponsiveAtBreakpoint(drag, true, breakpointIndex);
-  const requestedInitialSlide = resolveResponsiveAtBreakpoint(initialSlide, 0, breakpointIndex);
-  const speedTime = resolveResponsiveAtBreakpoint(speed, undefined, breakpointIndex);
-  const currentSpeed = useMotionTime('carousel', 'duration', rootRef, speedTime);
-  const autoplayDelay = useMotionTime('carousel', 'autoplayDelay', rootRef, typeof autoplay === 'object' ? autoplay.delay : undefined);
-  const requestedLoop = resolveResponsiveAtBreakpoint(loop, false, breakpointIndex);
-  const currentCenteredSlides = resolveResponsiveAtBreakpoint(centeredSlides, false, breakpointIndex);
-  const currentOffsetBefore = resolveResponsiveAtBreakpoint(offsetBefore, 0, breakpointIndex);
-  const currentOffsetAfter = resolveResponsiveAtBreakpoint(offsetAfter, 0, breakpointIndex);
-  const currentPeekStart = resolveResponsiveAtBreakpoint(peekStart, 0, breakpointIndex);
-  const currentPeekEnd = resolveResponsiveAtBreakpoint(peekEnd, 0, breakpointIndex);
-  const requestedEffect = resolveResponsiveAtBreakpoint(effect, 'slide', breakpointIndex);
-  const currentNavigation = resolveResponsiveAtBreakpoint(navigation, 'none', breakpointIndex);
-  const currentPagination = resolveResponsiveAtBreakpoint(pagination, false, breakpointIndex);
-  const currentOffsetBeforePx = currentOffsetBefore + getPeekOffsetPx(currentContainerWidthPx, currentSlidesPerView, currentGapPx, currentPeekStart);
-  const currentOffsetAfterPx = currentOffsetAfter + getPeekOffsetPx(currentContainerWidthPx, currentSlidesPerView, currentGapPx, currentPeekEnd);
-  const swiperEffect = requestedEffect;
-  const freeMode = useMemo(() => (
-    inertia && inertia > 0 ? { enabled: true, momentum: true, momentumRatio: inertia, sticky: true } : false
-  ), [inertia]);
-  const { renderedSlides, initialSlideOffset, middleCycleIndex, usesPaddedLoop } = useMemo(() => {
-    if (!requestedLoop) {
+  const layout = carouselLayout.resolve(config, measurement);
+  const { loop: requestedLoop, initialSlide, navigation, pagination } = layout;
+  const slidePlan = useMemo(
+    () =>
+      carouselLayout.slides(
+        slides,
+        {
+          loop: requestedLoop,
+          initialSlide,
+          navigation,
+          pagination,
+        },
+        measurement.slidesPerView,
+      ),
+    [slides, requestedLoop, initialSlide, navigation, pagination, measurement.slidesPerView],
+  );
+  const currentSpeed = useMotionTime('carousel', 'duration', rootRef, layout.speed);
+  const autoplayDelay = useMotionTime(
+    'carousel',
+    'autoplayDelay',
+    rootRef,
+    typeof autoplay === 'object' ? autoplay.delay : undefined,
+  );
+  const [status, setStatus] = useState(() => ({
+    navigation: DEFAULT_NAVIGATION_STATE,
+    index: slides.length > 0 ? ((initialSlide % slides.length) + slides.length) % slides.length : 0,
+  }));
+  const { navigation: navigationState, index: activeIndex } = status;
+
+  const getNavigationState = useCallback(
+    (swiper: SwiperInstance | null): CarouselNavigationState => {
+      if (!swiper || !hasScrollableSlides(slides.length, measurement.slidesPerView)) {
+        return DEFAULT_NAVIGATION_STATE;
+      }
+
+      if (slidePlan.loop || slidePlan.usesPaddedLoop) {
+        return {
+          isBeginning: false,
+          isEnd: false,
+          prevDisabled: false,
+          nextDisabled: false,
+        };
+      }
+
       return {
-        renderedSlides: slides,
-        initialSlideOffset: 0,
-        middleCycleIndex: 0,
-        usesPaddedLoop: false,
+        isBeginning: swiper.isBeginning,
+        isEnd: swiper.isEnd,
+        prevDisabled: swiper.isBeginning,
+        nextDisabled: swiper.isEnd,
       };
-    }
+    },
+    [measurement.slidesPerView, slidePlan.loop, slides.length, slidePlan.usesPaddedLoop],
+  );
 
-    return buildLoopSlides(slides, currentSlidesPerView);
-  }, [currentSlidesPerView, requestedLoop, slides]);
-  const currentInitialSlide = renderedSlides.length > 0
-    ? Math.min(
-      Math.max(requestedInitialSlide, 0) + initialSlideOffset,
-      renderedSlides.length - 1
-    )
-    : 0;
-  const loopEnabled = requestedLoop && !usesPaddedLoop && canEnableLoop(renderedSlides.length, currentSlidesPerView);
-  const hasScrollableContent = hasScrollableSlides(slides.length, currentSlidesPerView);
-  const showNavigation = hasScrollableContent && (currentNavigation === 'arrows' || currentNavigation === 'both');
-  const showDots = hasScrollableContent && (currentPagination || currentNavigation === 'dots' || currentNavigation === 'both');
-  const [navigationState, setNavigationState] = useState<CarouselNavigationState>(DEFAULT_NAVIGATION_STATE);
-  const [activeIndex, setActiveIndex] = useState(() => {
-    if (slides.length <= 0) return 0;
-    return ((requestedInitialSlide % slides.length) + slides.length) % slides.length;
-  });
+  const normalizePaddedLoopPosition = useCallback(
+    (swiper: SwiperInstance | null) => {
+      if (!swiper || !slidePlan.usesPaddedLoop || slides.length === 0) return;
 
-  const autoplayConfig = useMemo(() => {
-    if (!autoplay) return false;
-    if (autoplay === true) {
-      return {
-        delay: autoplayDelay,
-        disableOnInteraction: true,
-        pauseOnMouseEnter: true,
-      };
-    }
+      const leftBoundary = slides.length * slidePlan.middleCycleIndex;
+      const rightBoundary = slides.length * (slidePlan.middleCycleIndex + 1);
 
-    return {
-      delay: autoplayDelay,
-      disableOnInteraction: autoplay.disableOnInteraction ?? true,
-      pauseOnMouseEnter: true,
-    };
-  }, [autoplay, autoplayDelay]);
+      if (swiper.activeIndex < leftBoundary) {
+        swiper.slideTo(swiper.activeIndex + slides.length, 0, false);
+        return;
+      }
 
-  const modules = useMemo(() => {
-    const activeModules = [A11y];
+      if (swiper.activeIndex >= rightBoundary) {
+        swiper.slideTo(swiper.activeIndex - slides.length, 0, false);
+      }
+    },
+    [slidePlan.middleCycleIndex, slides.length, slidePlan.usesPaddedLoop],
+  );
 
-    if (autoplayConfig) activeModules.push(Autoplay);
-    if (currentMousewheel) activeModules.push(Mousewheel);
-    if (freeMode) activeModules.push(FreeMode);
-    if (swiperEffect !== 'slide') activeModules.push(EFFECT_MODULES[swiperEffect]);
+  const publishState = useCallback(
+    (swiper: SwiperInstance | null, force = false) => {
+      const index = getLogicalSlideIndex(swiper, slides.length, slidePlan.loop);
+      const navigation = getNavigationState(swiper);
+      const previous = publishedRef.current;
+      const indexChanged = previous.index !== index;
+      const navigationChanged =
+        !previous.navigation ||
+        previous.navigation.isBeginning !== navigation.isBeginning ||
+        previous.navigation.isEnd !== navigation.isEnd ||
+        previous.navigation.prevDisabled !== navigation.prevDisabled ||
+        previous.navigation.nextDisabled !== navigation.nextDisabled;
 
-    return activeModules;
-  }, [autoplayConfig, currentMousewheel, freeMode, swiperEffect]);
-
-  const getNavigationState = useCallback((swiper: SwiperInstance | null): CarouselNavigationState => {
-    if (!swiper || !hasScrollableSlides(slides.length, currentSlidesPerView)) {
-      return DEFAULT_NAVIGATION_STATE;
-    }
-
-    if (loopEnabled || usesPaddedLoop) {
-      return {
-        isBeginning: false,
-        isEnd: false,
-        prevDisabled: false,
-        nextDisabled: false,
-      };
-    }
-
-    return {
-      isBeginning: swiper.isBeginning,
-      isEnd: swiper.isEnd,
-      prevDisabled: swiper.isBeginning,
-      nextDisabled: swiper.isEnd,
-    };
-  }, [currentSlidesPerView, loopEnabled, slides.length, usesPaddedLoop]);
-
-  const publishActiveIndex = useCallback((swiper: SwiperInstance | null, force = false) => {
-    const nextIndex = getLogicalSlideIndex(swiper, slides.length, loopEnabled);
-
-    if (!force && lastActiveIndexRef.current === nextIndex) return;
-
-    const changed = lastActiveIndexRef.current !== nextIndex;
-    lastActiveIndexRef.current = nextIndex;
-    setActiveIndex(nextIndex);
-    if (changed) onActiveIndexChangeRef.current?.(nextIndex);
-  }, [loopEnabled, slides.length]);
-
-  const normalizePaddedLoopPosition = useCallback((swiper: SwiperInstance | null) => {
-    if (!swiper || !usesPaddedLoop || slides.length === 0) return;
-
-    const leftBoundary = slides.length * middleCycleIndex;
-    const rightBoundary = slides.length * (middleCycleIndex + 1);
-
-    if (swiper.activeIndex < leftBoundary) {
-      swiper.slideTo(swiper.activeIndex + slides.length, 0, false);
-      return;
-    }
-
-    if (swiper.activeIndex >= rightBoundary) {
-      swiper.slideTo(swiper.activeIndex - slides.length, 0, false);
-    }
-  }, [middleCycleIndex, slides.length, usesPaddedLoop]);
-
-  const publishNavigationState = useCallback((swiper: SwiperInstance | null, force = false) => {
-    const nextState = getNavigationState(swiper);
-    const previousState = lastNavigationStateRef.current;
-    const isSameState = previousState
-      && previousState.isBeginning === nextState.isBeginning
-      && previousState.isEnd === nextState.isEnd
-      && previousState.prevDisabled === nextState.prevDisabled
-      && previousState.nextDisabled === nextState.nextDisabled;
-
-    if (!force && isSameState) return;
-
-    lastNavigationStateRef.current = nextState;
-    setNavigationState(nextState);
-    onNavigationStateChangeRef.current?.(nextState);
-  }, [getNavigationState]);
+      if (!force && !indexChanged && !navigationChanged) return;
+      publishedRef.current = { index, navigation };
+      setStatus({ index, navigation });
+      if (indexChanged) onActiveIndexChangeRef.current?.(index);
+      if (force || navigationChanged) onNavigationStateChangeRef.current?.(navigation);
+    },
+    [getNavigationState, slidePlan.loop, slides.length],
+  );
 
   const prev = useCallback(() => {
     swiperRef.current?.slidePrev(currentSpeed);
@@ -272,21 +257,30 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     swiperRef.current?.slideNext(currentSpeed);
   }, [currentSpeed]);
 
-  const goTo = useCallback((index: number) => {
-    const swiper = swiperRef.current;
-    if (!swiper || slides.length === 0) return;
+  const goTo = useCallback(
+    (index: number) => {
+      const swiper = swiperRef.current;
+      if (!swiper || slides.length === 0) return;
 
-    if (loopEnabled && typeof swiper.slideToLoop === 'function') {
-      swiper.slideToLoop(index, currentSpeed);
-      return;
-    }
+      if (slidePlan.loop && typeof swiper.slideToLoop === 'function') {
+        swiper.slideToLoop(index, currentSpeed);
+        return;
+      }
 
-    const targetIndex = usesPaddedLoop
-      ? index + slides.length * middleCycleIndex
-      : index;
+      const targetIndex = slidePlan.usesPaddedLoop
+        ? index + slides.length * slidePlan.middleCycleIndex
+        : index;
 
-    swiper.slideTo(targetIndex, currentSpeed);
-  }, [currentSpeed, loopEnabled, middleCycleIndex, slides.length, usesPaddedLoop]);
+      swiper.slideTo(targetIndex, currentSpeed);
+    },
+    [
+      currentSpeed,
+      slidePlan.loop,
+      slidePlan.middleCycleIndex,
+      slides.length,
+      slidePlan.usesPaddedLoop,
+    ],
+  );
 
   carouselApiInternalRef.current.prev = prev;
   carouselApiInternalRef.current.next = next;
@@ -297,9 +291,9 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     const paginationState = getPaginationState(
       swiperRef.current,
       slides.length,
-      currentSlidesPerView,
-      loopEnabled,
-      usesPaddedLoop,
+      measurement.slidesPerView,
+      slidePlan.loop,
+      slidePlan.usesPaddedLoop,
     );
 
     publishCarouselControlsSnapshot(rootRef.current, {
@@ -309,8 +303,8 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
       slideCount: slides.length,
       pageIndex: paginationState.pageIndex,
       pageCount: paginationState.pageCount,
-      showNavigation,
-      showDots,
+      showNavigation: slidePlan.showNavigation,
+      showDots: slidePlan.showDots,
       paginationClassName,
       navigationClassName,
     });
@@ -318,13 +312,13 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     activeIndex,
     navigationClassName,
     paginationClassName,
-    currentSlidesPerView,
-    loopEnabled,
+    measurement.slidesPerView,
+    slidePlan.loop,
     navigationState,
-    showDots,
-    showNavigation,
+    slidePlan.showDots,
+    slidePlan.showNavigation,
     slides.length,
-    usesPaddedLoop,
+    slidePlan.usesPaddedLoop,
   ]);
 
   useEffect(() => {
@@ -348,54 +342,58 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     applyScrollProgress(swiperRef.current);
   }, [applyScrollProgress, scrollBased, scrollProgress]);
 
-  const handleSwiper = useCallback((instance: SwiperInstance) => {
-    swiperRef.current = instance;
-    applyScrollProgress(instance);
-    publishActiveIndex(instance, true);
-    publishNavigationState(instance, true);
-  }, [applyScrollProgress, publishActiveIndex, publishNavigationState]);
+  const handleSwiper = useCallback(
+    (instance: SwiperInstance) => {
+      swiperRef.current = instance;
+      applyScrollProgress(instance);
+      publishState(instance, true);
+    },
+    [applyScrollProgress, publishState],
+  );
 
-  const handleSwiperUpdate = useCallback((instance: SwiperInstance) => {
-    swiperRef.current = instance;
-    publishActiveIndex(instance);
-    publishNavigationState(instance);
-  }, [publishActiveIndex, publishNavigationState]);
+  const handleSwiperUpdate = useCallback(
+    (instance: SwiperInstance) => {
+      swiperRef.current = instance;
+      publishState(instance);
+    },
+    [publishState],
+  );
 
-  const handleSwiperTransitionEnd = useCallback((instance: SwiperInstance) => {
-    swiperRef.current = instance;
-    normalizePaddedLoopPosition(instance);
-    publishActiveIndex(instance, true);
-    publishNavigationState(instance, true);
-  }, [normalizePaddedLoopPosition, publishActiveIndex, publishNavigationState]);
+  const handleSwiperTransitionEnd = useCallback(
+    (instance: SwiperInstance) => {
+      swiperRef.current = instance;
+      normalizePaddedLoopPosition(instance);
+      publishState(instance, true);
+    },
+    [normalizePaddedLoopPosition, publishState],
+  );
 
   useEffect(() => {
-    publishActiveIndex(swiperRef.current, true);
-    publishNavigationState(swiperRef.current, true);
-  }, [currentGapPx, currentSlidesPerView, loopEnabled, publishActiveIndex, publishNavigationState, renderedSlides.length, slides.length, usesPaddedLoop]);
+    publishState(swiperRef.current, true);
+  }, [
+    measurement.gap,
+    measurement.slidesPerView,
+    slidePlan.loop,
+    publishState,
+    slidePlan.renderedSlides.length,
+    slides.length,
+    slidePlan.usesPaddedLoop,
+  ]);
 
   useEffect(() => {
     const instance = swiperRef.current;
     if (!instance) return;
 
-    instance.params.centeredSlides = currentCenteredSlides;
-    instance.params.slidesOffsetBefore = currentOffsetBeforePx;
-    instance.params.slidesOffsetAfter = currentOffsetAfterPx;
-    instance.originalParams.centeredSlides = currentCenteredSlides;
-    instance.originalParams.slidesOffsetBefore = currentOffsetBeforePx;
-    instance.originalParams.slidesOffsetAfter = currentOffsetAfterPx;
-    instance.update();
-    instance.slideTo(instance.activeIndex, 0, false);
-    publishActiveIndex(instance, true);
-    publishNavigationState(instance, true);
+    carouselEngine.updateLayout(instance, layout);
+    publishState(instance, true);
   }, [
-    currentCenteredSlides,
-    currentGapPx,
-    currentOffsetAfterPx,
-    currentOffsetBeforePx,
-    currentSlidesPerView,
+    layout.centered,
+    measurement.gap,
+    layout.offsetAfter,
+    layout.offsetBefore,
+    measurement.slidesPerView,
     currentSpeed,
-    publishActiveIndex,
-    publishNavigationState,
+    publishState,
   ]);
 
   useEffect(() => {
@@ -406,12 +404,19 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     };
   }, [apiRef]);
 
-  const swiperKey = `${currentOrientation}-${swiperEffect}-${Boolean(freeMode)}-${loopEnabled}-${usesPaddedLoop}-${String(currentSlidesPerView)}-${currentInitialSlide}-${renderedSlides.length}-${currentCenteredSlides}`;
-
+  const engineOptions = carouselEngine.options({
+    layout,
+    measurement,
+    slides: slidePlan,
+    speed: currentSpeed,
+    autoplay,
+    autoplayDelay,
+    inertia,
+  });
+  const swiperKey = `${layout.orientation}-${layout.effect}-${Boolean(engineOptions.freeMode)}-${slidePlan.loop}-${slidePlan.usesPaddedLoop}-${String(measurement.slidesPerView)}-${slidePlan.initialSlide}-${slidePlan.renderedSlides.length}-${layout.centered}`;
   const setRootRefs = useMergedRefs(rootRef, setMotionNode, ref);
-
   const engineProps = {
-    modules,
+    ...engineOptions,
     onSwiper: handleSwiper,
     onSlideChange: handleSwiperUpdate,
     onResize: handleSwiperUpdate,
@@ -422,38 +427,12 @@ export function useCarousel(ref: Ref<HTMLDivElement> | undefined, config: Carous
     onReachEnd: handleSwiperUpdate,
     onFromEdge: handleSwiperUpdate,
     onSlideChangeTransitionEnd: handleSwiperTransitionEnd,
-    a11y: { enabled: true, prevSlideMessage: UI_MESSAGES.carousel.previous, nextSlideMessage: UI_MESSAGES.carousel.next },
-    allowTouchMove: currentDrag,
-    autoplay: autoplayConfig,
-    direction: currentOrientation,
-    effect: swiperEffect,
-    fadeEffect: { crossFade: true },
-    cubeEffect: { shadow: false, slideShadows: false },
-    coverflowEffect: { slideShadows: false },
-    flipEffect: { slideShadows: false },
-    freeMode,
-    grabCursor: false,
-    centeredSlides: currentCenteredSlides,
-    initialSlide: currentInitialSlide,
-    loop: loopEnabled,
-    mousewheel: currentMousewheel ? { forceToAxis: true, releaseOnEdges: !loopEnabled } : false,
-    noSwipingSelector: 'button, input, textarea, select, option, label, summary, [role="button"], [data-carousel-no-drag]',
-    observeParents: true, observer: true, preventClicks: true, preventClicksPropagation: true, resizeObserver: true,
-    simulateTouch: currentDrag,
-    slidesPerView: currentSlidesPerView,
-    slidesOffsetAfter: currentOffsetAfterPx,
-    slidesOffsetBefore: currentOffsetBeforePx,
-    spaceBetween: currentGapPx,
-    speed: currentSpeed,
-    threshold: 6,
-    touchStartPreventDefault: currentDrag,
-    watchOverflow: true,
-  } satisfies SwiperProps;
+  };
 
   return {
     root: { id: carouselId, ref: setRootRefs, motionHandlers, motionStyle, revealAttrs },
     layout: { slidesPerViewKey },
     engine: { key: swiperKey, props: engineProps },
-    slides: renderedSlides,
+    slides: slidePlan.renderedSlides,
   };
 }

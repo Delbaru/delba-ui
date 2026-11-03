@@ -85,6 +85,29 @@ export function watchPathAliases(files: ReadonlySet<string>, onChange: () => voi
 
 const candidates = (base: string) => [base, `${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts'), path.join(base, 'index.tsx')];
 
+type CachedSource = { mtime: number; text: string };
+
+function isMissingSource(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT';
+}
+
+/** A watch scan can retain a filename after a case-only rename or concurrent deletion. */
+export function readSource(file: string, cache: Map<string, CachedSource>): Source | null {
+  try {
+    const mtime = fs.statSync(file).mtimeMs;
+    const cached = cache.get(file);
+    if (cached && cached.mtime === mtime) return { file, text: cached.text };
+
+    const text = fs.readFileSync(file, 'utf8');
+    cache.set(file, { mtime, text });
+    return { file, text };
+  } catch (error) {
+    if (!isMissingSource(error)) throw error;
+    cache.delete(file);
+    return null;
+  }
+}
+
 function writeIfChanged(file: string, content: string): boolean {
   if (fs.existsSync(file) && fs.readFileSync(file, 'utf8') === content) return false;
   fs.writeFileSync(file, content, 'utf8');
@@ -92,20 +115,16 @@ function writeIfChanged(file: string, content: string): boolean {
 }
 
 export function createUtilities(root: string, config: UtilitiesConfig) {
-  const cache = new Map<string, { mtime: number; text: string }>();
+  const cache = new Map<string, CachedSource>();
   const { paths, files: configFiles } = readPathAliases(root);
 
   function readSources(): Source[] {
     const files = config.scan.flatMap((dir) => walk(path.resolve(root, dir)));
     const alive = new Set(files);
     for (const file of cache.keys()) if (!alive.has(file)) cache.delete(file);
-    return files.map((file) => {
-      const mtime = fs.statSync(file).mtimeMs;
-      const cached = cache.get(file);
-      if (cached && cached.mtime === mtime) return { file, text: cached.text };
-      const text = fs.readFileSync(file, 'utf8');
-      cache.set(file, { mtime, text });
-      return { file, text };
+    return files.flatMap((file) => {
+      const source = readSource(file, cache);
+      return source ? [source] : [];
     });
   }
 

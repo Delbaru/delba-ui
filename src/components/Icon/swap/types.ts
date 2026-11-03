@@ -2,7 +2,7 @@ import type { MotionTime } from '../../../core/base/timing';
 
 export interface IconSwapOptions {
   /** Длительность одной фазы (exit или enter), сек. */
-  duration?: number;
+  duration?: MotionTime;
   /** Стартовый масштаб въезжающей иконки (и финишный у уходящей). 0..1. */
   scale?: number;
   /** Доворот (град): уходящая вращается на +rotate, въезжающая доворачивает из него в 0. 0 = без вращения. */
@@ -21,22 +21,15 @@ export interface IconChangeAnimate extends Omit<IconSwapOptions, 'duration'> {
   duration?: MotionTime;
 }
 
-/** Объектный API и совместимые прежние ключи/кортежи (их duration остаётся в секундах). */
-export type IconAnimate = IconChangeAnimate | IconSwapKey | [IconSwapKey] | [IconSwapKey, IconSwapOptions];
+/** Object intent for source changes; appearance is handled by shared motion. */
+export type IconAnimate = IconChangeAnimate;
 
-/** Общая внутренняя форма для новых и прежних настроек смены. */
+/** Engine options after selecting the change trigger. */
 export type NormalizedIconChangeAnimate = Omit<IconChangeAnimate, 'when'>;
 
-/** Приводит object и legacy API к одному эффекту без настроек общего появления/hover. */
+/** Select change options without accepting appearance or hover effects. */
 export function normalizeIconAnimate(value: unknown): NormalizedIconChangeAnimate | undefined {
-  if (typeof value === 'string') return value === 'swap' || value === 'spin' ? { effect: value } : undefined;
-  if (Array.isArray(value)) {
-    const [effect, options] = value;
-    if (effect !== 'swap' && effect !== 'spin') return undefined;
-    const opts = options && typeof options === 'object' ? options as IconSwapOptions : undefined;
-    return { ...opts, effect };
-  }
-  if (!value || typeof value !== 'object') return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const candidate = value as Partial<IconChangeAnimate>;
   if (candidate.when !== 'change' || (candidate.effect !== 'swap' && candidate.effect !== 'spin')) return undefined;
   return {

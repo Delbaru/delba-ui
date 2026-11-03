@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { readPathAliases, walk, watchPathAliases } from '../generate';
+import { readPathAliases, readSource, walk, watchPathAliases } from '../generate';
 
 function put(file: string): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -33,6 +33,30 @@ test('папка проекта: node_modules и .next пропускаются'
   put(path.join(project, 'src', '.next', 'b.ts'));
 
   assert.deepEqual(walk(path.join(project, 'src')), [page]);
+});
+
+test('disappearing source between walk and read is skipped and evicted from cache', (t) => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-source-race-'));
+  t.after(() => fs.rmSync(project, { recursive: true, force: true }));
+  const sourceFile = path.join(project, 'src', 'component.tsx');
+  put(sourceFile);
+  const [stalePath] = walk(path.join(project, 'src'));
+  const cache = new Map([[stalePath, { mtime: 1, text: 'stale source' }]]);
+  fs.unlinkSync(sourceFile);
+
+  assert.equal(readSource(stalePath, cache), null);
+  assert.equal(cache.has(stalePath), false);
+});
+
+test('source read failures other than ENOENT still propagate', (t) => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-source-error-'));
+  t.after(() => fs.rmSync(project, { recursive: true, force: true }));
+  const cache = new Map<string, { mtime: number; text: string }>();
+
+  assert.throws(
+    () => readSource(project, cache),
+    (error: NodeJS.ErrnoException) => error.code === 'EISDIR',
+  );
 });
 
 test('path aliases follow inherited config origins and project overrides, and track watch inputs', (t) => {

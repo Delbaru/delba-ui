@@ -118,10 +118,10 @@ export interface IconSource {
 }
 
 export type IconSourceInput = string | IconComponent | IconSource | undefined;
-export interface ResolvedIconSource {
-  url: string | null;
-  component?: IconComponent;
-}
+export type ResolvedIconSource =
+  | { kind: 'empty' }
+  | { kind: 'url'; url: string }
+  | { kind: 'component'; component: IconComponent };
 
 function isIconComponentSource(source: unknown): source is IconComponent {
   return typeof source === 'function'
@@ -144,20 +144,24 @@ function resolveIconUrl(source: string): string {
 }
 
 export function resolveIconSource(source?: IconSourceInput): ResolvedIconSource {
-  if (!source) return { url: null };
-  if (typeof source === 'string') return { url: resolveIconUrl(source) };
-  if (isIconComponentSource(source)) return { component: source, url: null };
+  if (!source) return { kind: 'empty' };
+  if (typeof source === 'string') return { kind: 'url', url: resolveIconUrl(source) };
+  if (isIconComponentSource(source)) return { kind: 'component', component: source };
 
-  return {
-    component: source.component ?? (isIconComponentSource(source.src) ? source.src : undefined),
-    url: typeof source.src === 'string'
-      ? resolveIconUrl(source.src)
-      : (source.name ? `/icons/${source.name}.svg` : null),
-  };
+  // An imported component has always been the rendered source when both were supplied.
+  // Resolve that precedence here so the unused URL is never fetched or treated as swap identity.
+  const component = source.component ?? (isIconComponentSource(source.src) ? source.src : undefined);
+  if (component) return { kind: 'component', component };
+
+  const url = typeof source.src === 'string'
+    ? resolveIconUrl(source.src)
+    : source.name ? `/icons/${source.name}.svg` : undefined;
+
+  return url ? { kind: 'url', url } : { kind: 'empty' };
 }
 
 export function hasIconSource(source: ResolvedIconSource): boolean {
-  return Boolean(source.component || source.url);
+  return source.kind !== 'empty';
 }
 
 export function parseAspectRatio(viewBox?: string): React.CSSProperties['aspectRatio'] | undefined {

@@ -1,32 +1,13 @@
 'use client';
-import type React from 'react';
 import { assetUrl, cx, stateProps } from '../../../core';
 import { Flex } from '../../Flex';
 import { Box } from '../../Box';
 import { Text } from '../../Text';
 import { Icon } from '../../Icon';
 import type { SelectController } from '../useSelect';
+import { selectContent } from '../Select.content';
 import checkIcon from '../../../../assets/icons/ui/check/succsess_check_black.svg';
 import styles from './SelectOptions.module.scss';
-function isPrimitiveNode(node: React.ReactNode): node is string | number {
-  return typeof node === 'string' || typeof node === 'number';
-}
-
-function renderSelectNode(
-  node: React.ReactNode,
-  textClassName: string | undefined,
-): React.ReactNode {
-  if (isPrimitiveNode(node)) {
-    return (
-      <Text variant={['body', 'body', 'body']} className={textClassName} color="inherit">
-        {node}
-      </Text>
-    );
-  }
-
-  return node;
-}
-
 export function SelectOptions<T extends string>({
   select,
   multiple,
@@ -116,7 +97,7 @@ export function SelectOptions<T extends string>({
             )}
 
             <Box className={styles.OptionContent}>
-              {renderSelectNode(optionContent, styles.OptionLabel)}
+              {selectContent.render(optionContent, styles.OptionLabel)}
             </Box>
           </Flex>
         );

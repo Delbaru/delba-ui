@@ -2,7 +2,6 @@ import type { CSSProperties, MouseEventHandler, ReactElement } from 'react';
 import type {
   BoxLayoutProps,
   LayoutSpaceProps,
-  ResponsiveInput,
   ResponsiveValue,
   SpaceValue,
   StateLinkInput,
@@ -51,7 +50,6 @@ export interface ModalSurfaceProps extends BoxLayoutProps, SharedMotionProps<Ope
   layout?: ResponsiveValue<PresetKey>;
   /** @deprecated Используйте layout; оставлен для существующих потребителей. */
   preset?: ResponsiveValue<PresetKey>;
-  animation?: ResponsiveInput<'fadeInUp' | 'fadeInDown'>;
 
   closeOnOverlayClick?: boolean;
   /** Dismissal rules; grouped settings take precedence over the legacy overlay flag. */

@@ -8,21 +8,14 @@ export type ContentExit = 'fadeOut' | 'fadeOutUp' | 'fadeOutDown' | 'fadeOutScal
 export type ContentAnimation = ContentEnter | ContentExit;
 export type ContentKey = string | number;
 
-export interface ContentAnimateOptions {
-  /** Идентификатор содержимого: при его смене старое уходит зеркальным ходом, затем входит новое. */
-  key?: ContentKey;
-}
-
 export interface ContentChangeAnimate {
   when: 'change';
-  effect: 'fade';
+  effect: 'fade' | 'up' | 'down' | 'scale';
   key: ContentKey;
   duration?: MotionTime;
 }
 
-/** Проп `animate`: ключ, `[ключ]` или `[ключ, опции]` — та же форма, что у Img, Icon и Text. */
-export type ContentAnimate = ContentEnter | [ContentEnter] | [ContentEnter, ContentAnimateOptions];
-export type FlexContentAnimate = ContentAnimate | ContentChangeAnimate;
+export type FlexContentAnimate = ContentChangeAnimate;
 
 const classOf: Record<ContentAnimation, string> = {
   fadeIn: 'ui-anim-fadeIn',
@@ -46,12 +39,11 @@ const exitOf: Partial<Record<ContentAnimation, ContentExit>> = {
 export function resolveContentAnimate(
   input: FlexContentAnimate | undefined,
 ): { animation?: ContentEnter; key?: ContentKey; duration?: MotionTime } {
-  if (input === undefined) return {};
-  if (typeof input === 'object' && !Array.isArray(input)) {
-    return { animation: 'fadeIn', key: input.key, duration: input.duration };
-  }
-  if (typeof input === 'string') return { animation: input };
-  return { animation: input[0], key: input.length === 2 ? input[1].key : undefined };
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const animations: Record<ContentChangeAnimate['effect'], ContentEnter> = {
+    fade: 'fadeIn', up: 'fadeInUp', down: 'fadeInDown', scale: 'fadeInScale',
+  };
+  return { animation: animations[input.effect], key: input.key, duration: input.duration };
 }
 
 export function contentAnimationClass(animation: ContentAnimation | undefined, exiting: boolean): string | undefined {

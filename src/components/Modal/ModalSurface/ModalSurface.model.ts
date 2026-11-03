@@ -5,7 +5,6 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
-  useState,
   type KeyboardEvent,
   type RefObject,
 } from 'react';
@@ -84,7 +83,6 @@ export function useModalSurface({
   activeRef.current = active;
   closeRef.current = close;
   exitRef.current = exitAfter;
-  const [entered, setEntered] = useState(false);
 
   useLayoutEffect(() => {
     const node = panel.current;
@@ -132,13 +130,6 @@ export function useModalSurface({
     exitRef.current(duration + MOTION_END_BUFFER_MS);
   }, [closing, panel]);
 
-  useEffect(() => {
-    const view = panel.current?.ownerDocument.defaultView;
-    if (!view) return;
-    const frame = view.requestAnimationFrame(() => setEntered(open));
-    return () => view.cancelAnimationFrame(frame);
-  }, [open, panel]);
-
   const onKeyDown = useCallback(
     (event: KeyboardEvent<HTMLElement>) => {
       if (event.key !== 'Escape' || event.defaultPrevented || !escape) return;
@@ -148,5 +139,5 @@ export function useModalSurface({
     [escape],
   );
 
-  return { entered, onKeyDown };
+  return { onKeyDown };
 }

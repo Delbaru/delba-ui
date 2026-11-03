@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -9,7 +10,8 @@ import {
 } from 'react';
 import type React from 'react';
 
-import { useFieldControl } from '../../core';
+import { useMergedRefs } from '../../core';
+import { useFieldFeedback, type FieldMessage } from '../Field';
 import { UI_MESSAGES, formatUiMessage } from '../../core/base/messages';
 import { useFormReset } from '../../core/useFormReset';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
@@ -53,6 +55,8 @@ export interface SelectConfig<T extends string> extends SharedMotionProps {
   label?: string;
   comment?: string;
   ariaLabel?: string;
+  describedBy?: string;
+  helperPadding?: FieldMessage['paddingLeft'];
 }
 
 /** Поведение Select: значение, раскрытие, пункт в фокусе, клавиатура, проверка. Вид — в Select.tsx. */
@@ -122,15 +126,17 @@ export function useSelect<T extends string>(
       })
     : defaultDisplayContent;
 
-  const { id, innerRef, fieldRef, displayError, errorId, setInternalError, focusField } =
-    useFieldControl<HTMLDivElement>(ref, {
-      id: idProp,
-      error: errorProp,
-    });
-
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
+  const innerRef = useRef<HTMLDivElement>(null);
+  const fieldRef = useMergedRefs(innerRef, ref);
+  const focusField = useCallback(() => {
+    if (!disabled) innerRef.current?.focus();
+  }, [disabled]);
+  const [internalError, setInternalError] = useState<string>();
+  const displayError = errorProp ?? internalError;
   const listboxId = `${id}-listbox`;
-  const commentId = !displayError && comment ? `${id}-comment` : undefined;
-  const helperTextId = displayError ? errorId : commentId;
+  const labelId = label ? `${id}-label` : undefined;
 
   const [open, setOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -140,7 +146,15 @@ export function useSelect<T extends string>(
     setOpen(false);
     setFocusedIndex(-1);
   });
-  const showInlineError = Boolean(displayError) && !open;
+  const feedback = useFieldFeedback({
+    id,
+    error: displayError,
+    comment,
+    placement: 'inside',
+    active: open || loading,
+    describedBy: config.describedBy,
+    paddingLeft: config.helperPadding,
+  });
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<Array<HTMLElement | null>>([]);
@@ -158,11 +172,12 @@ export function useSelect<T extends string>(
   const dropdownScrolls = dropdownItems.length > normalizedVisibleOptions;
 
   const triggerAccessibilityProps = {
-    'aria-label': ariaLabel ?? label ?? placeholder,
+    'aria-label': ariaLabel ?? (label ? undefined : placeholder),
+    'aria-labelledby': ariaLabel === undefined ? labelId : undefined,
     'aria-haspopup': 'listbox' as const,
     'aria-expanded': open,
     'aria-controls': listboxId,
-    'aria-describedby': helperTextId,
+    'aria-describedby': feedback.describedBy,
     'aria-invalid': !!displayError,
     'aria-disabled': disabled || undefined,
     'aria-required': required || undefined,
@@ -361,7 +376,8 @@ export function useSelect<T extends string>(
       isSelected: isOptionSelected,
       select: handleSelect,
     },
-    feedback: { error: displayError, errorId, commentId, inline: showInlineError },
+    feedback: { ...feedback, error: displayError },
+    label: { id: labelId, activate: focusField },
     popup: {
       open,
       change: handleOpenChange,

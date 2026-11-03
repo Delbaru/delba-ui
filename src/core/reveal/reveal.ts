@@ -1,5 +1,5 @@
 /**
- * Появление по скроллу (`reveal` у Flex, Grid, Box, Img) — чистая часть: разбор пропа, CSS-переменные
+ * Появление по animate у Flex, Grid, Box, Img — чистая часть: разбор конфигурации, CSS-переменные
  * и задержки каскада. Наблюдатель — `./observer.ts`, стили — `./_reveal.scss`.
  *
  * - `fade` — проявление прозрачностью;
@@ -45,7 +45,7 @@ export interface RevealOptions {
   start?: 'view' | 'load';
 }
 
-/** Объектная форма reveal. Секунды, пороги и остальные опции совпадают с legacy API. */
+/** Internal object configuration consumed by the shared observer and CSS engine. */
 export type RevealConfig<O extends RevealOptions = RevealOptions> = { effect: RevealKey } & O;
 
 /** Shared appearance animation: scroll or first paint. */
@@ -57,17 +57,7 @@ export type OpenAnimate = { when: 'open' } & Omit<RevealConfig, 'start' | 'stagg
 /** Narrow type for the observer-started appearance variant. */
 export type InViewAnimate = { when: 'inView' } & Omit<RevealConfig, 'start'>;
 
-/**
- * Значение пропа `reveal`. Предпочтительная запись — объект `{ effect, ...options }`;
- * ключи и tuple `[key, options]` остаются для совместимости.
- */
-export type RevealInput<O extends RevealOptions = RevealOptions> =
-  | RevealConfig<O>
-  | RevealKey
-  | [RevealKey]
-  | [RevealKey, O];
-
-/** True only for the shared appearance shape; legacy content/swap animate values stay separate. */
+/** Select appearance independently from a component's content-change or hover intent. */
 export function isAppearanceAnimate(value: unknown): value is AppearanceAnimate {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const candidate = value as { when?: unknown; effect?: unknown };
@@ -85,26 +75,15 @@ export function isInViewAnimate(value: unknown): value is InViewAnimate {
   return isAppearanceAnimate(value) && value.when === 'inView';
 }
 
-/** An explicit `animate={{ when: 'inView' }}` takes precedence over the legacy `reveal` prop. */
-export function resolveRevealInput(animate: unknown, reveal: RevealInput | undefined): RevealInput | undefined {
+/** Convert the public appearance intent to the observer/CSS engine's configuration. */
+export function resolveAppearanceAnimate(animate: unknown): RevealConfig | undefined {
   return isAppearanceAnimate(animate)
     ? { ...animate, start: animate.when === 'load' ? 'load' : 'view' }
-    : reveal;
+    : undefined;
 }
 
-export interface RevealProps {
-  /**
-   * Появление при прокрутке: `{ effect: 'up', delay: 0.16 }`. Опции: `stagger`, `delay`, `duration`,
-   * `distance`, `once`, `threshold`, `rootMargin`, `fade`, `start`. Tuple `[key, options]` и ключи
-   * сохранены для совместимости. С `stagger` — каскадом по прямым детям. Без JS и при «меньше движения»
-   * контент виден сразу. См. `RevealOptions`.
-   */
-  reveal?: RevealInput;
-
-  /**
-   * Исключает узел из каскада reveal его родителя, не отменяя его собственную анимацию.
-   * Установите `true` или уберите атрибут через `undefined`; учитывается load CSS и observer.
-   */
+export interface RevealScopeProps {
+  /** Exclude this node from a parent's stagger cascade without changing its own motion. */
   'data-reveal-skip'?: true;
 }
 
@@ -144,15 +123,10 @@ const timeCss = (value: number | MotionTimingName): string =>
   typeof value === 'number' ? `${value}ms` : `var(${motionTimingVariable(value)})`;
 
 /** Проп → нормализованные опции; нет пропа или чужой ключ — `null`. */
-export function resolveReveal(input: RevealInput | undefined | null): ResolvedReveal | null {
-  if (input == null) return null;
-
-  const key = Array.isArray(input) ? input[0] : typeof input === 'string' ? input : input.effect;
-  const options: RevealOptions = Array.isArray(input)
-    ? input[1] ?? {}
-    : typeof input === 'string'
-      ? {}
-      : input;
+export function resolveReveal(input: RevealConfig | undefined | null): ResolvedReveal | null {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const key = input.effect;
+  const options = input;
   if (!isRevealKey(key)) return null;
   const duration = toMs(options.duration);
 
@@ -171,11 +145,7 @@ export function resolveReveal(input: RevealInput | undefined | null): ResolvedRe
 }
 
 /** Тот же проп без каскада — для узла, чьи дети не отдельные элементы списка (слои Img). */
-export function withoutStagger(input: RevealInput | undefined): RevealInput | undefined {
-  if (Array.isArray(input)) {
-    return input[1]?.stagger ? [input[0], { ...input[1], stagger: 0 }] : input;
-  }
-
+export function withoutStagger(input: RevealConfig | undefined): RevealConfig | undefined {
   if (input && typeof input === 'object') {
     return input.stagger ? { ...input, stagger: 0 } : input;
   }

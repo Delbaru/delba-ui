@@ -40,19 +40,16 @@ export function SsrFixture() {
       <style>{':root { --t-d-fast: 190ms; }'}</style>
       <Text
         data-testid="ssr-named-slide"
-        animate={['textSlide', { mode: 'swap', duration: 'fast' }]}
+        animate={{ when: 'change', effect: 'textSlide', duration: 'fast' }}
       >
         Named slide
       </Text>
-      <Text data-testid="ssr-named-reveal" animate={['textReveal', { duration: 'fast' }]}>
+      <Text data-testid="ssr-named-reveal" animate={{ when: 'change', effect: 'textReveal', duration: 'fast' }}>
         Named reveal
       </Text>
       <Text
         data-testid="ssr-named-clip"
-        animate={[
-          'textClip',
-          { duration: 'fast', steps: ['Named clip', 'Next clip'], currentStep: 0 },
-        ]}
+        animate={{ when: 'change', effect: 'textClip', duration: 'fast', steps: ['Named clip', 'Next clip'], currentStep: 0 }}
       >
         Named clip
       </Text>
@@ -127,7 +124,7 @@ export function SsrFixture() {
       <Text role="alert" collapse={{ open, fade: true }}>
         Подсказка
       </Text>
-      <LexicalText content="<p>Текст из CMS</p>" reveal="up" />
+      <LexicalText content="<p>Текст из CMS</p>" animate={{ when: 'inView', effect: 'up' }} />
       <a href="/linked-card" data-testid="ssr-linked-card">
         <LexicalText
           data-testid="ssr-linked-text"

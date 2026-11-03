@@ -19,7 +19,8 @@
   Resolver задаёт `primary` и `default` без явной геометрии.
 - `label`, `placeholder='Выберите значение'`, `error`, `required`, `validate`;
   `name` и `form` подключают значение к FormData.
-- `panel` оформляет список, `collapse` сворачивает всё поле; ref — корень div.
+- `panel` оформляет список, `collapse` сворачивает всё поле; ref указывает на
+  фокусируемый div-триггер, а не на внешнюю оболочку FieldFrame.
 
 ## Пример
 
@@ -54,7 +55,7 @@ Multiple отправляет несколько записей одного `na
 
 ## Устройство и владельцы
 
-Select.tsx собирает поле, Dropdown, SelectTrigger и SelectOptions. Публичные
+Select.tsx собирает общий FieldFrame, Dropdown, SelectTrigger и SelectOptions. Публичные
 типы находятся в Select.types.ts; входы пакета сохранены. useSelect хранит один
 selection и popup-state и отдаёт предметные двери value, feedback, popup, focus,
 trigger, motion. Нет списка из десятков извлечённых flags в JSX компонента.
@@ -76,3 +77,28 @@ trigger, а не только внутри функции-компонента. 
 ui.config.messages.select задаёт placeholder, required и selectedCount с {count}.
 Явные placeholder/emptyMessage/renderValue сохраняют приоритет. Нативная
 отправка hidden input, multiple, form/reset и отказ выбора disabled/loading сохранены.
+
+### Общая презентация поля
+
+FieldFrame владеет подписью, декоративной звёздочкой и нижним сообщением.
+useFieldFeedback согласует приоритет ошибки/комментария и aria-describedby;
+входной aria-describedby дополняется ID фактически показанного сообщения.
+Во время loading скелет заменяет внутреннюю ошибку, поэтому её ID не попадает
+в aria-describedby до появления самого сообщения.
+SelectTrigger рисует только внутреннюю ошибку и содержимое выбора. Строки и
+пользовательская разметка выбранного значения/опций проходят через один
+selectContent.render; дополнительных визуальных обёрток этот помощник не создаёт.
+
+У div-триггера нет нативного label htmlFor. FieldFrame рисует его подпись как
+span с ID и activate; триггер ссылается на неё через aria-labelledby, а нажатие
+подписи фокусирует тот же узел, на который указывает публичный ref. Явный
+aria-label имеет приоритет. Нативные Input/Textarea продолжают использовать label.
+
+Selection имеет один uncontrolled state и одну подписку useFormReset.
+Select не вызывает текстовый useFieldControl ради ID/ref/ошибки: иначе тот
+создаёт неиспользуемый string-state и вторую reset-подписку. Валидация значения
+остаётся у Select, поскольку одиночный и множественный выбор имеют разные типы.
+
+Проверки: SSR доступное имя и единственный ID сообщения; браузерный клик по
+подписи и правильный ref; нативный reset/cancel reset, внешняя form=, grouped
+multiple, disabled/loading и Select в портальном Modal.

@@ -9,11 +9,8 @@ test('normalizes the object change form', () => {
   });
 });
 
-test('keeps legacy string and tuple forms', () => {
-  assert.deepEqual(normalizeImgAnimate('fade'), { effect: 'fade' });
-  assert.deepEqual(normalizeImgAnimate(['parallax', { direction: -1, duration: 0.4 }]), {
-    effect: 'parallax', direction: -1, duration: 0.4,
-  });
+test('rejects string and tuple aliases', () => {
+  for (const input of ['fade', ['parallax'], ['parallax', { direction: -1 }]]) assert.equal(normalizeImgAnimate(input), undefined);
 });
 
 test('does not treat appearance and invalid values as image changes', () => {

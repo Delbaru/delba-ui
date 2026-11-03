@@ -9,6 +9,36 @@ async function openContent(page: Page) {
   return editor;
 }
 
+test('direct toast routes to the mounted queue and does not retain messages after unmount', async ({ page }) => {
+  await openContent(page);
+  await page.getByRole('button', { name: 'Show direct message', exact: true }).click();
+  await expect(page.getByTestId('direct-toast-accepted')).toHaveText('true');
+  await expect(page.locator('.ToastProvider .ToastCard')).toHaveCount(1);
+  await expect(page.locator('.ToastCard')).toContainText('Direct command result');
+  await page.getByRole('button', { name: 'Toggle content contracts' }).click();
+  await expect(page.locator('.ToastProvider')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Show direct message', exact: true }).click();
+  await expect(page.getByTestId('direct-toast-accepted')).toHaveText('false');
+  await page.getByRole('button', { name: 'Toggle content contracts' }).click();
+  await expect(page.getByRole('textbox', { name: 'Rich document' })).toBeVisible();
+  await expect(page.locator('.ToastProvider')).toHaveCount(0);
+});
+
+test('StrictMode effect-created notifications retain their expiry after replay cleanup', async ({ page }) => {
+  await openContent(page);
+  await page.getByRole('button', { name: 'Toggle automatic notification' }).click();
+  await expect(page.locator('.ToastCard')).toContainText('Effect-created message');
+  await expect(page.locator('.ToastCard')).toHaveCount(0);
+});
+
+test('synchronous batch evictions release never-entered cards from queue state', async ({ page }) => {
+  await openContent(page);
+  await page.getByRole('button', { name: 'Batch eviction probe' }).click();
+  await expect(page.getByTestId('toast-owned-items')).toHaveText('5');
+  await page.getByRole('button', { name: 'Batch eviction probe' }).click();
+  await expect(page.getByTestId('toast-owned-items')).toHaveText('5');
+});
+
 test('rich editor keeps initial content in StrictMode, accepts input and undoes it', async ({ page }) => {
   const editor = await openContent(page);
   await editor.click();

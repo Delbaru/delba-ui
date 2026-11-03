@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { cx } from '../../../core';
+import { cx, type WithRef } from '../../../core';
 import styles from './FieldFrame.module.scss';
 
 import type { FlexProps } from '../../Flex/Flex';
@@ -20,8 +20,10 @@ export function FieldFrame({ layout, label, feedback, children }: FieldFrameProp
       {label && (
         <Flex dir={['row', 'row', 'row']} gap={[4, 4, 4]} mb={[8, 8, 8]}>
           <Text
-              as="label"
+              as={label.htmlFor ? 'label' : 'span'}
+              id={label.id}
               htmlFor={label.htmlFor}
+              onClick={label.activate}
               variant={['caption', 'caption', 'caption']}
               color={label.color}
           >
@@ -71,7 +73,10 @@ export function FieldFrame({ layout, label, feedback, children }: FieldFrameProp
 }
 
 export interface FieldLabel {
-  htmlFor: string;
+  /** Native target; custom controls use id + activate. */
+  htmlFor?: string;
+  id?: string;
+  activate?: () => void;
   text: string;
   required?: boolean;
   color?: string;
@@ -92,7 +97,9 @@ export interface FieldFeedback {
 }
 
 export interface FieldFrameProps {
-  layout: Omit<FlexProps, 'children'>;
+  layout: WithRef<Omit<FlexProps, 'children'>, HTMLElement> & {
+    'data-point-events'?: string;
+  };
   label?: FieldLabel;
   feedback: FieldFeedback;
   children: ReactNode;

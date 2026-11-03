@@ -1,7 +1,6 @@
 export { Text, type TextProps } from './Text';
 export type {
   AnimationKey,
-  AnimationInput,
   AnimationOptions,
   TextAnimate,
 } from './animations/types';

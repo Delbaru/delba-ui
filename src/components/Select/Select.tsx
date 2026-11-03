@@ -16,8 +16,7 @@ import {
   resolveFieldLayout,
   splitBoxLayout,
 } from '../../core';
-import { Text } from '../Text';
-import { Flex } from '../Flex';
+import { FieldFrame } from '../Field';
 import { useCollapseState } from '../../hooks/useCollapseState';
 import { Dropdown } from '../Dropdown';
 import { isValueArray, selectFormValues } from './options';
@@ -27,7 +26,6 @@ import { UI_MESSAGES } from '../../core/base/messages';
 import { useSelect } from './useSelect';
 import type { SelectProps } from './Select.types';
 export type { SelectProps, SelectBaseProps, SelectValueProps } from './Select.types';
-
 
 const c = createLayoutClasses(styles, { local: { h: 'height' } });
 
@@ -92,6 +90,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
     onFocus,
     onBlur,
     'aria-label': ariaLabel,
+    'aria-describedby': describedBy,
     'data-point-events': dataPointEvents,
     ...restProps
   } = fieldProps;
@@ -108,6 +107,8 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
     if (multiple) return isValueArray(next) ? validateProp?.(next) : undefined;
     return isValueArray(next) ? undefined : validateProp?.(next);
   };
+
+  const layoutProps = resolveFieldLayout({ ...box, variant, size, color, placeholderColor });
 
   const select = useSelect(ref, {
     options,
@@ -131,6 +132,8 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
     label,
     comment,
     ariaLabel,
+    describedBy,
+    helperPadding: fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl),
     perspective3d,
     parallax,
     animate,
@@ -144,59 +147,45 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
     if (isCollapsed) select.popup.close(false);
   }, [select.popup.close, isCollapsed]);
 
-  const layoutProps = resolveFieldLayout({ ...box, variant, size, color, placeholderColor });
-
   const fieldClasses = fieldLayoutClasses(c, layoutProps);
 
   return (
-    <Flex
-      collapse={
-        collapse
+    <FieldFrame
+      label={label ? { ...select.label, text: label, required, color: labelColor } : undefined}
+      feedback={select.feedback.below}
+      layout={{
+        collapse: collapse
           ? {
               ...collapseSettings,
               open: rootCollapse.open,
               onOpenChange: rootCollapse.changeOpen,
             }
-          : undefined
-      }
-      href={undefined}
-      dir={['column', 'column', 'column']}
-      gap={[8, 8, 8]}
-      className={cx(
-        'Select',
-        styles.Select,
-        styles.SelectWrapper,
-        ...fieldRootLayoutClasses(c, box),
-        className,
-      )}
-      style={{ ...(select.motion.style ?? null), ...style }}
-      ref={select.motion.ref}
-      data-point-events={dataPointEvents}
-      {...restProps}
-      {...select.motion.attrs}
-      {...stateLinkProps(linkState, {
-        onMouseEnter: composeEventHandlers(select.motion.handlers?.onMouseEnter, onMouseEnter),
-        onMouseMove: composeEventHandlers(select.motion.handlers?.onMouseMove, onMouseMove),
-        onMouseLeave: composeEventHandlers(select.motion.handlers?.onMouseLeave, onMouseLeave),
-        onMouseDown,
-        onMouseUp,
-        onClick,
-        onFocus,
-        onBlur,
-      })}
+          : undefined,
+        href: undefined,
+        className: cx(
+          'Select',
+          styles.Select,
+          styles.SelectWrapper,
+          ...fieldRootLayoutClasses(c, box),
+          className,
+        ),
+        style: { ...(select.motion.style ?? null), ...style },
+        ref: select.motion.ref,
+        'data-point-events': dataPointEvents,
+        ...restProps,
+        ...select.motion.attrs,
+        ...stateLinkProps(linkState, {
+          onMouseEnter: composeEventHandlers(select.motion.handlers?.onMouseEnter, onMouseEnter),
+          onMouseMove: composeEventHandlers(select.motion.handlers?.onMouseMove, onMouseMove),
+          onMouseLeave: composeEventHandlers(select.motion.handlers?.onMouseLeave, onMouseLeave),
+          onMouseDown,
+          onMouseUp,
+          onClick,
+          onFocus,
+          onBlur,
+        }),
+      }}
     >
-      {label && (
-        <Flex dir={['row', 'row', 'row']} gap={required ? [4, 4, 4] : [0, 0, 0]}>
-          <Text variant={['caption', 'caption', 'caption']} color={labelColor}>{label}</Text>
-
-          {required && (
-            <Text variant={['caption', 'caption', 'caption']} color="var(--error)">
-              *
-            </Text>
-          )}
-        </Flex>
-      )}
-
       <Dropdown
         ref={geometryRef}
         open={select.popup.open}
@@ -253,18 +242,6 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
               value={itemValue}
           />
         ))}
-
-      {!select.feedback.error && comment && (
-        <Text
-            as="div"
-            variant={['caption', 'caption', 'caption']}
-            id={select.feedback.commentId}
-            color="var(--text-muted)"
-            pl={fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl)}
-        >
-          {comment}
-        </Text>
-      )}
-    </Flex>
+    </FieldFrame>
   );
 }

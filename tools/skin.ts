@@ -12,6 +12,21 @@ const SKIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 's
 const BANNER = '// Автогенерат шкур кита (tools/skin.ts) — не править руками.\n\n';
 const EFFECTS = ['opacity', 'filter', 'cursor', 'pointerEvents', 'borderColor'];
 const STATES_MODULE = '@delba/ui/skin-states';
+const SKIP_SKIN_DIRS = new Set(['node_modules', 'tests', '__tests__', 'generated', 'dist', 'build', 'coverage']);
+
+/** One skin definition per named owner, including nested visual components. */
+export function componentSkinSources(directory: string): Array<{ folder: string; file: string }> {
+  const entries = fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+  const skinFiles = entries.filter((entry) => entry.isFile() && entry.name.endsWith('.skin.ts'));
+  if (skinFiles.length > 1) throw new Error(`${directory}: несколько владельцев skin в одной папке`);
+
+  const sources = skinFiles.map((entry) => ({ folder: directory, file: entry.name }));
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith('.') || SKIP_SKIN_DIRS.has(entry.name)) continue;
+    sources.push(...componentSkinSources(path.join(directory, entry.name)));
+  }
+  return sources;
+}
 
 type Props = Record<string, unknown>;
 
@@ -125,13 +140,8 @@ export async function generateSkins(root: string, skins: UiSkins): Promise<numbe
   const effects = new Set(skins.effects ?? EFFECTS);
   const statesModule = skins.states ?? STATES_MODULE;
   const dir = path.resolve(root, skins.dir);
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const folder = path.join(dir, entry.name);
-    const skinFile = fs.readdirSync(folder).find((f) => f.endsWith('.skin.ts'));
-    if (!skinFile) continue;
-
-    if (await generateComponentSkin(folder, skinFile, statesModule, effects)) changed++;
+  for (const { folder, file } of componentSkinSources(dir)) {
+    if (await generateComponentSkin(folder, file, statesModule, effects)) changed++;
   }
   return changed;
 }

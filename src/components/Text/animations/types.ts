@@ -21,12 +21,6 @@ export interface AnimationOptionsMap {
 export type AnimationKey = keyof AnimationOptionsMap;
 export type AnimationOptions = AnimationOptionsMap[AnimationKey];
 
-/** Значение пропа `animate`/`animation`: ключ, [ключ] или [ключ, опции-под-этот-ключ] (типизированно). */
-export type AnimationInput =
-  | AnimationKey
-  | [AnimationKey]
-  | { [K in AnimationKey]: [K, AnimationOptionsMap[K]] }[AnimationKey];
-
 /** Общая объектная форма анимаций содержимого Text. Время здесь в секундах или именем темы. */
 export type TextAnimate =
   | TextTimelineAnimate

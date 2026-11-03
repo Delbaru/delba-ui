@@ -13,7 +13,7 @@ export type ImgSwapKey = 'fade' | 'zoom' | 'reveal' | 'parallax' | 'veil';
 
 export interface ImgSwapOptions {
   /** Длительность смены, сек. По умолчанию — токен `--t-d-slow`; у `veil` ход вдвое длиннее (заход и уход). */
-  duration?: number;
+  duration?: MotionTime;
   /** Сторона для `parallax` и `veil`: `1` — новая приходит справа (дальше по списку), `-1` — слева. По умолчанию `1`. */
   direction?: 1 | -1;
   /** Содержимое вуали для `veil`: заливка, знак, узор — что задаст проект. Без него `veil` сменяет как `fade`. */
@@ -34,26 +34,17 @@ export interface ImgChangeAnimate {
   veil?: ReactNode;
 }
 
-/** Результат нормализации объектного и совместимого legacy API. */
+/** Engine options after selecting the change trigger. */
 export interface NormalizedImgChangeAnimate extends Omit<ImgChangeAnimate, 'when'> {}
 
-/** Legacy ключи и кортежи остаются поддержаны для существующих проектов. */
-export type ImgAnimate = ImgChangeAnimate | ImgSwapKey | [ImgSwapKey] | [ImgSwapKey, ImgSwapOptions];
+/** Object intent for source changes; appearance is handled by shared motion. */
+export type ImgAnimate = ImgChangeAnimate;
 
 const IMG_SWAP_KEYS: readonly ImgSwapKey[] = ['fade', 'zoom', 'reveal', 'parallax', 'veil'];
 
-/** Приводит старую запись и объект `when: 'change'` к одной внутренней форме. */
+/** Select source-change options without accepting appearance effects. */
 export function normalizeImgAnimate(value: unknown): NormalizedImgChangeAnimate | undefined {
-  if (typeof value === 'string') {
-    return IMG_SWAP_KEYS.includes(value as ImgSwapKey) ? { effect: value as ImgSwapKey } : undefined;
-  }
-  if (Array.isArray(value)) {
-    const [effect, options] = value;
-    if (typeof effect !== 'string' || !IMG_SWAP_KEYS.includes(effect as ImgSwapKey)) return undefined;
-    const opts = options && typeof options === 'object' ? options as ImgSwapOptions : undefined;
-    return { effect: effect as ImgSwapKey, ...opts };
-  }
-  if (!value || typeof value !== 'object') return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const candidate = value as Partial<ImgChangeAnimate>;
   if (candidate.when !== 'change' || typeof candidate.effect !== 'string' || !IMG_SWAP_KEYS.includes(candidate.effect as ImgSwapKey)) return undefined;
   return {

@@ -2,7 +2,7 @@
 
 import { useCallback, type CSSProperties } from 'react';
 
-import { isOpenAnimate, resolveRevealInput, type AppearanceAnimate, type RevealProps } from '../core/reveal/reveal';
+import { isOpenAnimate, resolveAppearanceAnimate, type AppearanceAnimate } from '../core/reveal/reveal';
 import { useParallaxMotion, type ParallaxInput } from './useParallaxMotion';
 import { usePerspective3dMotion, type Perspective3dInput } from './usePerspective3dMotion';
 import { useReveal } from './useReveal';
@@ -12,23 +12,21 @@ import { useHoverTransform } from './useHoverTransform';
 
 type MotionTarget = HTMLElement | SVGElement;
 
-export type SharedAnimate<LegacyAnimate = never> = (AppearanceAnimate & { hover?: HoverTransformOptions | false }) | HoverTransformAnimate | LegacyAnimate;
+export type SharedAnimate<ComponentAnimate extends object = never> = (AppearanceAnimate & { hover?: HoverTransformOptions | false }) | HoverTransformAnimate | ComponentAnimate;
 
 export function isSharedMotionAnimate(value: unknown): value is AppearanceAnimate | HoverTransformAnimate {
   return isAppearanceAnimate(value) || isHoverTransformAnimate(value);
 }
 
-export interface SharedMotionProps<LegacyAnimate = never> {
+export interface SharedMotionProps<ComponentAnimate extends object = never> {
   perspective3d?: Perspective3dInput;
   parallax?: ParallaxInput;
   /** Общий эффект появления: `{ effect: 'up', when: 'inView', delay: 0.16 }`.
-   * `when: 'load'` запускает CSS-эффект с первого кадра; прежние эффекты компонента сохраняются. */
-  animate?: SharedAnimate<LegacyAnimate>;
+   * `when: 'load'` запускает CSS-эффект с первого кадра. */
+  animate?: SharedAnimate<ComponentAnimate>;
 }
 
-// `reveal` — не в SharedMotionProps: его принимают только примитивы раскладки и Img, остальные
-// компоненты молча проглотили бы проп из общего типа.
-export function useSharedMotion<LegacyAnimate>({ perspective3d, parallax, reveal, animate, open }: SharedMotionProps<LegacyAnimate> & RevealProps & { open?: boolean }) {
+export function useSharedMotion<ComponentAnimate extends object>({ perspective3d, parallax, animate, open }: SharedMotionProps<ComponentAnimate> & { open?: boolean }) {
   const {
     isEnabled: hasPerspective3d,
     motionHandlers,
@@ -45,7 +43,7 @@ export function useSharedMotion<LegacyAnimate>({ perspective3d, parallax, reveal
   } = useParallaxMotion(parallax);
 
   const openAnimation = isOpenAnimate(animate);
-  const input = openAnimation ? { ...animate, stagger: 0, start: 'view' as const } : resolveRevealInput(animate, reveal);
+  const input = openAnimation ? { ...animate, stagger: 0, start: 'view' as const } : resolveAppearanceAnimate(animate);
   const { revealAttrs, revealStyle, setRevealNode } = useReveal(input, openAnimation ? Boolean(open) : undefined);
 
   const hover = resolveHoverTransform(animate);

@@ -14,28 +14,27 @@ import {
   isAppearanceAnimate,
   isInViewAnimate,
   isOpenAnimate,
-  resolveRevealInput,
+  resolveAppearanceAnimate,
   isRevealCascadeChild,
   withoutStagger,
-  type RevealInput,
-  type RevealOptions,
+  type RevealConfig,
   type InViewAnimate,
   type AppearanceAnimate,
 } from '../reveal';
 
 test('resolveReveal: ключ — умолчания, опции — в мс', () => {
-  assert.deepEqual(resolveReveal('up'), {
+  assert.deepEqual(resolveReveal({ effect: 'up' }), {
     key: 'up', stagger: 0, delay: 0, duration: null, distance: null, once: true, threshold: motionInView.threshold, rootMargin: motionInView.rootMargin, fade: true, start: 'view',
   });
-  assert.deepEqual(resolveReveal(['fade', { stagger: 0.08, delay: 0.1, duration: 0.6, distance: -48, once: false, threshold: 2, rootMargin: '0px 0px -10% 0px' }]), {
+  assert.deepEqual(resolveReveal({ effect: 'fade', stagger: 0.08, delay: 0.1, duration: 0.6, distance: -48, once: false, threshold: 2, rootMargin: '0px 0px -10% 0px' }), {
     key: 'fade', stagger: 80, delay: 100, duration: 600, distance: 48, once: false, threshold: 1, rootMargin: '0px 0px -10% 0px', fade: true, start: 'view',
   });
-  const load = resolveReveal(['up', { fade: false, start: 'load' }]);
+  const load = resolveReveal({ effect: 'up', fade: false, start: 'load' });
   assert.equal(load?.fade, false);
   assert.equal(load?.start, 'load');
   // Чужое значение `start` из JS без типов — обычный ход по экрану, а не вечное ожидание.
-  assert.equal(resolveReveal(['up', { start: 'now' as 'load' }])?.start, 'view');
-  assert.equal(resolveReveal(['scale'])?.key, 'scale');
+  assert.equal(resolveReveal({ effect: 'up', start: 'now' as 'load' })?.start, 'view');
+  assert.equal(resolveReveal({ effect: 'scale' })?.key, 'scale');
 });
 
 test('horizontal expansion is an appearance effect and keeps an observable starting extent', () => {
@@ -49,53 +48,38 @@ test('horizontal expansion is an appearance effect and keeps an observable start
 });
 
 test('resolveReveal: object API normalizes effect and preserves option semantics', () => {
-  const input = { effect: 'up', delay: 0.16, stagger: 0.08, duration: 0.6, fade: false, start: 'load' } satisfies RevealInput;
+  const input = { effect: 'up', delay: 0.16, stagger: 0.08, duration: 0.6, fade: false, start: 'load' } satisfies RevealConfig;
   assert.deepEqual(resolveReveal(input), {
     key: 'up', stagger: 80, delay: 160, duration: 600, distance: null, once: true, threshold: motionInView.threshold,
     rootMargin: motionInView.rootMargin, fade: false, start: 'load',
   });
   assert.equal(resolveReveal({ effect: 'scale' })?.key, 'scale');
-  const imageInput = { effect: 'blur', delay: 0.1 } satisfies RevealInput<Omit<RevealOptions, 'stagger'>>;
+  const imageInput = { effect: 'blur', delay: 0.1 } satisfies RevealConfig;
   assert.equal(resolveReveal(imageInput)?.key, 'blur');
 });
 
-test('inView animate shares reveal normalization and wins over the legacy reveal prop', () => {
+test('appearance intent selects its trigger without a parallel reveal door', () => {
   const animate = { when: 'inView', effect: 'up', delay: 0.16, stagger: 0.08 } satisfies InViewAnimate;
-  // @ts-expect-error inView starts on intersection; load-only CSS is reserved for the legacy reveal prop.
-  const loadAnimate: InViewAnimate = { when: 'inView', effect: 'up', start: 'load' };
-  void loadAnimate;
-  // @ts-expect-error AppearanceAnimate selects its start with `when`, not a second `start` option.
-  const conflictingStart: AppearanceAnimate = { when: 'load', effect: 'fade', start: 'view' };
-  void conflictingStart;
   assert.equal(isInViewAnimate(animate), true);
   assert.equal(isAppearanceAnimate(animate), true);
-  assert.equal(isAppearanceAnimate({ when: 'load', effect: 'fade' }), true);
   assert.equal(isOpenAnimate({ when: 'open', effect: 'down' }), true);
   assert.equal(isAppearanceAnimate({ when: 'open', effect: 'down' }), false);
-  assert.equal(isInViewAnimate({ when: 'mount', effect: 'up' }), false);
-  assert.equal(isInViewAnimate({ when: 'load', effect: 'fade' }), false);
-  assert.equal(isInViewAnimate({ when: 'inView', effect: 'spin' }), false);
-  assert.equal(isInViewAnimate('fadeIn'), false);
-
-  const chosen = resolveRevealInput(animate, ['fade', { delay: 0.4 }]);
-  assert.deepEqual(chosen, { ...animate, start: 'view' });
-  assert.deepEqual(resolveReveal(chosen), {
-    key: 'up', stagger: 80, delay: 160, duration: null, distance: null, once: true,
-    threshold: motionInView.threshold, rootMargin: motionInView.rootMargin, fade: true, start: 'view',
-  });
-  assert.deepEqual(resolveReveal(resolveRevealInput('fadeIn', ['left', { delay: 0.1 }])), resolveReveal(['left', { delay: 0.1 }]));
-  assert.deepEqual(resolveReveal(resolveRevealInput(undefined, 'scale')), resolveReveal('scale'));
-  assert.equal(resolveReveal(resolveRevealInput({ when: 'inView', effect: 'fade', start: 'load' } as unknown, ['up', { start: 'load' }]))?.start, 'view');
-  assert.equal(resolveReveal(resolveRevealInput({ when: 'load', effect: 'fade' } satisfies AppearanceAnimate, ['up']))?.start, 'load');
-  assert.equal(resolveReveal(resolveRevealInput(undefined, { effect: 'up', start: 'load' }))?.start, 'load');
+  assert.equal(isAppearanceAnimate('up'), false);
+  assert.equal(isAppearanceAnimate(['up']), false);
+  assert.deepEqual(resolveAppearanceAnimate(animate), { ...animate, start: 'view' });
+  assert.equal(resolveAppearanceAnimate(undefined), undefined);
+  assert.equal(resolveAppearanceAnimate('fadeIn'), undefined);
+  assert.equal(resolveReveal(resolveAppearanceAnimate({ when: 'load', effect: 'fade' } satisfies AppearanceAnimate))?.start, 'load');
+  // The event is authoritative even for untyped JavaScript passing an extra start.
+  assert.equal(resolveReveal(resolveAppearanceAnimate({ when: 'inView', effect: 'fade', start: 'load' }))?.start, 'view');
 });
 
 test('resolveReveal: нет пропа, чужой ключ, мусор в числах', () => {
   assert.equal(resolveReveal(undefined), null);
   assert.equal(resolveReveal(null), null);
   // Чужой ключ приходит из JS без типов — узел остаётся видимым, а не прячется навсегда.
-  assert.equal(resolveReveal('spin' as 'up'), null);
-  const r = resolveReveal(['up', { stagger: -1, delay: Number.NaN, duration: 0 }]);
+  assert.equal(resolveReveal({ effect: 'spin' as 'up' }), null);
+  const r = resolveReveal({ effect: 'up', stagger: -1, delay: Number.NaN, duration: 0 });
   assert.equal(r?.stagger, 0);
   assert.equal(r?.delay, 0);
   assert.equal(r?.duration, 0);
@@ -103,10 +87,10 @@ test('resolveReveal: нет пропа, чужой ключ, мусор в чи�
 });
 
 test('revealAttrs: каскад помечается отдельным атрибутом', () => {
-  assert.deepEqual(revealAttrs(resolveReveal('blur')), { 'data-reveal': 'blur' });
-  assert.deepEqual(revealAttrs(resolveReveal(['up', { stagger: 0.05 }])), { 'data-reveal': 'up', 'data-reveal-stagger': '' });
+  assert.deepEqual(revealAttrs(resolveReveal({ effect: 'blur' })), { 'data-reveal': 'blur' });
+  assert.deepEqual(revealAttrs(resolveReveal({ effect: 'up', stagger: 0.05 })), { 'data-reveal': 'up', 'data-reveal-stagger': '' });
   assert.equal(revealAttrs(null), undefined);
-  assert.deepEqual(revealAttrs(resolveReveal(['up', { stagger: 0.1, start: 'load' }])), {
+  assert.deepEqual(revealAttrs(resolveReveal({ effect: 'up', stagger: 0.1, start: 'load' })), {
     'data-reveal': 'up', 'data-reveal-stagger': '', 'data-reveal-start': 'load',
   });
 });
@@ -122,14 +106,14 @@ test('cascade eligibility skips marked nodes and nodes with their own reveal', (
 });
 
 test('revealStyle: только заданное — остальное берёт тема', () => {
-  assert.deepEqual(revealStyle(resolveReveal('up')), {});
-  assert.deepEqual(revealStyle(resolveReveal(['left', { duration: 0.4, delay: 0.2, distance: 64 }])), {
+  assert.deepEqual(revealStyle(resolveReveal({ effect: 'up' })), {});
+  assert.deepEqual(revealStyle(resolveReveal({ effect: 'left', duration: 0.4, delay: 0.2, distance: 64 })), {
     '--reveal-duration': '400ms', '--reveal-delay': '200ms', '--reveal-distance': 'calc(var(--rpx) * 64)',
   });
-  assert.deepEqual(revealStyle(resolveReveal(['up', { fade: false }])), { '--reveal-o': '1' });
+  assert.deepEqual(revealStyle(resolveReveal({ effect: 'up', fade: false })), { '--reveal-o': '1' });
   // Шаг каскада нужен CSS только при старте с загрузки: по экрану задержки ставит наблюдатель.
-  assert.deepEqual(revealStyle(resolveReveal(['up', { stagger: 0.08 }])), {});
-  assert.deepEqual(revealStyle(resolveReveal(['up', { stagger: 0.08, start: 'load' }])), { '--reveal-step': '80ms' });
+  assert.deepEqual(revealStyle(resolveReveal({ effect: 'up', stagger: 0.08 })), {});
+  assert.deepEqual(revealStyle(resolveReveal({ effect: 'up', stagger: 0.08, start: 'load' })), { '--reveal-step': '80ms' });
 });
 
 test('down enters from above and distances keep rpx, percent and named token semantics', () => {
@@ -167,22 +151,21 @@ test('revealDelays: delay + порядок × stagger', () => {
 });
 
 test('ключ наблюдателя и подпись опций', () => {
-  const a = resolveReveal(['up', { stagger: 0.08 }]);
-  const b = resolveReveal(['up', { stagger: 0.08 }]);
+  const a = resolveReveal({ effect: 'up', stagger: 0.08 });
+  const b = resolveReveal({ effect: 'up', stagger: 0.08 });
   assert.ok(a && b);
   assert.equal(revealSignature(a), revealSignature(b));
-  assert.equal(revealObserverKey(a), revealObserverKey(resolveReveal('fade') ?? a));
-  assert.notEqual(revealObserverKey(a), revealObserverKey(resolveReveal(['up', { rootMargin: '-10%' }]) ?? a));
-  assert.notEqual(revealSignature(a), revealSignature(resolveReveal(['up', { stagger: 0.08, start: 'load' }])));
+  assert.equal(revealObserverKey(a), revealObserverKey(resolveReveal({ effect: 'fade' }) ?? a));
+  assert.notEqual(revealObserverKey(a), revealObserverKey(resolveReveal({ effect: 'up', rootMargin: '-10%' }) ?? a));
+  assert.notEqual(revealSignature(a), revealSignature(resolveReveal({ effect: 'up', stagger: 0.08, start: 'load' })));
   assert.equal(revealSignature(null), '');
 });
 
 test('withoutStagger: снимает каскад, остальное не трогает', () => {
-  assert.deepEqual(withoutStagger(['up', { stagger: 0.1, delay: 0.2 }]), ['up', { stagger: 0, delay: 0.2 }]);
   assert.deepEqual(withoutStagger({ effect: 'up', stagger: 0.1, delay: 0.2 }), { effect: 'up', stagger: 0, delay: 0.2 });
   assert.deepEqual(withoutStagger({ effect: 'up', delay: 0.2 }), { effect: 'up', delay: 0.2 });
-  assert.deepEqual(withoutStagger(['fade', { delay: 0.2 }]), ['fade', { delay: 0.2 }]);
-  assert.equal(withoutStagger('fade'), 'fade');
+  assert.deepEqual(withoutStagger({ effect: 'fade', delay: 0.2 }), { effect: 'fade', delay: 0.2 });
+  assert.deepEqual(withoutStagger({ effect: 'fade' }), { effect: 'fade' });
   assert.equal(withoutStagger(undefined), undefined);
 });
 

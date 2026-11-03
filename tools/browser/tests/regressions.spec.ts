@@ -1,5 +1,15 @@
 import { expect, test, type Page } from '@playwright/test';
 
+type ModalRafWindow = Window & {
+  __modalFrameGate?: {
+    callbacks: Map<number, FrameRequestCallback>;
+    nextId: number;
+    originalRequest: typeof window.requestAnimationFrame;
+    originalCancel: typeof window.cancelAnimationFrame;
+    staleCallback?: FrameRequestCallback;
+  };
+};
+
 async function openFixture(page: Page) {
   await page.goto('/');
   await expect(
@@ -990,6 +1000,17 @@ test('reveal skip marker dynamically releases an in-view child without stale obs
   await expect(decoration).toHaveAttribute('data-reveal-state', /^(in|done)$/);
 });
 
+test('Img art direction retains explicit mobile equal to desktop ahead of a distinct tablet', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await openFixture(page);
+  const image = page.getByTestId('img-art-direction-explicit-mobile').locator('img');
+  await expect.poll(() => image.evaluate(node => (node as HTMLImageElement).currentSrc)).toContain('%23a33');
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect.poll(() => image.evaluate(node => (node as HTMLImageElement).currentSrc)).toContain('%2333a');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect.poll(() => image.evaluate(node => (node as HTMLImageElement).currentSrc)).toContain('%23a33');
+});
+
 test('Img object change animate snapshots direction, waits for load, follows the latest source and cleans layers', async ({
   page,
 }) => {
@@ -1027,10 +1048,14 @@ test('Img object change animate snapshots direction, waits for load, follows the
       swap.evaluate((node) => getComputedStyle(node).getPropertyValue('--img-swap-dir').trim()),
     )
     .toBe('1');
-  await page.getByTestId('img-change-latest').click();
   releaseRemote?.();
 
   await expect(swap.locator('.ui-img-swap-veil')).toHaveCount(1);
+  const blur = image.locator('.ImgBlur');
+  await expect(blur).toHaveClass(/ui-img-blur-hidden/);
+  await swap.locator('.ui-img-swap-layer[aria-hidden="true"] img').dispatchEvent('load');
+  await expect(blur).toHaveClass(/ui-img-blur-hidden/);
+  await page.getByTestId('img-change-latest').click();
   await expect(swap.locator('.ui-img-swap-veil')).toHaveCSS('animation-duration', '0.7s');
   await expect
     .poll(
@@ -2009,6 +2034,7 @@ test('Icon tooltip keeps the link and inline SVG stable while merging accessible
   const link = page.getByRole('link', { name: 'Help link' });
   const svg = link.getByTestId('tooltip-icon-svg');
   await expect(link).toHaveAttribute('href', 'https://example.test/icon-help');
+  await expect.poll(() => svg.evaluate((node) => node.style.getPropertyValue('--perspective3d'))).toBe('600px');
 
   const initialDescription = (await link.getAttribute('aria-describedby'))?.split(/\s+/) ?? [];
   expect(initialDescription).toContain('consumer-description');
@@ -2053,6 +2079,24 @@ test('Icon tooltip keeps the link and inline SVG stable while merging accessible
     { type: 'focus', currentTarget: 'A', trusted: true },
     { type: 'blur', currentTarget: 'A', trusted: true },
   ]);
+});
+
+test('framed Icon composes public event handlers once on the owning frame', async ({ page }) => {
+  await openFixture(page);
+  const frame = page.getByLabel('Framed event icon', { exact: true });
+  const svg = frame.getByTestId('tooltip-icon-svg');
+
+  await svg.click();
+  await frame.press('Enter');
+  await svg.hover();
+  await frame.focus();
+
+  await expect.poll(() => page.evaluate(() => window.__iconInteractionCounts)).toEqual({
+    click: 1,
+    keyDown: 1,
+    mouseEnter: 1,
+    focus: 1,
+  });
 });
 
 test('Media type choices are keyboard-operable buttons with pressed state', async ({ page }) => {
@@ -2313,6 +2357,15 @@ test('Select preserves panel styling, grouped options and opening guards through
   const scope = page.getByRole('region', { name: 'Select panel contracts' });
   for (const variant of ['primary', 'primaryFill', 'secondary']) {
     const trigger = scope.getByRole('button', { name: `Panel ${variant}`, exact: true });
+    await expect(trigger).toHaveAttribute('data-select-ref', 'trigger');
+    await expect(trigger).not.toHaveAttribute('aria-labelledby');
+    const label = scope.getByText(`Visible ${variant}`, { exact: true });
+    await expect(label).toHaveJSProperty('tagName', 'SPAN');
+    await label.click();
+    await expect(trigger).toBeFocused();
+    const description = await trigger.getAttribute('aria-describedby');
+    expect(description).toBeTruthy();
+    await expect(page.locator(`[id="${description}"]`)).toHaveText('Choose from the list');
     await trigger.click();
     await expect(trigger).toHaveAttribute('aria-expanded', 'true');
     const list = page.locator(`[id="${await trigger.getAttribute('aria-controls')}"]`);
@@ -2666,6 +2719,106 @@ test('declarative Modal cancellation, disabled trigger, defaultOpen and rapid re
   await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden');
   await dialog.getByRole('button', { name: 'Request declaration close' }).click();
   await expect(dialog).toHaveCount(0);
+});
+
+test('Modal ignores an opening frame from a declaration removed and remounted at the same position', async ({
+  page,
+}) => {
+  await openFixture(page);
+  await page.evaluate(() => {
+    const view = window as ModalRafWindow;
+    const gate = {
+      callbacks: new Map<number, FrameRequestCallback>(),
+      nextId: 10_000_000,
+      originalRequest: window.requestAnimationFrame.bind(window),
+      originalCancel: window.cancelAnimationFrame.bind(window),
+    };
+    view.__modalFrameGate = gate;
+    window.requestAnimationFrame = (callback) => {
+      const id = gate.nextId++;
+      gate.callbacks.set(id, callback);
+      return id;
+    };
+    window.cancelAnimationFrame = (id) => {
+      gate.callbacks.delete(id);
+      gate.originalCancel(id);
+    };
+  });
+
+  try {
+    const dialog = page.locator('[role="dialog"][aria-label="Lifecycle declaration"]');
+    await page.getByRole('button', { name: 'Mount lifecycle declaration', exact: true }).click();
+    await expect(dialog).toHaveCount(1);
+    const oldFrameId = await page.evaluate(() => {
+      const gate = (window as ModalRafWindow).__modalFrameGate!;
+      const [id, callback] = gate.callbacks.entries().next().value!;
+      gate.staleCallback = callback;
+      return id;
+    });
+    await page.getByRole('button', { name: 'Unmount lifecycle declaration', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await page.evaluate((id) => {
+      // Keep the callback as an in-flight browser task and deliver it after unmount below.
+      (window as ModalRafWindow).__modalFrameGate!.callbacks.delete(id);
+    }, oldFrameId);
+
+    await page.getByRole('button', { name: 'Mount lifecycle declaration', exact: true }).click();
+    await expect(dialog).toHaveCount(1);
+    const currentFrameId = await page.evaluate(() => {
+      const gate = (window as ModalRafWindow).__modalFrameGate!;
+      return gate.callbacks.keys().next().value as number;
+    });
+    expect(currentFrameId).not.toBe(oldFrameId);
+
+    await page.evaluate(() => {
+      const gate = (window as ModalRafWindow).__modalFrameGate!;
+      const before = new Set(gate.callbacks.keys());
+      gate.staleCallback?.(performance.now());
+      const staleFrames = [...gate.callbacks].filter(([id]) => !before.has(id));
+      for (const [id, callback] of staleFrames) {
+        gate.callbacks.delete(id);
+        callback(performance.now());
+      }
+    });
+    await expect(dialog.locator('..')).toHaveAttribute('data-open', 'false');
+
+    for (let frame = 0; frame < 4; frame += 1) {
+      await page.evaluate(() => {
+        const gate = (window as ModalRafWindow).__modalFrameGate!;
+        const callbacks = [...gate.callbacks.values()];
+        gate.callbacks.clear();
+        for (const callback of callbacks) callback(performance.now());
+      });
+      await page.waitForTimeout(0);
+    }
+    await expect(dialog.locator('..')).toHaveAttribute('data-open', 'true');
+  } finally {
+    await page.evaluate(() => {
+      const view = window as ModalRafWindow;
+      const gate = view.__modalFrameGate;
+      if (!gate) return;
+      window.requestAnimationFrame = gate.originalRequest;
+      window.cancelAnimationFrame = gate.originalCancel;
+      view.__modalFrameGate = undefined;
+    });
+  }
+});
+
+test('plain presented Modal content uses the configured exit timing and keeps the scroll lock', async ({
+  page,
+}) => {
+  await openFixture(page);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.evaluate(() => document.documentElement.style.setProperty('--t-d-normal', '1.2s'));
+  await page.getByRole('button', { name: 'Open plain presented content', exact: true }).click();
+  const content = page.getByTestId('plain-presented-content');
+  await expect(content).toBeVisible();
+  await content.getByRole('button', { name: 'Dismiss plain presented content' }).click();
+  await page.waitForTimeout(600);
+  await expect(content).toHaveCount(1);
+  await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden');
+  await expect(content).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveCSS('overflow-y', 'hidden');
 });
 
 test('declarative Modal uses shared full distance open motion, one inner scroll owner and desktop dismissal', async ({

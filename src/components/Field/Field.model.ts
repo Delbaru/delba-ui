@@ -11,7 +11,7 @@ import type {
   RefCallback,
   RefObject,
 } from 'react';
-import type { FieldValueChangeHandler } from '../../core';
+import type { FieldValueChangeHandler, FieldValueChangeReason } from '../../core';
 import { useMergedRefs } from '../../core';
 import { resolveSeedField } from '../../core/base/seed';
 import { UI_MESSAGES } from '../../core/base/messages';
@@ -24,6 +24,14 @@ type NativeTextField = HTMLInputElement | HTMLTextAreaElement;
 
 type FieldValue = InputHTMLAttributes<HTMLInputElement>['value'];
 type FieldDefaultValue = InputHTMLAttributes<HTMLInputElement>['defaultValue'];
+
+type FieldCommit<E extends NativeTextField> = {
+  value: string;
+  reason: Exclude<FieldValueChangeReason, 'country'>;
+  event?: ChangeEvent<E> | FocusEvent<E> | null;
+  validation?: FieldValidationPhase;
+  edit?: FieldEdit;
+};
 
 interface NativeFieldBinding {
   key: string;
@@ -207,17 +215,6 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
     [currentInput, emptyMessage, policy, readOnly, required, validate],
   );
 
-  const publish = useCallback(
-    (
-      next: string,
-      reason: 'input' | 'format' | 'seed' | 'step' | 'pick',
-      event: ChangeEvent<E> | FocusEvent<E> | null,
-    ) => {
-      onValueChange?.(next, { reason, event });
-    },
-    [onValueChange],
-  );
-
   const cancelCaret = useCallback(() => {
     pendingCaret.current?.();
     pendingCaret.current = null;
@@ -236,14 +233,8 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
     [controlled],
   );
 
-  const update = useCallback(
-    (
-      next: string,
-      reason: 'input' | 'format' | 'seed' | 'step' | 'pick',
-      event: ChangeEvent<E> | FocusEvent<E> | null,
-      phase?: FieldValidationPhase,
-      edit?: FieldEdit,
-    ) => {
+  const commit = useCallback(
+    ({ value: next, reason, event = null, validation: phase, edit }: FieldCommit<E>) => {
       const checkBeforeNotify = reason !== 'pick' && phase && policy.validation.beforeNotify;
       if (reason === 'pick') check(next, 'commit');
       else if (checkBeforeNotify) check(next, phase);
@@ -262,8 +253,7 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
       const changed = next !== currentInput;
       if (reason !== 'format' || changed) {
         store(next);
-        if (reason !== 'pick') publish(next, reason, event);
-        else publish(next, 'pick', null);
+        onValueChange?.(next, { reason, event: reason === 'pick' ? null : event });
       }
       if (reason !== 'pick' && phase && !checkBeforeNotify) check(next, phase);
     },
@@ -273,7 +263,7 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
       currentInput,
       policy.validation.beforeNotify,
       policy.value,
-      publish,
+      onValueChange,
       store,
       writeDisplay,
     ],
@@ -288,9 +278,9 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
       const raw = event.currentTarget.value;
       const edit = policy.value.finish(raw);
       const next = edit?.value ?? policy.value.normalize(raw);
-      update(next, 'format', event, 'commit', edit ?? undefined);
+      commit({ value: next, reason: 'format', event, validation: 'commit', edit: edit ?? undefined });
     },
-    [check, policy.value, readOnly, update],
+    [check, commit, policy.value, readOnly],
   );
 
   const applyEdit = useCallback(
@@ -306,7 +296,7 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
       if (!result) return false;
       const next = result;
       const phase = next.validation ?? (policy.validation.whileEditing ? 'editing' : 'commit');
-      update(next.value, 'input', event, phase, next);
+      commit({ value: next.value, reason: 'input', event, validation: phase, edit: next });
 
       if (
         result?.selectionStart != null &&
@@ -328,7 +318,7 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
       }
       return true;
     },
-    [cancelCaret, disabled, policy.validation.whileEditing, policy.value, readOnly, update],
+    [cancelCaret, commit, disabled, policy.validation.whileEditing, policy.value, readOnly],
   );
 
   const edit = useCallback(
@@ -346,9 +336,9 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
     (value: string) => {
       if (disabled || readOnly) return;
       const next = policy.value.normalize(value);
-      update(next, 'pick', null, 'commit');
+      commit({ value: next, reason: 'pick', validation: 'commit' });
     },
-    [disabled, policy.value, readOnly, update],
+    [commit, disabled, policy.value, readOnly],
   );
 
   const step = useCallback(
@@ -360,9 +350,9 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
       const numericInput = view && input instanceof view.HTMLInputElement ? input : null;
       const edit = calculate(currentInput, delta, numericInput);
       if (!edit) return;
-      update(edit.value, 'step', null, 'commit', edit);
+      commit({ value: edit.value, reason: 'step', validation: 'commit', edit });
     },
-    [currentInput, disabled, policy.value.step, readOnly, update],
+    [commit, currentInput, disabled, policy.value.step, readOnly],
   );
 
   const reset = useCallback(() => {
@@ -389,7 +379,7 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
         const next = seedState.focusValue;
         const display = resolveSeedField({ seed, value: next }).displayValue;
         const edit: FieldEdit = { value: next, displayValue: display, writeDisplay: true };
-        update(next, 'seed', event, undefined, edit);
+        commit({ value: next, reason: 'seed', event, edit });
       }
       onFocus?.(event);
     },
@@ -401,7 +391,7 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
       seed,
       seedEnabled,
       seedState.focusValue,
-      update,
+      commit,
     ],
   );
 
@@ -420,10 +410,11 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
         if (seedEnabled && seedState.blurValue !== undefined) {
           const next = seedState.blurValue;
           const display = resolveSeedField({ seed, value: next }).displayValue;
-          update(next, 'seed', event, undefined, {
+          commit({
             value: next,
-            displayValue: display,
-            writeDisplay: true,
+            reason: 'seed',
+            event,
+            edit: { value: next, displayValue: display, writeDisplay: true },
           });
           check(next, 'commit');
         } else {
@@ -432,7 +423,7 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
       }
       onBlur?.(event);
     },
-    [check, finish, onBlur, policy.blur, seed, seedEnabled, seedState.blurValue, update],
+    [check, commit, finish, onBlur, policy.blur, seed, seedEnabled, seedState.blurValue],
   );
 
   const handleChange = useCallback(

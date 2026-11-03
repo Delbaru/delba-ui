@@ -13,13 +13,8 @@ test('normalizes modern icon changes, including zero-valued geometry', () => {
   });
 });
 
-test('preserves legacy string, singleton tuple and numeric-duration options', () => {
-  assert.deepEqual(normalizeIconAnimate('swap'), { effect: 'swap' });
-  assert.deepEqual(normalizeIconAnimate(['spin']), { effect: 'spin' });
-  const config = normalizeIconAnimate(['spin', { duration: 0.24, scale: 0.5, rotate: 45 }]);
-  assert.deepEqual(config, { effect: 'spin', duration: 0.24, scale: 0.5, rotate: 45 });
-  assert.equal(motionTimeCss(config?.duration ?? 0), '0.24s');
-  assert.equal(readMotionTimeMs(config?.duration ?? 0), 240);
+test('rejects string and tuple aliases', () => {
+  for (const input of ['swap', ['spin'], ['spin', { duration: 0.24 }]]) assert.equal(normalizeIconAnimate(input), undefined);
 });
 
 test('named icon duration shares the local theme token between CSS and phase timing', () => {

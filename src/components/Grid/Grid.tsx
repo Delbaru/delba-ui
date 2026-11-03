@@ -39,7 +39,6 @@ export function Grid({
   perspective3d,
   parallax,
   animate,
-  reveal,
   justifyItems,
   alignItems,
   alignContent,
@@ -61,7 +60,6 @@ export function Grid({
     perspective3d,
     parallax,
     animate: layoutMotion ? undefined : (animate as SharedMotionProps['animate']),
-    reveal: layoutMotion ? undefined : reveal,
   });
   const setRefs = useMergedRefs(setMotionNode, ref, hostRef);
   const gridChildren =

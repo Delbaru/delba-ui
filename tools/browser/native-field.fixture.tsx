@@ -49,7 +49,7 @@ function LifecycleContracts() {
     <Checkbox perspective3d={1000} aria-label="Composed pointer checkbox" onMouseEnter={() => setPointerEvents((n) => n + 1)}>Pointer checkbox</Checkbox>
     <output data-testid="audit-pointer-count">{pointerEvents}</output>
     <button type="button" onClick={() => setMotionVersion((n) => n + 1)}>Update seconds contracts</button>
-    <Text data-testid="audit-counter-seconds" animation={['counter', { to: 80 + motionVersion * 80, duration: 0.6, trigger: 'onLoad' }]}>0</Text>
+    <Text data-testid="audit-counter-seconds" animate={{ when: 'load', effect: 'counter', to: 80 + motionVersion * 80, duration: 0.6 }}>0</Text>
     <Text data-testid="audit-slide-clock" style={{ '--t-m-text-slide-duration': '0.22s' } as CSSProperties} animate={{ when: 'change', effect: 'textSlide' }}>{motionVersion ? 'NEW' : 'OLD'}</Text>
     <Section data-testid="audit-margin-object" style={{ height: 80, width: 200 }} animate={{ when: 'inView', effect: 'up', duration: 0.1, once: false, rootMargin: { top: '0px', right: '0px', bottom: '-10%', left: '0px' } }}>Explicit viewport margins</Section>
   </section>;

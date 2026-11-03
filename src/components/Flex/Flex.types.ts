@@ -8,11 +8,11 @@ import type {
   StateLinkInput,
   Transition,
 } from '../../core';
-import type { RevealProps } from '../../core/reveal/reveal';
+import type { RevealScopeProps } from '../../core/reveal/reveal';
 import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { LinkPrefetchProps } from '../../hooks/useLinkPrefetch';
 import type { CollapseHandle } from '../../hooks/useCollapseMotion';
-import type { ContentAnimation, ContentEnter, FlexContentAnimate } from '../../hooks/contentMotion';
+import type { FlexContentAnimate } from '../../hooks/contentMotion';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 
 type DirectionKey = 'row' | 'row_reverse' | 'column' | 'column_reverse';
@@ -32,11 +32,6 @@ type JustifyContentKey =
   | 'space_between'
   | 'space_around'
   | 'space_evenly';
-/** Вход Flex — общий словарь движения содержимого. */
-export type FlexEnterAnimation = ContentEnter;
-/** Прежний проп `animation` принимал и уходы — они играют один раз при монтировании. */
-export type FlexAnimation = ContentAnimation;
-
 type FlexCollapseOptions = CollapseOptions;
 
 export interface FlexProps
@@ -45,7 +40,7 @@ export interface FlexProps
     BoxLayoutProps,
     ContainerProp,
     SharedMotionProps<FlexContentAnimate>,
-    RevealProps,
+    RevealScopeProps,
     LinkPrefetchProps {
   children?: React.ReactNode;
   style?: CSSProperties;
@@ -117,10 +112,6 @@ export interface FlexProps
    * Смена содержимого: { when: 'change', effect: 'fade', key, duration: 'fast' }.
    * Своп сохраняет DOM ref и фокус; reduced motion меняет содержимое сразу. */
   animate?: SharedMotionProps<FlexContentAnimate>['animate'];
-  /** @deprecated Используй объектный animate. Удаляется после миграции потребителей. */
-  animation?: FlexAnimation;
-  /** @deprecated Используй animate с when: 'change' и key. */
-  transitionKey?: string | number;
 
   dir?: ResponsiveValue<DirectionKey>;
   justify?: ResponsiveValue<JustifyContentKey>;

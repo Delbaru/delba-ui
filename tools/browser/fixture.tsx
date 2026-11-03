@@ -31,7 +31,7 @@ import { CarouselNav } from '../../src/components/Carousel/CarouselNav/CarouselN
 import { CarouselDots } from '../../src/components/Carousel/CarouselDots';
 import { Dropdown } from '../../src/components/Dropdown/Dropdown';
 import { Modal } from '../../src/components/Modal/Modal';
-import { ModalProvider, useModal } from '../../src/components/Modal/ModalProvider';
+import { ModalProvider, useModal, useModalAction } from '../../src/components/Modal/ModalProvider';
 import { ModalContextFixture } from './modal-context.fixture';
 import { NativeFieldFixture } from './native-field.fixture';
 import { InViewObjectRefFixture } from './in-view-object-ref.fixture';
@@ -87,6 +87,7 @@ declare global {
     __imageClickTargets: string[];
     __imageRoot: HTMLElement | null;
     __iconEvents: { type: string; currentTarget: string; trusted: boolean }[];
+    __iconInteractionCounts: { click: number; keyDown: number; mouseEnter: number; focus: number };
     __iconSvg: SVGSVGElement | null;
     __setIconTooltip: ((value: string | undefined) => void) | null;
     __swapEvents: Record<string, { target: string; name: string }[]>;
@@ -128,6 +129,7 @@ const initWindowState = () => {
   window.__imageClickTargets = [];
   window.__imageRoot = null;
   window.__iconEvents = [];
+  window.__iconInteractionCounts = { click: 0, keyDown: 0, mouseEnter: 0, focus: 0 };
   window.__iconSvg = null;
   window.__setIconTooltip = null;
   window.__swapEvents = {};
@@ -545,7 +547,7 @@ function MotionProfileField() {
           data-testid="motion-profile-box"
           data-profile-mode={enabled ? 'motion' : 'static'}
           perspective3d={enabled ? 600 : undefined}
-          reveal={enabled ? ['up', { duration: 0.1, fade: false }] : undefined}
+          animate={enabled ? { when: 'inView', effect: 'up', duration: 0.1, fade: false } : undefined}
         >
           {Array.from({ length: 40 }, (_, index) => (
             <Text key={index}>
@@ -873,6 +875,7 @@ function IconTooltipField() {
         }}
         component={InlineFixtureIcon}
         href="https://example.test/icon-help"
+        perspective3d={600}
         aria-label="Help link"
         aria-describedby="consumer-description"
         tooltip={tooltip}
@@ -890,6 +893,16 @@ function IconTooltipField() {
             trusted: event.nativeEvent.isTrusted,
           })
         }
+      />
+      <Icon
+        component={InlineFixtureIcon}
+        rootW={32}
+        tabIndex={0}
+        aria-label="Framed event icon"
+        onClick={() => { window.__iconInteractionCounts.click += 1; }}
+        onKeyDown={() => { window.__iconInteractionCounts.keyDown += 1; }}
+        onMouseEnter={() => { window.__iconInteractionCounts.mouseEnter += 1; }}
+        onFocus={() => { window.__iconInteractionCounts.focus += 1; }}
       />
       <button type="button" onClick={() => setTooltip('Updated help')}>
         Update Icon tooltip
@@ -950,7 +963,7 @@ function ContentSwapField() {
           window.__swapNodes.box = node;
         }}
         data-testid="swap-box"
-        animate={['fadeInUp', { key }]}
+        animate={{ when: 'change', effect: 'up', key }}
         onAnimationEnd={onAnimationEnd('box')}
         onAnimationStart={onAnimationStart('box')}
         style={{ minHeight: 36 }}
@@ -962,7 +975,7 @@ function ContentSwapField() {
           window.__swapNodes.flex = node;
         }}
         data-testid="swap-flex"
-        animate={['fadeInUp', { key }]}
+        animate={{ when: 'change', effect: 'up', key }}
         onAnimationEnd={onAnimationEnd('flex')}
         onAnimationStart={onAnimationStart('flex')}
         style={{ minHeight: 36 }}
@@ -982,7 +995,7 @@ function LexicalRevealField() {
       <LexicalText
         data-testid="lexical-reveal"
         content={content}
-        reveal={['up', { duration: 'veryFast', fade: false }]}
+        animate={{ when: 'inView', effect: 'up', duration: 'veryFast', fade: false }}
       />
     </section>
   );
@@ -1144,12 +1157,14 @@ function DropdownClosedArrowContracts() {
 }
 
 function DeclarativeModalContracts() {
+  const { present } = useModal();
   const [controlledOpen, setControlledOpen] = useState(false);
   const [allowClose, setAllowClose] = useState(false);
   const [clicks, setClicks] = useState(0);
   const [changes, setChanges] = useState<boolean[]>([]);
   const [content, setContent] = useState(0);
   const [showDefault, setShowDefault] = useState(false);
+  const [showLifecycle, setShowLifecycle] = useState(false);
   const surfaceRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -1233,6 +1248,20 @@ function DeclarativeModalContracts() {
           )}
         </Modal>
       )}
+      <button type="button" onClick={() => setShowLifecycle(true)}>
+        Mount lifecycle declaration
+      </button>
+      <button type="button" onClick={() => setShowLifecycle(false)}>
+        Unmount lifecycle declaration
+      </button>
+      {showLifecycle && (
+        <Modal defaultOpen aria-label="Lifecycle declaration" style={{ width: 360 }}>
+          <p>Lifecycle declaration content</p>
+        </Modal>
+      )}
+      <button type="button" onClick={() => present(<PlainPresentedContent />)}>
+        Open plain presented content
+      </button>
       <Modal
         trigger={<button type="button">Open mobile declaration</button>}
         closeOn={{ breakpoint: 'desktop' }}
@@ -1252,6 +1281,16 @@ function DeclarativeModalContracts() {
           </>
         )}
       </Modal>
+    </section>
+  );
+}
+
+function PlainPresentedContent() {
+  const { dismiss } = useModalAction();
+  return (
+    <section data-testid="plain-presented-content">
+      <p>Plain presented content</p>
+      <button type="button" onClick={dismiss}>Dismiss plain presented content</button>
     </section>
   );
 }
@@ -1681,7 +1720,8 @@ function ImgChangeContracts() {
       <div data-testid="change-img">
         <Img
           alt="Animated source"
-          src={src}
+          src={[src, `${motionImageA}#mobile`, null]}
+          blur
           w={[160, 160, 160]}
           h={[96, 96, 96]}
           style={{ width: 160, height: 96 }}
@@ -1692,6 +1732,14 @@ function ImgChangeContracts() {
             direction,
             veil: <span data-testid="image-veil-content" />,
           }}
+        />
+      </div>
+      <div data-testid="img-art-direction-explicit-mobile">
+        <Img
+          alt="Explicit mobile cascade"
+          src={[motionImageA, motionImageA, motionImageC]}
+          w={[160, 160, 160]}
+          h={[96, 96, 96]}
         />
       </div>
     </section>
@@ -1965,6 +2013,9 @@ function SelectPanelContracts() {
         <Select
           key={variant}
           aria-label={`Panel ${variant}`}
+          label={`Visible ${variant}`}
+          comment="Choose from the list"
+          ref={(node) => { if (node) node.dataset.selectRef = 'trigger'; }}
           variant={[variant, variant, variant]}
           size={['fullWidth', 'fullWidth', 'fullWidth']}
           multiple

@@ -4,6 +4,18 @@ import { fileURLToPath } from 'node:url';
 
 const OUTPUT = fileURLToPath(new URL('../src/core/inline-icons.ts', import.meta.url));
 
+/** Folder presence identifies local source ownership, not an obsolete asset cache. */
+export function iconSourceNotices(root: string, hasPublicOption: boolean) {
+    const notices: Array<{ level: 'warn' | 'info'; message: string }> = [];
+    if (hasPublicOption) {
+        notices.push({ level: 'warn', message: '[ui] Настройка `public` в ui.config.ts устарела: кит не копирует свои иконки в public проекта. Удаление настройки не означает удаление локальных SVG.' });
+    }
+    if (fs.existsSync(path.join(root, 'public', 'icons', 'ui'))) {
+        notices.push({ level: 'info', message: '[ui:icons] public/icons/ui содержит локальные исходники проекта. Иконки кита доступны импортом; наличие этой папки не означает, что её можно удалить. Сначала проверьте ссылки и владельцев SVG.' });
+    }
+    return notices;
+}
+
 /** Local public icons are trusted build assets; remote URLs keep the runtime fetch path. */
 export function collectInlineIcons(root: string): Record<string, string> {
     const icons: Record<string, string> = {};

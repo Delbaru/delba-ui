@@ -3,13 +3,13 @@
 import { useCallback, useLayoutEffect, useRef } from 'react';
 
 import { armReveal, releaseReveal } from '../core/reveal/observer';
-import { resolveReveal, revealAttrs, revealSignature, revealStyle, type RevealInput } from '../core/reveal/reveal';
+import { resolveReveal, revealAttrs, revealSignature, revealStyle, type RevealConfig } from '../core/reveal/reveal';
 
 /**
  * Появление по скроллу для корня примитива: атрибуты и переменные — в рендер (их видит серверный
  * HTML), наблюдение — после монтирования. `setRevealNode` — ref-колбэк корня, стабильный.
  */
-export function useReveal(input: RevealInput | undefined, phaseOpen?: boolean) {
+export function useReveal(input: RevealConfig | undefined, phaseOpen?: boolean) {
   const config = resolveReveal(input);
   const signature = revealSignature(config);
   const controlled = phaseOpen !== undefined;

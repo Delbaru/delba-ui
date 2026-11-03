@@ -77,9 +77,12 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
     const wrappedIndex = (value: number) => boundedCarouselPage(value, readOptions().count, true);
     const nearest = (value: number) => looping ? wrappedIndex(Math.round(value / span)) : nearestCarouselPage(geometry.offsets, value);
     const transform = (value: number) => orientation === 'vertical' ? `translate3d(0,${value}px,0)` : `translate3d(${value}px,0,0)`;
+    const positionRange = () => looping ? span * readOptions().count : geometry.offsets.at(-1) ?? 0;
     const fraction = (value: number) => {
-        const range = looping ? span * readOptions().count : geometry.offsets.at(-1) ?? 0;
-        return range > 0 ? looping ? ((value % range) + range) % range / range : Math.max(0, Math.min(1, value / range)) : 0;
+        const range = positionRange();
+        if (range <= 0) return 0;
+        if (looping) return ((value % range) + range) % range / range;
+        return Math.max(0, Math.min(1, value / range));
     };
     const arrange = (value: number) => {
         const bucket = looping && span > 0 ? Math.floor((value + gapPx + 0.01) / span) : 0;
@@ -111,6 +114,26 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
         prevDisabled: geometry.offsets.length <= 1 || (!looping && !readOptions().rewind && index === 0),
         nextDisabled: geometry.offsets.length <= 1 || (!looping && !readOptions().rewind && index >= geometry.offsets.length - 1),
     });
+    const updateSlideVisibility = (start: number) => {
+        slides.forEach((slide, slideIndex) => {
+            const shift = looping ? loopSlideShift(slideIndex, start, span, gapPx, readOptions().count) : 0;
+            const left = slideIndex * span + shift;
+            const hidden = left + span - gapPx <= start + 0.5 || left >= start + size - 0.5;
+            if (!hidden) {
+                slide.removeAttribute('aria-hidden');
+                slide.removeAttribute('inert');
+                return;
+            }
+            if (slide.contains(doc.activeElement)) root.focus({ preventScroll: true });
+            slide.setAttribute('aria-hidden', 'true');
+            slide.setAttribute('inert', '');
+            if (readOptions().pauseInactiveMedia) {
+                slide.querySelectorAll('video,audio').forEach(media => {
+                    if (media instanceof view.HTMLMediaElement && !media.paused) media.pause();
+                });
+            }
+        });
+    };
     const publish = () => {
         if (destroyed) return;
         const state: NativeCarouselSnapshot = {
@@ -125,18 +148,7 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
                 api: controller, navigationState: state.navigation, activeIndex: index, slideCount: state.slideCount,
                 pageIndex: index, pageCount: state.pageCount, showNavigation: true, showDots: true,
             });
-            const start = move ? desiredPosition : position;
-            slides.forEach((slide, slideIndex) => {
-                const left = slideIndex * span + (looping ? loopSlideShift(slideIndex, start, span, gapPx, readOptions().count) : 0);
-                const hidden = left + span - gapPx <= start + 0.5 || left >= start + size - 0.5;
-                if (hidden) {
-                    if (slide.contains(doc.activeElement)) root.focus({ preventScroll: true });
-                    slide.setAttribute('aria-hidden', 'true'); slide.setAttribute('inert', '');
-                    if (readOptions().pauseInactiveMedia) slide.querySelectorAll('video,audio').forEach(media => {
-                        if (media instanceof view.HTMLMediaElement && !media.paused) media.pause();
-                    });
-                } else { slide.removeAttribute('aria-hidden'); slide.removeAttribute('inert'); }
-            });
+            updateSlideVisibility(move ? desiredPosition : position);
         }
         if (previousIndex !== index) { previousIndex = index; readOptions().onIndexChange?.(index); }
     };
@@ -162,17 +174,27 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
             const slope = (motion.easing(hi) - motion.easing(lo)) / Math.max(0.0001, hi - lo);
             velocity = (motion.to - motion.from) / motion.duration * slope * (motion.reversed ? -1 : 1);
         }
-        generation++; motion?.cancel(); move = null; motion = null;
+        generation++;
+        motion?.cancel();
+        move = null;
+        motion = null;
         writePosition(current);
         return velocity;
     };
-    const goTo = (requested: number, command?: { direction?: -1 | 1; target?: number; duration?: number; velocity?: number }): Transition => {
+    type MoveCommand = { direction?: -1 | 1; target?: number; duration?: number; velocity?: number };
+    const destination = (requested: number, previous: number, command?: MoveCommand) => {
+        if (command?.target !== undefined) return command.target;
+        if (!looping) {
+            const page = boundedCarouselPage(requested, geometry.offsets.length, readOptions().rewind);
+            return geometry.offsets[page] ?? 0;
+        }
+        if (command?.direction) return previous + command.direction * span;
+        return loopDestination(requested, index, position, span, readOptions().count);
+    };
+    const goTo = (requested: number, command?: MoveCommand): Transition => {
         const previousDestination = move ? desiredPosition : geometry.offsets[index] ?? position;
         const previousVelocity = interrupt();
-        const target = command?.target ?? (looping ? command?.direction
-            ? previousDestination + command.direction * span
-            : loopDestination(requested, index, position, span, readOptions().count)
-            : geometry.offsets[boundedCarouselPage(requested, geometry.offsets.length, readOptions().rewind)] ?? 0);
+        const target = destination(requested, previousDestination, command);
         index = looping ? wrappedIndex(requested) : boundedCarouselPage(requested, geometry.offsets.length, readOptions().rewind);
         desiredPosition = target;
         const from = position;
@@ -236,8 +258,7 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
         read: () => fraction(move ? carouselTrackPosition(track, orientation) : position),
         seek(progress) {
             interrupt();
-            const range = looping ? span * readOptions().count : geometry.offsets.at(-1) ?? 0;
-            const target = progress * range;
+            const target = progress * positionRange();
             index = nearest(target); settle(target); clock.reset(); lastSnapshot = ''; schedule();
         },
     });
@@ -298,6 +319,19 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
         && Boolean(target.closest('button,input,textarea,select,a,video,audio,[contenteditable="true"],[data-carousel-no-drag]'));
     const mainCoordinate = (event: PointerEvent) => orientation === 'vertical' ? event.clientY : event.clientX;
     const crossCoordinate = (event: PointerEvent) => orientation === 'vertical' ? event.clientX : event.clientY;
+    const dragPosition = (raw: number) => {
+        if (looping) return raw;
+        const maximum = geometry.offsets.at(-1) ?? 0;
+        if (raw < 0) return raw * tuning.edgeResistance;
+        if (raw > maximum) return maximum + (raw - maximum) * tuning.edgeResistance;
+        return raw;
+    };
+    const flushDragFrame = () => {
+        if (!dragFrame) return;
+        view.cancelAnimationFrame(dragFrame);
+        dragFrame = 0;
+        writePosition(pendingPosition);
+    };
     const down = (event: PointerEvent) => {
         suppressClick = false;
         if (event.defaultPrevented || !(event.target instanceof view.Node) || !viewport.contains(event.target)) return;
@@ -313,28 +347,41 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
         const cross = crossCoordinate(event) - drag.cross;
         if (!drag.active) {
             if (Math.max(Math.abs(delta), Math.abs(cross)) < tuning.dragThreshold) return;
-            if (Math.abs(cross) > Math.abs(delta)) { drag = null; schedule(); return; }
+            if (Math.abs(cross) > Math.abs(delta)) {
+                drag = null;
+                schedule();
+                return;
+            }
             interrupt();
             drag.position = position;
             drag.main = mainCoordinate(event);
             delta = 0;
-            drag.active = true; viewport.setPointerCapture(event.pointerId); root.dataset.dragging = 'true';
+            drag.active = true;
+            viewport.setPointerCapture(event.pointerId);
+            root.dataset.dragging = 'true';
         }
         event.preventDefault();
         drag.samples.push({ time: event.timeStamp, point: mainCoordinate(event) });
         while (drag.samples.length > 2 && (drag.samples[1]?.time ?? 0) < event.timeStamp - sampleDuration) drag.samples.shift();
-        const maximum = geometry.offsets.at(-1) ?? 0;
-        const raw = drag.position - delta;
-        pendingPosition = looping ? raw : raw < 0 ? raw * tuning.edgeResistance : raw > maximum ? maximum + (raw - maximum) * tuning.edgeResistance : raw;
-        if (!dragFrame) dragFrame = view.requestAnimationFrame(() => { dragFrame = 0; writePosition(pendingPosition); });
+        pendingPosition = dragPosition(drag.position - delta);
+        if (!dragFrame) {
+            dragFrame = view.requestAnimationFrame(() => {
+                dragFrame = 0;
+                writePosition(pendingPosition);
+            });
+        }
     };
     const finishDrag = (event: PointerEvent) => {
         if (!drag || drag.id !== event.pointerId) return;
-        const previous = drag; drag = null;
-        if (dragFrame) { view.cancelAnimationFrame(dragFrame); dragFrame = 0; writePosition(pendingPosition); }
+        const previous = drag;
+        drag = null;
+        flushDragFrame();
         root.dataset.dragging = 'false';
         if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
-        if (!previous.active) { schedule(); return; }
+        if (!previous.active) {
+            schedule();
+            return;
+        }
         suppressClick = event.type === 'pointerup';
         const delta = mainCoordinate(event) - previous.main;
         const elapsed = Math.max(1, event.timeStamp - previous.started);
@@ -371,8 +418,12 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
         if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || interactive(event.target)) return;
         const previous = orientation === 'vertical' ? 'ArrowUp' : 'ArrowLeft';
         const next = orientation === 'vertical' ? 'ArrowDown' : 'ArrowRight';
-        const direction = event.key === previous ? -1 : event.key === next ? 1 : null;
-        const target = event.key === 'Home' ? 0 : event.key === 'End' ? geometry.offsets.length - 1 : null;
+        let direction: -1 | 1 | null = null;
+        if (event.key === previous) direction = -1;
+        if (event.key === next) direction = 1;
+        let target: number | null = null;
+        if (event.key === 'Home') target = 0;
+        if (event.key === 'End') target = geometry.offsets.length - 1;
         if (target === null && direction === null) return;
         event.preventDefault(); explicitlyPaused = true;
         if (direction) step(direction); else if (target !== null) goTo(target);
@@ -404,7 +455,10 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
         update, keyboard, pointerDown: down,
         destroy() {
             destroyed = true; clock.destroy(); interrupt();
+            const pointer = drag?.id;
+            drag = null;
             if (dragFrame) view.cancelAnimationFrame(dragFrame);
+            if (pointer !== undefined && viewport.hasPointerCapture(pointer)) viewport.releasePointerCapture(pointer);
             resize.disconnect(); stopVisibility();
             viewport.removeEventListener('pointermove', pointerMove); viewport.removeEventListener('lostpointercapture', lostCapture);
             viewport.removeEventListener('wheel', wheel);
@@ -414,6 +468,7 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
             root.removeEventListener('focusin', focusIn); root.removeEventListener('focusout', focusOut);
             reduced.removeEventListener('change', visibility); view.removeEventListener('resize', update);
             delete root.dataset.carouselReady; delete root.dataset.looping; delete root.dataset.orientation;
+            delete root.dataset.dragging;
             track.style.removeProperty('transform');
             slides.forEach(slide => {
                 slide.removeAttribute('inert'); slide.removeAttribute('aria-hidden');

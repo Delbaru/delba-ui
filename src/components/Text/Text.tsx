@@ -38,7 +38,6 @@ export function Text({
   ref,
   as = 'div',
   variant = ['body', 'body', 'body'],
-  animation,
   animate,
   collapse,
   fontSize,
@@ -92,7 +91,7 @@ export function Text({
   const timelineInput = isTextTimeline(animate) ? animate : undefined;
   const timeline = useTextTimeline(timelineInput, content, internalRef);
   const contentAnimate = isSharedMotionAnimate(animate) || timelineInput ? undefined : animate;
-  const anim = resolveAnimation(animation ?? contentAnimate, content);
+  const anim = resolveAnimation(contentAnimate, content);
 
   // Классы и inline-стиль host'а — коробка из ядра (boxLayout), типографика здесь. Алгоритмика (letter-spacing,
   // формат, разбор анимации) вынесена в ./typography, ./formatContent, ./animations.

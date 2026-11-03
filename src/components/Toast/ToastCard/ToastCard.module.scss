@@ -1,5 +1,5 @@
 @layer ui.components {
-  .ToastCard {}
+  .ToastCard { pointer-events: auto; }
   .card {
     box-shadow: 0 calc(8 * var(--rpx)) calc(32 * var(--rpx)) rgb(0 0 0 / 8%);
     pointer-events: auto;

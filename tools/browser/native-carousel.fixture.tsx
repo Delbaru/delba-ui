@@ -9,6 +9,7 @@ declare global {
     interface Window {
         __nativeCarousel?: NativeCarouselController;
         __toggleNativeCarousel?: () => void;
+        __replaceNativeController?: () => void;
         __legacyCarousel?: CarouselApi | null;
         __legacyActiveIndices?: number[];
         __setNativeCount?: (count: number) => void;
@@ -18,7 +19,10 @@ declare global {
 }
 
 export function NativeCarouselFixture() {
-    const carousel = useCarouselController();
+    const primary = useCarouselController();
+    const replacement = useCarouselController();
+    const [replaced, setReplaced] = useState(false);
+    const carousel = replaced ? replacement : primary;
     const state = useCarouselSnapshot(carousel);
     const [mounted, setMounted] = useState(true);
     const [count, setCount] = useState(4);
@@ -28,11 +32,12 @@ export function NativeCarouselFixture() {
     useEffect(() => {
         window.__nativeCarousel = carousel;
         window.__toggleNativeCarousel = () => setMounted(value => !value);
+        window.__replaceNativeController = () => setReplaced(value => !value);
         window.__setNativeCount = setCount;
         window.__setNativeInertia = setInertia;
         window.__setNativeLoop = setLoop;
         return () => { delete window.__nativeCarousel; delete window.__toggleNativeCarousel; delete window.__setNativeCount;
-            delete window.__setNativeInertia; delete window.__setNativeLoop; };
+            delete window.__setNativeInertia; delete window.__setNativeLoop; delete window.__replaceNativeController; };
     }, [carousel]);
     return <main className="fixture">
         <h1>Native carousel contracts</h1>

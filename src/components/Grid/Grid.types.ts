@@ -9,7 +9,7 @@ import type {
   SizeValue,
   StateLinkInput,
 } from '../../core';
-import type { RevealProps } from '../../core/reveal/reveal';
+import type { RevealScopeProps } from '../../core/reveal/reveal';
 import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 import type { GridLayoutAnimate } from './layout';
@@ -104,7 +104,7 @@ export interface GridProps
     BoxLayoutProps,
     ContainerProp,
     Omit<SharedMotionProps, 'animate'>,
-    RevealProps {
+    RevealScopeProps {
   children?: React.ReactNode;
   /** Появление либо точечное перестроение: `{ when: 'change', effect: 'layout' }` для keyed GridItem. */
   animate?: SharedMotionProps['animate'] | GridLayoutAnimate;

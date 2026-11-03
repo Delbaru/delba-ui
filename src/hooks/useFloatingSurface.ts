@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useLayoutEffect, useState, type FocusEvent, type KeyboardEvent, type RefObject } from 'react';
-import { useAnchoredFloating, type FloatingAlign, type FloatingPlacement } from './useAnchoredFloating';
+import { useAnchoredFloating, type FloatingAlign, type FloatingAnchorPoint, type FloatingPlacement } from './useAnchoredFloating';
 import { useOutsideDismiss, type DismissRef } from './useOutsideDismiss';
 
 export type FloatingDismissReason = 'outside' | 'blur' | 'escape';
@@ -10,6 +10,9 @@ export interface UseFloatingSurfaceOptions {
   open: boolean;
   portal?: boolean;
   anchorRef: RefObject<HTMLElement | null>;
+  anchorPoint?: FloatingAnchorPoint;
+  /** External layer owners may keep their own dismissal policy. */
+  dismiss?: boolean;
   positionRef?: RefObject<HTMLElement | null>;
   surfaceRef: RefObject<HTMLElement | null>;
   outsideRefs?: readonly DismissRef[];
@@ -34,6 +37,8 @@ export function useFloatingSurface({
   open,
   portal = true,
   anchorRef,
+  anchorPoint,
+  dismiss: dismissEnabled = true,
   positionRef,
   surfaceRef,
   outsideRefs,
@@ -56,6 +61,7 @@ export function useFloatingSurface({
 
   const floating = useAnchoredFloating({
     anchorRef,
+    anchorPoint,
     floatingRef: positionedRef,
     isActive: portal && open,
     placement,
@@ -69,7 +75,7 @@ export function useFloatingSurface({
   const dismissProps = useOutsideDismiss(
     outsideRefs ?? [anchorRef, surfaceRef],
     dismiss,
-    { enabled: open, escape: false, blockOutsideClick },
+    { enabled: open && dismissEnabled, escape: false, blockOutsideClick },
   );
 
   const contains = useCallback((target: EventTarget | null) => {
@@ -81,15 +87,15 @@ export function useFloatingSurface({
   }, [anchorRef, positionedRef, regions, surfaceRef]);
 
   const onBlur = useCallback((event: FocusEvent<HTMLElement>) => {
-    if (open && !contains(event.relatedTarget)) onDismiss('blur');
-  }, [contains, onDismiss, open]);
+    if (open && dismissEnabled && !contains(event.relatedTarget)) onDismiss('blur');
+  }, [contains, dismissEnabled, onDismiss, open]);
 
   const onKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
-    if (!open || event.key !== 'Escape' || event.defaultPrevented) return;
+    if (!open || !dismissEnabled || event.key !== 'Escape' || event.defaultPrevented) return;
     event.preventDefault();
     event.stopPropagation();
     onDismiss('escape');
-  }, [onDismiss, open]);
+  }, [dismissEnabled, onDismiss, open]);
 
   return {
     portalNode,

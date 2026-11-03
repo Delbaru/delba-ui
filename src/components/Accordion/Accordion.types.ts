@@ -26,7 +26,6 @@ export type ShellOmit =
   | 'nofollow'
   | 'noreferrer'
   | 'linkState'
-  | 'transitionKey'
   | 'animate';
 type AccordionRootOmit = Exclude<ShellOmit, 'animate'>;
 

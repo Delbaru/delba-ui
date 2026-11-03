@@ -1,9 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../src/components/Button';
 import { Flex } from '../../src/components/Flex';
 import { LexicalText } from '../../src/components/RichText';
 import { LexicalTextarea, type LexicalTextareaChangePayload, type LexicalTextareaHandle, type LexicalTextareaVariable } from '../../src/components/RichTextarea';
-import { ToastProvider, useToast } from '../../src/components/Toast';
+import { ToastProvider, useToast, toast as notify } from '../../src/components/Toast';
+import { useToastQueue } from '../../src/components/Toast/Toast.model';
+import { ToastCard } from '../../src/components/Toast/ToastCard/ToastCard';
 
 const VARIABLES: LexicalTextareaVariable[] = [{ key: 'client', label: 'Client name', aliases: ['customer'] }];
 const STEPS = ['<p>Short step</p>', '<p>Long step<br>with another line<br>and a final line</p>'];
@@ -48,6 +50,23 @@ function ToastContracts() {
   </section>;
 }
 
+function AutomaticToast() {
+  const notification = useToast();
+  useEffect(() => { notification.show({ title: 'Effect-created message', durationMs: 300 }); }, [notification]);
+  return null;
+}
+
+function ToastEvictionProbe() {
+  const queue = useToastQueue();
+  return <section>
+    <button type='button' onClick={() => {
+      for (let index = 0; index < 7; index += 1) queue.api.show({ title: `Probe ${index}`, durationMs: 60000 });
+    }}>Batch eviction probe</button>
+    <output data-testid='toast-owned-items'>{queue.items.length}</output>
+    {queue.items.map(item => <ToastCard key={item.id} item={item} onDismiss={() => queue.close(item.id)} onExited={() => queue.remove(item.id)} />)}
+  </section>;
+}
+
 function SequenceContracts() {
   const [step, setStep] = useState(0);
   return <section aria-label='Rich sequence contracts'>
@@ -59,13 +78,20 @@ function SequenceContracts() {
 
 export function ContentFixture() {
   const [mounted, setMounted] = useState(true);
+  const [accepted, setAccepted] = useState<boolean | null>(null);
+  const [automatic, setAutomatic] = useState(false);
   return <main>
     <h1>Delba UI content contracts</h1>
     <button type='button' onClick={() => setMounted(value => !value)}>Toggle content contracts</button>
+    <button type='button' onClick={() => setAccepted(notify({ title: 'Direct command result', durationMs: 60000 }))}>Show direct message</button>
+    <output data-testid='direct-toast-accepted'>{String(accepted)}</output>
+    <button type='button' onClick={() => setAutomatic(value => !value)}>Toggle automatic notification</button>
+    {automatic && <ToastProvider><AutomaticToast /></ToastProvider>}
     {mounted && <ToastProvider>
       <Flex dir={['column', 'column', 'column']} gap={[24, 24, 24]} maxW={[720, 720, 720]}>
         <EditorContracts />
         <ToastContracts />
+        <ToastEvictionProbe />
         <SequenceContracts />
       </Flex>
     </ToastProvider>}

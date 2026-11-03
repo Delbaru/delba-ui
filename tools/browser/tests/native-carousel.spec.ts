@@ -100,8 +100,26 @@ test('unmount interrupts a pending transition, restores native content and permi
         return transition?.finished;
     });
     expect(result).toEqual({ status: 'interrupted' });
+    const root = page.getByRole('region', { name: 'Native fixture gallery' });
+    await expect(root).toHaveCount(0);
     await page.evaluate(() => window.__toggleNativeCarousel?.());
-    await expect(page.getByRole('region', { name: 'Native fixture gallery' })).toHaveAttribute('data-carousel-ready', 'true');
+    await expect(root).toHaveAttribute('data-carousel-ready', 'true');
+    await page.getByRole('button', { name: 'Next native', exact: true }).click();
+    await expect(page.getByTestId('native-state')).toContainText('"index":1');
+});
+
+test('replacing the controller during a drag releases capture and clears the old gesture', async ({ page }) => {
+    const root = page.getByRole('region', { name: 'Native fixture gallery' });
+    const target = await root.locator('p').first().boundingBox();
+    if (!target) throw new Error('Carousel drag target missing');
+    await page.mouse.move(target.x + 180, target.y + 8);
+    await page.mouse.down();
+    await page.mouse.move(target.x + 80, target.y + 8, { steps: 8 });
+    await expect(root).toHaveAttribute('data-dragging', 'true');
+    await page.evaluate(() => window.__replaceNativeController?.());
+    await expect(root).not.toHaveAttribute('data-dragging', 'true');
+    expect(await root.evaluate(node => [node, ...node.querySelectorAll('*')].some(target => target.hasPointerCapture(1)))).toBe(false);
+    await page.mouse.up();
     await page.getByRole('button', { name: 'Next native', exact: true }).click();
     await expect(page.getByTestId('native-state')).toContainText('"index":1');
 });

@@ -5,6 +5,14 @@ import { clamp } from '../core/utils';
 
 export type FloatingPlacement = 'top' | 'right' | 'bottom' | 'left';
 export type FloatingAlign = 'start' | 'center' | 'end';
+/** Viewport coordinates; anchorRef remains the real document and focus context. */
+export type FloatingAnchorPoint = { x: number; y: number };
+type FloatingRect = Pick<DOMRect, 'top' | 'bottom' | 'left' | 'right' | 'width' | 'height'>;
+
+export function floatingAnchorRect(rect: FloatingRect, point?: FloatingAnchorPoint): FloatingRect {
+  if (!point) return rect;
+  return { top: point.y, bottom: point.y, left: point.x, right: point.x, width: 0, height: 0 };
+}
 
 type FloatingStyle = CSSProperties & {
   '--floating-left'?: string;
@@ -13,6 +21,7 @@ type FloatingStyle = CSSProperties & {
 
 type UseAnchoredFloatingOptions = {
   anchorRef: RefObject<Element | null>;
+  anchorPoint?: FloatingAnchorPoint;
   floatingRef: RefObject<HTMLElement | null>;
   isActive: boolean;
   placement?: FloatingPlacement;
@@ -40,8 +49,8 @@ const HIDDEN_POSITION = -9999;
 
 function resolvePlacement(
   preferredPlacement: FloatingPlacement,
-  anchorRect: DOMRect,
-  floatingRect: DOMRect,
+  anchorRect: FloatingRect,
+  floatingRect: FloatingRect,
   gap: number,
   viewportPadding: number,
   view: Window,
@@ -71,8 +80,8 @@ function resolvePlacement(
 function resolveAlignedPosition(
   placement: FloatingPlacement,
   align: FloatingAlign,
-  anchorRect: DOMRect,
-  floatingRect: DOMRect,
+  anchorRect: FloatingRect,
+  floatingRect: FloatingRect,
   gap: number,
   viewportPadding: number,
   view: Window,
@@ -124,7 +133,7 @@ function resolveAlignedPosition(
  */
 function resolveAvailableHeight(
   placement: FloatingPlacement,
-  anchorRect: DOMRect,
+  anchorRect: FloatingRect,
   gap: number,
   viewportPadding: number,
   view: Window,
@@ -152,6 +161,7 @@ function areSnapshotsEqual(left: FloatingSnapshot, right: FloatingSnapshot) {
 
 export function useAnchoredFloating({
   anchorRef,
+  anchorPoint,
   floatingRef,
   isActive,
   placement: preferredPlacement = 'bottom',
@@ -184,7 +194,7 @@ export function useAnchoredFloating({
     // A portal can move documents after its anchor; wait for both refs to agree.
     if (floatingNode.ownerDocument !== anchorNode.ownerDocument) return;
 
-    const anchorRect = anchorNode.getBoundingClientRect();
+    const anchorRect = floatingAnchorRect(anchorNode.getBoundingClientRect(), anchorPoint);
     // Ширину якоря публикуем ДО замера панели: комбобокс тянет список ровно по ширине поля
     // (SharedPopover matchAnchorWidth). Отдай её после getBoundingClientRect — первый кадр
     // посчитается по контентной ширине панели, и кламп у края экрана уедет.
@@ -207,7 +217,7 @@ export function useAnchoredFloating({
     setSnapshot((currentSnapshot) => (
       areSnapshotsEqual(currentSnapshot, nextSnapshot) ? currentSnapshot : nextSnapshot
     ));
-  }, [align, anchorRef, floatingRef, gap, isActive, preferredPlacement, viewportPadding]);
+  }, [align, anchorRef, anchorPoint?.x, anchorPoint?.y, floatingRef, gap, isActive, preferredPlacement, viewportPadding]);
   const updateRef = useRef(updatePosition);
   updateRef.current = updatePosition;
 

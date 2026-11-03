@@ -10,4 +10,5 @@ export const TOAST_TONES: Record<ToastTone, { glyph: string; fill: string }> = {
   success: { glyph: assetUrl(checkIcon), fill: 'var(--success)' },
   warning: { glyph: assetUrl(exclamationIcon), fill: 'var(--warning)' },
   error: { glyph: assetUrl(crossIcon), fill: 'var(--error)' },
+  info: { glyph: assetUrl(exclamationIcon), fill: 'var(--primary)' },
 };

@@ -63,8 +63,8 @@ reduced motion нужно проверить в сценарии потреби�
 
 Carousel.tsx читает carousel.root/layout/engine/slides. Типизированный engine.props
 сверяется с SwiperProps; lifecycle и события Swiper не собираются вручную в JSX.
-useCarousel остаётся единственным адаптером Swiper: responsive-замер, loop, команды,
-публикация navigation snapshot. Общие движение и контролы берутся из существующих
+useCarousel остаётся единственным владельцем экземпляра Swiper, команд и
+публикации navigation snapshot. Общие движение и контролы берутся из существующих
 механизмов; параллельного двигателя листания здесь нет. ResizeObserver, computed style
 и viewport берутся из ownerDocument корня.
 
@@ -72,3 +72,38 @@ useCarousel остаётся единственным адаптером Swiper:
 свои модули. Доступные имена направлений задаются в ui.config.messages.carousel.
 Для карусели без копирования интерактивных детей доступен отдельный
 [NativeCarousel](NativeCarousel.md) из @delba/ui/carousel.
+
+### Раскладка и адаптер движка
+
+`Carousel.layout.ts` содержит чистую проекцию, а не второй hook состояния:
+
+- `carouselLayout.measure` читает один снимок breakpoint/gap/width/slidesPerView
+  из документа корня; одинаковый снимок не вызывает новое обновление React.
+- `carouselLayout.resolve` выбирает responsive-параметры и считает peek-отступы
+  из одного снимка. `scrollBased` запрещает drag независимо от responsive drag.
+- `carouselLayout.slides` согласует обычную/нативную/дополненную петлю,
+  начальную позицию и наличие внешних контролов. Существующий buildLoopSlides
+  остаётся единственным владельцем копирования слайдов.
+
+`Carousel.engine.ts` переводит эту проекцию в Swiper options: модули эффектов,
+autoplay, freeMode, геометрия, accessibility и защита интерактивных детей от drag.
+Время приходит уже разрешённым через общий useMotionTime, включая reduced motion;
+адаптер не вводит второй источник длительностей. updateLayout согласованно
+обновляет params/originalParams и сохраняет текущую позицию.
+
+useCarousel хранит один React snapshot активного индекса и navigation. Синхронный
+publishedRef отсеивает повторные события Swiper; это зеркало последней публикации,
+не отдельный источник команд. Один publishState вызывается после init/update/
+transition и изменения раскладки. onActiveIndexChange вызывается при изменении
+логического индекса, onNavigationStateChange — при изменении или forced sync.
+Все исходные callbacks Swiper, apiRef cleanup и scrollProgress сохранены.
+
+Проверка изменения должна охватывать весь путь:
+
+- [ ] Pure projection: responsive band, дробный peek, auto, пустой и короткий loop.
+- [ ] Engine options: effect module, точные motion times, autoplay interaction,
+  mousewheel releaseOnEdges и noSwipingSelector интерактивных детей.
+- [ ] Browser: реальный drag/кнопки, внешние Nav/Dots и края, loop/index после
+  смены ширины, все эффекты и reduced motion.
+- [ ] Проверены consumer → useCarousel → layout/engine → Swiper callbacks;
+  один источник измерения, экземпляра и публикации, без локального второго двигателя.

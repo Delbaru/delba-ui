@@ -102,3 +102,116 @@ test('пустой стиль допускается, а реальный сти
   assert.deepEqual(files, ['Box.module.scss']);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+
+test('component root class may qualify its real semantic element without accepting another selector', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rules-element-root-'));
+  try {
+    fs.writeFileSync(path.join(dir, 'TableRow.module.scss'), 'tr.TableRow[data-editing] { padding: 4px; }');
+    fs.writeFileSync(path.join(dir, 'Input.module.scss'), 'input.Input:focus { color: red; }');
+    fs.writeFileSync(path.join(dir, 'Missing.module.scss'), 'tr.Other { color: red; }');
+    fs.writeFileSync(path.join(dir, 'Nested.module.scss'), '.Ancestor .Nested { color: red; }');
+    const { counts } = countViolations([dir]);
+    assert.deepEqual(Object.keys(counts['module-root-class']).map(file => path.basename(file)).sort(), ['Missing.module.scss', 'Nested.module.scss']);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+
+test('responsive constants guard ignores native SVG geometry and unrelated component data', () => {
+  const count = RULES['const-tuple'].ast.count;
+  assert.equal(count('<svg><circle cx={CENTER} cy={CENTER} r={RADIUS} stroke={STROKE} /></svg><DSelect options={OPTIONS} /><DInput accept={ACCEPT} /><Textarea rows={ROWS} />', 'Example.tsx').length, 0);
+  assert.equal(count('<Flex gap={GAP} borderT={[LINE, LINE, LINE]} /><Grid columns={COLUMNS} />', 'Example.tsx').length, 3);
+  assert.equal(count('<Flex gap={[8, 8, 8]} /><Grid columns={[2, 1, 2]} />', 'Example.tsx').length, 0);
+});
+
+test('native hidden file picker is allowed without allowing visible or spread-overridden inputs', () => {
+  const count = RULES['raw-input'].ast.count;
+  assert.equal(count('<input type="file" hidden multiple /><input type="file" hidden={true} />', 'Example.tsx').length, 0);
+  assert.equal(count('<input type="text" hidden /><input type="file" /><input type="file" hidden={false} /><input type="file" hidden {...props} />', 'Example.tsx').length, 4);
+  assert.equal(count('const example = "<input />"; // <input />', 'Example.tsx').length, 0);
+});
+
+
+test('declared theme token and native reset owners cannot exempt component CSS', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rules-style-owner-'));
+  try {
+    fs.writeFileSync(path.join(dir, 'tokens.scss'), '// @ui-style-owner theme-tokens\n@media (max-width: 767px) { :root { --rpx: 1px; --font-p: 16px; } }');
+    fs.writeFileSync(path.join(dir, 'globals.scss'), '// @ui-style-owner native-reset\nbody {\n margin: 0;\n}\ninput[type="number"]::-webkit-inner-spin-button {\n margin: 0;\n}');
+    fs.writeFileSync(path.join(dir, 'bad.scss'), '// @ui-style-owner theme-tokens\n@media (max-width: 767px) { :root { --rpx: 1px; } .Card { padding: 8px; } }');
+    fs.writeFileSync(path.join(dir, 'bad-reset.scss'), '// @ui-style-owner native-reset\n.Card {\n margin: 0;\n}');
+    fs.writeFileSync(path.join(dir, 'Component.module.scss'), '// @ui-style-owner native-reset\nbody {\n margin: 0;\n}');
+    const { counts } = countViolations([dir]);
+    assert.deepEqual(Object.keys(counts['media-query']).map(file => path.basename(file)), ['bad.scss']);
+    assert.deepEqual(Object.keys(counts['scss-zero-spacing']).map(file => path.basename(file)).sort(), ['Component.module.scss', 'bad-reset.scss']);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+
+test('conditional JSX respects direct and keyed layout ownership, not unrelated or opaque ancestors', () => {
+  const count = RULES['unanimated-conditional'].ast.count;
+  const wrap = body => 'function Panel({open}: {open: boolean}) {return (' + body + ');}';
+  for (const body of [
+    '<Flex>{open && <Text animate={{when:"load",effect:"fade"}}>Panel</Text>}</Flex>',
+    '<Flex animate={{when:"change",effect:"fade",key:open}}><Flex>{open && <Text>Panel</Text>}</Flex></Flex>',
+    '<Flex animate={{when:"change",effect:"fade",key:open}}>{open && <Flex>{open && <Text>Panel</Text>}</Flex>}</Flex>',
+    '<Flex animate={{when:"change",effect:"fade",key:open}}>{open && <Text>Panel</Text>}</Flex>',
+    '<Flex key={open ? "open" : "closed"} animate={{when:"load",effect:"fade"}}>{open && <Text>Panel</Text>}</Flex>',
+  ]) assert.equal(count(wrap(body), 'Panel.tsx').length, 0, body);
+  for (const body of [
+    '<Flex animate={{when:"inView",effect:"fade"}}>{open && <Text>Panel</Text>}</Flex>',
+    '<Flex animate={{when:"change",effect:"fade",key:"constant"}}>{open && <Text>Panel</Text>}</Flex>',
+    '<Flex animate={{when:"load",effect:"fade"}}>{open && <Text>Panel</Text>}</Flex>',
+    '<Flex animate={{when:"change",effect:"fade",key:open}}><PortalOrCustom>{open && <Text>Panel</Text>}</PortalOrCustom></Flex>',
+    '<Flex>{open ? <Text animate={{when:"load",effect:"fade"}}>A</Text> : <Text>B</Text>}</Flex>',
+  ]) assert.equal(count(wrap(body), 'Panel.tsx').length, 1, body);
+});
+
+
+test('a native range owner is declared, styled and rooted; ordinary range inputs remain forbidden', () => {
+  const count = RULES['raw-input'].ast.count;
+  const owner = '// @ui-native-control range\nimport styles from "./Range.module.scss"; export function Range() {return <Flex className="Range"><input type="range" min={1} max={12} value={value} onChange={change} /></Flex>;}';
+  assert.equal(count(owner, 'Range.tsx').length, 0);
+  assert.equal(count(owner + 'function Other(){return <input type="range" min={1} max={12} value={value} onChange={change} />;}', 'Range.tsx').length, 1);
+  assert.equal(count(owner.replace('className="Range"', 'className="Other"'), 'Range.tsx').length, 1);
+  assert.equal(count(owner.replace('type="range"', 'type="text"'), 'Range.tsx').length, 1);
+  assert.equal(count(owner.replace('import styles from "./Range.module.scss";', ''), 'Range.tsx').length, 1);
+  assert.equal(count('<input type="range" min={1} max={12} value={value} onChange={change} />', 'Page.tsx').length, 1);
+});
+
+
+test('a shared hook-derived identity remains a motion key without expanding away its binding', () => {
+  const text = 'function Inbox(){ const active = useSelection(); return <Flex animate={{when:"change",effect:"fade",key:active ? active.id : "empty"}}>{active ? <Text>Selected</Text> : <Text>Empty</Text>}</Flex>;}';
+  assert.equal(RULES['unanimated-conditional'].ast.count(text, 'Inbox.tsx').length, 0);
+});
+
+test('motion keys ignore builtin undefined but preserve a shadowed parameter dependency', () => {
+  const count = RULES['unanimated-conditional'].ast.count;
+  const body = '<Flex key={`${editing}:${kind}`} animate={{when:"load",effect:"fade"}}>{!editing && kind === undefined && <Text>Create</Text>}</Flex>';
+  assert.equal(count('function Panel({editing,kind}:{editing:boolean;kind?:string}){return '+body+';}', 'Panel.tsx').length, 0);
+  assert.equal(count('function Panel({editing,kind}:{editing:boolean;kind?:string}, undefined:string){return '+body+';}', 'Panel.tsx').length, 1);
+});
+
+test('a declared portal owner resolves aliases and exports to Modal, without hiding conditional unmounts', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-motion-owner-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const write = (name: string, text: string) => fs.writeFileSync(path.join(dir, name), text);
+  write('dialog.tsx', 'import {Modal as KitModal} from "@delba/ui"; export function Dialog({open}){return <KitModal open={open}/>;}');
+  const owner = 'import {Dialog as RealDialog} from "./dialog";\n/** @ui-motion-owner open */\nexport function Crop({open}){return <><RealDialog open={open}/></>;}';
+  write('owner.tsx', owner);
+  write('barrel.ts', 'export {Crop as Owned} from "./owner";');
+  const count = (body: string, parameters = '') => RULES['unanimated-conditional'].ast.count(
+    'import {Owned as Layer} from "./barrel"; function Scene('+parameters+'){const file=useFile();return <Flex>'+body+'</Flex>;}', path.join(dir, 'Scene.tsx'),
+  ).length;
+  assert.equal(count('{file.asset && <Layer open={file.open}/>}'), 0);
+  assert.equal(count('{file.open && <Layer open={file.open}/>}'), 1, 'visibility cannot unmount its portal before exit');
+  assert.equal(count('{file.asset && <Layer/>}'), 1, 'open must be explicit at the call site');
+  assert.equal(count('{file.asset && <Layer open={file.open} {...override}/>}'), 1);
+  assert.equal(count('{file.asset && <Layer open={file.open}/>}','Layer:any'), 1, 'a shadowed component is not the imported owner');
+  write('owner.tsx', owner.replace('/** @ui-motion-owner open */', ''));
+  assert.equal(count('{file.asset && <Layer open={file.open}/>}'), 1);
+  write('owner.tsx', owner);
+  write('dialog.tsx', 'export function Dialog({open}){return <Flex open={open}/>;}');
+  assert.equal(count('{file.asset && <Layer open={file.open}/>}'), 1, 'an identically named local dialog is not Modal');
+});

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { ownsNativeReset, ownsResponsiveTokens } from './check/rules/stylesheet-infrastructure.mjs';
 // Красные линии дизайн-системы как проверка с храповиком: сколько нарушений в каждом файле
 // сейчас — записано в планку, и сборка падает, только если где-то их стало БОЛЬШЕ. Старое
 // не ломает сборку, новое не проходит; починил — `--update` опускает планку.
@@ -6,6 +7,8 @@
 //   node <UI>/tools/check-rules.mjs --baseline <file.json> [--update] <папки проекта…>
 import fs from 'node:fs';
 import path from 'node:path';
+
+import { constTupleRule, rawInputRule } from './check/rules/project-props.mjs';
 
 import { jsxFormatRule } from './check/rules/jsx-format.mjs';
 import { unanimatedConditionalRule } from './check/rules/unanimated-conditional.mjs';
@@ -22,7 +25,7 @@ export const RULES = {
   'raw-button': { ext: /\.tsx$/, test: (line) => /<button[\s>]/.test(line), hint: 'SharedButton*' },
   'raw-input': {
     ext: /\.tsx$/,
-    test: (line) => /<input[\s/>]/.test(line),
+    ast: rawInputRule,
     hint: 'SharedInput / SharedCheckbox / SharedRadio',
   },
   'raw-anchor': {
@@ -40,7 +43,7 @@ export const RULES = {
     ext: /\.tsx$/,
     client: true,
     ast: unanimatedConditionalRule,
-    hint: 'collapse / transitionKey',
+    hint: 'collapse / animate с соответствующим триггером и ключом',
   },
   'off-grid-number': {
     ext: /\.tsx$/,
@@ -73,13 +76,13 @@ export const RULES = {
   },
   'media-query': {
     ext: /\.scss$/,
-    test: (line) => /@media\b/.test(line),
+    test: (line, file = '', text = '', offset = 0) => /@media\b/.test(line) && !ownsResponsiveTokens(text, file, offset),
     hint: 'кортеж пропа или data-hide-*',
   },
   // Проп раньше SCSS (docs/rules.md): то, что говорится пропом, в модуле — брак, который ревью ловило много раз.
   'scss-zero-spacing': {
     ext: /\.scss$/,
-    test: (line) => /^\s*(margin|padding)(-[a-z]+)?\s*:\s*0\s*;/.test(line),
+    test: (line, file = '', text = '', offset = 0) => /^\s*(margin|padding)(-[a-z]+)?\s*:\s*0\s*;/.test(line) && !ownsNativeReset(text, file, offset),
     hint: 'проп m / p = [0, 0, 0]',
   },
   'scss-flex-none': {
@@ -101,7 +104,8 @@ export const RULES = {
   // Генератор утилит видит только литералы на месте вызова: константа даёт мёртвый класс.
   'const-tuple': {
     ext: /\.tsx$/,
-    test: (line) => /\s[a-zA-Z]+=\{\[?\s*[A-Z][A-Z0-9_]{2,}\s*[,\]}]/.test(line),
+    ast: constTupleRule,
+    test: (line) => constTupleRule.test(line),
     hint: 'литерал на месте вызова',
   },
   // Корневой класс модуля = имя компонента: виджет находится в DOM по имени.
@@ -167,7 +171,7 @@ function moduleRootClassViolation(source, file) {
   if (!stylesheet.includes('{')) return 0;
 
   const componentName = path.basename(file, '.module.scss').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const rootSelector = new RegExp(`(?:^|[}\\n])\\s*\\.${componentName}(?=[\\s.#:[,{])`);
+  const rootSelector = new RegExp(`(?:^|[}\\n])\\s*(?:[a-zA-Z][\\w-]*)?\\.${componentName}(?=[\\s.#:[,{])`);
   return rootSelector.test(stylesheet) ? 0 : 1;
 }
 
@@ -203,7 +207,10 @@ export function countViolations(dirs) {
   }
   for (const file of dirs.flatMap((dir) => walk(path.resolve(dir)))) {
     const rel = path.relative(process.cwd(), file).split(path.sep).join('/');
-    const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+    const text = fs.readFileSync(file, 'utf8').replaceAll('\r\n', '\n');
+    const lines = text.split('\n');
+    let offset = 0;
+    const offsets = lines.map(line => { const start = offset; offset += line.length + 1; return start; });
     const client = lines.some((line) => /^\s*['"]use client['"]/.test(line));
     for (const [rule, def] of Object.entries(RULES)) {
       if (!def.ext.test(file) || (def.client && !client)) continue;
@@ -225,7 +232,7 @@ export function countViolations(dirs) {
       }
       lines.forEach((line, index) => {
         if (isComment(line)) return;
-        const n = def.count ? def.count(line) : def.test(line) ? 1 : 0;
+        const n = def.count ? def.count(line) : def.test(line, file, text, offsets[index]) ? 1 : 0;
         if (!n) return;
         counts[rule][rel] = (counts[rule][rel] ?? 0) + n;
         (places[rule][rel] ??= []).push(index + 1);

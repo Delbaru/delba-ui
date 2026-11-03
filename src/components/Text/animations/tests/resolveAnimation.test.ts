@@ -4,7 +4,7 @@ import test from 'node:test';
 import { resolveAnimation } from '../resolveAnimation';
 import type { TextAnimate } from '../types';
 
-test('counter object and tuple forms share seconds and named timing', () => {
+test('counter intent preserves seconds and named timing', () => {
   const modern = {
     when: 'inView',
     effect: 'counter',
@@ -34,12 +34,10 @@ test('counter object and tuple forms share seconds and named timing', () => {
     duration: 0.7,
   });
 
-  const legacy = resolveAnimation(['counter', { to: 70, duration: 2.5 }], '70%');
-  assert.equal(legacy.options?.duration, 2.5);
-  assert.deepEqual(legacy.options, { to: 70, duration: 2.5 });
+
 });
 
-test('textSlide change object selects swap, preserving older hover and sequence forms', () => {
+test('textSlide change intent selects the existing swap renderer', () => {
   const modern = resolveAnimation(
     { when: 'change', effect: 'textSlide', duration: 'fast' },
     '00:07',
@@ -53,11 +51,7 @@ test('textSlide change object selects swap, preserving older hover and sequence 
     ).options,
     { mode: 'swap', duration: 'normal', by: 'text' },
   );
-  assert.equal(resolveAnimation('textSlide', 'Hover').active, true);
-  assert.deepEqual(
-    resolveAnimation(['textSlide', { mode: 'swap', duration: 0.4 }], '00:07').options,
-    { mode: 'swap', duration: 0.4 },
-  );
+
 });
 
 test('object step sequences reach the same renderer options without legacy tuples', () => {

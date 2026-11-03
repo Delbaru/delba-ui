@@ -1,31 +1,9 @@
 import type { CSSProperties, HTMLAttributes } from 'react';
-import type { BoxLayoutProps, StateLinkInput, ResponsiveInput, ResponsiveValue } from '../../core';
-import type { RevealProps } from '../../core/reveal/reveal';
+import type { BoxLayoutProps, StateLinkInput, ResponsiveValue } from '../../core';
+import type { RevealScopeProps } from '../../core/reveal/reveal';
 import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { MotionTime } from '../../core/base/timing';
 import type { LexicalDocument } from './types';
-
-export type AnimationKey = 'counter' | 'textSlide' | 'textClip';
-
-export interface TextSlideOptions {
-  steps: string[];
-  currentStep: number;
-  duration?: MotionTime;
-  lineHeight?: string;
-}
-
-export interface TextClipOptions {
-  steps: string[];
-  currentStep: number;
-  duration?: MotionTime;
-  clipHeight?: string;
-}
-
-export type AnimationInput =
-  | AnimationKey
-  | [AnimationKey]
-  | [AnimationKey, TextSlideOptions | TextClipOptions];
-
 
 /** Rich HTML sequence, selected by a content change rather than viewport appearance. */
 export interface RichTextChangeAnimate {
@@ -52,13 +30,11 @@ export interface LexicalTextProps
   extends Omit<HTMLAttributes<HTMLDivElement>, 'color' | 'content'>,
     BoxLayoutProps,
     SharedMotionProps<RichTextChangeAnimate>,
-    RevealProps {
+    RevealScopeProps {
   /** Безопасная HTML-строка либо документ Lexical с проверяемыми узлами. */
   content?: string | LexicalDocument | null;
   /** Typography preset on desktop, mobile and tablet; defaults to default. */
   variant?: ResponsiveValue<LexicalTextVariant>;
-  /** @deprecated Use object animate with when: change and textSlide/textClip. */
-  animation?: ResponsiveInput<AnimationInput>;
   /** Plain-text preview clamped to this many rows. */
   rows?: ResponsiveValue<number>;
   /** Single-line plain-text preview when rows is absent. */

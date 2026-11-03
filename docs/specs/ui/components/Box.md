@@ -13,6 +13,7 @@
 - `scroll="x" | "y" | "both"` включает нативную прокрутку. Размер области нужно ограничить.
 - `collapse={{ open, fade, keepMounted }}` выражает раскрытие; состоянием `open` владеет вызывающий компонент.
 - `animate={{ when: 'load', effect: 'fade' }}` — появление; `animate={{ when: 'change', effect: 'fade', key, duration: 'fast' }}` — последовательная смена содержимого. Не подменяй ключ ручным таймером удаления.
+- Публичный motion принимает только объектный `animate`; отдельный `reveal` и строки/tuple удалены. Направленные change-эффекты `up/down/scale` используют тот же content-swap. См. [миграцию](../../../motion-migration.md).
 - Responsive-кортеж: `[desktop, mobile, tablet]`; `null` пропускает полосу, а не наследует desktop.
 
 ## Пример
