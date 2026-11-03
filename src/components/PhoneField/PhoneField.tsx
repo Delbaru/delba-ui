@@ -50,7 +50,7 @@ export function PhoneField(props: WithRef<PhoneFieldProps, HTMLInputElement>) {
   return (
     <Input
       {...phone.input}
-      className={cx('PhoneField', styles.PhoneField, props.className)}
+      className={cx(styles.PhoneField, props.className)}
       slots={{
         ...props.slots,
         start: <CountryPicker {...phone.country} />,

@@ -173,11 +173,7 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
   const affixes = previous !== null ? commonAffixes(previous, current) : { prefix: 0, suffix: 0 };
 
   return (
-    <span
-        ref={viewportRef}
-        className={cx('TextReveal', styles.TextReveal, 'ui-reveal')}
-        style={vars}
-    >
+    <span ref={viewportRef} className={cx(styles.TextReveal, 'ui-reveal')} style={vars}>
       {previous !== null && (
         <TextRevealLayer
             key={`out-${generation}`}

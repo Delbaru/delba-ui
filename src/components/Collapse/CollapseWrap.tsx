@@ -176,7 +176,7 @@ export function CollapseWrap({
     return (
         <Tag
             ref={setWrapNode}
-            className={cx('CollapseWrap', styles.CollapseWrap, 'ui-collapse', inline && 'ui-collapse-inline', fade && 'ui-collapse-fade')}
+            className={cx(styles.CollapseWrap, 'ui-collapse', inline && 'ui-collapse-inline', fade && 'ui-collapse-fade')}
             data-axis={axis}
             data-gap-side={gapSide}
             data-open={visualOpen || undefined}
@@ -187,7 +187,11 @@ export function CollapseWrap({
         >
             <Tag
                 ref={setInnerNode}
-                className={cx('ui-collapse-inner', clip && 'ui-collapse-clip', overflowVisibleWhenOpen && settled && 'ui-collapse-visible')}
+                className={cx(
+                    'ui-collapse-inner',
+                    clip && 'ui-collapse-clip',
+                    overflowVisibleWhenOpen && settled && 'ui-collapse-visible',
+                )}
             >
                 {children}
             </Tag>

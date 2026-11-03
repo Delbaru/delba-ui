@@ -72,12 +72,11 @@ function appearance(props: AppearanceOptions, state: FieldState) {
       : undefined,
     root: {
       className: cx(
-        'Input',
-        styles.Input,
-        ...fieldRootLayoutClasses(classes, box),
-        state.inputType,
-        styles[state.inputType],
-        props.className,
+          styles.Input,
+          ...fieldRootLayoutClasses(classes, box),
+          state.inputType,
+          styles[state.inputType],
+          props.className,
       ),
       style: props.style,
       collapse: props.collapse,

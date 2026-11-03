@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { cx, decodeHtmlEntities, prefersReducedMotion } from '../../../core';
+import { decodeHtmlEntities, prefersReducedMotion } from '../../../core';
 import { motionTimeCss, readMotionTimeMs } from '../../../core/base/timing';
 import { readMotionDefaultMs } from '../../../core/base/motion-config';
 import { Box } from '../../Box';
@@ -65,7 +65,7 @@ export function RichTextSequence({ sequence, links }: {
 
   return (
     <Box
-        className={cx('RichTextSequence', styles.RichTextSequence)}
+        className={styles.RichTextSequence}
         data-effect={sequence.effect}
         style={sliding ? {
           height: heights[sequence.currentStep] ?? 0,

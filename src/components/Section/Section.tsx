@@ -72,7 +72,7 @@ export function Section({
   return (
     <section
       ref={setRefs}
-      className={cx('Section', styles.Section, 'ui-section', ...layout, className)}
+      className={cx(styles.Section, 'ui-section', ...layout, className)}
       style={{ ...(motionStyle ?? null), ...style }}
       {...rest}
       {...stateLinkProps(

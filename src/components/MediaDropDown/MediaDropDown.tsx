@@ -26,7 +26,7 @@ export function MediaDropDown(props: WithRef<MediaDropDownProps, HTMLDivElement>
         {...media.root}
         dir={['column', 'column', 'column']}
         w={['100%', '100%', '100%']}
-        className={cx('MediaDropDown', styles.MediaDropDown, media.root.className)}
+        className={cx(styles.MediaDropDown, media.root.className)}
         data-open={media.popup.open}
     >
       <MediaTrigger media={media} />

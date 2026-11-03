@@ -21,5 +21,8 @@ tools/browser/.test-results/
 test-results/
 playwright-report/
 
+# Локальная точка отсчёта project-check, не контракт библиотеки.
+/.rules-baseline.json
+
 # Локальные ссылки Claude на единственные источники в .agents/skills
 /.claude/skills/

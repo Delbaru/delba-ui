@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { cx, type WithRef } from '../../../core';
+import { type WithRef } from '../../../core';
 import { Text } from '../../Text';
 import { Flex } from '../../Flex';
 import type { VideoPlayerPreviewSource } from '../types';
@@ -87,7 +87,7 @@ export function TimelinePreview({ ref, source }: WithRef<{ source?: VideoPlayerP
             gap={[6, 6, 6]}
             p={[6, 6, 6]}
             r={[12, 12, 12]}
-            className={cx(styles.TimelinePreview, 'TimelinePreview')}
+            className={styles.TimelinePreview}
             data-visible={visible ? 'true' : 'false'}
             aria-hidden='true'
         >

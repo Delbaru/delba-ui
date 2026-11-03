@@ -17,6 +17,60 @@ async function openFixture(page: Page) {
   ).toBeVisible();
 }
 
+test('loading closes an open Select without leaving an expanded trigger', async ({ page }) => {
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Pending control contracts' });
+  const trigger = scope.getByRole('button', { name: 'Pending country' });
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  const loading = scope.getByRole('button', { name: 'Toggle pending loading' });
+  await loading.evaluate((button) => button.click());
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('option', { name: 'Pending option' })).toBeHidden();
+  await loading.evaluate((button) => button.click());
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+});
+
+for (const replacement of ['type', 'selection'] as const) {
+  test(`controlled media ${replacement} invalidates an older file read`, async ({ page }) => {
+    await openFixture(page);
+    await page.evaluate(() => {
+      const mediaWindow = window as Window & { completeMediaRead?: () => void };
+      const NativeReader = window.FileReader;
+      window.FileReader = class extends NativeReader {
+        override readAsDataURL() {
+          mediaWindow.completeMediaRead = () => {
+            Object.defineProperty(this, 'result', { value: 'data:image/png;base64,old' });
+            this.onload?.call(this, new ProgressEvent<FileReader>('load'));
+          };
+        }
+      };
+    });
+    const scope = page.getByRole('region', { name: 'Pending control contracts' });
+    await scope.locator('input[type="file"]').setInputFiles({ name: 'old.png', mimeType: 'image/png', buffer: Buffer.from('old') });
+    await scope.getByRole('button', { name: `Replace media ${replacement}` }).click();
+    await page.evaluate(() => (window as Window & { completeMediaRead?: () => void }).completeMediaRead?.());
+    await expect(scope.getByTestId('pending-media-changes')).toHaveText('0');
+  });
+}
+
+test('TabTrack follows a keyed tab reorder without changing selection or remounting', async ({ page }) => {
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Pending control contracts' });
+  const track = scope.getByTestId('reordered-track');
+  await expect(track).toHaveAttribute('data-thumb-ready', '');
+  const selected = await track.locator('[state~="active"]').elementHandle();
+  await scope.getByRole('button', { name: 'Reorder tabs' }).click();
+  expect(await track.locator('[state~="active"]').evaluate((node, original) => node === original, selected)).toBe(true);
+  await expect.poll(() => track.evaluate((root) => {
+    const active = root.querySelector('[state~="active"]');
+    const cap = root.lastElementChild?.firstElementChild;
+    if (!active || !cap) return Infinity;
+    return Math.abs(active.getBoundingClientRect().left - cap.getBoundingClientRect().left);
+  })).toBeLessThan(1);
+});
+
 test('ChoiceButtons retains one selection across desktop, mobile and tablet without legacy hide attributes', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await openFixture(page);
@@ -571,19 +625,68 @@ test('carousel defaults reach Swiper through the public component and its scoped
 
 test('scoped perspective reconnects when the primitive replaces its DOM host', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    const pending = new Map<Element, { entry: IntersectionObserverEntry; publish(): void }>();
+    const tiltWindow = window as Window & {
+      tiltVisibilityReady?: () => boolean;
+      releaseTiltVisibility?: () => void;
+    };
+    const NativeObserver = window.IntersectionObserver;
+    window.IntersectionObserver = class extends NativeObserver {
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        super((entries, observer) => {
+          const ordinary = entries.filter((entry) => !entry.target.matches('[data-tilt-replacement]'));
+          if (ordinary.length) callback(ordinary, observer);
+          for (const entry of entries) {
+            if (entry.target.matches('[data-tilt-replacement]')) {
+              pending.set(entry.target, { entry, publish: () => callback([entry], observer) });
+            }
+          }
+        }, options);
+      }
+    };
+    tiltWindow.tiltVisibilityReady = () => Array.from(pending.values()).some(({ entry }) => entry.target.isConnected && entry.isIntersecting);
+    tiltWindow.releaseTiltVisibility = () => {
+      const callbacks = Array.from(pending.values());
+      pending.clear();
+      for (const { entry, publish } of callbacks) if (entry.target.isConnected) publish();
+    };
+  });
   await openFixture(page);
   const host = page.getByTestId('perspective-replacement');
+  const publishVisibility = async () => {
+    await expect.poll(() => page.evaluate(() => (window as Window & { tiltVisibilityReady?: () => boolean }).tiltVisibilityReady?.())).toBe(true);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(await rotation()).toBe(0);
+    await page.evaluate(() => (window as Window & { releaseTiltVisibility?: () => void }).releaseTiltVisibility?.());
+  };
   const rotation = () =>
     host.evaluate((node) =>
       Math.abs(parseFloat(node.style.getPropertyValue('--perspective3d-rotate-y'))),
     );
   await host.hover({ position: { x: 210, y: 20 } });
+  await publishVisibility();
   await expect.poll(rotation).toBeGreaterThan(1);
+  const previous = await host.elementHandle();
+  if (!previous) throw new Error('Missing original tilt host');
   await page.getByRole('button', { name: 'Replace tilt host' }).click();
   await expect(host).toHaveJSProperty('tagName', 'SECTION');
   await host.hover({ position: { x: 210, y: 20 } });
+  await publishVisibility();
   await expect.poll(rotation).toBeGreaterThan(1);
   await page.mouse.move(1, 1);
+  await expect.poll(rotation).toBeLessThan(0.01);
+  const detachedStyle = await previous.getAttribute('style');
+  await previous.evaluate((node) => node.dispatchEvent(new PointerEvent('pointermove', { pointerType: 'mouse', clientX: 210, clientY: 20 })));
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  expect(await previous.getAttribute('style')).toBe(detachedStyle);
+  expect(await rotation()).toBeLessThan(0.01);
+  await page.getByRole('button', { name: 'Replace tilt host' }).click();
+  await expect(host).toHaveJSProperty('tagName', 'DIV');
+  await host.focus();
+  await publishVisibility();
+  await expect.poll(rotation).toBeGreaterThan(1);
+  await page.getByRole('button', { name: 'Replace tilt host' }).focus();
   await expect.poll(rotation).toBeLessThan(0.01);
 });
 
@@ -1094,7 +1197,7 @@ test('Img object change animate snapshots direction, waits for load, follows the
   releaseRemote?.();
 
   await expect(swap.locator('.ui-img-swap-veil')).toHaveCount(1);
-  const blur = image.locator('.ImgBlur');
+  const blur = image.locator('.ui-img-blur');
   await expect(blur).toHaveClass(/ui-img-blur-hidden/);
   await swap.locator('.ui-img-swap-layer[aria-hidden="true"] img').dispatchEvent('load');
   await expect(blur).toHaveClass(/ui-img-blur-hidden/);
@@ -2164,7 +2267,7 @@ test('MediaDropDown closes and stays inert after becoming disabled while open', 
   const widget = page.locator('.fixture-media-dropdown');
   const trigger = widget.locator('[class*="Trigger"]').first();
   await trigger.click();
-  const panel = widget.locator('.DropdownPanel');
+  const panel = widget.locator('[class*="DropdownPanel_"]');
   await expect(panel).toBeVisible();
   await page.evaluate(() => window.__setMediaDisabled?.(true));
   await expect(widget).toHaveAttribute('data-open', 'false');

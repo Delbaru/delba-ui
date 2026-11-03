@@ -30,13 +30,8 @@ export function DropdownPanel({
     <>
       {backdrop && <DropdownBackdrop {...backdrop} open={model.open} />}
       <Box
-        {...model.props}
-        className={cx(
-          'DropdownPanel',
-          styles.DropdownPanel,
-          model.portal && styles.portalPanel,
-          model.className,
-        )}
+          {...model.props}
+          className={cx(styles.DropdownPanel, model.portal && styles.portalPanel, model.className)}
       >
         {model.probe && <Box {...model.probe} className={styles.gapProbe} aria-hidden />}
       {model.openAnimate ? (

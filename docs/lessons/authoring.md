@@ -2,6 +2,37 @@
 
 # Компоненты, типы и пропы
 
+### Scoped perspective не теряет ввод до первого ответа observer
+
+Visibility observer сначала сообщает false. Scoped pointermove/focus отбрасывали
+ввод до асинхронного ответа IntersectionObserver; затем true запускал кадр с нулевой
+целью, и единственный hover оставался без результата. Обработчики сохраняют цель,
+а существующий scheduler по-прежнему не исполняет движение до visible=true.
+Browser regression задерживает настоящий IO callback до после реального hover:
+до исправления rotation остаётся 0 и тест падает, после — проходит с прежним >1.
+Он также проверяет повтор после замены div→section, отсутствие движения при pending
+visibility, игнорирование событий отсоединённого узла и focus после обратной замены.
+
+### Смена доступности и controlled-источника завершает старое действие
+
+Проверка только начала действия пропускала последующие переходы: у disabled
+password оставалась фокусируемая reveal-иконка, открытый Select переживал loading,
+а старый FileReader MediaDropDown вызывал callback после внешней смены выбора.
+InputActions учитывает disabled (readonly по-прежнему допускает reveal), Select
+закрывает список при loading без валидации, MediaDropDown отменяет старую операцию
+через существующего MediaOperationOwner при изменении controlled value/selectedItem.
+Причина и переходы подтверждены SSR и mounted hooks. SSR-регрессия находится в
+Input/tests/render.test.ts; сценарии loading и двух controlled media replacements
+добавлены в tools/browser/tests/regressions.spec.ts. Эти три browser-сценария прошли
+на реальном fixture; полный browser gate остаётся отдельным обязательным этапом.
+
+TabTrack наблюдал только размеры: reorder одинаковых вкладок с прежним value
+не меняет размеры и оставлял бегунок на старой позиции. Его владелец измерений
+наблюдает также структуру и state, заново находит active и переключает size observer
+при замене узла. Style и собственные data-атрибуты не наблюдаются. Mounted-проверка
+подтверждает новый offset и сохранение DOM выбранной вкладки; browser regression
+`TabTrack follows a keyed tab reorder` прошёл на реальной геометрии без remount.
+
 ### Один адрес ресурса для StaticRequire, оптимизации и source identity
 
 Art direction имеет каскад, а не независимые полосы: удаление mobile A в `[A, A, B]`

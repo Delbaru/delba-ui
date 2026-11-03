@@ -1,4 +1,4 @@
-import { cx } from '../../../core';
+
 import styles from './CalendarMonths.module.scss';
 import { UI_MESSAGES } from '../../../core/base/messages';
 import { Button } from '../../Button';
@@ -15,7 +15,7 @@ interface CalendarMonthsProps {
 export function CalendarMonths({ current, disabled, pick }: CalendarMonthsProps) {
   return (
     <Grid
-        className={cx('CalendarMonths', styles.CalendarMonths)}
+        className={styles.CalendarMonths}
         columns={calendarConfig.monthColumns}
         rows={calendarConfig.monthRows}
         gap={[8, 8, 8]}

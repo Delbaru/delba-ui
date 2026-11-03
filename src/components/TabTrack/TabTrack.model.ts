@@ -37,9 +37,16 @@ export function useTabTrack(value: string | null, thumb: TabTrackThumb) {
     const [start, body, end] = Array.from(knob.children) as HTMLElement[];
     if (!start || !body || !end) return;
 
-    const active = track.querySelector<HTMLElement>(ACTIVE);
+    let active = track.querySelector<HTMLElement>(ACTIVE);
 
     const place = () => {
+      const selected = track.querySelector<HTMLElement>(ACTIVE);
+      if (selected !== active) {
+        if (active) observer.unobserve(active);
+        active = selected;
+        if (active) observer.observe(active);
+      }
+
       if (!active || active.offsetWidth === 0) {
         track.removeAttribute('data-thumb-ready');
         placedRef.current = false;
@@ -79,12 +86,24 @@ export function useTabTrack(value: string | null, thumb: TabTrackThumb) {
       placedRef.current = true;
     };
 
-    place();
     const observer = new view.ResizeObserver(place);
     observer.observe(track);
     if (active) observer.observe(active);
+    place();
 
-    return () => observer.disconnect();
+    const structure = new view.MutationObserver(place);
+    structure.observe(track, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['state'],
+    });
+
+    return () => {
+      observer.disconnect();
+      structure.disconnect();
+    };
   }, [value, thumb]);
 
   return { trackRef, thumbRef };

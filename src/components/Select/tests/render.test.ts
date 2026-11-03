@@ -17,7 +17,7 @@ test('composed SelectTrigger keeps Dropdown accessibility and native form entrie
       ],
     }),
   );
-  assert.match(html, /class="[^"]*SelectTrigger[^"]*"/);
+  assert.doesNotMatch(html, /class="(?:[^"]* )?SelectTrigger(?: |")/);
   assert.match(html, /id="country"/);
   assert.match(html, /aria-haspopup="listbox"/);
   assert.match(html, /aria-controls="country-listbox"/);

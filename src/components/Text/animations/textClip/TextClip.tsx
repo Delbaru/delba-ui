@@ -79,7 +79,7 @@ export function TextClip({ options }: TextAnimationContext<TextClipOptions>) {
   } as CSSProperties;
 
   return (
-    <Flex ref={stageRef} className={cx('TextClip', styles.TextClip, 'ui-clip')} style={stageStyle}>
+    <Flex ref={stageRef} className={cx(styles.TextClip, 'ui-clip')} style={stageStyle}>
       {options.steps.map((step, index) => (
         <span
           key={index}

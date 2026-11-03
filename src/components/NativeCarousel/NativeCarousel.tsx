@@ -116,7 +116,12 @@ export function NativeCarousel({ ref, children, label, controller: externalContr
         data-native-carousel
         data-draggable={drag ? 'true' : 'false'}
         gap={gap}
-        className={cx(styles.NativeCarousel, 'NativeCarousel', ...c.key('slides-per-view', perView as ResponsiveValue<string>, value => value), ...c.key('orientation', orientation, value => value), className)}
+        className={cx(
+            styles.NativeCarousel,
+            ...c.key('slides-per-view', perView as ResponsiveValue<string>, value => value),
+            ...c.key('orientation', orientation, value => value),
+            className,
+        )}
     >
         <div ref={viewport} className={styles.Viewport}>
             <div ref={track} className={styles.Track}>

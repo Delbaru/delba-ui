@@ -1,4 +1,4 @@
-import { cx } from '../../../../core';
+
 import { maskGroups, type PhoneFormat } from '../../../../core/fields/phone';
 import { Flex } from '../../../Flex';
 import { Text } from '../../../Text';
@@ -9,7 +9,7 @@ export function InputPhoneMask({ format }: { format: PhoneFormat }) {
   return (
     <Flex
         aria-hidden="true"
-        className={cx('InputPhoneMask', styles.InputPhoneMask)}
+        className={styles.InputPhoneMask}
         gap={[4, 2, 4]}
         align={['center', 'center', 'center']}
     >

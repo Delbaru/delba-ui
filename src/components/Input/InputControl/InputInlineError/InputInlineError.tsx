@@ -1,4 +1,4 @@
-import { cx } from '../../../../core';
+
 import { Flex } from '../../../Flex';
 import { Text } from '../../../Text';
 import styles from './InputInlineError.module.scss';
@@ -8,7 +8,7 @@ export function InputInlineError({ message, id }: { message?: string; id?: strin
   if (!message) return null;
   return (
     <Flex
-        className={cx('InputInlineError', styles.InputInlineError)}
+        className={styles.InputInlineError}
         position={['absolute', 'absolute', 'absolute']}
         top={[0, 0, 0]}
         bottom={[0, 0, 0]}

@@ -15,7 +15,7 @@ test('repeated labels retain distinct steps and only the selected label is acces
     }));
     assert.equal((html.match(/Same label/g) ?? []).length, 2);
     assert.equal((html.match(/aria-hidden="true"/g) ?? []).length, 1);
-    assert.match(html, /class="[^"]*TextClip/);
+    assert.match(html, /class="[^"]*ui-clip/);
     assert.equal(warnings.some((warning) => /same key/i.test(warning)), false);
   } finally {
     console.error = error;

@@ -16,7 +16,7 @@ export function ButtonTooltip({ ref, id, bubble, children }: WithRef<ButtonToolt
         as="span"
         surface={false}
         id={id}
-        className={cx('ButtonTooltip', styles.ButtonTooltip, 'ui-button-tooltip')}
+        className={cx(styles.ButtonTooltip, 'ui-button-tooltip')}
         {...bubble}
     >
       {children}

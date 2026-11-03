@@ -38,7 +38,7 @@ export function TabTrack({
   return (
     <Flex
         ref={track.trackRef}
-        className={cx('TabTrack', styles.TabTrack, className)}
+        className={cx(styles.TabTrack, className)}
         data-thumb={thumb}
         {...props}
     >

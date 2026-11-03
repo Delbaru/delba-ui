@@ -37,7 +37,7 @@ export function CarouselProgress({ controller, fill = 'currentColor', ref, class
     return <Flex
         {...props}
         ref={mergedRef}
-        className={cx(styles.CarouselProgress, 'CarouselProgress', className)}
+        className={cx(styles.CarouselProgress, className)}
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}

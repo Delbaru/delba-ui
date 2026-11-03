@@ -45,7 +45,7 @@ export function DurationPicker({
         ref={ref}
         role="group"
         aria-label={ariaLabel}
-        className={cx('DurationPicker', styles.DurationPicker, 'ui-duration-picker', className)}
+        className={cx(styles.DurationPicker, 'ui-duration-picker', className)}
         position={['relative', 'relative', 'relative']}
         w={['max-content', 'max-content', 'max-content']}
         maxW={[128, 128, 128]}
@@ -62,7 +62,7 @@ export function DurationPicker({
           right={[4, 4, 4]}
           h={[24, 24, 24]}
           r={[4, 4, 4]}
-          className={cx('DurationSelectedBand', styles.SelectedBand, 'ui-duration-selected-band')}
+          className={cx(styles.SelectedBand, 'ui-duration-selected-band')}
           aria-hidden="true"
       />
       <DurationWheel {...model.wheels.hours} label={labels.hours} disabled={disabled} />

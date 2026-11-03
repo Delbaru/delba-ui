@@ -57,10 +57,10 @@ export function SwitchButton({
       {...revealAttrs}
       {...(!isDisabled ? stateLinkProps(linkState, { ...motionHandlers }) : {})}
       className={cx(
-        'SwitchButton', styles.SwitchButton,
-        ...layoutSpaceClasses(c, { p, pt, pr, pb, pl, m, mt, mr, mb, ml }),
-        ...c.value('grow', grow),
-        className
+          styles.SwitchButton,
+          ...layoutSpaceClasses(c, { p, pt, pr, pb, pl, m, mt, mr, mb, ml }),
+          ...c.value('grow', grow),
+          className,
       )}
       style={{ ...(motionStyle ?? null), ...style }}
       {...stateProps(state, isDisabled && 'disabled')}

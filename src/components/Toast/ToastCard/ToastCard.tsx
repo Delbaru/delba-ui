@@ -1,4 +1,4 @@
-import { cx } from '../../../core';
+
 import { useEffect, useRef } from 'react';
 import { Flex } from '../../Flex';
 import { Icon } from '../../Icon';
@@ -22,7 +22,7 @@ export function ToastCard({ item, onExited, onDismiss, renderToast }: {
 
   return (
     <Flex
-        className={cx('ToastCard', styles.ToastCard)}
+        className={styles.ToastCard}
         collapse={{ open: item.open, appear: true, gap: [12, 12, 12], fade: true, onEnd: item.open ? undefined : onExited }}
         dir={['column', 'column', 'column']}
     >

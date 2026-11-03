@@ -396,8 +396,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       if (
         event.pointerType !== 'mouse' ||
         reducedMotionRef.current ||
-        isMobileRef.current ||
-        !isVisibleRef.current
+        isMobileRef.current
       )
         return;
       activeRef.current = true;
@@ -411,7 +410,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
       scheduleAnimation();
     };
     const focus = () => {
-      if (reducedMotionRef.current || isMobileRef.current || !isVisibleRef.current) return;
+      if (reducedMotionRef.current || isMobileRef.current) return;
       const rect = surface.getBoundingClientRect();
       activeRef.current = true;
       updateTargetFromPointer(

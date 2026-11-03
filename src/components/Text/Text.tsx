@@ -138,9 +138,8 @@ export function Text({
 
   // clamp/ellipsis/required не сочетаются с анимациями — добавляем их только в неанимированном пути.
   const classNames = anim.active
-    ? cx('Text', styles.Text, 'ui-text', ...coreClasses, className)
+    ? cx(styles.Text, 'ui-text', ...coreClasses, className)
     : cx(
-        'Text',
         styles.Text,
         'ui-text',
         ...coreClasses,
@@ -148,7 +147,7 @@ export function Text({
         hasRows && 'ui-text-clamp',
         hasSingleLineEllipsis && 'ui-text-ellipsis',
         className,
-      );
+    );
 
   if (!hasChildren && !collapse) return null;
 

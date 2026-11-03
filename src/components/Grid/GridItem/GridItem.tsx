@@ -51,19 +51,18 @@ export function GridItem({
     <div
       ref={setRefs}
       className={cx(
-        'GridItem',
-        styles.GridItem,
-        hasFlex && 'ui-grid-item-flex',
-        ...c.value('colSpan', colSpan),
-        ...c.value('rowSpan', rowSpan),
-        ...c.value('colStart', colStart),
-        ...c.value('colEnd', colEnd),
-        ...c.value('rowStart', rowStart),
-        ...c.value('rowEnd', rowEnd),
-        ...layout,
-        ...c.value('justify', justifyContent),
-        ...c.value('align', alignItems),
-        className,
+          styles.GridItem,
+          hasFlex && 'ui-grid-item-flex',
+          ...c.value('colSpan', colSpan),
+          ...c.value('rowSpan', rowSpan),
+          ...c.value('colStart', colStart),
+          ...c.value('colEnd', colEnd),
+          ...c.value('rowStart', rowStart),
+          ...c.value('rowEnd', rowEnd),
+          ...layout,
+          ...c.value('justify', justifyContent),
+          ...c.value('align', alignItems),
+          className,
       )}
       style={{
         ...(area ? { gridArea: area } : null),

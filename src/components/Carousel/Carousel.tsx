@@ -87,19 +87,19 @@ export function Carousel({
       data-scroll-based={scrollBased ? 'true' : 'false'}
       {...stateLinkProps(linkState, composeInteractionHandlers(carousel.root.motionHandlers, { onMouseEnter, onMouseLeave }))}
       className={cx(
-        styles.Carousel, 'Carousel',
-        ...c.value('gap', gap),
-        ...c.value('p', padding),
-        ...c.value('w', w),
-        ...c.value('minW', minW),
-        ...c.value('maxW', maxW),
-        ...c.value('h', h),
-        ...c.value('minH', minH),
-        ...c.value('maxH', maxH),
-        ...c.value('ratio', aspectRatio),
-        ...c.value('grow', grow),
-        ...slidesPerViewClasses,
-        className
+          styles.Carousel,
+          ...c.value('gap', gap),
+          ...c.value('p', padding),
+          ...c.value('w', w),
+          ...c.value('minW', minW),
+          ...c.value('maxW', maxW),
+          ...c.value('h', h),
+          ...c.value('minH', minH),
+          ...c.value('maxH', maxH),
+          ...c.value('ratio', aspectRatio),
+          ...c.value('grow', grow),
+          ...slidesPerViewClasses,
+          className,
       )}
       style={{
         ...(carousel.root.motionStyle ?? null),

@@ -19,7 +19,7 @@ interface IconGlyphProps {
 /** Source selection and fetched markup have one renderer in all Icon modes. */
 export function IconGlyph({ ref, source, fetched, html, fill, hiddenUntilReady, svgProps }: IconGlyphProps) {
   const { className, ...props } = svgProps;
-  const classes = cx('IconGlyph', styles.IconGlyph, className);
+  const classes = cx(styles.IconGlyph, className);
 
   if (source.kind === 'component') {
     const Component = source.component;

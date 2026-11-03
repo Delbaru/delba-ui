@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { cx } from '../../../core';
+
 import styles from './InputOverflow.module.scss';
 import { useTextOverflow } from '../../../hooks/useTextOverflow';
 import { useTooltip } from '../../../hooks/useTooltip';
@@ -11,11 +11,7 @@ export function InputOverflow({ tooltip }: { tooltip: ReturnType<typeof useInput
   if (!tooltip.isOverflowing) return null;
 
   return (
-    <Tooltip
-        ref={tooltip.tooltipRef}
-        {...tooltip.bubbleProps}
-        className={cx('InputOverflow', styles.InputOverflow)}
-    >
+    <Tooltip ref={tooltip.tooltipRef} {...tooltip.bubbleProps} className={styles.InputOverflow}>
       {tooltip.text}
     </Tooltip>
   );

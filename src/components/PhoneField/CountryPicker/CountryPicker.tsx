@@ -1,4 +1,4 @@
-import { cx } from '../../../core';
+
 import { memo, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { getCountryCallingCode, type CountryCode } from 'libphonenumber-js/min';
 
@@ -78,7 +78,7 @@ export const CountryPicker = memo(function CountryPicker({
 
   return (
     <Dropdown
-      className={cx('CountryPicker', styles.CountryPicker)}
+      className={styles.CountryPicker}
       panel={{ portal: true, side: 'start', className: styles.countryPanel, keepMounted: false }}
       trigger={
         <Button

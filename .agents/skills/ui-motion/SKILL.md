@@ -42,6 +42,8 @@ reveal и строковые/tuple-входы удалены; переход о�
   Initial state времени читает generated runtime без DOM; scoped CSS уточняется после commit.
 - Пауза вне экрана/скрытого документа и снятие слушателей/observer/rAF обязательны
   там, где механика их создаёт. Не дублируй движок в компоненте.
+- Локальный pointer/focus до первого visibility callback сохраняет цель; scheduler
+  приостанавливает кадры. Проверяй delayed observer вместе с заменой DOM и cleanup.
 - Сглаживание учитывает время кадра, а не число кадров; на разных Hz длительность одинакова.
 - Все публичные motion duration/delay, включая legacy counter и Carousel, — секунды или timing name.
   Пороги, инерция и общие defaults поведения доступны в ui.config, без скрытых числовых fallback

@@ -22,7 +22,7 @@ export function InputActions({ actions }: { actions: Actions }) {
 
   return (
     <Flex
-        className={cx('InputActions', styles.InputActions)}
+        className={styles.InputActions}
         align={['center', 'center', 'center']}
         data-input-action="true"
         onClick={preserveFocus}
@@ -137,7 +137,7 @@ export function useInputActions(options: ActionOptions) {
 
   return {
     password: {
-      visible: Boolean(options.revealable) && options.type === 'password',
+      visible: !options.disabled && Boolean(options.revealable) && options.type === 'password',
       revealed,
       toggle: () => setRevealed((current) => !current),
     },

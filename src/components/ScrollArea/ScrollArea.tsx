@@ -26,7 +26,7 @@ export function ScrollArea({ axis = 'y', fade = false, scrollbar, className, sty
             {...props}
             scrollFade={fade ? axis : false}
             data-scroll-axis={axis}
-            className={cx('ScrollArea', styles.ScrollArea, 'ui-scroll-area', decoration.className, className)}
+            className={cx(styles.ScrollArea, 'ui-scroll-area', decoration.className, className)}
             style={{ ...decoration.style, ...style }}
         />
     );

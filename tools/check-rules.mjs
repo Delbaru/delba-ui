@@ -8,7 +8,7 @@ import { ownsNativeReset, ownsResponsiveTokens } from './check/rules/stylesheet-
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { constTupleRule, rawInputRule } from './check/rules/project-props.mjs';
+import { constTupleRule, globalComponentClassRule, rawInputRule } from './check/rules/project-props.mjs';
 
 import { jsxFormatRule } from './check/rules/jsx-format.mjs';
 import { unanimatedConditionalRule } from './check/rules/unanimated-conditional.mjs';
@@ -17,6 +17,12 @@ const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'generated', 'public
 const GRID_PROPS = 'w|h|minW|maxW|minH|maxH|p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|r';
 
 export const RULES = {
+  'global-component-class': {
+    ext: /\.[cm]?[jt]sx?$/,
+    ast: globalComponentClassRule,
+    baseline: false,
+    hint: 'собственный styles.Name без глобального именного дубля или fallback; utility/vendor классы сохраняются',
+  },
   'jsx-format': {
     ext: /\.tsx$/,
     ast: jsxFormatRule,
@@ -178,7 +184,7 @@ function moduleRootClassViolation(source, file) {
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   if (fs.statSync(dir).isFile()) {
-    if (/\.(tsx|scss)$/.test(dir) && !/\.(test|typecheck|type-test)\.tsx?$/.test(dir))
+    if (/\.(?:[cm]?[jt]sx?|scss)$/.test(dir) && !/\.(?:test|spec|typecheck|type-test|d)\.[cm]?[jt]sx?$/.test(dir))
       out.push(dir);
     return out;
   }
@@ -187,8 +193,8 @@ function walk(dir, out = []) {
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) walk(abs, out);
     } else if (
-      /\.(tsx|scss)$/.test(entry.name) &&
-      !/\.(test|typecheck|type-test)\.tsx?$/.test(entry.name)
+      /\.(?:[cm]?[jt]sx?|scss)$/.test(entry.name) &&
+      !/\.(?:test|spec|typecheck|type-test|d)\.[cm]?[jt]sx?$/.test(entry.name)
     ) {
       out.push(abs);
     }
@@ -269,7 +275,13 @@ if (isMain) {
   const total = (rule, data) => Object.values(data[rule] ?? {}).reduce((a, b) => a + b, 0);
 
   if (update || !fs.existsSync(baselineFile)) {
-    fs.writeFileSync(baselineFile, `${JSON.stringify(counts, null, 2)}\n`);
+    const strict = Object.entries(RULES).filter(([rule, definition]) => definition.baseline === false && total(rule, counts) > 0);
+    if (strict.length) {
+      console.error(`[ui:rules] ✗ правила без планки требуют нулевых нарушений: ${strict.map(([rule]) => `${rule} ${total(rule, counts)}`).join(', ')}`);
+      process.exit(1);
+    }
+    const stored = Object.fromEntries(Object.keys(RULES).map(rule => [rule, RULES[rule].baseline === false ? {} : counts[rule]]));
+    fs.writeFileSync(baselineFile, `${JSON.stringify(stored, null, 2)}\n`);
     const summary = Object.keys(RULES)
       .map((rule) => `${rule} ${total(rule, counts)}`)
       .join(', ');
@@ -279,8 +291,8 @@ if (isMain) {
 
   const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
   // Правило, которого нет в планке, пришло с обновлением кита: старые места проекта — его долг, а не
-  // поломка. Планка дописывается текущим числом, падать будет только рост.
-  const fresh = Object.keys(RULES).filter((rule) => !(rule in baseline));
+  // поломка. Правила с baseline:false всегда требуют нуля и не принимают этот долг.
+  const fresh = Object.keys(RULES).filter((rule) => !(rule in baseline) && RULES[rule].baseline !== false);
   if (fresh.length) {
     for (const rule of fresh) baseline[rule] = counts[rule];
     fs.writeFileSync(baselineFile, `${JSON.stringify(baseline, null, 2)}\n`);
@@ -291,7 +303,7 @@ if (isMain) {
   let grew = 0;
   for (const [rule, def] of Object.entries(RULES)) {
     for (const [file, n] of Object.entries(counts[rule])) {
-      const allowed = baseline[rule]?.[file] ?? 0;
+      const allowed = def.baseline === false ? 0 : baseline[rule]?.[file] ?? 0;
       if (n > allowed) {
         grew += n - allowed;
         console.error(

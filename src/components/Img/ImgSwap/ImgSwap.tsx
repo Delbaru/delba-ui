@@ -19,7 +19,7 @@ export function ImgSwap({ ref, effect, style, turn, busy, running, pending, outg
   return (
     <span
         ref={ref}
-        className={cx('ImgSwap', styles.ImgSwap, 'ui-img-swap')}
+        className={cx(styles.ImgSwap, 'ui-img-swap')}
         data-effect={effect}
         style={style}
     >

@@ -20,10 +20,7 @@ export function TextSlideHover({ content, options }: TextAnimationContext<TextSl
   } as CSSProperties;
 
   return (
-    <span
-        className={cx('TextSlideHover', styles.TextSlideHover, 'ui-slide-hover')}
-        style={hoverStyle}
-    >
+    <span className={cx(styles.TextSlideHover, 'ui-slide-hover')} style={hoverStyle}>
       <span className={'ui-slide-hover-viewport'}>
         <span className={cx('ui-slide-hover-layer', 'ui-slide-hover-base')}>{content}</span>
 

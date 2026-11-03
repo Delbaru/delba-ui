@@ -277,7 +277,7 @@ function createPresentationContext(
     ...iconSize,
     grow: structure.frame ? undefined : grow,
   });
-  const visualClassName = cx('Icon', styles.Icon, 'ui-icon', ...iconLayout, className);
+  const visualClassName = cx(styles.Icon, 'ui-icon', ...iconLayout, className);
   const visualHandlers = structure.visual.receivesEvents ? interaction.visual.handlers : undefined;
   const visualRootProps = structure.visual.receivesRootDomProps ? rootProps : undefined;
   const interactiveProps = structure.visual.interactive ? {
@@ -349,7 +349,7 @@ function createVisualRecord(context: IconPresentationContext, defaultGlyph: Icon
       ...(context.visualRootProps ?? null),
       'data-point-events': props.dataPointEvents,
       ...context.rootStateProps,
-      className: cx('Icon', styles.Icon, 'ui-icon-wrapper', ...context.iconLayout, props.className),
+      className: cx(styles.Icon, 'ui-icon-wrapper', ...context.iconLayout, props.className),
       style: { ...(aspectRatio ? { aspectRatio } : null), ...context.commonStyle, ...(context.motionStyle ?? null) },
       ...context.visualHandlers,
       ...(context.revealAttrs ?? null),
@@ -381,7 +381,11 @@ function createLinkRecord(context: IconPresentationContext): IconPresentationRec
       href,
       target,
       rel: rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined),
-      className: cx('ui-icon-link', ...boxLayout(c, context.box), context.interaction.tooltip.has && 'ui-icon-tooltip-anchor'),
+      className: cx(
+          'ui-icon-link',
+          ...boxLayout(c, context.box),
+          context.interaction.tooltip.has && 'ui-icon-tooltip-anchor',
+      ),
       id,
       role,
       tabIndex,
@@ -411,7 +415,13 @@ function createFrameRecord(context: IconPresentationContext): IconPresentationRe
       ...context.rootProps,
       'data-point-events': dataPointEvents,
       'data-icon-root': 'true',
-      className: cx('Icon', styles.Icon, 'ui-icon-root', interaction.tooltip.has && 'ui-icon-tooltip-anchor', rootClassName, ...c.value('bg', rootBg)),
+      className: cx(
+          styles.Icon,
+          'ui-icon-root',
+          interaction.tooltip.has && 'ui-icon-tooltip-anchor',
+          rootClassName,
+          ...c.value('bg', rootBg),
+      ),
       w: rootW, minW: rootMinW, maxW: rootMaxW, h: rootH, minH: rootMinH, maxH: rootMaxH,
       ...context.rootRadius,
       border, borderC, borderS, borderW, borderT, borderR, borderB, borderL,

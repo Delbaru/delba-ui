@@ -5,7 +5,7 @@ import styles from './IconSwap.module.scss';
 // Плавная смена двух иконок (crossfade + scale) в фикс-боксе 24×24 — ширина не скачет.
 export function IconSwap({ active, a, b }: { active: boolean; a: string; b: string }) {
     return (
-        <span className={cx(styles.IconSwap, 'IconSwap')} data-active={active ? 'b' : 'a'}>
+        <span className={styles.IconSwap} data-active={active ? 'b' : 'a'}>
             <span className={cx(styles.iconSwapItem, styles.iconSwapA)}><Icon
                 src={a}
                 w={[24, 24, 24]}

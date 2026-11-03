@@ -8,7 +8,7 @@ import {
   type RefObject,
   type KeyboardEvent,
 } from 'react';
-import { cx } from '../../../core';
+
 import { UI_MESSAGES } from '../../../core/base/messages';
 import * as dates from '../../../core/fields/date';
 import { Calendar } from '../../Calendar';
@@ -173,7 +173,7 @@ export function InputCalendar({ calendar }: { calendar: CalendarModel }) {
         portal: true,
         keepMounted: false,
         viewportPadding: 8,
-        className: cx('InputCalendar', styles.InputCalendar),
+        className: styles.InputCalendar,
         animate: { when: 'open', effect: 'fade', duration: 'fast' },
       }}
     >

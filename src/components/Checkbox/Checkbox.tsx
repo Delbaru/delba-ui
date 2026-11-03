@@ -94,7 +94,7 @@ export function Checkbox({
             {...(rootProps as React.LabelHTMLAttributes<HTMLLabelElement>)}
             {...revealAttrs}
             {...(!isDisabled ? stateLinkProps(linkState, composeInteractionHandlers(motionHandlers, { onMouseEnter, onMouseLeave, onClick, onFocus, onBlur })) : {})}
-            className={cx('Checkbox', styles.Checkbox, ...layout, className)}
+            className={cx(styles.Checkbox, ...layout, className)}
             style={{ ...(motionStyle ?? null), ...style }}
             {...stateProps(state, isChecked && 'active', dataError && 'error', isDisabled && 'disabled')}
         >

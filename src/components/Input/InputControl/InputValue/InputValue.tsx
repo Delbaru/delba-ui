@@ -8,7 +8,7 @@ import styles from './InputValue.module.scss';
 
 /** Native value and its visual time suffix share the same field binding. */
 export function InputValue({ control, decoration }: InputValueProps) {
-  const rootClass = cx('InputValue', styles.InputValue);
+  const rootClass = styles.InputValue;
   if (control.loading) return <Skeleton className={rootClass} h={[16, 16, 16]} />;
   const inputProps = {
     ...control.inputProps,

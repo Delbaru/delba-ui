@@ -30,9 +30,7 @@ export function CarouselTimer({ controller, format = remainingSeconds, ref, clas
         update();
         return controller.subscribePlayback(update);
     }, [controller, format, node]);
-    return <Text
-        {...props}
-        ref={ref}
-        className={cx(styles.CarouselTimer, 'CarouselTimer', className)}
-    ><span ref={setNode}>{format(INITIAL_CAROUSEL_PLAYBACK)}</span></Text>;
+    return <Text {...props} ref={ref} className={cx(styles.CarouselTimer, className)}><span
+        ref={setNode}
+    >{format(INITIAL_CAROUSEL_PLAYBACK)}</span></Text>;
 }

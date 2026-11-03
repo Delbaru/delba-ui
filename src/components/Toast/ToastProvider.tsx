@@ -24,7 +24,7 @@ export function ToastProvider({ children, className, renderToast }: ToastProvide
       {children}
       {queue.host && queue.items.length > 0 && createPortal(
         <Flex
-            className={cx('ToastProvider', styles.ToastProvider, className)}
+            className={cx(styles.ToastProvider, className)}
             dir={['column', 'column', 'column']}
             align={['center', 'center', 'center']}
             role='status'

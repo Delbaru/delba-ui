@@ -46,7 +46,7 @@ export function useIconTooltip(tooltip: React.ReactNode, direction: IconTooltipD
         as="span"
         surface={false}
         id={id}
-        className={cx('IconTooltip', styles.IconTooltip, 'ui-icon-tooltip')}
+        className={cx(styles.IconTooltip, 'ui-icon-tooltip')}
         {...bubbleProps}
     >
       {tooltip}

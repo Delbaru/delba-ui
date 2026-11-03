@@ -37,7 +37,7 @@ export function Skeleton({
           h={h}
           r={r}
           bg={['var(--line)', 'var(--line)', 'var(--line)']}
-          className={cx('Skeleton', styles.Skeleton, styles.stripe, className)}
+          className={cx(styles.Skeleton, styles.stripe, className)}
       />
     );
   }
@@ -48,7 +48,7 @@ export function Skeleton({
         dir={['column', 'column', 'column']}
         gap={gap}
         w={w}
-        className={cx('Skeleton', styles.Skeleton, className)}
+        className={cx(styles.Skeleton, className)}
     >
       {Array.from({ length: rows }, (_row, index) => (
         <Flex

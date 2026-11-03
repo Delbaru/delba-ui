@@ -26,7 +26,7 @@ export function InputControl({ control, decoration, start, end, children }: Inpu
   return (
     <Flex
         {...control.appearance}
-        className={cx('InputControl', styles.InputControl, control.appearance.className)}
+        className={cx(styles.InputControl, control.appearance.className)}
         position={['relative', 'relative', 'relative']}
         minW={[0, 0, 0]}
         ref={control.rowRef}

@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import ts from 'typescript';
+import { compileString } from 'sass';
 import { componentAnatomyRule, visualComponents } from '../rules/component-anatomy.mjs';
 
 function fixture(run: (root: string, write: (name: string, text: string) => void, inspect: (name: string) => Array<{ message: string }>) => void) {
@@ -39,11 +40,30 @@ test('parent stylesheet imports are rejected regardless of alias', () => fixture
 test('className can be owned by the component model/config, never by a sibling', () => fixture((_root, write, inspect) => {
   write('Panel/Panel.module.scss', '.Panel {}');
   write('Panel/Panel.tsx', 'export function Panel() { return <FieldFrame layout={model.layout} />; }');
-  write('Panel/Panel.config.ts', `import styles from './Panel.module.scss'; export const layout = { className: cx('Panel', styles.Panel) };`);
+  write('Panel/Panel.config.ts', `import styles from './Panel.module.scss'; export const layout = { className: styles.Panel };`);
   assert.deepEqual(inspect('Panel/Panel.tsx'), []);
   write('Panel/Panel.config.ts', 'export const example = "className: cx(\'Panel\', styles.Panel)";');
   assert.match(inspect('Panel/Panel.tsx')[0]?.message ?? '', /className/);
 }));
+
+test('literal component markers are rejected while utility and third-party classes remain valid', () => fixture((_root, write, inspect) => {
+  write('Panel/Panel.module.scss', '.Panel {}');
+  write('Panel/Panel.tsx', `import styles from './Panel.module.scss'; export function Panel() { return <Flex className={cx('Panel', styles.Panel, 'ui-panel', 'swiper-slide')} />; }`);
+  assert.match(inspect('Panel/Panel.tsx')[0]?.message ?? '', /Глобальный класс Panel/);
+  write('Panel/Panel.tsx', `import styles from './Panel.module.scss'; export function Panel() { return <Flex className={cx(styles.Panel, 'ui-panel', 'swiper-slide')} />; }`);
+  assert.deepEqual(inspect('Panel/Panel.tsx'), []);
+  write('Panel/Panel.model.ts', `element.classList.add('Panel');`);
+  assert.match(inspect('Panel/Panel.model.ts')[0]?.message ?? '', /Глобальный класс Panel/);
+}));
+
+test('compiled empty module has no root selector to promise as a DOM marker', () => {
+  const empty = compileString('@layer ui.components { .Panel {} }').css.trim();
+  const styled = compileString('@layer ui.components { .Panel { color: red; } }').css.trim();
+  assert.deepEqual({ empty, styled }, {
+    empty: '@layer ui.components {}',
+    styled: '@layer ui.components {\n  .Panel {\n    color: red;\n  }\n}',
+  });
+});
 
 test('comments, strings, class on another component and stripped-selector-only markers do not prove anatomy', () => fixture((_root, write, inspect) => {
   write('Panel/Panel.module.scss', '/* .Panel {} */ .other {}');
@@ -78,7 +98,7 @@ test('same-directory sibling styles are rejected even when the owner has its own
 
 test('local class variable initializers are followed through aliases', () => fixture((_root, write, inspect) => {
   write('Panel/Panel.module.scss', '.Panel {}');
-  write('Panel/Panel.tsx', `import styles from './Panel.module.scss'; export function Panel() { const base = cx('Panel', styles.Panel); const classes = cx(base, extra); return <Flex className={classes} />; }`);
+  write('Panel/Panel.tsx', `import styles from './Panel.module.scss'; export function Panel() { const base = cx(styles.Panel, own); const classes = cx(base, extra); return <Flex className={classes} />; }`);
   assert.deepEqual(inspect('Panel/Panel.tsx'), []);
 }));
 

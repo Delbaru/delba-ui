@@ -102,13 +102,7 @@ export function useTextarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) 
     layout: {
       ref: motion.setMotionNode,
       collapse,
-      className: cx(
-        'Textarea',
-        styles.Textarea,
-        styles.TextareaWrapper,
-        ...fieldRootLayoutClasses(classes, box),
-        className,
-      ),
+      className: cx(styles.Textarea, styles.TextareaWrapper, ...fieldRootLayoutClasses(classes, box), className),
       style: { ...motion.motionStyle, ...style },
       ...motion.revealAttrs,
       ...stateLinkProps(linkState, motion.motionHandlers),

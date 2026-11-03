@@ -67,26 +67,36 @@ test('recent release velocity adds bounded inertia; reduced motion removes the p
     await page.setViewportSize({ width: 390, height: 840 });
     await page.evaluate(() => window.__setNativeCount?.(8));
     const root = page.getByRole('region', { name: 'Native fixture gallery' });
+    const pointer = await page.context().newCDPSession(page);
     const drag = async (inertia: boolean) => {
         await page.evaluate(async value => { window.__setNativeInertia?.(value); await window.__nativeCarousel?.goTo(0); }, inertia);
         await expect(page.getByTestId('native-state')).toContainText('"index":0');
         const box = await root.locator('p').first().boundingBox();
         if (!box) throw new Error('Missing inertia target');
-        await page.mouse.move(box.x + 240, box.y + 8);
-        await page.mouse.down();
-        await page.mouse.move(box.x + 130, box.y + 8, { steps: 4 });
-        await page.mouse.up();
+        const time = await page.evaluate(() => Date.now() / 1000);
+        const y = box.y + 8;
+        await pointer.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x + 240, y, timestamp: time });
+        await pointer.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: box.x + 240, y, button: 'left', buttons: 1, clickCount: 1, timestamp: time + 0.001 });
+        // Explicit trusted-event timestamps keep release velocity independent of CDP round-trip load.
+        for (let step = 1; step <= 4; step++) {
+            await pointer.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x + 240 - 110 * step / 4, y, button: 'left', buttons: 1, timestamp: time + 0.001 + step * 0.005 });
+        }
+        await pointer.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: box.x + 130, y, button: 'left', buttons: 0, clickCount: 1, timestamp: time + 0.026 });
         await expect.poll(() => page.evaluate(() => window.__nativeCarousel?.getSnapshot().moving)).toBe(false);
         return page.evaluate(() => window.__nativeCarousel?.getSnapshot().index ?? -1);
     };
-    const baseline = await drag(false);
-    const momentum = await drag(true);
-    expect(baseline).toBe(1);
-    expect(momentum).toBeGreaterThan(baseline);
-    expect(momentum).toBeLessThanOrEqual(4);
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    const reduced = await drag(true);
-    expect(reduced).toBeLessThanOrEqual(1);
+    try {
+        const baseline = await drag(false);
+        const momentum = await drag(true);
+        expect(baseline).toBe(1);
+        expect(momentum).toBeGreaterThan(baseline);
+        expect(momentum).toBeLessThanOrEqual(4);
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        const reduced = await drag(true);
+        expect(reduced).toBeLessThanOrEqual(1);
+    } finally {
+        await pointer.detach();
+    }
 });
 
 test('100 original slides wrap with no frame geometry reads and writes only to repositioned children', async ({ page }) => {

@@ -97,25 +97,20 @@ export function ModalSurface({
 
   return (
     <Flex
-      ref={ref}
-      linkState={linkState}
-      data-point-events={dataPointEvents}
-      className={cx(
-        'ModalSurface',
-        styles.ModalSurface,
-        rootClassName,
-        ...root,
-      )}
-      data-open={open}
-      data-entered={open}
-      data-closing={closing}
-      data-open-motion={isOpenAnimate(animate) || undefined}
-      role="presentation"
-      aria-hidden={!open || !active}
-      inert={!open || !active}
-      align={alignItems ?? ['center', 'center', 'center']}
-      justify={justifyContent ?? ['center', 'center', 'center']}
-      style={rootStyle}
+        ref={ref}
+        linkState={linkState}
+        data-point-events={dataPointEvents}
+        className={cx(styles.ModalSurface, rootClassName, ...root)}
+        data-open={open}
+        data-entered={open}
+        data-closing={closing}
+        data-open-motion={isOpenAnimate(animate) || undefined}
+        role="presentation"
+        aria-hidden={!open || !active}
+        inert={!open || !active}
+        align={alignItems ?? ['center', 'center', 'center']}
+        justify={justifyContent ?? ['center', 'center', 'center']}
+        style={rootStyle}
     >
       <Flex
         className={cx(styles.Overlay, overlayClassName)}

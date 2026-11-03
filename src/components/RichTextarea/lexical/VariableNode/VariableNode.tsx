@@ -38,7 +38,6 @@ export type SerializedVariableNode = Spread<
 // (фон, скругление, иконка) навешиваем CSS-классом и data-атрибутом — их Lexical
 // при обновлении DOM не трогает, поэтому переприменяем и в createDOM, и в updateDOM.
 function decorateVariableElement(element: HTMLElement, node: VariableNode): void {
-    element.classList.add('VariableNode');
     if (styles.VariableNode) element.classList.add(styles.VariableNode);
     element.setAttribute('data-variable-key', node.getVariableKey());
 

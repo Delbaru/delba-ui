@@ -42,7 +42,7 @@ export function AccordionItem({
     <Flex
         ref={ref}
         {...props}
-        className={cx('AccordionItem', styles.AccordionItem, className)}
+        className={cx(styles.AccordionItem, className)}
         state={mergeComponentStates(state, props.state)}
         data-disabled={disabled || undefined}
     >

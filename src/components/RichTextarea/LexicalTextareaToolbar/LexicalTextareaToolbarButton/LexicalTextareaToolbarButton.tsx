@@ -1,7 +1,7 @@
 import { Button } from '../../../Button';
 import { Icon } from '../../../Icon';
 import { Text } from '../../../Text';
-import { cx, preserveFocus } from '../../../../core';
+import { preserveFocus } from '../../../../core';
 import styles from './LexicalTextareaToolbarButton.module.scss';
 
 export function LexicalTextareaToolbarButton({
@@ -20,7 +20,7 @@ export function LexicalTextareaToolbarButton({
   return (
     <Button
       type='button'
-      className={cx('LexicalTextareaToolbarButton', styles.LexicalTextareaToolbarButton)}
+      className={styles.LexicalTextareaToolbarButton}
       state={isActive ? 'active' : undefined}
       p={[0, 0, 0]}
       w={[size, size, size]}

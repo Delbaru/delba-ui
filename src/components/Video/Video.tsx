@@ -181,10 +181,10 @@ export function Video({
       {...revealAttrs}
       {...stateLinkProps(linkState, { ...motionHandlers })}
       className={cx(
-        styles.Video, 'Video',
-        ...sizeClasses(c, wrapperSizeProps),
-        ...boxLayout(c, { ...box, ...radiusProps, bg, aspectRatio, grow }),
-        className,
+          styles.Video,
+          ...sizeClasses(c, wrapperSizeProps),
+          ...boxLayout(c, { ...box, ...radiusProps, bg, aspectRatio, grow }),
+          className,
       )}
       style={{
         ...(motionStyle ?? null),

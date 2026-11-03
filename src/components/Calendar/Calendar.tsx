@@ -40,7 +40,7 @@ export function Calendar({
         role="group"
         aria-label={ariaLabel}
         aria-disabled={disabled || undefined}
-        className={cx('Calendar', styles.Calendar, className)}
+        className={cx(styles.Calendar, className)}
         style={style}
     >
       <CalendarHeader

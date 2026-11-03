@@ -39,7 +39,7 @@ export function CarouselDots({ className, carouselId, renderItem, ...props }: Ca
         align={['center', null, null]}
         justify={['center', null, null]}
         gap={[8, null, null]}
-        className={cx(styles.CarouselDots, 'CarouselDots', snapshot.paginationClassName, className)}
+        className={cx(styles.CarouselDots, snapshot.paginationClassName, className)}
         data-carousel-dots
         {...props}
     >

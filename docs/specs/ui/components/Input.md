@@ -246,6 +246,8 @@ useSwapTransition: второй движок не создаётся. Прави
   Общий resolver задаёт `primary` и `default`, если нет явной геометрии.
 - `label`, `comment`, `error`, `required`, `validate(value)`, `length`, `seed`.
 - `loading=false`, `revealable=false`, `showNumberControls=true`;
+- Disabled скрывает встроенные действия, включая показ пароля; readonly допускает показ
+  пароля, поскольку значение не изменяется. Disabled не оставляет дополнительный tab-stop.
   `errorPlacement='inside'`, `nativeValidation=false`.
 - `slots.start/end`, `field`, `rowClassName`; DOM ref указывает на input.
 

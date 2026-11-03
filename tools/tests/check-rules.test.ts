@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import { RULES, countViolations } from '../check-rules.mjs';
 
@@ -10,6 +12,75 @@ const hit = (rule: keyof typeof RULES, line: string) => {
   const def = RULES[rule] as { test?: (line: string) => boolean };
   return def.test?.(line) ?? false;
 };
+
+test('consumer marker guard follows real class values without banning utility or vendor contracts', () => {
+  const count = RULES['global-component-class'].ast.count;
+  const invalid = [
+    `const card = <Flex className={cx(styles.Card, 'Card')} />;`,
+    `const classes = ['Card', enabled && 'CardBody']; const card = <Flex className={classes.filter(Boolean).join(' ')} />;`,
+    `node.classList.add('Card');`,
+    `const card = <Flex className={\`cms-theme \${styles.Card || 'Card'}\`} />;`,
+    `const props = { panelClassName: styles.Panel ?? 'Panel' };`,
+    `const card = <Flex className="Card" />;`,
+    `node.className = enabled ? 'Card' : styles.Card;`,
+  ];
+  for (const text of invalid) assert.ok(count(text, 'Consumer.tsx').length > 0, text);
+  const valid = `
+    import { cx as combine } from '@delba/ui';
+    const classes = ['ui-flex', 'cms-theme', 'sk_primary', 'swiper-slide', 'fancybox__container', styles.Card];
+    const card = <Flex className={combine(classes, className, enabled && styles.Active)} />;
+    const themed = <Flex className={\`cms-\${mode || 'Default'} ui-panel\`} />;
+    const heading = 'Card';
+    const text = <Text title="Card">Card</Text>;
+    node.classList.add('ui-flex', 'cms-theme', styles.Card);
+  `;
+  assert.deepEqual(count(valid, 'Consumer.tsx'), []);
+  assert.ok(count(`import { cx as combine } from '@delba/ui'; combine('Card', styles.Card);`, 'Consumer.ts').length > 0);
+  for (const file of ['Consumer.js', 'Consumer.jsx', 'Consumer.mjs', 'Consumer.cjs']) {
+    assert.equal(count(`const classes = ['Card']; const props = { className: classes.join(' ') };`, file).length, 1, file);
+  }
+});
+
+test('new consumer marker rule is zero by default across scanned folders, including model files', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rules-marker-'));
+  try {
+    fs.mkdirSync(path.join(dir, 'cms', 'ui'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'cms', 'ui', 'Card.model.ts'), `export const props = { className: ['Card', styles.Card].join(' ') };`);
+    fs.writeFileSync(path.join(dir, 'Theme.tsx'), `const node = <Flex className="cms-theme ui-flex sk_primary swiper-slide" />;`);
+    const { counts } = countViolations([dir]);
+    assert.deepEqual(Object.values(counts['global-component-class'] ?? {}), [1]);
+    assert.equal(Object.keys(counts['global-component-class'] ?? {}).some((file) => file.endsWith('Card.model.ts')), true);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('marker rule cannot be adopted or raised through a legacy baseline or --update', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rules-marker-zero-'));
+  try {
+    const source = path.join(dir, 'Card.tsx');
+    const baselineFile = path.join(dir, 'baseline.json');
+    fs.writeFileSync(source, `const card = <Flex className="Card" />;`);
+    const baseline = Object.fromEntries(Object.keys(RULES).filter(rule => rule !== 'global-component-class').map(rule => [rule, {}]));
+    const original = JSON.stringify(baseline);
+    fs.writeFileSync(baselineFile, original);
+    const command = fileURLToPath(new URL('../check-rules.mjs', import.meta.url));
+    const run = (extra: string[] = []) => spawnSync(process.execPath, [command, '--baseline', baselineFile, ...extra, source], { cwd: dir, encoding: 'utf8' });
+    const absent = run();
+    assert.equal(absent.status, 1, absent.stdout + absent.stderr);
+    assert.match(absent.stderr, /global-component-class/);
+    assert.equal(fs.readFileSync(baselineFile, 'utf8'), original);
+    fs.writeFileSync(baselineFile, JSON.stringify({ ...baseline, 'global-component-class': { 'Card.tsx': 10 } }));
+    assert.equal(run().status, 1);
+    const beforeUpdate = fs.readFileSync(baselineFile, 'utf8');
+    assert.equal(run(['--update']).status, 1);
+    assert.equal(fs.readFileSync(baselineFile, 'utf8'), beforeUpdate);
+    fs.writeFileSync(source, `const card = <Flex className={styles.Card} />;`);
+    assert.equal(run().status, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 test('client CMS labels do not require an appearance animation', () => {
   const count = RULES['unanimated-conditional'].ast.count;
@@ -185,10 +256,13 @@ test('collapse shorthand open owns a conditional column without exempting an unr
 
 test('a native range owner is declared, styled and rooted; ordinary range inputs remain forbidden', () => {
   const count = RULES['raw-input'].ast.count;
-  const owner = '// @ui-native-control range\nimport styles from "./Range.module.scss"; export function Range() {return <Flex className="Range"><input type="range" min={1} max={12} value={value} onChange={change} /></Flex>;}';
+  const owner = '// @ui-native-control range\nimport styles from "./Range.module.scss"; export function Range() {return <Flex className={styles.Range}><input type="range" min={1} max={12} value={value} onChange={change} /></Flex>;}';
   assert.equal(count(owner, 'Range.tsx').length, 0);
   assert.equal(count(owner + 'function Other(){return <input type="range" min={1} max={12} value={value} onChange={change} />;}', 'Range.tsx').length, 1);
-  assert.equal(count(owner.replace('className="Range"', 'className="Other"'), 'Range.tsx').length, 1);
+  assert.equal(count(owner.replace('className={styles.Range}', 'className="Range"'), 'Range.tsx').length, 1);
+  assert.equal(count(owner.replace('styles.Range', 'styles.Other'), 'Range.tsx').length, 1);
+  assert.equal(count(owner.replace('Range()', 'Range(styles)'), 'Range.tsx').length, 1);
+  assert.equal(count(owner.replace('styles.Range', 'styles["Range"]'), 'Range.tsx').length, 0);
   assert.equal(count(owner.replace('type="range"', 'type="text"'), 'Range.tsx').length, 1);
   assert.equal(count(owner.replace('import styles from "./Range.module.scss";', ''), 'Range.tsx').length, 1);
   assert.equal(count('<input type="range" min={1} max={12} value={value} onChange={change} />', 'Page.tsx').length, 1);

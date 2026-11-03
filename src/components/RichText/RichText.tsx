@@ -23,7 +23,14 @@ export function LexicalText({ content, variant, animate, rows, ellipsis, links =
         {...props}
         ref={text.rootRef}
         animate={text.appearance}
-        className={cx('LexicalText', styles.LexicalText, styles.RichText, ...layoutClasses.value('color', color), styles[text.variant], text.sequence && styles.sequence, className)}
+        className={cx(
+            styles.LexicalText,
+            styles.RichText,
+            ...layoutClasses.value('color', color),
+            styles[text.variant],
+            text.sequence && styles.sequence,
+            className,
+        )}
         style={style as CSSProperties}
     >
       {text.sequence ? (

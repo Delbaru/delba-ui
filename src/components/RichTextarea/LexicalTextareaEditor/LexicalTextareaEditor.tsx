@@ -28,7 +28,7 @@ interface EditorProps {
 /** Editable document and its Lexical plugins share a single composer and document ref. */
 export function LexicalTextareaEditor({ id, editor, feedback, label, required, placeholder, placeholderColor, variant }: EditorProps) {
   return (
-    <Box className={cx('LexicalTextareaEditor', styles.LexicalTextareaEditor)}>
+    <Box className={styles.LexicalTextareaEditor}>
       <EditorRefPlugin editorRef={editor.ref} />
       <ContentSyncPlugin
           content={editor.content}

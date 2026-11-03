@@ -11,11 +11,7 @@ import { Button } from '../../Button';
 
 export function MediaTabs({ media }: { media: Pick<MediaDropDownModel, 'type' | 'file' | 'link' | 'disabled'> }) {
   return (
-    <Flex
-        dir={['column', 'column', 'column']}
-        gap={[8, 8, 8]}
-        className={cx('MediaTabs', styles.MediaTabs)}
-    >
+    <Flex dir={['column', 'column', 'column']} gap={[8, 8, 8]} className={styles.MediaTabs}>
       <Grid
           columns={[2, 2, 2]}
           gap={[4, 4, 4]}

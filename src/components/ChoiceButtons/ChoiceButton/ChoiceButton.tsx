@@ -18,10 +18,7 @@ export function ChoiceButton<T extends string>({
   itemClassName, buttonClassName, textClassName, infoClassName = '', tooltipClassName = '',
 }: ChoiceButtonProps<T>) {
   return (
-    <Flex
-        w={['100%', null, null]}
-        className={cx('ChoiceButton', styles.ChoiceButton, itemClassName)}
-    >
+    <Flex w={['100%', null, null]} className={cx(styles.ChoiceButton, itemClassName)}>
       <Button
           h={[48, null, null]}
           w={['100%', null, null]}

@@ -28,7 +28,7 @@ export function DropdownBackdrop({
     <Box
         {...props}
         ref={ref}
-        className={cx('DropdownBackdrop', styles.DropdownBackdrop, className)}
+        className={cx(styles.DropdownBackdrop, className)}
         style={{ ...motionStyle, ...style }}
         {...revealAttrs}
         data-open={open || undefined}

@@ -176,11 +176,7 @@ export function TextSlideSwap({ content, options }: TextAnimationContext<TextSli
   flushWord();
 
   return (
-    <span
-        ref={viewportRef}
-        className={cx('TextSlideSwap', styles.TextSlideSwap, 'ui-slide-swap')}
-        style={vars}
-    >
+    <span ref={viewportRef} className={cx(styles.TextSlideSwap, 'ui-slide-swap')} style={vars}>
       {groups}
     </span>
   );

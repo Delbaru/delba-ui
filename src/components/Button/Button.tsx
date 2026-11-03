@@ -121,15 +121,16 @@ export function Button({
     <Comp
       ref={setRefs}
       className={cx(
-        'Button', styles.Button, 'ui-button',
-        ...c.value('variant', variant),
-        ...c.value('size', size),
-        ...c.value('justify', justifyContent),
-        ...c.value('align', alignItems),
-        ...c.value('gap', gap),
-        ...layout,
-        ...c.value('color', color),
-        className
+          styles.Button,
+          'ui-button',
+          ...c.value('variant', variant),
+          ...c.value('size', size),
+          ...c.value('justify', justifyContent),
+          ...c.value('align', alignItems),
+          ...c.value('gap', gap),
+          ...layout,
+          ...c.value('color', color),
+          className,
       )}
       style={{
         ...(motionStyle ?? null),

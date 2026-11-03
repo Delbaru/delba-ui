@@ -43,7 +43,7 @@ export function Tooltip({
     <Surface
         ref={ref}
         id={id}
-        className={cx('Tooltip', styles.Tooltip, surface && styles.surface, className)}
+        className={cx(styles.Tooltip, surface && styles.surface, className)}
         style={style}
         role="tooltip"
         aria-hidden={!active}

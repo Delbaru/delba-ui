@@ -154,7 +154,7 @@ export function DurationWheel({ value, max, label, disabled, onChange }: WheelPr
           top={[0, 0, 0]}
           left={[0, 0, 0]}
           dir={['column', 'column', 'column']}
-          className={cx('DurationWheelLayer', styles.Layer, 'ui-duration-wheel-layer')}
+          className={cx(styles.Layer, 'ui-duration-wheel-layer')}
           data-motion={layer.kind}
           aria-hidden="true"
       >
@@ -201,7 +201,7 @@ export function DurationWheel({ value, max, label, disabled, onChange }: WheelPr
         w={[48, 48, 48]}
         h={[72, 72, 72]}
         r={[4, 4, 4]}
-        className={cx('DurationWheel', styles.DurationWheel, 'ui-duration-wheel')}
+        className={cx(styles.DurationWheel, 'ui-duration-wheel')}
         style={motionStyle}
         role="spinbutton"
         aria-label={label}

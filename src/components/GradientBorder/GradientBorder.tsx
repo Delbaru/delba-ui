@@ -42,12 +42,11 @@ export function GradientBorder({
       aria-hidden="true"
       data-reveal-skip
       className={cx(
-        'GradientBorder',
-        styles.GradientBorder,
-        'ui-gradient-border',
-        animate && 'ui-gradient-border--trace',
-        ...boxLayout(c, { bg: gradient, p: width ?? [1, 1, 1] }),
-        className,
+          styles.GradientBorder,
+          'ui-gradient-border',
+          animate && 'ui-gradient-border--trace',
+          ...boxLayout(c, { bg: gradient, p: width ?? [1, 1, 1] }),
+          className,
       )}
       style={{
         ...(animate

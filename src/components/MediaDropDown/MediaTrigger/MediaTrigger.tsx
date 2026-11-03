@@ -1,6 +1,6 @@
 'use client';
 
-import { assetUrl, cx } from '../../../core';
+import { assetUrl } from '../../../core';
 import { Flex } from '../../Flex';
 import { Text } from '../../Text';
 import { Icon } from '../../Icon';
@@ -22,7 +22,7 @@ export function MediaTrigger({ media }: { media: Pick<MediaDropDownModel, 'popup
       r={[16, 16, 16]}
       align={['center', 'center', 'center']}
       justify={['space_between', 'space_between', 'space_between']}
-      className={cx('MediaTrigger', styles.MediaTrigger)}
+      className={styles.MediaTrigger}
       data-open={media.popup.open}
       role="button"
       tabIndex={media.disabled ? -1 : 0}

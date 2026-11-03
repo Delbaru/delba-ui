@@ -17,7 +17,7 @@ const checkers = new WeakMap();
 export function checkerOf(source) {
   const cached = checkers.get(source);
   if (cached) return cached;
-  const options = { noResolve: true, noLib: true, types: [], jsx: ts.JsxEmit.Preserve };
+  const options = { noResolve: true, noLib: true, allowJs: true, types: [], jsx: ts.JsxEmit.Preserve };
   const host = ts.createCompilerHost(options);
   const own = (name) => path.resolve(name) === path.resolve(source.fileName);
   host.getSourceFile = (name) => (own(name) ? source : undefined);

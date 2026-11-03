@@ -2,6 +2,7 @@
 import path from 'node:path';
 import ts from 'typescript';
 import { checkerOf, position } from './ast.mjs';
+import { globalComponentMarkers } from './project-props.mjs';
 
 const ignoredFile = /\.(?:test|typecheck|type-test|d)\.tsx?$/;
 const componentName = /^[A-Z][A-Za-z0-9]*$/;
@@ -105,6 +106,9 @@ export const componentAnatomyRule = {
         'Компонент импортирует SCSS родителя или соседней части.',
         'Перенесите принадлежащие части селекторы в её собственный локальный Name.module.scss. Общие миксины берите из core.');
     }
+    for (const { node, name } of globalComponentMarkers(source)) report(node,
+      `Глобальный класс ${name} дублирует имя компонента.`,
+      'Используйте собственный styles.Name; пустой модуль может не создать DOM-класс. Не добавляйте фиктивный CSS.');
     for (const { name, node } of components) {
       if (nonvisualAdapters.has(relative.split(path.sep).join('/') + ':' + name)) continue;
       const own = path.join(path.dirname(source.fileName), `${name}.module.scss`);

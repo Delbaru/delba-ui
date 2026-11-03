@@ -10,6 +10,17 @@ import { startProgress } from '../progress.mjs';
 import { projectSteps, uiCheckSteps } from '../index.mjs';
 import { runNode, runSteps } from '../run.mjs';
 
+test('the toolkit generates once and runs its library suite without duplicate consumer checks', () => {
+    const kit = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+    const steps = uiCheckSteps({ project: kit });
+    const names = steps.map((step: { name: string }) => step.name);
+    assert.equal(names.filter((name: string) => name === 'Генерация').length, 1);
+    assert.equal(names.filter((name: string) => name === 'Тесты').length, 1);
+    assert.equal(names.filter((name: string) => name === 'Браузер').length, 1);
+    assert.ok(steps.every((step: { suite?: string }) => step.suite !== 'project'));
+    assert.throws(() => uiCheckSteps({ project: kit, suite: 'project', typecheckCache: 'cache.tsbuildinfo' }), /requires a consumer/);
+});
+
 test('CI suites cover the complete gate without dropping checks; each starts with generation', (context) => {
     const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-check-consumer-'));
     context.after(() => fs.rmSync(project, { recursive: true, force: true }));

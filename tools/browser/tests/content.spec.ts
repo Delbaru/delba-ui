@@ -13,22 +13,22 @@ test('direct toast routes to the mounted queue and does not retain messages afte
   await openContent(page);
   await page.getByRole('button', { name: 'Show direct message', exact: true }).click();
   await expect(page.getByTestId('direct-toast-accepted')).toHaveText('true');
-  await expect(page.locator('.ToastProvider .ToastCard')).toHaveCount(1);
-  await expect(page.locator('.ToastCard')).toContainText('Direct command result');
+  await expect(page.locator('[role="status"] [class*="ToastCard_"]')).toHaveCount(1);
+  await expect(page.locator('[class*="ToastCard_"]')).toContainText('Direct command result');
   await page.getByRole('button', { name: 'Toggle content contracts' }).click();
-  await expect(page.locator('.ToastProvider')).toHaveCount(0);
+  await expect(page.locator('[role="status"]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Show direct message', exact: true }).click();
   await expect(page.getByTestId('direct-toast-accepted')).toHaveText('false');
   await page.getByRole('button', { name: 'Toggle content contracts' }).click();
   await expect(page.getByRole('textbox', { name: 'Rich document' })).toBeVisible();
-  await expect(page.locator('.ToastProvider')).toHaveCount(0);
+  await expect(page.locator('[role="status"]')).toHaveCount(0);
 });
 
 test('StrictMode effect-created notifications retain their expiry after replay cleanup', async ({ page }) => {
   await openContent(page);
   await page.getByRole('button', { name: 'Toggle automatic notification' }).click();
-  await expect(page.locator('.ToastCard')).toContainText('Effect-created message');
-  await expect(page.locator('.ToastCard')).toHaveCount(0);
+  await expect(page.locator('[class*="ToastCard_"]')).toContainText('Effect-created message');
+  await expect(page.locator('[class*="ToastCard_"]')).toHaveCount(0);
 });
 
 test('synchronous batch evictions release never-entered cards from queue state', async ({ page }) => {
@@ -116,8 +116,8 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) {
     await page.emulateMedia({ reducedMotion });
     await openContent(page);
     await page.getByRole('button', { name: 'Show seven messages' }).click();
-    const stack = page.locator('.ToastProvider[role="status"]');
-    await expect(stack.locator('.ToastCard')).toHaveCount(5);
+    const stack = page.locator('[role="status"]');
+    await expect(stack.locator('[class*="ToastCard_"]')).toHaveCount(5);
     await expect(stack).not.toContainText('Message 1');
     await expect(stack).not.toContainText('Message 2');
     await expect(stack).toContainText('Message 7');
@@ -135,7 +135,7 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) {
     const initialHeight = await slide.evaluate(node => node.getBoundingClientRect().height);
     await page.getByRole('button', { name: 'Change rich step' }).click();
     await expect.poll(() => slide.evaluate(node => node.getBoundingClientRect().height)).toBeGreaterThan(initialHeight + 1);
-    const clip = page.getByTestId('rich-clip').locator('.RichTextSequence');
+    const clip = page.getByTestId('rich-clip').locator('[class*="RichTextSequence_"]');
     await expect.poll(() => clip.locator(':scope > *').last().evaluate(node => getComputedStyle(node).opacity)).toBe('1');
     await expect(clip).toHaveCSS('clip-path', 'inset(0px)');
     await page.getByRole('button', { name: 'Toggle content contracts' }).click();

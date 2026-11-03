@@ -6,12 +6,12 @@ import { Textarea } from '../Textarea';
 
 test('multiline composition forwards native form props and labels the real field', () => {
   const html = renderToStaticMarkup(createElement(Textarea, {
-    id: 'message', label: 'Message', name: 'message', form: 'contact',
+    id: 'message', label: 'Message', name: 'message', form: 'contact', className: 'consumer-field',
     value: 'hello', rows: 4, length: { max: 20 }, readOnly: true,
     comment: 'Hint', 'aria-describedby': 'external',
   }));
-  assert.match(html, /class="[^"]*Textarea[^"]*"/);
-  assert.match(html, /class="[^"]*TextareaControl[^"]*"/);
+  assert.match(html, /class="[^"]*consumer-field[^"]*"/);
+  assert.match(html, /role="presentation"/);
   assert.match(html, /<label[^>]*for="message"/);
   assert.match(html, /<textarea[^>]*name="message"[^>]*form="contact"/);
   assert.match(html, /rows="4"/);
@@ -24,5 +24,6 @@ test('multiline composition forwards native form props and labels the real field
 test('multiline loading preserves requested skeleton rows and removes native editing', () => {
   const html = renderToStaticMarkup(createElement(Textarea, { loading: true, rows: 2 }));
   assert.doesNotMatch(html, /<textarea/);
-  assert.match(html, /TextareaControl/);
+  assert.match(html, /role="presentation"/);
+  assert.equal((html.match(/\bh_16\b/g) ?? []).length, 2);
 });

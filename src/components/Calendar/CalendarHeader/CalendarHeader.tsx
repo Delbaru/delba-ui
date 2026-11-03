@@ -32,7 +32,7 @@ export function CalendarHeader({
 
   return (
     <Flex
-        className={cx('CalendarHeader', styles.CalendarHeader)}
+        className={styles.CalendarHeader}
         align={['center', 'center', 'center']}
         justify={['space_between', 'space_between', 'space_between']}
         gap={[8, 8, 8]}

@@ -27,11 +27,7 @@ export function CalendarDays({
   pick,
 }: CalendarDaysProps) {
   return (
-    <Flex
-        className={cx('CalendarDays', styles.CalendarDays)}
-        dir={['column', 'column', 'column']}
-        gap={[8, 8, 8]}
-    >
+    <Flex className={styles.CalendarDays} dir={['column', 'column', 'column']} gap={[8, 8, 8]}>
       <Grid columns={[7, 7, 7]}>
         {UI_MESSAGES.calendar.weekdays.map((label, index) => (
           <Flex

@@ -39,7 +39,7 @@ export function LexicalTextarea({
         {...layout.root}
         dir={['column', 'column', 'column']}
         position={layout.root.position ?? ['relative', 'relative', 'relative']}
-        className={cx('LexicalTextarea', styles.LexicalTextarea, className)}
+        className={cx(styles.LexicalTextarea, className)}
         style={style}
         perspective3d={perspective3d}
         parallax={parallax}

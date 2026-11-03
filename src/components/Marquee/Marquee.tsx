@@ -29,7 +29,7 @@ export function Marquee({
   return (
     <Flex
         ref={marquee.rootRef}
-        className={cx('Marquee', styles.Marquee, className)}
+        className={cx(styles.Marquee, className)}
         data-fade={fade || undefined}
         data-draggable={draggable || undefined}
         minW={[0, 0, 0]}

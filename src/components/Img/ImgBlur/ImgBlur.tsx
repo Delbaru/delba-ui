@@ -10,6 +10,6 @@ export function ImgBlur({ resource, ready, className }: { resource: ImageResourc
       aria-hidden
       draggable={false}
       sizes="5vw"
-      className={cx('ImgBlur', styles.ImgBlur, className, 'ui-img-blur', ready && 'ui-img-blur-hidden')}
+      className={cx(styles.ImgBlur, className, 'ui-img-blur', ready && 'ui-img-blur-hidden')}
   />;
 }

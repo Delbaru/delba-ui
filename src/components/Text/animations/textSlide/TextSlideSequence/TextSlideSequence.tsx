@@ -48,10 +48,7 @@ export function TextSlideSequence({ options }: { options: SequenceOptions }) {
   } as CSSProperties;
 
   return (
-    <Flex
-        className={cx('TextSlideSequence', styles.TextSlideSequence, 'ui-slide')}
-        style={stageStyle}
-    >
+    <Flex className={cx(styles.TextSlideSequence, 'ui-slide')} style={stageStyle}>
       {options.steps.map((step, index) => (
         <span
           key={index}

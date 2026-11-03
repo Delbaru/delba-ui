@@ -15,7 +15,7 @@ export function TextareaControl({
   return (
     <Flex
       {...control.appearance}
-      className={cx('TextareaControl', styles.TextareaControl, control.appearance.className)}
+      className={cx(styles.TextareaControl, control.appearance.className)}
       position={['relative', 'relative', 'relative']}
       align={['stretch', 'stretch', 'stretch']}
       data-has-counter={

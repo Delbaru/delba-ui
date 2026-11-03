@@ -40,7 +40,7 @@ export function ChoiceInfoTooltip({
             justify={['center', null, null]}
             onMouseEnter={tooltip.show}
             onMouseLeave={tooltip.hide}
-            className={cx('ChoiceInfoTooltip', styles.ChoiceInfoTooltip)}
+            className={styles.ChoiceInfoTooltip}
         >
             <Icon
                 src={assetUrl(infoIcon)}

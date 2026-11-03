@@ -1,5 +1,5 @@
 'use client';
-import { assetUrl, cx, stateProps } from '../../../core';
+import { assetUrl, stateProps } from '../../../core';
 import { Flex } from '../../Flex';
 import { Box } from '../../Box';
 import { Text } from '../../Text';
@@ -22,7 +22,7 @@ export function SelectOptions<T extends string>({
       id={select.popup.id}
       role="listbox"
       scrollFade
-      className={cx('SelectOptions', styles.SelectOptions)}
+      className={styles.SelectOptions}
       data-scrolls={select.popup.scrolls || undefined}
       aria-hidden={!select.popup.open}
       aria-multiselectable={multiple || undefined}

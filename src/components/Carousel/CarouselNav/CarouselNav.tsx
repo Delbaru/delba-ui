@@ -31,7 +31,7 @@ export function CarouselNav({ className, carouselId }: CarouselNavProps) {
             align={['center', 'center', null]}
             justify={['end', null, null]}
             gap={[8, 4, null]}
-            className={cx(styles.CarouselNav, 'CarouselNav', snapshot.navigationClassName, className)}
+            className={cx(styles.CarouselNav, snapshot.navigationClassName, className)}
             data-carousel-navigation
         >
             {shouldRender ? (

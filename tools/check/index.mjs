@@ -31,7 +31,8 @@ export function projectSteps(root, config, { update = false, strict = false, fix
   ];
 }
 
-export function uiCheckSteps({ project, config = {}, configArg = 'ui.config.ts', fix = false, suite = 'all', shard, typecheckCache } = {}) {
+export function uiCheckSteps({ project: requestedProject, config = {}, configArg = 'ui.config.ts', fix = false, suite = 'all', shard, typecheckCache } = {}) {
+  const project = requestedProject && path.relative(KIT, path.resolve(requestedProject)) !== '' ? requestedProject : undefined;
   if (!['all', 'library', 'project', 'browser'].includes(suite)) throw new Error(`Unknown UI suite: ${suite}`);
   if (typecheckCache !== undefined && (!project || suite !== 'project' || !typecheckCache)) {
     throw new Error('--typecheck-cache requires a consumer and --suite project');
@@ -51,7 +52,7 @@ export function uiCheckSteps({ project, config = {}, configArg = 'ui.config.ts',
     : [];
   const projectChecks = project ? projectSteps(project, config, { strict: true, fix }) : [];
   const steps = [
-    ...(project ? [{ ...nodeStep('Генерация', [script('cli.mjs'), 'build', '--config', configArg], project), required: true }] : []),
+    ...(requestedProject ? [{ ...nodeStep('Генерация', [script('cli.mjs'), 'build', '--config', configArg], requestedProject), required: true }] : []),
     ...(fix ? [astStep('Архитектура', undefined, { fix: true })] : []),
     ...(fix ? projectChecks.slice(0, 1) : []),
     { ...nodeStep('Типы', [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json', '--noEmit', '--incremental', 'false']), suite: 'library' },

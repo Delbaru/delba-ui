@@ -55,12 +55,12 @@ export function VideoPlayer({
     const { player, state, timeline, volume } = view;
 
     const rootClassName = cx(
-        styles.VideoPlayer, 'VideoPlayer',
+        styles.VideoPlayer,
         !view.root.visible && interactive && styles.hidden,
         ...sizeClasses(c, { w, minW, maxW, h, minH, maxH }),
         ...c.value('ratio', aspectRatio),
         ...c.value('grow', grow),
-        className
+        className,
     );
 
     const rootStyle: CSSProperties = {

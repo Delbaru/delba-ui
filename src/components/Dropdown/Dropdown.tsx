@@ -36,7 +36,7 @@ export function Dropdown(props: WithRef<DropdownProps, HTMLDivElement>) {
 
   return (
     <DropdownAncestors.Provider value={scope.ids}>
-      <Box {...dropdown.root.props} className={cx('Dropdown', styles.Dropdown, scope.className)}>
+      <Box {...dropdown.root.props} className={cx(styles.Dropdown, scope.className)}>
         {dropdown.trigger.element && cloneElement(dropdown.trigger.element, dropdown.trigger.props)}
         <Box {...dropdown.root.probe} className={styles.gapProbe} aria-hidden />
         {scope.portal && scope.target

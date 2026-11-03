@@ -79,6 +79,7 @@ test('real Img routes root markers and native image attributes without nested li
   }));
   assert.match(lightbox, /href="\/api\/private\/photo.webp"/);
   assert.match(lightbox, /aria-label="Изображение"/);
-  assert.match(lightbox, /ImgBlur/);
+  assert.match(lightbox, /(?:class="| )ui-img-blur(?: |")/);
+  assert.doesNotMatch(lightbox, /(?:class="| )ImgBlur(?: |")/);
   assert.match(lightbox, /aria-hidden="true"/);
 });

@@ -257,7 +257,7 @@ export function useSelect<T extends string>(
   useEffect(() => {
     if (!open) return;
 
-    if (dropdownOptions.length === 0) {
+    if (loading || dropdownOptions.length === 0) {
       setOpen(false);
       setFocusedIndex(-1);
       return;
@@ -267,7 +267,7 @@ export function useSelect<T extends string>(
       if (currentIndex < 0) return 0;
       return Math.min(currentIndex, dropdownOptions.length - 1);
     });
-  }, [dropdownOptions.length, open]);
+  }, [dropdownOptions.length, loading, open]);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {

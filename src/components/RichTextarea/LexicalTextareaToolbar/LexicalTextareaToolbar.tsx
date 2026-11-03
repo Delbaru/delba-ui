@@ -3,7 +3,7 @@
 import { Flex } from '../../Flex';
 import { Text } from '../../Text';
 import { UI_MESSAGES } from '../../../core/base/messages';
-import { cx } from '../../../core';
+
 import { useLexicalTextareaToolbar } from './LexicalTextareaToolbar.model';
 import { LexicalTextareaToolbarButton } from './LexicalTextareaToolbarButton/LexicalTextareaToolbarButton';
 import styles from './LexicalTextareaToolbar.module.scss';
@@ -13,7 +13,7 @@ export function LexicalTextareaToolbar({ hasVariables, allowLink = true }: { has
 
   return (
     <Flex
-        className={cx('LexicalTextareaToolbar', styles.LexicalTextareaToolbar)}
+        className={styles.LexicalTextareaToolbar}
         dir={['row', null, null]}
         wrap={['wrap', 'wrap', 'wrap']}
         align={['center', null, null]}

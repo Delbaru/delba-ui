@@ -159,6 +159,9 @@ export function useMediaDropDown(props: WithRef<MediaDropDownProps, HTMLDivEleme
   useEffect(() => () => cancel(), [cancel]);
   useEffect(() => {
     cancel();
+  }, [cancel, props.value, props.selectedItem]);
+  useEffect(() => {
+    cancel();
     setLink(props.linkValue ?? '');
   }, [cancel, props.linkValue]);
 

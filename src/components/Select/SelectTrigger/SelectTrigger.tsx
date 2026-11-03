@@ -35,7 +35,7 @@ export function SelectTrigger<T extends string>({
         align={['center', 'center', 'center']}
         justify={['space_between', 'space_between', 'space_between']}
         gap={[8, 8, 8]}
-        className={cx('SelectTrigger', styles.SelectTrigger, className)}
+        className={cx(styles.SelectTrigger, className)}
         w={['100%', '100%', '100%']}
         role="button"
         tabIndex={disabled ? -1 : 0}

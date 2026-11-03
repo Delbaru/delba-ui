@@ -55,7 +55,7 @@ export function useImg(props: WithRef<ImgProps, HTMLSpanElement>) {
       ...(rootProps as HTMLAttributes<HTMLSpanElement>), ...link,
       ...stateLinkProps(linkState, motion.motionHandlers), ...motion.revealAttrs,
       ref: mergedRef, id, 'data-point-events': pointEvents,
-      className: cx('Img', styles.Img, 'ui-img', ...boxLayout(classes, {
+      className: cx(styles.Img, 'ui-img', ...boxLayout(classes, {
         ...box, w: rootW ?? box.w, h: rootH ?? box.h,
       }), className),
       style: { ...motion.motionStyle, ...style },

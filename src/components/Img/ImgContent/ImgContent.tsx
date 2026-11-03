@@ -15,14 +15,10 @@ export function ImgContent({ resource, className, onLoad, onError }: ImgContentP
   const media = { mobile: MEDIA_QUERY.mobile, tablet: MEDIA_QUERY.below };
   const events = { onLoad, onError, draggable: false };
   if (!resource.picture) {
-    return <Image
-        {...resource.image}
-        {...events}
-        className={cx('ImgContent', styles.ImgContent, className)}
-    />;
+    return <Image {...resource.image} {...events} className={cx(styles.ImgContent, className)} />;
   }
   return (
-    <picture className={cx('ImgContent', styles.ImgContent)}>
+    <picture className={styles.ImgContent}>
       {resource.sources.map(source => (
         <source
             key={source.media}

@@ -79,11 +79,11 @@ export function Radio({
             {...revealAttrs}
             {...(!isDisabled ? stateLinkProps(linkState, { ...motionHandlers }) : {})}
             className={cx(
-                'Radio', styles.Radio,
+                styles.Radio,
                 ...layoutSpaceClasses(c, { p, pt, pr, pb, pl, m, mt, mr, mb, ml }),
                 ...radiusClasses(c, { r, tlr, trr, brr, blr, borderTLR, borderTRR, borderBRR, borderBLR }),
                 ...c.value('grow', grow),
-                className
+                className,
             )}
             style={{ ...(motionStyle ?? null), ...(size != null ? { ['--radio-box']: size } : null), ...(dotSize != null ? { ['--radio-dot']: dotSize } : null), ...style }}
             {...stateProps(state, Boolean(props.checked) && 'active', (props['aria-invalid'] && props['aria-invalid'] !== 'false') && 'error', isDisabled && 'disabled')}

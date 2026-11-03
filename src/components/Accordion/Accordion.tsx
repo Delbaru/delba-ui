@@ -12,7 +12,7 @@ export function Accordion(props: WithRef<AccordionProps, HTMLElement>) {
 
   return (
     <AccordionContext.Provider value={accordion.context}>
-      <Flex {...accordion.root} className={cx('Accordion', styles.Accordion, props.className)} />
+      <Flex {...accordion.root} className={cx(styles.Accordion, props.className)} />
     </AccordionContext.Provider>
   );
 }

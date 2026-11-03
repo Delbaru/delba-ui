@@ -42,11 +42,10 @@ export function TextRevealLayer({ text, mode, staticPrefix, staticSuffix }: Laye
       data-reveal-layer=""
       data-reveal-mode={mode}
       className={cx(
-        'TextRevealLayer',
-        styles.TextRevealLayer,
-        'ui-reveal-layer',
-        mode === 'in' && 'ui-reveal-in',
-        mode === 'out' && 'ui-reveal-out',
+          styles.TextRevealLayer,
+          'ui-reveal-layer',
+          mode === 'in' && 'ui-reveal-in',
+          mode === 'out' && 'ui-reveal-out',
       )}
       aria-hidden={mode === 'out' ? true : undefined}
     >

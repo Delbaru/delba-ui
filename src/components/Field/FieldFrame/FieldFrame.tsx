@@ -14,7 +14,7 @@ export function FieldFrame({ layout, label, feedback, children }: FieldFrameProp
   return (
     <Flex
         {...layout}
-        className={cx('FieldFrame', styles.FieldFrame, layout.className)}
+        className={cx(styles.FieldFrame, layout.className)}
         dir={['column', 'column', 'column']}
     >
       {label && (

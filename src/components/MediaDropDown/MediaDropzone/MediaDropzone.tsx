@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from '../../../core';
+
 import { Flex } from '../../Flex';
 import { Text } from '../../Text';
 import { Icon } from '../../Icon';
@@ -12,7 +12,7 @@ import { Input } from '../../Input';
 export function MediaDropzone({ media }: { media: Pick<MediaDropDownModel, 'file' | 'link' | 'drag' | 'labels' | 'disabled'> }) {
   return (
     <Flex
-        className={cx('MediaDropzone', styles.MediaDropzone)}
+        className={styles.MediaDropzone}
         dir={['column', 'column', 'column']}
         gap={[12, 12, 12]}
         w={['100%', null, null]}

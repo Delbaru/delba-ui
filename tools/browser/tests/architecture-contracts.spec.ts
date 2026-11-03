@@ -5,6 +5,15 @@ async function openFixture(page: Page) {
   await expect(page.getByRole('heading', { name: 'Delba UI browser regression fixture' })).toBeVisible();
 }
 
+test('compiled component roots use scoped modules without bare debug classes', async ({ page }) => {
+  await openFixture(page);
+  const bare = await page.locator('body').evaluate((body) => Array.from(body.querySelectorAll('[class]'))
+    .flatMap((node) => Array.from(node.classList))
+    .filter((name) => /^[A-Z][A-Za-z0-9]*$/.test(name)));
+  expect([...new Set(bare)]).toEqual([]);
+  await expect(page.getByRole('region', { name: 'Pending control contracts' }).getByTestId('reordered-track')).toHaveClass(/TabTrack_/);
+});
+
 test('Input calendar validates once on outside pointer and Tab blur, while Escape cancels without commit', async ({ page }) => {
   await openFixture(page);
   const scope = page.getByRole('region', { name: 'Field engine event contracts' });
@@ -71,7 +80,7 @@ test('Calendar day text uses its semantic colors without a base white override',
       return getComputedStyle(probe).color;
     };
     const day = (date: number) => {
-      const text = root.querySelector('[id$="-day-2025-0-' + date + '"] .Text');
+      const text = root.querySelector('[id$="-day-2025-0-' + date + '"] .ui-text');
       if (!text) throw new Error('Calendar day text missing: ' + date);
       return getComputedStyle(text).color;
     };

@@ -54,7 +54,7 @@ export function Counter({ options, content }: TextAnimationContext<CounterOption
   );
 
   return (
-    <span ref={rootRef} className={cx('Counter', styles.Counter, 'ui-counter')}>
+    <span ref={rootRef} className={cx(styles.Counter, 'ui-counter')}>
       <span aria-hidden className={'ui-counter-reserve'}>
         {prefix}
         {format(to)}

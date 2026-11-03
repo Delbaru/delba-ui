@@ -105,14 +105,13 @@ export function Box({
       ref={setRefs}
       data-scroll={scroll}
       className={cx(
-        'Box',
-        styles.Box,
-        'ui-box',
-        containerClass(container),
-        ...layout,
-        ...c.value('justify', justify),
-        contentMotion.className,
-        className,
+          styles.Box,
+          'ui-box',
+          containerClass(container),
+          ...layout,
+          ...c.value('justify', justify),
+          contentMotion.className,
+          className,
       )}
       style={{ ...(motionStyle ?? null), ...style, ...(contentMotion.style ?? null) }}
       {...revealAttrs}
