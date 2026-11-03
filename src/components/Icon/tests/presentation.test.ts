@@ -40,4 +40,3 @@ test('a link owns focus semantics while the visual still receives pointer and cl
   assert.equal(linkedGlyph.visual.receivesEvents, true);
   assert.equal(linkedGlyph.tooltipTarget, 'link');
 });
-

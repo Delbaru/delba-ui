@@ -143,4 +143,3 @@ export interface ImgProps
   /** Suppress the link referrer. */
   noreferrer?: boolean;
 }
-
