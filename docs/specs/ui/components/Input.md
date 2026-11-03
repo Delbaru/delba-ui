@@ -304,3 +304,8 @@ InputCalendar переводит ISO Calendar в формат поля, выби
 сохраняет цвет placeholder. Inline-ошибка скрывает и color, и webkit-text-fill-color
 значения; фокус возвращает видимый текст. Проверяются computed styles и настоящий
 частичный ввод, не только наличие mask-узла.
+
+Input поддерживает внешний native label. InputActions помечает всю зону своих
+действий и отменяет default click label, сохраняя обработчик конкретного действия:
+нажатие на рамку календаря не создаёт второй click поля и не закрывает popup.
+Этот договор проверяется настоящим pointer click по padding, а не dispatchEvent.

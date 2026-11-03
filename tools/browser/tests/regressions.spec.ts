@@ -17,6 +17,23 @@ async function openFixture(page: Page) {
   ).toBeVisible();
 }
 
+test('Input calendar action padding toggles once without activating the field again', async ({ page }) => {
+  await openFixture(page);
+  const scope = page.getByRole('region', { name: 'Audit lifecycle contracts' });
+  const action = scope.getByRole('button', { name: 'Открыть календарь', exact: true });
+  const calendar = page.getByRole('group', { name: 'Открыть календарь', exact: true });
+
+  await action.click({ position: { x: 2, y: 2 } });
+  await expect(calendar).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(calendar).not.toBeVisible();
+
+  await action.click({ position: { x: 2, y: 2 } });
+  await expect(calendar).toBeVisible();
+  await action.click({ position: { x: 2, y: 2 } });
+  await expect(calendar).not.toBeVisible();
+});
+
 test('uncontrolled checkbox visuals and custom form values follow native reset and cancellation', async ({
   page,
 }) => {

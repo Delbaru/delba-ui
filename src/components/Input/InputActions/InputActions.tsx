@@ -24,6 +24,8 @@ export function InputActions({ actions }: { actions: Actions }) {
     <Flex
         className={cx('InputActions', styles.InputActions)}
         align={['center', 'center', 'center']}
+        data-input-action="true"
+        onClick={preserveFocus}
     >
       {actions.password.visible && (
         <Icon

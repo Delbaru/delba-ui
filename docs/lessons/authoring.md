@@ -1239,3 +1239,15 @@ destroy снимал listeners, но оставлял pointer capture и data-dr
 собственный жест до releasePointerCapture и удаляет его DOM-состояние. Настоящий
 mouse-drag regression в native-carousel.spec.ts сначала воспроизвёл зависшее
 состояние, после исправления подтвердил освобождение захвата и работу next.
+
+### Действие внутри внешнего label не активирует поле повторно
+
+На сайте Input даты находится внутри внешнего label. Нажатие на padding
+иконки попадало в её div-frame: затем браузер выполнял default action label
+и посылал второй click связанному input. Календарь открывался и сразу закрывался.
+Один лишь preventDefault на mousedown не отменяет default action последующего
+click. InputActions отмечает всю существующую зону действий и отменяет её click
+default через общий preserveFocus; обработчик поля не повторяет действие.
+Регрессия использует настоящий внешний label и pointer click по padding:
+до исправления календарь отсутствует, после работают открытие, Escape и повторный
+toggle. Проверены также readonly/disabled, password и самостоятельный Calendar.

@@ -35,7 +35,10 @@ function LifecycleContracts() {
     <Textarea readOnly seed="Seeded textarea" defaultValue="Seeded textarea"
       aria-label="Read only seeded textarea" onValueChange={() => setReadonlySeedChanges((n) => n + 1)} />
     <output data-testid="readonly-seed-changes">{readonlySeedChanges}</output>
-    <Input type="date" disabled={dateDisabled} defaultValue="2025-01-15" aria-label="Disable open calendar" />
+    <label>
+      Calendar date
+      <Input type="date" autoComplete="off" disabled={dateDisabled} defaultValue="2025-01-15" aria-label="Disable open calendar" />
+    </label>
     <button type="button" onClick={() => setDateDisabled((value) => !value)}>Toggle lifecycle date disabled</button>
     <div ref={overflowHost} style={{ width: 600 }}>
       <Input loading={loading} defaultValue="Overflow measurement follows the replacement input" aria-label="Replacement overflow field" w={['100%', '100%', '100%']} />

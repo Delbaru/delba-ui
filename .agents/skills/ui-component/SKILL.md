@@ -194,3 +194,7 @@ source identity, включая Next `{ default: image }`. Асинхронна�
 Для art direction проверяй фактический currentSrc: корректные media/srcset в DOM
 не доказывают выбор. Кодируй whitespace только в одиночном fallback URL, сохраняя
 дескрипторы готового multi-candidate srcSet.
+
+Действия поля проверяй также внутри внешнего native label: click по padding
+действия не должен выполнять default activation связанного input. Отмена mousedown
+не отменяет click default; зона действий имеет одного владельца этого поведения.
