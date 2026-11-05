@@ -16,7 +16,7 @@ test('the toolkit generates once and runs its library suite without duplicate co
     const names = steps.map((step: { name: string }) => step.name);
     assert.equal(names.filter((name: string) => name === 'Генерация').length, 1);
     assert.equal(names.filter((name: string) => name === 'Тесты').length, 1);
-    assert.equal(names.filter((name: string) => name === 'Браузер').length, 1);
+    assert.equal(names.filter((name: string) => name === 'Браузер').length, 0);
     assert.ok(steps.every((step: { suite?: string }) => step.suite !== 'project'));
     assert.throws(() => uiCheckSteps({ project: kit, suite: 'project', typecheckCache: 'cache.tsbuildinfo' }), /requires a consumer/);
 });
@@ -24,8 +24,22 @@ test('the toolkit generates once and runs its library suite without duplicate co
 test('CI suites cover the complete gate without dropping checks; each starts with generation', (context) => {
     const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-check-consumer-'));
     context.after(() => fs.rmSync(project, { recursive: true, force: true }));
-    const complete = uiCheckSteps({ project }).map((step: { name: string }) => step.name);
+    const complete = uiCheckSteps({ project, suite: 'all' }).map((step: { name: string }) => step.name);
     assert.ok(complete.includes('Анатомия D-компонентов'));
+    for (const fix of [false, true]) {
+        const standard = uiCheckSteps({ project, fix });
+        const explicitStandard = uiCheckSteps({ project, fix, suite: 'standard' });
+        assert.deepEqual(
+            standard.map((step: { name: string }) => step.name),
+            explicitStandard.map((step: { name: string }) => step.name),
+        );
+        assert.deepEqual(
+            standard.map((step: { name: string }) => step.name),
+            uiCheckSteps({ project, fix, suite: 'all' })
+                .filter((step: { suite?: string }) => step.suite !== 'browser')
+                .map((step: { name: string }) => step.name),
+        );
+    }
     const partitioned = ['library', 'project', 'browser'].flatMap((suite) => {
         const steps = uiCheckSteps({ project, suite });
         assert.equal(steps[0]?.name, 'Генерация');
@@ -33,7 +47,7 @@ test('CI suites cover the complete gate without dropping checks; each starts wit
     });
     assert.deepEqual(partitioned.sort(), complete.filter((name: string) => name !== 'Генерация').sort());
     assert.throws(() => uiCheckSteps({ suite: 'typo' }), /Unknown UI suite/);
-    assert.throws(() => uiCheckSteps({ suite: 'project', fix: true }), /complete UI suite/);
+    assert.throws(() => uiCheckSteps({ suite: 'project', fix: true }), /--suite standard or all/);
     for (const shard of ['0/4', '5/4', '1/0', 'oops']) {
         assert.throws(() => uiCheckSteps({ suite: 'browser', shard }), /valid index\/total/);
     }

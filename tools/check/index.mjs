@@ -31,13 +31,13 @@ export function projectSteps(root, config, { update = false, strict = false, fix
   ];
 }
 
-export function uiCheckSteps({ project: requestedProject, config = {}, configArg = 'ui.config.ts', fix = false, suite = 'all', shard, typecheckCache } = {}) {
+export function uiCheckSteps({ project: requestedProject, config = {}, configArg = 'ui.config.ts', fix = false, suite = 'standard', shard, typecheckCache } = {}) {
   const project = requestedProject && path.relative(KIT, path.resolve(requestedProject)) !== '' ? requestedProject : undefined;
-  if (!['all', 'library', 'project', 'browser'].includes(suite)) throw new Error(`Unknown UI suite: ${suite}`);
+  if (!['standard', 'all', 'library', 'project', 'browser'].includes(suite)) throw new Error(`Unknown UI suite: ${suite}`);
   if (typecheckCache !== undefined && (!project || suite !== 'project' || !typecheckCache)) {
     throw new Error('--typecheck-cache requires a consumer and --suite project');
   }
-  if (fix && suite !== 'all') throw new Error('--fix requires the complete UI suite');
+  if (fix && !['standard', 'all'].includes(suite)) throw new Error('--fix requires --suite standard or all');
   if (shard !== undefined) {
     const match = /^(\d+)\/(\d+)$/.exec(shard);
     if (suite !== 'browser' || !match || Number(match[1]) < 1 || Number(match[1]) > Number(match[2])) {
@@ -65,11 +65,11 @@ export function uiCheckSteps({ project: requestedProject, config = {}, configArg
     { ...nodeStep('Браузер', [require.resolve('@playwright/test/cli'), 'test', '--config', 'tools/browser/playwright.config.ts', ...(shard ? ['--shard', shard] : [])]), suite: 'browser' },
     ...(fix ? projectChecks.slice(1) : projectChecks).map((step) => ({ ...step, suite: 'project' })),
   ];
-  return steps.filter((step) => suite === 'all' || step.required || step.suite === suite);
+  return steps.filter((step) => suite === 'all' || step.required || (suite === 'standard' ? step.suite !== 'browser' : step.suite === suite));
 }
 
 export function runUiChecks(options = {}) {
-  const suite = options.suite ?? 'all';
+  const suite = options.suite ?? 'standard';
   return runSteps(uiCheckSteps(options), { label: suite === 'all' ? 'UI' : `UI (${suite})` });
 }
 
