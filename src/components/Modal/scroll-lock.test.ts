@@ -38,6 +38,14 @@ test('stable gutter keeps its layout width even when clientWidth reports the vie
   release();
 });
 
+test('only the root is locked: overflow on body would break position sticky inside it', () => {
+  const { document, rootStyle, bodyStyle } = fixture();
+  const release = acquireScrollLock(document);
+  assert.equal(rootStyle.getPropertyValue('overflow'), 'hidden');
+  assert.equal(bodyStyle.getPropertyValue('overflow'), '');
+  release();
+});
+
 test('overlapping providers keep their document locked until the last lease ends', () => {
   const { document, rootStyle, bodyStyle } = fixture();
   const releaseFirst = acquireScrollLock(document);

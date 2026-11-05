@@ -40,8 +40,10 @@ export function acquireScrollLock(document: Document): () => void {
     const originalWidth = layoutWidth();
     const padding = saveProperty(body.style, 'padding-right');
     const computedPadding = view.getComputedStyle(body).paddingRight;
+    // Только корень: его overflow управляет окном. overflow на body при этом сделал бы body областью
+    // прокрутки, и position: sticky внутри него потерял бы окно — шапка и подвал вставали бы на своё
+    // место в документе.
     const restoreRoot = hideOverflow(root.style);
-    const restoreBody = hideOverflow(body.style);
     // Measure the width actually reclaimed: stable scrollbar gutters need no compensation.
     const compensation = Math.max(0, Math.round(layoutWidth() - originalWidth));
     if (compensation) body.style.setProperty('padding-right', `calc(${computedPadding} + ${compensation}px)`, 'important');
@@ -50,7 +52,6 @@ export function acquireScrollLock(document: Document): () => void {
       count: 0,
       restore: () => {
         restoreRoot();
-        restoreBody();
         if (compensation) restoreProperty(body.style, 'padding-right', padding);
       },
     };
