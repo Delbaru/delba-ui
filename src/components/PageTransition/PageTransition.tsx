@@ -7,6 +7,7 @@ import { readMotionTimeMs } from '../../core/base/timing';
 import { prefersReducedMotion } from '../../core/base/motion';
 import { motionEasing } from '../../core/base/easing';
 import type { PageTransitionProps } from './PageTransition.types';
+import { snapshotSelector } from './snapshot';
 import './PageTransition.scss';
 
 /** Native React snapshots preserve the router tree; no cloned DOM, remount or transition timer. */
@@ -24,14 +25,14 @@ export function PageTransition({ children, location, name, animate }: PageTransi
         const root = document.documentElement;
         const oldPage = root.animate([{ opacity: 1 }, { opacity: 0 }], {
             duration, easing: motionEasing.easeOutCubic.css, fill: 'both',
-            pseudoElement: `::view-transition-old(${instance.name})`,
+            pseudoElement: snapshotSelector('old', instance.name),
         });
         const newPage = root.animate([
             { opacity: 0, transform: `translateY(${distance})` },
             { opacity: 1, transform: 'translateY(0)' },
         ], {
             duration, easing: motionEasing.easeOutCubic.css, fill: 'both',
-            pseudoElement: `::view-transition-new(${instance.name})`,
+            pseudoElement: snapshotSelector('new', instance.name),
         });
         return () => { oldPage.cancel(); newPage.cancel(); };
     };

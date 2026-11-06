@@ -1,4 +1,32 @@
 import { expect, test, type Page } from '@playwright/test';
+import { kitRoot } from '../environment';
+
+test('page snapshot animation preserves uppercase React names and changes visible opacity', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/?smooth');
+  const source = `/@fs/${kitRoot.replaceAll('\\', '/')}/src/components/PageTransition/snapshot.ts`;
+  const result = await page.evaluate(async (source) => {
+    const { snapshotSelector } = await import(source);
+    const node = document.createElement('div');
+    node.style.cssText = 'view-transition-name:_R_Page_;width:100px;height:100px;background:black';
+    document.body.appendChild(node);
+    const transition = document.startViewTransition(() => { node.textContent = 'Next page'; });
+    await transition.ready;
+    const pseudoElement = snapshotSelector('new', '_R_Page_');
+    const animation = document.documentElement.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 1000, fill: 'both', pseudoElement,
+    });
+    animation.pause();
+    animation.currentTime = 400;
+    const opacity = Number(getComputedStyle(document.documentElement, pseudoElement).opacity);
+    animation.finish();
+    await transition.finished;
+    node.remove();
+    return opacity;
+  }, source);
+  expect(result).toBeGreaterThan(0.2);
+  expect(result).toBeLessThan(0.8);
+});
 
 type ModalRafWindow = Window & {
   __modalFrameGate?: {
