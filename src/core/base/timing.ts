@@ -8,7 +8,7 @@ declare global {
 
 /** Проект задаёт допустимые имена. Без декларации кит принимает строковые имена темы. */
 export type MotionTimingName = UiMotionTiming extends { names: infer Name extends string }
-    ? Name
+    ? Name | keyof typeof MOTION_TIMING_DEFAULTS
     : string;
 
 /** Имя общей шкалы либо точное время в секундах. */

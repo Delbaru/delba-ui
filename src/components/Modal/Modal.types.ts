@@ -39,6 +39,8 @@ export interface ModalTriggerProps {
 export interface ModalSurfaceProps extends BoxLayoutProps, SharedMotionProps<OpenAnimate> {
   id?: string;
   children?: React.ReactNode | ((close: () => void) => React.ReactNode);
+  /** Dialog controls outside the scrolling content; remain inside its focus boundary. */
+  controls?: React.ReactNode;
   className?: string;
   rootClassName?: string;
   overlayClassName?: string;

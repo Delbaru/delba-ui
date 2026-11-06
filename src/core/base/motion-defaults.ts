@@ -3,6 +3,7 @@ import type { MotionEasingRole, SerializedEasing } from './easing';
 
 /** Tunable behavior defaults. Public durations are seconds; frame counts and safety tolerances stay internal. */
 export const MOTION_DEFAULTS = {
+    pageTransition: { duration: 0.3, distance: 8 },
     reveal: {
         duration: 0.75,
         distance: 32,

@@ -5,6 +5,8 @@ import type { SmoothScrollEasing, SmoothScrollOffset } from './smooth-scroll';
 export type SmoothScrollProps = {
   /** Application content; the provider creates no DOM wrapper. */
   children: ReactNode;
+  /** Router pathname. New pages start at the top; traversal restores the router's position. Queries stay still. */
+  pathname?: string;
   /** Инерция колеса: доля оставшегося пути за кадр 60 Гц, 0–1. Меньше — плавнее и дольше. По умолчанию motion.scroll.lerp (база 0.08). */
   lerp?: number;
   /** Множитель шага колеса и тачпада. По умолчанию `1`. */

@@ -189,6 +189,79 @@ test('Prettier keeps deeply nested conditional JSX stable across passes', async 
   assert.deepEqual(check(first), []);
 });
 
+test('conditional JSX near the line limit is stable on the first formatter pass', async () => {
+  const source = `export function Card({ item }) {
+    return (
+        <Flex>
+            {item.note && <Text variant={['small', 'small', 'small']} color="var(--gold-dark)">{item.note}</Text>}
+        </Flex>
+    );
+}`;
+  const options = {
+    filepath: path.resolve(file), parser: 'typescript', printWidth: 100, tabWidth: 4,
+    singleQuote: true, plugins: [fileURLToPath(new URL('../prettier-plugin.mjs', import.meta.url))],
+  };
+  const first = await prettier.format(source, options);
+  assert.equal(await prettier.format(first, options), first);
+  assert.deepEqual(jsxFormatRule.count(first, options.filepath, options), []);
+});
+
+test('first pass measures formatted indentation, member children and object props', async () => {
+  const source = `export function Account({ orders, visibleMessage }) {
+  return (
+    <Flex>
+      <Section>
+        <Flex>
+          <Flex>
+            <Text collapse={{ open: !orders.length }}>{cms.text.account.emptyOrders}</Text>
+            <Form>
+              <Text as="h2" variant={['h3', 'h3', 'h3']}>{cms.text.account.contacts}</Text>
+              <Text as="h2" variant={['h3', 'h3', 'h3']}>{cms.text.account.addresses}</Text>
+            </Form>
+          </Flex>
+          <Text collapse={{ open: !!visibleMessage }} role="status">{visibleMessage}</Text>
+        </Flex>
+      </Section>
+    </Flex>
+  );
+}`;
+  const options = {
+    filepath: path.resolve(file), parser: 'typescript', printWidth: 100, tabWidth: 4,
+    singleQuote: true, plugins: [fileURLToPath(new URL('../prettier-plugin.mjs', import.meta.url))],
+  };
+  const first = await prettier.format(source, options);
+  assert.equal(await prettier.format(first, options), first);
+  assert.doesNotMatch(first, /cms\.text\.account\s*\n\s*\./);
+  assert.match(first, /\{cms\.text\.account\.emptyOrders\}/);
+  assert.match(first, /\{cms\.text\.account\.contacts\}/);
+  assert.deepEqual(jsxFormatRule.count(first, options.filepath, options), []);
+  assert.deepEqual(ts.createSourceFile('formatted.tsx', first, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX).parseDiagnostics, []);
+});
+
+test('optional member children agree with the JSX rule and stay compact', async () => {
+  const source = `export function Support({ head, field }) {
+    return (
+        <Flex>
+            <Text as="h3" variant={['dop', 'dop', 'dop']}>
+                {head?.title}
+            </Text>
+            <Text as="p" variant={['small', 'small', 'small']}>
+                {head?.[field]}
+            </Text>
+        </Flex>
+    );
+}`;
+  const options = {
+    filepath: path.resolve(file), parser: 'typescript', printWidth: 100, tabWidth: 4,
+    singleQuote: true, plugins: [fileURLToPath(new URL('../prettier-plugin.mjs', import.meta.url))],
+  };
+  const first = await prettier.format(source, options);
+  assert.match(first, /<Text as="h3" variant=\{\['dop', 'dop', 'dop'\]\}>\{head\?\.title\}<\/Text>/);
+  assert.match(first, /<Text as="p" variant=\{\['small', 'small', 'small'\]\}>\{head\?\.\[field\]\}<\/Text>/);
+  assert.equal(await prettier.format(first, options), first);
+  assert.deepEqual(jsxFormatRule.count(first, options.filepath, options), []);
+});
+
 test('existing project rules registry reports JSX formatting through its file baseline', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-format-'));
   try {

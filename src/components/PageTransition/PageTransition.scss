@@ -1,0 +1,12 @@
+@layer ui.components {
+  ::view-transition-old(.ui-page-transition),
+  ::view-transition-new(.ui-page-transition),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-group(.ui-page-transition) {
+    animation: none;
+  }
+}

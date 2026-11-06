@@ -39,6 +39,11 @@
         overflow: visible;
       }
 
+      // Controls may extend outside the surface while the inner viewport keeps scrolling.
+      &.withControls {
+        overflow: visible;
+      }
+
       // Содержимое выше панели прокручивается здесь: панель держит max-height пресета или пропа,
       // а min-height: 0 даёт этой ячейке сжаться ниже своего содержимого.
       .inner {

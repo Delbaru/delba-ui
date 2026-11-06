@@ -1,13 +1,13 @@
 import typescript from 'prettier/plugins/typescript';
 import estree from 'prettier/plugins/estree';
-import { builders } from 'prettier/doc';
+import { builders, utils } from 'prettier/doc';
 import ts from 'typescript';
 
 import { jsxFormatRule } from './rules/jsx-format.mjs';
 
 const baseParser = typescript.parsers.typescript;
 const basePrinter = estree.printers.estree;
-const { group } = builders;
+const { group, indent, softline } = builders;
 
 function attachSource(node, source, seen = new WeakSet()) {
   if (!node || typeof node !== 'object' || seen.has(node)) return;
@@ -29,21 +29,15 @@ function hasComment(source, start, end) {
   return false;
 }
 
-function compactElement(node, options) {
+function compactElement(node) {
   const child = node.children?.[0];
   if (node.children?.length !== 1 || child?.type !== 'JSXExpressionContainer') return undefined;
-  if (!['Identifier', 'MemberExpression'].includes(child.expression?.type)) return undefined;
+  const expression = child.expression?.type === 'ChainExpression' ? child.expression.expression : child.expression;
+  if (!['Identifier', 'MemberExpression'].includes(expression?.type)) return undefined;
   const source = node.__jsxSource;
   const [start, end] = node.range ?? [];
   if (!source || start == null || end == null || hasComment(source, start, end)) return undefined;
-  const text = source.slice(start, end);
-  const lineStart = source.lastIndexOf('\n', start - 1) + 1;
-  const prefix = source.slice(lineStart, start);
-  // The parent may move an inline conditional across lines while printing. Count only
-  // the element's indentation so eligibility cannot toggle with parent layout.
-  const indent = prefix.match(/^[ \t]*/)?.[0] ?? '';
-  const estimate = text.replace(/\r?\n[ \t]*/g, ' ');
-  return indent.length + estimate.length <= options.printWidth ? {} : undefined;
+  return true;
 }
 
 export const parsers = {
@@ -68,23 +62,25 @@ export const printers = {
     ...basePrinter,
     print(path, options, print) {
       const node = path.getValue();
-      const compact = node?.type === 'JSXElement' ? compactElement(node, options) : undefined;
+      const compact = node?.type === 'JSXElement' && compactElement(node);
       if (compact) {
-        const opening = ['<', path.call(print, 'openingElement', 'name')];
-        if (node.openingElement.typeArguments) {
-          opening.push(path.call(print, 'openingElement', 'typeArguments'));
-        }
-        for (let index = 0; index < node.openingElement.attributes.length; index += 1) {
-          opening.push(' ', path.call(print, 'openingElement', 'attributes', index));
-        }
-        opening.push(node.openingElement.selfClosing ? ' />' : '>');
-        return group([
-          group(opening),
-          '{',
-          path.call(print, 'children', 0, 'expression'),
-          '}',
-          path.call(print, 'closingElement'),
+        const opening = path.call(print, 'openingElement');
+        const closing = path.call(print, 'closingElement');
+        const content = group([
+          opening,
+          indent([softline, '{', utils.removeLines(path.call(print, 'children', 0, 'expression')), '}']),
+          softline,
+          closing,
         ]);
+        // Keep native parentheses/indentation around conditional JSX. Only replace
+        // its content group; softlines measure the final document, not source columns.
+        const native = basePrinter.print(path, options, print);
+        const compactContent = Symbol('compactContent');
+        utils.traverseDoc(native, (doc) => {
+          const parts = doc.type === 'group' && doc.contents;
+          if (Array.isArray(parts) && parts[0] === opening && parts.at(-1) === closing) doc[compactContent] = true;
+        });
+        return utils.mapDoc(native, (doc) => doc[compactContent] ? content : doc);
       }
       return basePrinter.print(path, options, print);
     },
