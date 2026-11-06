@@ -85,8 +85,14 @@ test('opposite command halfway through the seam retains the painted position and
         const before = position();
         const reverse = controller.prev();
         const after = position();
-        await new Promise(resolve => setTimeout(resolve, 80));
-        const later = position();
+        // A direction change preserves release velocity before turning. Sample
+        // painted frames rather than assuming an 80 ms timer includes a frame.
+        const deadline = performance.now() + 1500;
+        let later = after;
+        while (later >= after && performance.now() < deadline) {
+            await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+            later = position();
+        }
         const outcome = await reverse;
         return { before, after, later, outcome, forward: await forward, state: controller.getSnapshot() };
     });
