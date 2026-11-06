@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties } fr
 
 import { Input } from '../../src/components/Input/Input';
 import { Flex } from '../../src/components/Flex/Flex';
+import { Grid, GridItem } from '../../src/components/Grid/Grid';
 import { Text } from '../../src/components/Text/Text';
 import { Dropdown } from '../../src/components/Dropdown/Dropdown';
 import { Button } from '../../src/components/Button/Button';
@@ -42,6 +43,7 @@ export function CollapseControlsFixture() {
   const [open, setOpen] = useState(false);
   const [accept, setAccept] = useState(true);
   const [appearEnds, setAppearEnds] = useState(0);
+  const [gridOpen, setGridOpen] = useState(false);
   const cleanups = useRef(0);
   const panelRef = useCallback((handle: CollapseControls | null) => {
     panel.current = handle;
@@ -79,6 +81,16 @@ export function CollapseControlsFixture() {
 
   return (
     <section aria-label="Collapse commands" className="fixture" style={{ '--t-d-fast': '0.35s' } as CSSProperties}>
+      <button data-testid="collapse-grid-toggle" onClick={() => setGridOpen(value => !value)}>Swap skeleton and grid</button>
+      <Flex data-testid="collapse-grid-swap" dir={['column', 'column', 'column']}>
+        <Flex collapse={{ open: !gridOpen, gap: [32, 32, 32], fade: true }}>
+          <Flex h={[160, 160, 160]}>Loading skeleton</Flex>
+        </Flex>
+        <Grid data-testid="collapse-grid" collapse={{ open: gridOpen, gap: [32, 32, 32], fade: true }} columns={[2, 1, 2]} gap={[16, 16, 16]}>
+          <GridItem><Flex h={[320, 320, 320]}>Loaded first column</Flex></GridItem>
+          <GridItem><Flex h={[320, 320, 320]}>Loaded second column</Flex></GridItem>
+        </Grid>
+      </Flex>
       {visible && (
         <Input
           ref={input}

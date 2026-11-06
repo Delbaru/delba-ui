@@ -1,5 +1,47 @@
 import { expect, test } from '@playwright/test';
 
+test('Grid collapse starts at zero and swaps normal-flow siblings without a height overshoot', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+  const grid = page.getByTestId('collapse-grid');
+  const surface = page.getByTestId('collapse-grid-swap');
+  await page.getByTestId('collapse-grid-toggle').scrollIntoViewIfNeeded();
+  await expect(grid).toHaveCount(0);
+  const before = await surface.evaluate(node => node.getBoundingClientRect().height);
+  await surface.evaluate(node => {
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function(keyframes, options) {
+      const animation = animate.call(this, keyframes, options);
+      if (this.getAttribute('data-testid') === 'collapse-grid' && animation.id === 'ui-collapse' && animation.effect instanceof KeyframeEffect) {
+        this.setAttribute('data-size-keyframes', JSON.stringify(animation.effect.getKeyframes()));
+      }
+      return animation;
+    };
+    node.setAttribute('data-height-frames', '[]');
+    const start = performance.now();
+    function sample() {
+      const frames = JSON.parse(node.getAttribute('data-height-frames') ?? '[]') as number[];
+      frames.push(node.getBoundingClientRect().height);
+      node.setAttribute('data-height-frames', JSON.stringify(frames));
+      if (performance.now() - start < 800) requestAnimationFrame(sample);
+    }
+    requestAnimationFrame(sample);
+  });
+  await page.getByTestId('collapse-grid-toggle').click();
+  await expect(grid.locator('xpath=../..')).toHaveAttribute('data-settled', 'true');
+  const gridHeight = await grid.evaluate(node => node.getBoundingClientRect().height);
+  const keyframes = await grid.evaluate(node => JSON.parse(node.getAttribute('data-size-keyframes') ?? '[]') as { height?: string }[]);
+  expect(keyframes[0]?.height).toBe('0px');
+  expect(parseFloat(keyframes.at(-1)?.height ?? '0')).toBeCloseTo(gridHeight, 1);
+  const after = await surface.evaluate(node => node.getBoundingClientRect().height);
+  const frames = await surface.evaluate(node => JSON.parse(node.getAttribute('data-height-frames') ?? '[]') as number[]);
+  expect(after).toBeGreaterThan(before);
+  expect(frames.some(height => height > before + 5 && height < after - 5)).toBe(true);
+  expect(Math.max(...frames)).toBeLessThanOrEqual(after + 2);
+  await page.getByTestId('collapse-grid-toggle').click();
+  await expect(grid).toHaveCount(0);
+});
+
 test('accordion animates layout padding and borders all the way to zero', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
