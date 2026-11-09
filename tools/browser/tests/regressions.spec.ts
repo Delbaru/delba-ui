@@ -112,6 +112,18 @@ test('Input calendar action padding toggles once without activating the field ag
   await expect(calendar).toBeVisible();
   await action.click({ position: { x: 2, y: 2 } });
   await expect(calendar).not.toBeVisible();
+
+  await action.focus();
+  await page.keyboard.press('Enter');
+  await expect(calendar).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(calendar).not.toBeVisible();
+  await action.focus();
+  await page.keyboard.press('Space');
+  await expect(calendar).toBeVisible();
+  await action.focus();
+  await page.keyboard.press('Space');
+  await expect(calendar).not.toBeVisible();
 });
 
 test('uncontrolled checkbox visuals and custom form values follow native reset and cancellation', async ({
