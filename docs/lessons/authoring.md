@@ -1282,3 +1282,10 @@ default через общий preserveFocus; обработчик поля не 
 Регрессия использует настоящий внешний label и pointer click по padding:
 до исправления календарь отсутствует, после работают открытие, Escape и повторный
 toggle. Проверены также readonly/disabled, password и самостоятельный Calendar.
+
+Уточнение: скругление frame иконки исключало её углы из hit-test. Pointer в (2, 2)
+попадал в InputActions и лишь отменял default label, не выполняя команду. Роль,
+клавиатура и toggle календаря теперь принадлежат существующему прямоугольному
+InputActions; внутренняя иконка отвечает только за вид. Тот же regression
+`Input calendar action padding toggles once without activating the field again`
+проверяет настоящий click угла, Escape, повторное переключение, Enter и Space.

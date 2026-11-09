@@ -25,7 +25,17 @@ export function InputActions({ actions }: { actions: Actions }) {
         className={styles.InputActions}
         align={['center', 'center', 'center']}
         data-input-action="true"
-        onClick={preserveFocus}
+        role={actions.calendar.visible ? 'button' : undefined}
+        tabIndex={actions.calendar.visible ? 0 : undefined}
+        aria-label={actions.calendar.visible ? UI_MESSAGES.input.openCalendar : undefined}
+        onMouseDown={actions.calendar.visible ? preserveFocus : undefined}
+        onClick={(event) => {
+          preserveFocus(event);
+          if (actions.calendar.visible) actions.calendar.toggle();
+        }}
+        onKeyDown={actions.calendar.visible
+          ? (event) => activateWithKeyboard(event, actions.calendar.toggle)
+          : undefined}
     >
       {actions.password.visible && (
         <Icon
@@ -60,12 +70,6 @@ export function InputActions({ actions }: { actions: Actions }) {
             rootBg={['var(--background)', 'var(--background)', 'var(--background)']}
             rootClassName={styles.dateToggle}
             data-input-action="true"
-            role="button"
-            tabIndex={0}
-            aria-label={UI_MESSAGES.input.openCalendar}
-            onMouseDown={preserveFocus}
-            onClick={actions.calendar.toggle}
-            onKeyDown={(event) => activateWithKeyboard(event, actions.calendar.toggle)}
         />
       )}
       {actions.number.visible && (

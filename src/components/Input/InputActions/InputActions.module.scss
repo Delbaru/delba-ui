@@ -1,5 +1,8 @@
 @layer ui.components {
   .InputActions {
+    &[role='button'] {
+      cursor: pointer;
+    }
     .dateToggle {
       position: relative;
       &::before {
