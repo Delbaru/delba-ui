@@ -30,7 +30,7 @@ function parse(input: TextAnimate | undefined): {
           start: input.start,
           suffix: input.suffix,
           grouped: input.grouped,
-          trigger: input.when === 'load' ? 'onLoad' : 'onView',
+          trigger: input.when === 'change' ? 'onChange' : input.when === 'load' ? 'onLoad' : 'onView',
           duration: input.duration,
         },
       };

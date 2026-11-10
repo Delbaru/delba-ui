@@ -502,6 +502,7 @@ Fallback vw-длины записываются эквивалентным calc:
 <Text animate={{ when: 'change', effect: 'textSlide', duration: 'fast' }}>{title}</Text>
 <Text animate={{ when: 'change', effect: 'textSlide', by: 'text', duration: 'normal' }}>{category}</Text>
 <Text animate={{ when: 'inView', effect: 'counter', duration: 'slow' }}>70%</Text>
+<Text animate={{ when: 'change', effect: 'counter', duration: 'fast' }}>{priceText}</Text>
 ```
 
 У `textSlide` режим `by: 'text'` сменяет всю подпись, включая совпадающие буквы.

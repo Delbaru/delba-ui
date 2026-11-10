@@ -32,13 +32,13 @@ export type TextAnimate =
       hoverColor?: string;
     }
   | {
-      /** Запуск при входе в экран или сразу после монтирования. */
-      when: 'inView' | 'load';
+      /** change сразу показывает первое значение, затем ведёт от текущего кадра к новому; inView/load начинают со start. */
+      when: 'inView' | 'load' | 'change';
       /** Число из содержимого или явного to. */
       effect: 'counter';
       /** Секунды или имя шкалы motion.timing. */
       duration?: MotionTime;
-      /** Начальное число; по умолчанию 0. */
+      /** Начальное число для load/inView, по умолчанию 0; change сохраняет показанное значение. */
       start?: number;
       /** Итоговое число; без него разбирается содержимое Text. */
       to?: number;

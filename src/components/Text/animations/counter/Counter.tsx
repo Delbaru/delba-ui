@@ -16,6 +16,7 @@ import { useMergedRefs } from '../../../../core';
 /**
  * Анимация счётчика: число едет от start к to. trigger='onView' (по умолчанию) запускает анимацию,
  * когда элемент попадает в зону видимости (и сбрасывает при уходе из неё), 'onLoad' — сразу.
+ * 'onChange' сразу показывает первое значение, затем меняет цель от последнего показанного кадра.
  * inView наблюдается на собственном span'е плагина — Text про это ничего не знает.
  *
  * `to`/`suffix`/`grouped` можно не задавать: их достанет parseCountContent из текстового контента
@@ -38,18 +39,29 @@ export function Counter({ options, content }: TextAnimationContext<CounterOption
   const suffix = options?.suffix ?? parsed?.suffix ?? '';
   const grouped = options?.grouped ?? parsed?.grouped ?? false;
   const trigger = options?.trigger ?? 'onView';
-  const shouldStart = trigger === 'onLoad' || (trigger === 'onView' && isInView);
+  const changing = trigger === 'onChange';
+  const shouldStart = changing || trigger === 'onLoad' || (trigger === 'onView' && isInView);
 
-  const start = options?.start ?? 0;
-  const format = (value: number) => (grouped ? value.toLocaleString('ru-RU') : String(value));
+  const initial = useRef(changing ? to : options?.start ?? 0);
+  const start = changing ? initial.current : options?.start ?? 0;
+  const decimal = parsed?.decimal;
+  const format = (value: number) => {
+    if (!decimal) return grouped ? value.toLocaleString('ru-RU') : String(value);
+    const formatted = value.toLocaleString('ru-RU', {
+      useGrouping: grouped,
+      minimumFractionDigits: decimal.places,
+      maximumFractionDigits: decimal.places,
+    });
+    return decimal.separator === ',' ? formatted : formatted.replace(',', decimal.separator);
+  };
   const text = (value: number) => `${prefix}${format(value)}${suffix}`;
 
   useCountUpNode(
     valueRef,
     to,
-    { duration: options?.duration, start },
+    { duration: options?.duration, start, retarget: changing, places: decimal?.places },
     shouldStart,
-    !isInView,
+    !changing && !isInView,
     text,
   );
 

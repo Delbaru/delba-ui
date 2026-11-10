@@ -3,6 +3,7 @@ export interface ParsedCount {
   prefix: string;
   suffix: string;
   grouped: boolean;
+  decimal?: { separator: string; places: number };
 }
 
 const NBSP = ' ';
@@ -16,17 +17,19 @@ const NBSP = ' ';
 export function parseCountContent(content: unknown): ParsedCount | null {
   if (typeof content !== 'string') return null;
 
-  const match = content.match(/\d(?:[\d\s]*\d)?/);
+  const match = content.match(/\d(?:[\d\s]*\d)?(?:[.,]\d+)?/);
   if (!match) return null;
 
   const digits = match[0];
   const index = match.index ?? 0;
-  const to = Number(digits.replace(/\s/g, ''));
+  const decimal = digits.match(/([.,])(\d+)$/);
+  const to = Number(digits.replace(/\s/g, '').replace(',', '.'));
   if (!Number.isFinite(to)) return null;
 
   return {
     to,
     grouped: /\s/.test(digits),
+    ...(decimal?.[1] && decimal[2] ? { decimal: { separator: decimal[1], places: decimal[2].length } } : {}),
     prefix: content.slice(0, index).trimStart().replace(/\s+$/, NBSP),
     suffix: content
       .slice(index + digits.length)
