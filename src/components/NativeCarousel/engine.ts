@@ -76,6 +76,14 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
     const held = () => explicitlyPaused || hovered || focused || !visible || doc.hidden || reduced.matches || Boolean(drag);
     const wrappedIndex = (value: number) => boundedCarouselPage(value, readOptions().count, true);
     const nearest = (value: number) => looping ? wrappedIndex(Math.round(value / span)) : nearestCarouselPage(geometry.offsets, value);
+    // Track transforms own the navigation axis. Browser focus/scrollIntoView may
+    // still reveal overflowing controls on the cross axis without adding a second
+    // navigation offset to the animated track.
+    const resetNativeTrackOffset = () => {
+        if (orientation === 'vertical') {
+            if (viewport.scrollTop !== 0) viewport.scrollTop = 0;
+        } else if (viewport.scrollLeft !== 0) viewport.scrollLeft = 0;
+    };
     const transform = (value: number) => orientation === 'vertical' ? `translate3d(0,${value}px,0)` : `translate3d(${value}px,0,0)`;
     const positionRange = () => looping ? span * readOptions().count : geometry.offsets.at(-1) ?? 0;
     const fraction = (value: number) => {
@@ -307,6 +315,7 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
             lastSnapshot = '';
         }
         root.dataset.orientation = orientation;
+        resetNativeTrackOffset();
         arrange(position);
         root.dataset.looping = String(looping);
         if (wheelAttached !== readOptions().mousewheel) {
@@ -448,6 +457,7 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
     resize.observe(viewport);
     const stopVisibility = observeAnimationVisibility(root, next => { visible = next; schedule(); }, '0px');
     root.dataset.carouselReady = 'true'; viewport.scrollLeft = 0; viewport.scrollTop = 0;
+    viewport.addEventListener('scroll', resetNativeTrackOffset, { passive: true });
     viewport.addEventListener('pointermove', pointerMove, { passive: false });
     viewport.addEventListener('lostpointercapture', lostCapture);
     view.addEventListener('pointerup', finishDrag); view.addEventListener('pointercancel', finishDrag);
@@ -467,6 +477,7 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
             resize.disconnect(); stopVisibility();
             viewport.removeEventListener('pointermove', pointerMove); viewport.removeEventListener('lostpointercapture', lostCapture);
             viewport.removeEventListener('wheel', wheel);
+            viewport.removeEventListener('scroll', resetNativeTrackOffset);
             view.removeEventListener('pointerup', finishDrag); view.removeEventListener('pointercancel', finishDrag);
             viewport.removeEventListener('click', click, true);
             root.removeEventListener('pointerenter', enter); root.removeEventListener('pointerleave', leave);

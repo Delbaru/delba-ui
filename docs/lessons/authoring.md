@@ -1312,3 +1312,22 @@ interacting with a field keeps its input` проверяет текст с яв�
 использует overflow:clip; fallback без JS остаётся scroll/snap. Регрессия
 `focusing a newly visible field during motion cannot add native viewport scrolling`
 фокусирует реальное поле во время next, проверяет offset и сохранность фокуса.
+
+
+## NativeCarousel: не запрещать cross-axis focus-scroll ради единственного владельца позиции
+
+Замена enhanced `overflow: hidden` на `clip` убрала второй нативный offset при
+фокусе нового поля во время движения. Но она также запретила `scrollIntoView` по
+поперечной оси: ссылка чуть ниже фиксированной высоты viewport оставалась частично
+обрезанной, её центр попадал в родительский контейнер и обычный клик не проходил.
+Отмена touch была только триггером теста; подавление клика уже корректно сбрасывалось.
+
+Enhanced viewport сохраняет `hidden`. Двигатель удерживает нулевым только нативный
+scroll offset оси transform-трека через scroll listener, оставляя поперечную ось
+доступной браузерному фокусу. Слушатель снимается при destroy; при смене ориентации
+сбрасывается новая ось. Нет таймеров или постоянного animation-frame цикла.
+
+Воспроизведение и проверка: `native-carousel-rapid.spec.ts` — cancelled native touch
+затем настоящий link.click и смена hash; `native-carousel.spec.ts` — focus во время
+next с нулевым main-axis offset и весь профиль из 15 native сценариев. Не заменять
+клик на force и не увеличивать высоту fixture, чтобы скрыть clipping.
