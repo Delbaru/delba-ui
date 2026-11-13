@@ -26,6 +26,11 @@ test('visual owner requires its own stylesheet, even when all geometry is props'
   assert.match(inspect('Panel/Panel.tsx')[0]?.message ?? '', /отсутствует собственный Panel.module.scss/);
 }));
 
+test('reviewed native page transition boundary needs no artificial DOM or CSS module', () => fixture((_root, write, inspect) => {
+  write('PageTransition/PageTransition.tsx', 'export function PageTransition({children}) { return <React.ViewTransition>{children}</React.ViewTransition>; }');
+  assert.deepEqual(inspect('PageTransition/PageTransition.tsx'), []);
+}));
+
 test('empty named selector plus owning module class is valid without dummy CSS or global marker', () => fixture((_root, write, inspect) => {
   write('Panel/Panel.module.scss', '@layer ui.components { .Panel {} }');
   write('Panel/Panel.tsx', `import local from './Panel.module.scss'; export function Panel() { return <Flex className={local.Panel} />; }`);

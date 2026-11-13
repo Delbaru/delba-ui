@@ -18,6 +18,7 @@ export type {
     ObserverMarginValue,
 } from './core/base/observer-margin';
 import { motionEasing } from './core/base/easing';
+export type { PageTransitionAnimate } from './components/PageTransition/PageTransition.types';
 
 /** Кривые скролла: публичный словарь с автодополнением, без React и стилей. */
 export const scrollEasing = {

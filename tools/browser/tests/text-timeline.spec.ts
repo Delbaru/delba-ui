@@ -1,5 +1,24 @@
 import { expect, test } from '@playwright/test';
 
+test('static slide labels do not invalidate inline transitions before initial measurement', async ({ page }) => {
+  await page.addInitScript(() => {
+    const measure = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function() {
+      if (this instanceof HTMLElement && this.matches('.ui-slide-swap') && !this.querySelector('[data-swap-out]')) {
+        const reads = JSON.parse(sessionStorage.getItem('initialSlideMeasurements') ?? '[]') as string[];
+        reads.push(this.style.transition);
+        sessionStorage.setItem('initialSlideMeasurements', JSON.stringify(reads));
+      }
+      return measure.call(this);
+    };
+  });
+  await page.goto('/');
+  await expect(page.getByTestId('slide-label')).toBeVisible();
+  const reads = await page.evaluate(() => JSON.parse(sessionStorage.getItem('initialSlideMeasurements') ?? '[]') as string[]);
+  expect(reads.length).toBeGreaterThan(0);
+  expect(reads).not.toContain('none');
+});
+
 test('reveal prepares every host before reading scoped duration and preserves cascade cleanup', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.addInitScript(() => {

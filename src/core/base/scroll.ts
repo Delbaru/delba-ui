@@ -129,7 +129,7 @@ export function unregisterScrollProvider(api: ScrollProviderApi): void {
   if (provider === api) provider = null;
 }
 
-function cancelActiveScroll(): void {
+export function cancelActiveScroll(): void {
   const previous = active;
   active = null;
   previous?.cancel();

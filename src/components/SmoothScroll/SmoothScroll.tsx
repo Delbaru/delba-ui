@@ -1,8 +1,8 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useRef } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
-import { registerScrollProvider, unregisterScrollProvider } from '../../core/base/scroll';
+import { registerScrollProvider, unregisterScrollProvider, cancelActiveScroll, scrollTo } from '../../core/base/scroll';
 import { createSmoothScroll, type SmoothScrollConfig, type SmoothScrollController } from './engine';
 import { motionScroll } from '../../core/base/motion-config';
 import { subscribeWindowScroll } from './scroll-events';
@@ -31,6 +31,7 @@ export function useSmoothScrollOptional(): SmoothScrollApi | null {
  */
 export function SmoothScroll({
   children,
+  pathname,
   lerp = motionScroll.lerp,
   wheelMultiplier = 1,
   duration = motionScroll.duration,
@@ -76,6 +77,25 @@ export function SmoothScroll({
     // провайдера, и подписка через движок в первом кадре потерялась бы.
     subscribe: subscribeWindowScroll,
   }), []);
+
+  const previousPath = useRef(pathname);
+  const traversalPath = useRef<string | null>(null);
+  useEffect(() => {
+    const traverse = () => { traversalPath.current = window.location.pathname; };
+    window.addEventListener('popstate', traverse);
+    return () => window.removeEventListener('popstate', traverse);
+  }, []);
+  useLayoutEffect(() => {
+    if (!pathname || previousPath.current === pathname) return;
+    previousPath.current = pathname;
+    cancelActiveScroll();
+    api.stop();
+    const traversing = traversalPath.current === pathname;
+    traversalPath.current = null;
+    if (traversing) return;
+    api.scrollTo(0, { immediate: true });
+    if (window.location.hash) void scrollTo(window.location.hash);
+  }, [pathname, api]);
 
   // Дверь scrollTo ядра едет через этого провайдера, пока он жив, и падает в нативную прокрутку без него.
   useEffect(() => {

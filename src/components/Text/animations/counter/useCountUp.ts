@@ -2,38 +2,15 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
-import { clamp01, prefersReducedMotion } from '../../../../core';
+import { prefersReducedMotion } from '../../../../core';
 import { readMotionTimeMs, type MotionTime } from '../../../../core/base/timing';
-import { configuredMotionEasing, readMotionDefaultMs } from '../../../../core/base/motion-config';
+import { readMotionDefaultMs } from '../../../../core/base/motion-config';
+import { createCountMotion } from './countMotion';
 
 export interface UseCountUpOptions {
   /** Duration in seconds or a motion.timing name. */
   duration?: MotionTime;
   start?: number;
-}
-
-// Ход числа по кадрам. Очистка гасит ТЕКУЩИЙ кадр: id первого кадра к середине хода уже устарел,
-// и цепочка продолжалась бы после размонтирования.
-function runCount(
-  to: number,
-  start: number,
-  duration: number,
-  onFrame: (value: number) => void,
-): () => void {
-  const startTime = performance.now();
-  const diff = to - start;
-  const easing = configuredMotionEasing('counter');
-  let id = 0;
-
-  const tick = (now: number) => {
-    // Метка кадра rAF бывает раньше performance.now() из эффекта: без нижней границы (1-t)**4 > 1 и число уходит в минус.
-    const progress = clamp01((now - startTime) / duration);
-    onFrame(Math.round(start + diff * easing(progress)));
-    if (progress < 1) id = requestAnimationFrame(tick);
-  };
-
-  id = requestAnimationFrame(tick);
-  return () => cancelAnimationFrame(id);
 }
 
 export function useCountUp(
@@ -73,7 +50,9 @@ export function useCountUp(
       setValue(to);
       return;
     }
-    return runCount(to, start, milliseconds, setValue);
+    const motion = createCountMotion(start, setValue);
+    motion.animate(to, milliseconds);
+    return motion.cancel;
   }, [enabled, to, start, duration, resetOnDisable]);
 
   return value;
@@ -87,18 +66,20 @@ export function useCountUp(
 export function useCountUpNode(
   ref: RefObject<HTMLElement | null>,
   to: number,
-  { duration, start = 0 }: UseCountUpOptions,
+  { duration, start = 0, retarget = false, places = 0 }: UseCountUpOptions & { retarget?: boolean; places?: number },
   enabled: boolean,
   resetOnDisable: boolean,
   format: (value: number) => string,
 ): void {
   const formatRef = useRef(format);
+  const motionRef = useRef<{ node: HTMLElement; motion: ReturnType<typeof createCountMotion> } | null>(null);
 
   useLayoutEffect(() => {
     formatRef.current = format;
+    motionRef.current?.motion.refresh();
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = ref.current;
     if (!node) return undefined;
 
@@ -108,14 +89,18 @@ export function useCountUpNode(
         if (node.firstChild.nodeValue !== text) node.firstChild.nodeValue = text;
       } else if (node.textContent !== text) node.textContent = text;
     };
+    if (motionRef.current?.node !== node) {
+      motionRef.current = { node, motion: createCountMotion(start, write) };
+    }
+    const motion = motionRef.current.motion;
 
     if (!enabled) {
-      if (resetOnDisable) write(start);
+      if (resetOnDisable) motion.set(start);
       return undefined;
     }
 
-    if (to === start || prefersReducedMotion()) {
-      write(to);
+    if (prefersReducedMotion()) {
+      motion.set(to);
       return undefined;
     }
 
@@ -124,9 +109,10 @@ export function useCountUpNode(
         ? readMotionDefaultMs('counter', 'duration', node)
         : readMotionTimeMs(duration, node);
     if (durationMs <= 0) {
-      write(to);
+      motion.set(to);
       return undefined;
     }
-    return runCount(to, start, durationMs, write);
-  }, [ref, enabled, to, start, duration, resetOnDisable]);
+    motion.animate(to, durationMs, places, retarget ? undefined : start);
+    return motion.cancel;
+  }, [ref, enabled, to, start, duration, resetOnDisable, retarget, places]);
 }

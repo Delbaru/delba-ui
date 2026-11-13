@@ -100,7 +100,7 @@ test('fresh package imports public motion before any ignored runtime config has 
     });
 });
 
-test('project timing types follow config keys, including custom names and renames', () => {
+test('timing types retain standard defaults and reject removed custom names', () => {
     const fixture = path.join(import.meta.dirname, 'motion-types.fixture.ts');
     const source = `
     import type { MotionTime } from '../../src/core/base/timing';
@@ -112,8 +112,9 @@ test('project timing types follow config keys, including custom names and rename
     }
     const named: MotionTime = 'gentleEase';
     const exact: MotionTime = 0.16;
-    // @ts-expect-error names absent from config cannot be used
-    const oldName: MotionTime = 'slow';
+    const standardDefault: MotionTime = 'slow';
+    // @ts-expect-error removed project names cannot be used
+    const oldName: MotionTime = 'oldProjectStagger';
     // @ts-expect-error misspelled names cannot be used
     const typo: MotionTime = 'gentleEsae';
     const namedDistance: MotionDistance = 'full';

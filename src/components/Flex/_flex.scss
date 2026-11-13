@@ -12,7 +12,7 @@
   }
 }
 
-// Опт-ин сворачивание (проп collapse у Flex). Ход ведёт Web Animations API (`animateCollapse`,
+// Опт-ин сворачивание (проп collapse у layout-компонентов). Ход ведёт Web Animations API (`animateCollapse`,
 // src/core/base/collapse.ts), здесь — ТОЛЬКО два состояния покоя: открыт и закрыт. Переходов в этом
 // файле нет намеренно: CSS-переход ехал бы вторым движением поверх замеренного и ломал монотонность.
 //
@@ -97,17 +97,17 @@
   min-width: 0;
 }
 
-// По высоте клип — сам Flex: он сжимается в ноль вместе с обёрткой, поэтому его рамка, радиус и
+// По высоте клип — сам Flex/Grid: он сжимается в ноль вместе с обёрткой, поэтому его рамка, радиус и
 // тень едут целиком, а режется только содержимое. Внутренний слой не клипает — иначе срезал бы тень.
 .ui-collapse[data-axis='row'] > .ui-collapse-inner {
   display: flex;
   flex-direction: column;
 
-  > .ui-flex {
+  > :is(.ui-flex, .ui-grid) {
     min-height: 0;
   }
 
-  &:not(.ui-collapse-visible) > .ui-flex {
+  &:not(.ui-collapse-visible) > :is(.ui-flex, .ui-grid) {
     overflow: hidden;
   }
 }

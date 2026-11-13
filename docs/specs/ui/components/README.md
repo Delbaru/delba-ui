@@ -73,6 +73,7 @@
 | [CarouselProgress](CarouselProgress.md) | Прогресс воспроизведения из `@delba/ui/carousel` |
 | [CarouselTimer](CarouselTimer.md) | Таймер воспроизведения из `@delba/ui/carousel` |
 | [SmoothScroll](SmoothScroll.md) | Собственная альтернативная механика прокрутки окна |
+| [PageTransition](PageTransition.md) | Нативный переход страниц без перемонтирования роутера |
 
 ## Полнота и сопровождение
 

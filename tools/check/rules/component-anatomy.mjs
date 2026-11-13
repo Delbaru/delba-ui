@@ -8,6 +8,7 @@ const ignoredFile = /\.(?:test|typecheck|type-test|d)\.tsx?$/;
 const componentName = /^[A-Z][A-Za-z0-9]*$/;
 // Reviewed lifecycle adapters add no DOM; their visual owner keeps the marker.
 const nonvisualAdapters = new Map([
+  ['PageTransition/PageTransition.tsx:PageTransition', 'React ViewTransition owns native snapshots; this boundary adds no DOM element.'],
   ['Modal/Modal.tsx:Modal', 'Public mode dispatcher; ModalSurface owns the DOM.'],
   ['Modal/Modal.tsx:DeclarativeModal', 'Declaration/trigger adapter; ModalSurface owns the DOM.'],
   ['Text/animations/textSlide/TextSlide.tsx:TextSlide', 'Dispatches to three renderers; each owns its DOM root.'],

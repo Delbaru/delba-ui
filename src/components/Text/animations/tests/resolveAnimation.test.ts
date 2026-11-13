@@ -37,6 +37,13 @@ test('counter intent preserves seconds and named timing', () => {
 
 });
 
+test('counter change intent delegates to the retargeting counter owner', () => {
+  const resolved = resolveAnimation({ when: 'change', effect: 'counter', duration: 'fast' }, '1 499,50 ₽');
+  assert.equal(resolved.active, true);
+  assert.equal(resolved.options && 'trigger' in resolved.options ? resolved.options.trigger : undefined, 'onChange');
+  assert.equal(resolveAnimation({ when: 'change', effect: 'counter' }, 'Цена по запросу').active, false);
+});
+
 test('textSlide change intent selects the existing swap renderer', () => {
   const modern = resolveAnimation(
     { when: 'change', effect: 'textSlide', duration: 'fast' },

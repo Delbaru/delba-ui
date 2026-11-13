@@ -105,3 +105,4 @@ export type { SharedAnimate } from './hooks/useSharedMotion';
 export * from './components/PhoneField';
 
 export { useScrollProgress, type ScrollProgressOptions } from './hooks/useScrollProgress';
+export { PageTransition, type PageTransitionProps, type PageTransitionAnimate } from './components/PageTransition';

@@ -39,6 +39,8 @@ export interface TextProps
   noreferrer?: boolean;
 
   as?: keyof React.JSX.IntrinsicElements;
+  /** Machine-readable date when rendered as time. */
+  dateTime?: React.TimeHTMLAttributes<HTMLTimeElement>['dateTime'];
   /** Associates Text rendered as a label with its native form control. */
   htmlFor?: React.LabelHTMLAttributes<HTMLLabelElement>['htmlFor'];
   variant?: ResponsiveValue<VariantKey>;

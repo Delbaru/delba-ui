@@ -18,6 +18,7 @@ export function ModalSurface({
   ref,
   id,
   children,
+  controls,
   className = '',
   rootClassName,
   overlayClassName,
@@ -132,6 +133,7 @@ export function ModalSurface({
         tabIndex={-1}
         className={cx(
           styles.Panel,
+          Boolean(controls) && styles.withControls,
           overflowVisible && styles.overflowVisible,
           ...c.value('preset', layout),
           ...panel,
@@ -147,6 +149,7 @@ export function ModalSurface({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={dialog.onKeyDown}
       >
+        {controls}
         <Box
           {...scrollbarProps(scroll?.scrollbar)}
           className={cx(

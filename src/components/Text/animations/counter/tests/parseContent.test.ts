@@ -41,3 +41,12 @@ test('parseCountContent: без цифр — null', () => {
   assert.equal(parseCountContent('∞'), null);
   assert.equal(parseCountContent(42), null);
 });
+
+test('decimal money retains numeric target, precision, grouping and currency suffix', () => {
+  assert.deepEqual(parseCountContent('1\u00a0499,50 ₽'), {
+    to: 1499.5, grouped: true, prefix: '', suffix: '\u00a0₽', decimal: { separator: ',', places: 2 },
+  });
+  assert.deepEqual(parseCountContent('$19.99'), {
+    to: 19.99, grouped: false, prefix: '$', suffix: '', decimal: { separator: '.', places: 2 },
+  });
+});

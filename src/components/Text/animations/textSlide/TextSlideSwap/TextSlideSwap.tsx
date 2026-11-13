@@ -23,6 +23,13 @@ export function TextSlideSwap({ content, options }: TextAnimationContext<TextSli
   useLayoutEffect(() => {
     const vp = viewportRef.current;
     if (!vp) return undefined;
+    if (previous === null) {
+      // Initial labels have no outgoing layer or pinned size. Keep the height for
+      // a later swap without invalidating styles before every sibling's read.
+      if (vp.style.height) vp.style.height = '';
+      lastHeightRef.current = vp.getBoundingClientRect().height;
+      return undefined;
+    }
     vp.style.transition = 'none';
     vp.style.height = '';
     const curH = vp.getBoundingClientRect().height;
@@ -40,7 +47,7 @@ export function TextSlideSwap({ content, options }: TextAnimationContext<TextSli
 
     vp.style.transition = '';
 
-    if (previous === null || fromH === null || prefersReducedMotion(vp.ownerDocument.defaultView)) return undefined;
+    if (fromH === null || prefersReducedMotion(vp.ownerDocument.defaultView)) return undefined;
 
     const animH = Math.abs(fromH - curH) > 0.5;
     const animW = plan.some((p) => Math.abs(p.outW - p.inW) > 0.5);

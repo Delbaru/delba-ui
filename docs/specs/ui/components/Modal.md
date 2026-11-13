@@ -15,6 +15,7 @@
 | `layout`                         | Responsive `default                                                                                                              | fullWidth`; default во всех диапазонах |
 | `closeOn`                        | overlay/escape по умолчанию true; breakpoint закрывает при совпадении                                                            |
 | `scroll`                         | Padding единственного внутреннего scroll-контейнера; `scroll.scrollbar` настраивает scrollbar и по умолчанию следует `ui.config` |
+| `controls`                       | Элементы управления вне внутренней прокрутки, внутри focus boundary диалога; например, внешний крестик |
 | `overflowVisible`                | false; true снимает клип и требует прокрутки со стороны потребителя                                                              |
 | `aria-label` / `aria-labelledby` | Доступное имя диалога                                                                                                            |
 
@@ -82,3 +83,9 @@ scroll lock остаются до измеренного CSS exit.
 Flex column без запрета shrink у содержимого сжимает длинные блоки и убирает overflow.
 Проверка должна подтверждать scrollHeight>clientHeight и настоящий wheel scrollTop,
 а не только наличие overflow-y:auto в CSS.
+
+`controls` располагаются относительно панели. Их наличие разрешает выход за её
+границы, сохраняя прокрутку контента в единственном inner scroll-host. Потребитель
+оставляет место во viewport для внешнего действия и задаёт его доступное имя.
+На узком экране действие можно расположить внутри панели responsive-пропсами.
+Проверь Tab, Escape, overlay и хит-тест внешней кнопки после прокрутки.

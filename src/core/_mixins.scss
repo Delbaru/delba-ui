@@ -32,6 +32,14 @@ $text-roles: (body: p, caption: small, micro: dop);
   }
 }
 
+/// Height-constrained screens: release persistent chrome when content would be obscured.
+/// Width-based geometry continues to use responsive props.
+@mixin short-viewport($max-height) {
+  @media (max-height: $max-height) {
+    @content;
+  }
+}
+
 /// Смещение части интерактивного элемента при hover и клавиатурном фокусе.
 @mixin interaction-shift($target, $distance, $duration: var(--t-d-fast), $properties: translate) {
   #{$target} {
