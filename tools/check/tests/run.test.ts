@@ -89,6 +89,33 @@ test('opt-in incremental consumer types still reject changed source and global d
     }
 });
 
+test('consumer test concurrency is bounded and successful tests report counts', async context => {
+    for (const value of [0, -1, 1.5, 17, NaN]) {
+        assert.throws(() => uiCheckSteps({ config: { testConcurrency: value } }), /testConcurrency/);
+    }
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-test-workers-'));
+    context.after(() => fs.rmSync(fixture, { recursive: true, force: true }));
+    fs.mkdirSync(path.join(fixture, 'src'));
+    for (const name of ['one', 'two']) {
+        fs.writeFileSync(path.join(fixture, 'src', `${name}.test.mjs`), `
+            import {test} from 'node:test';
+            import {appendFileSync} from 'node:fs';
+            test('${name}', async () => {
+                appendFileSync('order.txt', '${name}:start\\n');
+                await new Promise(resolve => setTimeout(resolve, 50));
+                appendFileSync('order.txt', '${name}:end\\n');
+            });
+        `);
+    }
+    const step = uiCheckSteps({ project: fixture, suite: 'project', config: { testConcurrency: 1 } })
+        .find((item: {name: string}) => item.name === 'Тесты проекта');
+    assert.ok(step);
+    const result = await step.run();
+    assert.equal(result.ok, true, result.output);
+    assert.match(result.output, /Tests: 2 passed, 0 failed, 0 skipped/);
+    assert.deepEqual(fs.readFileSync(path.join(fixture, 'order.txt'), 'utf8').trim().split('\n'), ['one:start', 'one:end', 'two:start', 'two:end']);
+});
+
 test('ошибка и исключение не скрывают остальные результаты и делают общий итог красным', async () => {
     const output: string[] = [];
     const ok = await runSteps([
@@ -115,6 +142,28 @@ test('неудачная подготовка и остановленный пр
         ], { write: () => {}, color: false }), false);
         assert.equal(nextRan, false);
     }
+});
+
+test('parallel checks wait for generation, respect their bound and collect both failures', async () => {
+    let prepared = false;
+    let active = 0;
+    let peak = 0;
+    const output: string[] = [];
+    const failed = () => ({ name: 'Independent', run: async () => {
+        assert.equal(prepared, true);
+        active++; peak = Math.max(peak, active);
+        await new Promise(resolve => setTimeout(resolve, 10));
+        active--;
+        return { ok: false, output: 'failure' };
+    } });
+    const ok = await runSteps([
+        { name: 'Generation', required: true, run: () => { prepared = true; return { ok: true }; } },
+        failed(), failed(), failed(),
+    ], { concurrency: 2, write: (line: string) => output.push(line), color: false });
+    assert.equal(ok, false);
+    assert.equal(peak, 2);
+    assert.equal(output.filter(line => line.includes('failure')).length, 3);
+    await assert.rejects(runSteps([], { concurrency: 3 }), /checkConcurrency/);
 });
 
 test('дочерний процесс: stdout успеха скрыт, предупреждения сохранены, ненулевой код означает ошибку', async () => {

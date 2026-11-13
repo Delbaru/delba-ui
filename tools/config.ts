@@ -91,6 +91,10 @@ export interface UiConfig {
     readonly baseline?: string;
     /** Node export conditions for consumer tests only, e.g. react-server for server-only imports. */
     readonly testConditions?: readonly string[];
+    /** Maximum parallel consumer test files. CI defaults to two; accepts integers from 1 to 16. */
+    readonly testConcurrency?: number;
+    /** Independent validation steps after generation: one by default, at most two. */
+    readonly checkConcurrency?: number;
     readonly skins?: UiSkins;
     /**
      * Базовые ширины макета, px: `1rpx = окно / база` на своей полосе, десктоп шире `max` не растёт.

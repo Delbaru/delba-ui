@@ -5,7 +5,7 @@ import { formatStep } from './format.mjs';
 import { startProgress } from './progress.mjs';
 
 /** Node запускается без shell: одинаковые аргументы на Windows и Unix. */
-export function runNode(args, cwd) {
+export function runNode(args, cwd, { showOutput = false } = {}) {
   return new Promise((resolve) => {
     const env = { ...process.env, FORCE_COLOR: '0' };
     // Playwright assigns FORCE_COLOR to its workers; an inherited NO_COLOR makes Node warn.
@@ -25,7 +25,7 @@ export function runNode(args, cwd) {
     child.on('error', (error) => resolve({ ok: false, output: error.message }));
     child.on('close', (code, signal) => resolve({
       ok: code === 0,
-      output: code === 0 ? '' : `${stripVTControlCharacters(output).trim()}\n${signal ? `Процесс остановлен: ${signal}.` : `Код завершения: ${code}.`}`.trim(),
+      output: code === 0 ? (showOutput ? stripVTControlCharacters(output).trim() : '') : `${stripVTControlCharacters(output).trim()}\n${signal ? `Процесс остановлен: ${signal}.` : `Код завершения: ${code}.`}`.trim(),
       warnings: code === 0 ? stripVTControlCharacters(warnings).trim() : '',
       signal,
     }));
@@ -38,10 +38,12 @@ export async function runSteps(steps, {
   color = Boolean(process.stdout.isTTY) && !('NO_COLOR' in process.env) && process.env.FORCE_COLOR !== '0',
   progress = (name) => startProgress(name, { color }),
   label = 'UI',
+  concurrency = 1,
 } = {}) {
+  if (![1, 2].includes(concurrency)) throw new Error('checkConcurrency must be 1 or 2');
   let ok = true;
   const started = performance.now();
-  for (const step of steps) {
+  async function execute(step) {
     let result;
     const stepStarted = performance.now();
     const stopProgress = progress(step.name);
@@ -54,7 +56,15 @@ export async function runSteps(steps, {
     }
     write(formatStep(step.name, { ...result, durationMs: performance.now() - stepStarted }, { color }));
     ok = result.ok && ok;
-    if (result.signal || (!result.ok && step.required)) break;
+    return result;
+  }
+  for (let index = 0; index < steps.length;) {
+    const batch = [steps[index++]];
+    if (!batch[0].required) {
+      while (batch.length < concurrency && index < steps.length && !steps[index].required) batch.push(steps[index++]);
+    }
+    const results = await Promise.all(batch.map(execute));
+    if (results.some((result, offset) => result.signal || (!result.ok && batch[offset].required))) break;
   }
   write(`\n${formatStep(`${label} — ${ok ? 'все проверки прошли' : 'проверка не пройдена'}`, { ok, durationMs: performance.now() - started }, { color })}`);
   return ok;

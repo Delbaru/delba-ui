@@ -10,7 +10,7 @@ const TOOLS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const KIT = path.dirname(TOOLS);
 const require = createRequire(import.meta.url);
 const script = (name) => path.join(TOOLS, name);
-const nodeStep = (name, args, cwd = KIT) => ({ name, run: () => runNode(args, cwd) });
+const nodeStep = (name, args, cwd = KIT, options) => ({ name, run: () => runNode(args, cwd, options) });
 const astStep = (name, ...args) => ({
   name,
   run: () => {
@@ -32,6 +32,10 @@ export function projectSteps(root, config, { update = false, strict = false, fix
 }
 
 export function uiCheckSteps({ project: requestedProject, config = {}, configArg = 'ui.config.ts', fix = false, suite = 'standard', shard, typecheckCache } = {}) {
+  if (config.testConcurrency !== undefined && (!Number.isInteger(config.testConcurrency) || config.testConcurrency < 1 || config.testConcurrency > 16)) {
+    throw new Error('testConcurrency must be an integer from 1 to 16');
+  }
+  const testConcurrency = config.testConcurrency ?? (process.env.CI ? 2 : undefined);
   const project = requestedProject && path.relative(KIT, path.resolve(requestedProject)) !== '' ? requestedProject : undefined;
   if (!['standard', 'all', 'library', 'project', 'browser'].includes(suite)) throw new Error(`Unknown UI suite: ${suite}`);
   if (typecheckCache !== undefined && (!project || suite !== 'project' || !typecheckCache)) {
@@ -60,8 +64,8 @@ export function uiCheckSteps({ project: requestedProject, config = {}, configArg
     ...(!fix ? [{ ...astStep('Архитектура'), suite: 'library' }] : []),
     { ...nodeStep('Границы', [script('check-boundary.mjs')]), suite: 'library' },
     { ...nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']), suite: 'library' },
-    { ...nodeStep('Тесты', ['--import', 'tsx', '--import', pathToFileURL(script('check/unit-runtime.mjs')).href, '--test', ...(process.env.CI ? ['--test-concurrency=2'] : []), '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, 'src/**/*.test.ts', 'tools/**/*.test.ts']), suite: 'library' },
-    ...(projectTests.length ? [{ ...nodeStep('Тесты проекта', [...(config.testConditions ?? []).map((condition) => `--conditions=${condition}`), '--import', pathToFileURL(require.resolve('tsx')).href, '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, ...projectTests], project), suite: 'project' }] : []),
+    { ...nodeStep('Тесты', ['--import', 'tsx', '--import', pathToFileURL(script('check/unit-runtime.mjs')).href, '--test', ...(process.env.CI ? ['--test-concurrency=2'] : []), '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, 'src/**/*.test.ts', 'tools/**/*.test.ts'], KIT, { showOutput: true }), suite: 'library' },
+    ...(projectTests.length ? [{ ...nodeStep('Тесты проекта', [...(config.testConditions ?? []).map((condition) => `--conditions=${condition}`), '--import', pathToFileURL(require.resolve('tsx')).href, '--test', ...(testConcurrency ? [`--test-concurrency=${testConcurrency}`] : []), '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, ...projectTests], project, { showOutput: true }), suite: 'project' }] : []),
     { ...nodeStep('Браузер', [require.resolve('@playwright/test/cli'), 'test', '--config', 'tools/browser/playwright.config.ts', ...(shard ? ['--shard', shard] : [])]), suite: 'browser' },
     ...(fix ? projectChecks.slice(1) : projectChecks).map((step) => ({ ...step, suite: 'project' })),
   ];
@@ -70,7 +74,7 @@ export function uiCheckSteps({ project: requestedProject, config = {}, configArg
 
 export function runUiChecks(options = {}) {
   const suite = options.suite ?? 'standard';
-  return runSteps(uiCheckSteps(options), { label: suite === 'all' ? 'UI' : `UI (${suite})` });
+  return runSteps(uiCheckSteps(options), { label: suite === 'all' ? 'UI' : `UI (${suite})`, concurrency: options.config?.checkConcurrency ?? 1 });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
