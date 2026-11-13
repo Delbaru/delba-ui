@@ -29,7 +29,9 @@
         scroll-snap-align: start;
     }
     .NativeCarousel[data-carousel-ready='true'] .Viewport {
-        overflow: hidden;
+        // Enhanced movement belongs to the track. Unlike hidden, clip cannot
+        // acquire a second native scroll offset when a moving field gets focus.
+        overflow: clip;
         scroll-snap-type: none;
     }
     .NativeCarousel[data-carousel-ready='true'][data-draggable='true'] .Viewport {
@@ -75,7 +77,7 @@
                     .Viewport { overflow-x: auto; overflow-y: hidden; }
                     &[data-carousel-ready='true'][data-draggable='true'] .Viewport { touch-action: pan-y pinch-zoom; }
                 }
-                &[data-carousel-ready='true'] .Viewport { overflow: hidden; scroll-snap-type: none; }
+                &[data-carousel-ready='true'] .Viewport { overflow: clip; scroll-snap-type: none; }
             }
         }
     }

@@ -56,6 +56,17 @@ test('a single slide is visible and interactive after initial measurement and re
     await expect(root.getByRole('textbox', { name: 'Input 1' })).toHaveValue('Single slide works');
 });
 
+test('focusing a newly visible field during motion cannot add native viewport scrolling', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const root = page.getByRole('region', { name: 'Native fixture gallery' });
+    await page.evaluate(() => { void window.__nativeCarousel?.next(); });
+    await root.getByRole('textbox', { name: 'Input 3', exact: true }).focus();
+    await expect.poll(() => root.evaluate(node => node.firstElementChild?.scrollLeft)).toBe(0);
+    await expect.poll(() => page.evaluate(() => window.__nativeCarousel?.getSnapshot().moving)).toBe(false);
+    await expect(root.getByRole('textbox', { name: 'Input 3', exact: true })).toBeFocused();
+    await expect.poll(() => root.evaluate(node => node.firstElementChild?.scrollLeft)).toBe(0);
+});
+
 test('interrupted commands settle once, cancellation and reverse preserve final position', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     const results = await page.evaluate(async () => {

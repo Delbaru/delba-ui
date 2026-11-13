@@ -1303,3 +1303,12 @@ Readonly-редактор с явным user-select:text перекрывал з
 активное drag-состояние запрещает выделение потомкам. Поля и ссылки не запускают
 жест; до/после него выделение разрешено. `real mouse drag changes page and
 interacting with a field keeps its input` проверяет текст с явным userSelect.
+
+### Один владелец позиции: transform и native focus scroll
+
+`overflow:hidden` остаётся программно прокручиваемой областью. Фокус на поле
+появляющегося слайда сдвигал viewport, а движок одновременно применял transform:
+после анимации карточки оставались между позициями. Enhanced viewport теперь
+использует overflow:clip; fallback без JS остаётся scroll/snap. Регрессия
+`focusing a newly visible field during motion cannot add native viewport scrolling`
+фокусирует реальное поле во время next, проверяет offset и сохранность фокуса.

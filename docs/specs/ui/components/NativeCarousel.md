@@ -80,3 +80,8 @@ Unit-проверки геометрии/контроллера/инерции/�
 [Реализация](../../../../src/components/NativeCarousel/NativeCarousel.tsx) ·
 [контроллер](../../../../src/components/NativeCarousel/controller.ts) ·
 [CarouselProgress](CarouselProgress.md) · [CarouselTimer](CarouselTimer.md).
+
+Enhanced viewport использует `overflow: clip`: фокус на появляющемся поле
+во время движения не должен добавлять нативный scrollLeft/scrollTop поверх
+transform трека. Без JS сохраняется обычный scroll/snap fallback. Браузерная
+приёмка фокусирует новое поле во время next и проверяет нулевой native offset.
