@@ -38,6 +38,8 @@
     .NativeCarousel[data-dragging='true'] {
         user-select: none;
         cursor: grabbing;
+        // Readonly editors may explicitly opt back into text selection.
+        * { user-select: none; }
     }
     .NativeCarousel img {
         -webkit-user-drag: none;

@@ -25,7 +25,8 @@ export function NativeCarouselFixture() {
     const carousel = replaced ? replacement : primary;
     const state = useCarouselSnapshot(carousel);
     const [mounted, setMounted] = useState(true);
-    const [count, setCount] = useState(4);
+    const [single] = useState(() => window.location.hash === '#single');
+    const [count, setCount] = useState(single ? 1 : 4);
     const [inertia, setInertia] = useState(false);
     const [loop, setLoop] = useState(false);
     const video = useRef<HTMLVideoElement | null>(null);
@@ -48,12 +49,12 @@ export function NativeCarouselFixture() {
         <Button onClick={() => carousel.stop()}>Stop native</Button>
         <output data-testid="native-state">{JSON.stringify(state)}</output>
         {mounted && <NativeCarousel label="Native fixture gallery" controller={carousel} carouselId="native-fixture" rewind loop={loop} inertia={inertia} speed={0.3}
-            autoplayDelay={0.2} w={[600, 320, 480]} h={[240, 240, 240]} slidesPerView={[2, 1, 1.5]} gap={[16, 12, 16]}
+            autoplayDelay={0.2} w={[600, 320, 480]} h={[240, 240, 240]} slidesPerView={single ? [1, 1, 1] : [2, 1, 1.5]} gap={[16, 12, 16]}
             onKeyDown={event => { if (event.shiftKey) event.preventDefault(); }}
             onPointerDown={event => { if (event.shiftKey) event.preventDefault(); }}>
             {Array.from({ length: count }, (_, index) => <Flex key={index} dir={['column', 'column', 'column']} h={['100%', '100%', '100%']} p={[20, 20, 20]}>
                 <h2>Native slide {index + 1}</h2>
-                <p>Draggable content {index + 1}</p>
+                <p style={{ userSelect: 'text' }}>Draggable content {index + 1}</p>
                 <input aria-label={`Input ${index + 1}`} defaultValue="Editable content" />
                 <a href={`#destination-${index}`}>Native link {index + 1}</a>
                 {index === 0 && <video ref={video} data-testid="native-video" muted playsInline />}

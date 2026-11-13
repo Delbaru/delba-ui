@@ -292,7 +292,8 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
         const nextSpan = (nextSize - Math.max(0, count - 1) * gap) / count + gap;
         const finite = carouselGeometry(readOptions().count, nextSize, gap, count);
         const next = nextLoop ? { offsets: Array.from({ length: readOptions().count }, (_, item) => item * nextSpan), visible: count } : finite;
-        const changed = JSON.stringify(next) !== JSON.stringify(geometry) || nextOrientation !== orientation || looping !== nextLoop;
+        const changed = nextSize !== size || nextSpan !== span || gap !== gapPx ||
+            JSON.stringify(next) !== JSON.stringify(geometry) || nextOrientation !== orientation || looping !== nextLoop;
         if (autoplaySetting !== readOptions().autoplay) { autoplaySetting = readOptions().autoplay; playing = autoplaySetting; explicitlyPaused = false; }
         root.style.setProperty('--native-carousel-gap', `${gap}px`);
         if (changed) {
@@ -359,6 +360,10 @@ export function createNativeCarousel(root: HTMLDivElement, viewport: HTMLDivElem
             drag.active = true;
             viewport.setPointerCapture(event.pointerId);
             root.dataset.dragging = 'true';
+            // Native text selection may already have started below the drag threshold.
+            // Clear only this carousel's selection; unrelated page selections remain intact.
+            const selection = doc.getSelection();
+            if (selection?.anchorNode && viewport.contains(selection.anchorNode)) selection.removeAllRanges();
         }
         event.preventDefault();
         drag.samples.push({ time: event.timeStamp, point: mainCoordinate(event) });

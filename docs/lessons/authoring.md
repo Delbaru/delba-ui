@@ -1289,3 +1289,17 @@ toggle. Проверены также readonly/disabled, password и самос�
 InputActions; внутренняя иконка отвечает только за вид. Тот же regression
 `Input calendar action padding toggles once without activating the field again`
 проверяет настоящий click угла, Escape, повторное переключение, Enter и Space.
+
+### NativeCarousel: первое измерение и выделение при drag
+
+При одном слайде offsets остаются `[0]` до и после первого измерения. Сравнение
+только offsets оставляло size/span нулевыми и скрывало единственный слайд через
+aria-hidden/inert. Update сравнивает также размер viewport, span и gap.
+Регрессия `a single slide is visible and interactive after initial measurement
+and resize` проверяет первый mount, ввод и responsive resize.
+
+Readonly-редактор с явным user-select:text перекрывал запрет выделения предка.
+При начале принятого drag карусель снимает только своё начатое выделение, а
+активное drag-состояние запрещает выделение потомкам. Поля и ссылки не запускают
+жест; до/после него выделение разрешено. `real mouse drag changes page and
+interacting with a field keeps its input` проверяет текст с явным userSelect.

@@ -36,9 +36,24 @@ test('real mouse drag changes page and interacting with a field keeps its input'
     await page.mouse.down();
     await page.mouse.move(start.x + 15, start.y + 8, { steps: 12 });
     await page.mouse.up();
+    expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('');
     await expect(page.getByTestId('native-state')).toContainText('"index":1');
     await root.getByRole('textbox', { name: 'Input 2' }).fill('Typing works');
     await expect(root.getByRole('textbox', { name: 'Input 2' })).toHaveValue('Typing works');
+});
+
+test('a single slide is visible and interactive after initial measurement and resize', async ({ page }) => {
+    await page.goto('/?native-carousel#single');
+    await page.reload();
+    const root = page.getByRole('region', { name: 'Native fixture gallery' });
+    await expect(root).toHaveAttribute('data-carousel-ready', 'true');
+    const slide = root.getByRole('group', { name: '1 из 1' });
+    await expect(slide).not.toHaveAttribute('aria-hidden', 'true');
+    await expect(root.getByRole('textbox', { name: 'Input 1' })).toBeEditable();
+    await root.getByRole('textbox', { name: 'Input 1' }).fill('Single slide works');
+    await page.setViewportSize({ width: 390, height: 840 });
+    await expect(slide).not.toHaveAttribute('aria-hidden', 'true');
+    await expect(root.getByRole('textbox', { name: 'Input 1' })).toHaveValue('Single slide works');
 });
 
 test('interrupted commands settle once, cancellation and reverse preserve final position', async ({ page }) => {
