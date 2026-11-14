@@ -498,3 +498,5 @@ export const Container = ({ className, ...props }: BoxProps) => <Box container c
   `assets`, пакет `@delba/ui` (см. «Переход на 2.0»). Переименование репозитория в `delba-ui` — уже.
 - ~~**`<Container/>` устарел.**~~ Удалён в 2.0, замена — проп `container` у Flex, Grid и Box.
 - ~~**Иконки кита — импортом.**~~ Сделано в 2.0: `assets/` импортом, копия в `public/` не нужна.
+
+Executable project compositions and the Node-only `@delba/ui/config-loader` contract: [configuration](docs/configuration.md).

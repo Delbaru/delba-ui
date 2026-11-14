@@ -1,9 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { focusWhenReady, resolveFocusTarget, shouldYieldFocus } from '../focus';
+import { focusableElements, focusWhenReady, resolveFocusTarget, shouldYieldFocus } from '../focus';
 
 const fakeElement = (editable: boolean) => ({ matches: () => editable }) as unknown as Element;
+
+test('focusableElements keeps scope order and excludes disabled, hidden, inert and unpainted candidates', () => {
+    function candidate({ disabled = false, blocked = false, visible = true } = {}) {
+        return { matches: () => disabled, closest: () => blocked ? {} : null,
+            getClientRects: () => visible ? [1] : [] } as unknown as HTMLElement;
+    }
+    const first = candidate();
+    const last = candidate();
+    const scope = { querySelectorAll: () => [candidate({ disabled: true }), first,
+        candidate({ blocked: true }), candidate({ visible: false }), last] } as unknown as ParentNode;
+    assert.deepEqual(focusableElements(scope), [first, last]);
+    assert.deepEqual(focusableElements(null), []);
+});
 
 test('resolveFocusTarget: ref разворачивается, пустое значение — null', () => {
     const node = { tagName: 'TEXTAREA' } as unknown as HTMLElement;

@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from 'react';
+import { focusableElements } from '../../core';
 
 type Edge = 'first' | 'last';
 type KeyboardCommand = { action: 'open'; edge: Edge } | { action: 'focus'; target: HTMLElement } | { action: 'consume' };
@@ -10,14 +11,10 @@ interface KeyboardScope {
   mode: 'menu' | 'content';
 }
 const EDITABLE = 'input, textarea, select, [contenteditable="true"]';
-const FOCUSABLE = 'button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
 /** Menu navigation is a policy; content widgets keep their own arrow keys. */
 export const dropdownKeyboard = {
-  items(panel: HTMLElement | null): HTMLElement[] {
-    return [...(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])]
-      .filter(node => !node.closest('[hidden], [inert]') && node.getClientRects().length > 0);
-  },
+  items: focusableElements,
   command(event: KeyboardEvent<HTMLElement>, scope: KeyboardScope): KeyboardCommand | undefined {
     if (scope.mode === 'content') return;
     const view = event.currentTarget.ownerDocument.defaultView;
@@ -43,7 +40,7 @@ export const dropdownKeyboard = {
       Home: 0,
       End: items.length - 1,
       ArrowDown: (current + 1) % items.length,
-      ArrowUp: (current - 1 + items.length) % items.length,
+      ArrowUp: current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length,
     };
     const index = destinations[event.key];
     const next = index === undefined ? undefined : items[index];

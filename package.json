@@ -25,7 +25,11 @@
     "./config": "./tools/config.ts",
     "./motion": "./src/motion.ts",
     "./startup": "./src/startup.ts",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./config-loader": {
+      "types": "./tools/config-loader.d.mts",
+      "default": "./tools/config-loader.mjs"
+    }
   },
   "bin": {
     "delba-ui": "./tools/cli.mjs"

@@ -17,6 +17,15 @@ const DEFAULT_TIMEOUT_MS = 1000;
 const EDITABLE_SELECTOR = 'input, textarea, select, [contenteditable="true"], [contenteditable=""]';
 const BLOCKING_ATTRIBUTES = ['inert', 'hidden', 'disabled', 'class', 'style'];
 
+const FOCUSABLE_SELECTOR = 'button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [contenteditable="true"], [tabindex]:not([tabindex="-1"])';
+
+/** Visible, enabled focus candidates inside the supplied scope, in document order; never includes the scope itself. */
+export function focusableElements(scope: ParentNode | null | undefined): HTMLElement[] {
+  return [...(scope?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])].filter(
+    element => !element.matches(':disabled') && !element.closest('[hidden], [inert]') && element.getClientRects().length > 0,
+  );
+}
+
 /** Узел цели: `ref` разворачивается, пустое значение — `null`. */
 export function resolveFocusTarget(target: FocusTarget): HTMLElement | null {
   if (!target) return null;
