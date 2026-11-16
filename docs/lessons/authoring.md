@@ -1355,3 +1355,11 @@ WAAPI size-keyframe равен нулю, промежуточные высоты
 counter/tests/{countMotion,parseContent,render}.test.ts — дробная цель, быстрый
 разворот, один активный кадр, cleanup и SSR без нуля. Браузер отдельно проверяет
 изменение настоящей цены, reduced motion и точность итогового текста.
+
+## React-контекст имеет клиентскую границу
+
+handles.ts создаёт React Context и использует useContext/useEffect; без
+'use client' серверный импорт публичного barrel при prerender ломал Next
+с ошибкой createContext в RSC. Граница принадлежит модулю handles, а не всему
+пакету или странице потребителя. Проверка: handles.test.ts и production build
+с серверным импортом Skeleton/Text и Suspense вокруг query-зависимой формы.

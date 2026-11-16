@@ -112,6 +112,8 @@ export function VideoPlayer({
                         variant={['body', null, null]}
                         color='var(--white-100)'
                         whiteSpace={['nowrap', null, null]}
+                        minW={[0, 0, 0]}
+                        ellipsis
                     >{label}</Text>
                 </div>
             ) : null}

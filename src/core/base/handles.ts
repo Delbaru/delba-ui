@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, createElement, useContext, useEffect, type ReactNode } from 'react';
 
 /** Ручка доменного блока — набор глаголов поверх дверей кита (`focus`, `reveal`…). */

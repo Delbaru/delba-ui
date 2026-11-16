@@ -33,11 +33,12 @@ export const ICON = {
     fullscreenQuit: assetUrl(fullscreenQuitIcon),
 };
 
-/** Formats finite playback time as HH:MM:SS. */
+/** Minutes and seconds for short clips; hours appear only when needed. */
 export function formatClock(totalSeconds: number): string {
     const safe = Number.isFinite(totalSeconds) && totalSeconds > 0 ? Math.floor(totalSeconds) : 0;
 
-    return `${pad(Math.floor(safe / 3600))}:${pad(Math.floor((safe % 3600) / 60))}:${pad(safe % 60)}`;
+    const minutes = `${pad(Math.floor((safe % 3600) / 60))}:${pad(safe % 60)}`;
+    return safe >= 3600 ? `${pad(Math.floor(safe / 3600))}:${minutes}` : minutes;
 }
 
 

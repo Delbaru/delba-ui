@@ -36,6 +36,8 @@
       }
 
       .labelBar {
+          min-width: 0;
+          max-width: calc(100% - 16 * var(--rpx));
           align-self: flex-start;
           gap: calc(8 * var(--rpx));
           // Лейбл источника — компактнее бара управления (как в макете: py 8, px 16).
@@ -43,7 +45,11 @@
       }
 
       .controlBar {
-          gap: calc(16 * var(--rpx));
+          min-width: 0;
+          max-width: calc(100% - 16 * var(--rpx));
+          flex-wrap: wrap;
+          margin-top: auto;
+          gap: calc(12 * var(--rpx));
       }
 
       // Автоскрытие: бар уезжает вниз, лейбл — вверх.
@@ -97,6 +103,7 @@
 
       // Таймлайн: увеличенная зона захвата, внутри — тонкий трек с заполнением.
       .timeline {
+          min-width: calc(24 * var(--rpx));
           position: relative;
           display: flex;
           flex: 1;
@@ -140,7 +147,7 @@
           left: 0;
           width: 0;
           border-radius: inherit;
-          background: var(--primary);
+          background: var(--video-player-accent, var(--primary));
       }
 
       // Точка-playhead: текущая позиция (на конце проигранной части), всегда видна, на ховере чуть крупнее.
@@ -151,7 +158,7 @@
           width: calc(12 * var(--rpx));
           height: calc(12 * var(--rpx));
           border-radius: 50%;
-          background: var(--primary);
+          background: var(--video-player-accent, var(--primary));
           pointer-events: none;
           transform: translate(-50%, -50%);
           transition: transform var(--t-d-fast) var(--t-t-f-ease);
@@ -219,7 +226,7 @@
           left: 0;
           height: 0;
           border-radius: inherit;
-          background: var(--white-100);
+          background: var(--video-player-accent, var(--primary));
       }
   }
 
