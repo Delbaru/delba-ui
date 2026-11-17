@@ -43,12 +43,34 @@ function SearchSelectFixture() {
   </form>;
 }
 
+function LongSearchSelectFixture() {
+  const [query, setQuery] = useState('Раменское');
+  return <div style={{ position: 'fixed', bottom: 12, left: 64, right: 64 }}>
+    <Select
+        search={{ value: query, onChange: setQuery, placeholder: 'Населённый пункт' }}
+        options={[
+          { value: '0', label: 'Раменское' },
+          { value: '1', label: 'Московская обл, г Раменское' },
+          { value: '2', label: 'Тверская обл, г Ржев, деревня Раменское' },
+          { value: '3', label: 'Красноярский край, Пировский р-н, деревня Раменское' },
+        ]}
+        w={['100%', '100%', '100%']}
+        h={[44, 44, 44]}
+        p={[[12, 16], [12, 16], [12, 16]]}
+        r={[0, 0, 0]}
+        border={['1px solid var(--line)', '1px solid var(--line)', '1px solid var(--line)']}
+        panel={{ r: [0, 0, 0], minH: [152, 152, 152], maxH: [152, 152, 152] }}
+    />
+  </div>;
+}
+
 export function DropdownOpenFixture() {
   const anchor = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [accept, setAccept] = useState(true);
   const [mounted, setMounted] = useState(true);
   const [point, setPoint] = useState<{ x: number; y: number; target: HTMLElement } | null>(null);
+  if (location.hash === '#long-search') return <LongSearchSelectFixture />;
   return <section aria-label="Animated dropdown contracts" style={{ padding: 20 }}>
     <SearchSelectFixture />
     <button onClick={(event) => {

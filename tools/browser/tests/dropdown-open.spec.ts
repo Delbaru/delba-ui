@@ -283,3 +283,32 @@ test('point menu keeps focus inside when its controlled owner rejects closing', 
   await action.press('Escape');
   await expect(action).toBeFocused();
 });
+
+test('mobile flipped search panel keeps long Russian option labels inside separate rows', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 300 });
+  await page.goto('/?dropdown-open#long-search');
+  await page.addStyleTag({ content: 'html,body,*,*::before,*::after{box-sizing:border-box}' });
+  const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+  await input.click();
+  const list = page.getByRole('listbox');
+  await expect(list).toBeVisible();
+  const field = await input.evaluate(node => node.closest('[class*="SelectTrigger"]')!.parentElement!.getBoundingClientRect().top);
+  const panel = await list.boundingBox();
+  expect(panel!.y + panel!.height).toBeLessThanOrEqual(field + 2);
+  const rows = await page.getByRole('option').evaluateAll(options => options.map(option => {
+    const row = option.getBoundingClientRect();
+    const label = option.querySelector('[class*="OptionLabel"]')!;
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const text = range.getBoundingClientRect();
+    return { top: row.top, bottom: row.bottom, textTop: text.top, textBottom: text.bottom, lines: range.getClientRects().length };
+  }));
+  expect(rows.some(row => row.lines > 1)).toBe(true);
+  for (const [index, row] of rows.entries()) {
+    expect(row.textTop).toBeGreaterThanOrEqual(row.top - 1);
+    expect(row.textBottom).toBeLessThanOrEqual(row.bottom + 1);
+    if (index) expect(row.textTop).toBeGreaterThanOrEqual(rows[index - 1].textBottom);
+  }
+  expect(await list.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath('long-russian-search-mobile.png') });
+});

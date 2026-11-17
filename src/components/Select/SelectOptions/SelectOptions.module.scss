@@ -30,6 +30,7 @@
     }
   }
   .Option {
+    flex-shrink: 0;
     padding: var(--select-option-padding, calc(12 * var(--rpx)) calc(16 * var(--rpx)));
     cursor: pointer;
     min-height: var(--select-height);
