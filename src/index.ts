@@ -46,6 +46,7 @@ export {
   composeEventHandlers,
   cx,
   focusWhenReady,
+  focusableElements,
   preserveFocus,
   MEDIA_QUERY,
   motion,

@@ -10,3 +10,10 @@ const conflicting: DropdownProps = { trigger, anchorRef: anchor, children: null 
 // @ts-expect-error A controlled owner must receive requests to change open.
 const uncontrolledCallback: DropdownProps = { anchorRef: anchor, open: true, children: null };
 void [anchored, triggered, conflicting, uncontrolledCallback];
+
+const pointed: DropdownProps = { point: { x: 0, y: 0 }, open: true, onOpenChange: () => {}, initialFocus: 'first', children: null };
+// @ts-expect-error Point and DOM geometry are mutually exclusive.
+const ambiguousPoint: DropdownProps = { point: { x: 1, y: 1 }, anchorRef: anchor, children: null };
+// @ts-expect-error Point and trigger are mutually exclusive.
+const pointedTrigger: DropdownProps = { point: null, trigger, children: null };
+void [pointed, ambiguousPoint, pointedTrigger];

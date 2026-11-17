@@ -7,13 +7,14 @@
 
 | Проп | Договор |
 |---|---|
-| trigger / anchorRef | Взаимоисключающие варианты: React-trigger или внешний DOM-якорь |
+| trigger / anchorRef / point | Взаимоисключающие варианты: React-trigger, DOM-якорь или viewport-точка |
 | open + onOpenChange | Controlled-состояние, callback обязателен |
 | defaultOpen | Uncontrolled-состояние, начально false |
 | children | Узлы либо функция (close) => ReactNode |
 | panel | Оформление и геометрия поверхности |
 | keyboard | menu по умолчанию; content оставляет стрелки содержимому |
 | focusRegions | Дополнительные логические области фокуса, не pointer-inside |
+| initialFocus | first/last при controlled-открытии; без значения фокус сохраняется |
 | preserveFocus | Сохранять фокус поля при pointer-действии внутри поверхности |
 | returnFocus | Ref возврата после подтверждённого закрытия либо false |
 | surfaceRef | Ref настоящей окрашенной поверхности |
@@ -23,7 +24,7 @@
 
 panel defaults: side=start, offset=8 дизайн-единиц, matchTriggerWidth=false,
 keepMounted=true, viewportPadding=8 CSS px. portal=false с trigger и true с внешним
-anchorRef. panel.anchorRef меняет геометрию trigger-сценария, сохраняя его клавиатуру.
+anchorRef и point. panel.anchorRef меняет геометрию trigger-сценария, сохраняя его клавиатуру.
 Внешний anchorRef не создаёт trigger или дополнительную корневую обёртку.
 inheritVariables переносит выбранные CSS-переменные в портал.
 
@@ -81,3 +82,8 @@ reduced motion и пользовательские отменённые собы
 после завершения всей миграции DelbaUI.
 
 Источник: [Dropdown.tsx](../../../../src/components/Dropdown/Dropdown.tsx).
+
+Точечное меню использует `point={{ x, y, target }}` и `initialFocus="first"`.
+Реальный target задаёт документ, модальный портал и возврат фокуса; без target
+используется body текущего документа. `point={null}` допустим для закрытого меню.
+Target точечного меню не считается pointer-inside: клик по нему закрывает меню.

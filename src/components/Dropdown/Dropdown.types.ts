@@ -46,6 +46,8 @@ interface DropdownBaseProps extends Omit<BoxProps, 'children'> {
   focusRegions?: readonly RefObject<HTMLElement | null>[];
   /** Menu navigation or content-owned keyboard behavior. Default menu. */
   keyboard?: 'menu' | 'content';
+  /** Focus an edge when opening a controlled context menu; omitted preserves current focus. */
+  initialFocus?: 'first' | 'last';
   /** Keep pointer actions from moving focus out of the owning field. */
   preserveFocus?: boolean;
   /** Restore focus after a confirmed close. Defaults to the trigger/anchor. */
@@ -71,10 +73,18 @@ type DropdownAnchor =
   | {
       /** Clickable opener; its handler can cancel toggling. */ trigger: ReactElement<DropdownTriggerProps>;
       anchorRef?: never;
+      point?: never;
     }
   | {
       /** External geometry anchor; this variant creates no trigger or root wrapper. */ anchorRef: RefObject<HTMLElement | null>;
       trigger?: never;
+      point?: never;
+    }
+  | {
+      /** Viewport point; target supplies the real document, modal and return-focus context. Null is closed. */
+      point: { x: number; y: number; target?: HTMLElement } | null;
+      trigger?: never;
+      anchorRef?: never;
     };
 
 export type DropdownProps = DropdownBaseProps &

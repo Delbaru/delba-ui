@@ -12,72 +12,237 @@ const require = createRequire(import.meta.url);
 const script = (name) => path.join(TOOLS, name);
 const nodeStep = (name, args, cwd = KIT) => ({ name, run: () => runNode(args, cwd) });
 const astStep = (name, ...args) => ({
-  name,
-  run: () => {
-    const diagnostics = check(...args);
-    return { ok: diagnostics.length === 0, diagnostics };
-  },
+    name,
+    run: () => {
+        const diagnostics = check(...args);
+        return { ok: diagnostics.length === 0, diagnostics };
+    },
 });
 
 /** Один список шагов для быстрой проверки проекта и полной проверки UI. */
-export function projectSteps(root, config, { update = false, strict = false, fix = false } = {}) {
-  const configs = readdirSync(root).filter((file) => /^(next|ui).config./.test(file));
-  return [
-    nodeStep('Правила проекта', [script('check-rules.mjs'), '--baseline', config.baseline ?? '.rules-baseline.json', ...(update ? ['--update'] : []), ...(fix ? ['--fix'] : []), ...(config.rules ?? ['src'])], root),
-    nodeStep('Тема', [script('check-tokens.mjs'), ...(strict ? ['--strict'] : []), ...(config.themeDefaults ? ['--with-defaults'] : []), ...[config.theme ?? 'theme'].flat(), ...(config.motion ? ['--generated-motion', path.join(KIT, 'src/core/_motion.scss')] : []), ...(config.typography ? ['--typography', config.typography.join(',')] : [])], root),
-    nodeStep('Импорты', [script('check-migration.mjs'), ...(config.rules ?? ['src']), ...configs], root),
-    nodeStep('Анатомия D-компонентов', [script('check-d-component-anatomy.mjs')], root),
-    astStep('Архитектура проекта', root, { rules: projectRules, dirs: config.rules ?? ['src'] }),
-  ];
+export function projectSteps(
+    root,
+    config,
+    { update = false, strict = false, fix = false, configFiles = [] } = {},
+) {
+    const configs = [
+        ...new Set([
+            ...readdirSync(root).filter((file) => /^(next|ui|delba)\.config\./.test(file)),
+            ...configFiles,
+        ]),
+    ];
+    return [
+        nodeStep(
+            'Правила проекта',
+            [
+                script('check-rules.mjs'),
+                '--baseline',
+                config.baseline ?? '.rules-baseline.json',
+                ...(update ? ['--update'] : []),
+                ...(fix ? ['--fix'] : []),
+                ...(config.rules ?? ['src']),
+            ],
+            root,
+        ),
+        nodeStep(
+            'Тема',
+            [
+                script('check-tokens.mjs'),
+                ...(strict ? ['--strict'] : []),
+                ...(config.themeDefaults ? ['--with-defaults'] : []),
+                ...[config.theme ?? 'theme'].flat(),
+                ...(config.motion
+                    ? ['--generated-motion', path.join(KIT, 'src/core/_motion.scss')]
+                    : []),
+                ...(config.typography ? ['--typography', config.typography.join(',')] : []),
+            ],
+            root,
+        ),
+        nodeStep(
+            'Импорты',
+            [script('check-migration.mjs'), ...(config.rules ?? ['src']), ...configs],
+            root,
+        ),
+        nodeStep('Анатомия D-компонентов', [script('check-d-component-anatomy.mjs')], root),
+        astStep('Архитектура проекта', root, {
+            rules: projectRules,
+            dirs: config.rules ?? ['src'],
+        }),
+    ];
 }
 
-export function uiCheckSteps({ project: requestedProject, config = {}, configArg = 'ui.config.ts', fix = false, suite = 'standard', shard, typecheckCache } = {}) {
-  const project = requestedProject && path.relative(KIT, path.resolve(requestedProject)) !== '' ? requestedProject : undefined;
-  if (!['standard', 'all', 'library', 'project', 'browser'].includes(suite)) throw new Error(`Unknown UI suite: ${suite}`);
-  if (typecheckCache !== undefined && (!project || suite !== 'project' || !typecheckCache)) {
-    throw new Error('--typecheck-cache requires a consumer and --suite project');
-  }
-  if (fix && !['standard', 'all'].includes(suite)) throw new Error('--fix requires --suite standard or all');
-  if (shard !== undefined) {
-    const match = /^(\d+)\/(\d+)$/.exec(shard);
-    if (suite !== 'browser' || !match || Number(match[1]) < 1 || Number(match[1]) > Number(match[2])) {
-      throw new Error('--shard requires --suite browser and a valid index/total');
+export function uiCheckSteps({
+    project: requestedProject,
+    config = {},
+    configArg,
+    fix = false,
+    suite = 'standard',
+    shard,
+    typecheckCache,
+} = {}) {
+    const project =
+        requestedProject && path.relative(KIT, path.resolve(requestedProject)) !== ''
+            ? requestedProject
+            : undefined;
+    if (!['standard', 'all', 'library', 'project', 'browser'].includes(suite))
+        throw new Error(`Unknown UI suite: ${suite}`);
+    if (typecheckCache !== undefined && (!project || suite !== 'project' || !typecheckCache)) {
+        throw new Error('--typecheck-cache requires a consumer and --suite project');
     }
-  }
-  const source = project ? path.join(project, 'src') : undefined;
-  const projectTests = source && existsSync(source)
-    ? readdirSync(source, { recursive: true })
-      .filter((file) => /\.test\.(?:[cm]?[jt]s|tsx|jsx)$/.test(file))
-      .map((file) => path.join('src', file)).sort()
-    : [];
-  const projectChecks = project ? projectSteps(project, config, { strict: true, fix }) : [];
-  const steps = [
-    ...(requestedProject ? [{ ...nodeStep('Генерация', [script('cli.mjs'), 'build', '--config', configArg], requestedProject), required: true }] : []),
-    ...(fix ? [astStep('Архитектура', undefined, { fix: true })] : []),
-    ...(fix ? projectChecks.slice(0, 1) : []),
-    { ...nodeStep('Типы', [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json', '--noEmit', '--incremental', 'false']), suite: 'library' },
-    ...(project ? [{ ...nodeStep('Типы проекта', [require.resolve('typescript/bin/tsc'), '--noEmit', '--incremental', typecheckCache ? 'true' : 'false', ...(typecheckCache ? ['--tsBuildInfoFile', typecheckCache] : [])], project), suite: 'project' }] : []),
-    ...(!fix ? [{ ...astStep('Архитектура'), suite: 'library' }] : []),
-    { ...nodeStep('Границы', [script('check-boundary.mjs')]), suite: 'library' },
-    { ...nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']), suite: 'library' },
-    { ...nodeStep('Тесты', ['--import', 'tsx', '--import', pathToFileURL(script('check/unit-runtime.mjs')).href, '--test', ...(process.env.CI ? ['--test-concurrency=2'] : []), '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, 'src/**/*.test.ts', 'tools/**/*.test.ts']), suite: 'library' },
-    ...(projectTests.length ? [{ ...nodeStep('Тесты проекта', [...(config.testConditions ?? []).map((condition) => `--conditions=${condition}`), '--import', pathToFileURL(require.resolve('tsx')).href, '--test', '--test-reporter', pathToFileURL(script('check/reporter.mjs')).href, ...projectTests], project), suite: 'project' }] : []),
-    { ...nodeStep('Браузер', [require.resolve('@playwright/test/cli'), 'test', '--config', 'tools/browser/playwright.config.ts', ...(shard ? ['--shard', shard] : [])]), suite: 'browser' },
-    ...(fix ? projectChecks.slice(1) : projectChecks).map((step) => ({ ...step, suite: 'project' })),
-  ];
-  return steps.filter((step) => suite === 'all' || step.required || (suite === 'standard' ? step.suite !== 'browser' : step.suite === suite));
+    if (fix && !['standard', 'all'].includes(suite))
+        throw new Error('--fix requires --suite standard or all');
+    if (shard !== undefined) {
+        const match = /^(\d+)\/(\d+)$/.exec(shard);
+        if (
+            suite !== 'browser' ||
+            !match ||
+            Number(match[1]) < 1 ||
+            Number(match[1]) > Number(match[2])
+        ) {
+            throw new Error('--shard requires --suite browser and a valid index/total');
+        }
+    }
+    const source = project ? path.join(project, 'src') : undefined;
+    const projectTests =
+        source && existsSync(source)
+            ? readdirSync(source, { recursive: true })
+                  .filter((file) => /\.test\.(?:[cm]?[jt]s|tsx|jsx)$/.test(file))
+                  .map((file) => path.join('src', file))
+                  .sort()
+            : [];
+    const projectChecks = project
+        ? projectSteps(project, config, {
+              strict: true,
+              fix,
+              configFiles: configArg ? [configArg] : [],
+          })
+        : [];
+    const steps = [
+        ...(requestedProject
+            ? [
+                  {
+                      ...nodeStep(
+                          'Генерация',
+                          [
+                              script('cli.mjs'),
+                              'build',
+                              ...(configArg ? ['--config', configArg] : []),
+                          ],
+                          requestedProject,
+                      ),
+                      required: true,
+                  },
+              ]
+            : []),
+        ...(fix ? [astStep('Архитектура', undefined, { fix: true })] : []),
+        ...(fix ? projectChecks.slice(0, 1) : []),
+        {
+            ...nodeStep('Типы', [
+                require.resolve('typescript/bin/tsc'),
+                '-p',
+                'tsconfig.json',
+                '--noEmit',
+                '--incremental',
+                'false',
+            ]),
+            suite: 'library',
+        },
+        ...(project
+            ? [
+                  {
+                      ...nodeStep(
+                          'Типы проекта',
+                          [
+                              require.resolve('typescript/bin/tsc'),
+                              '--noEmit',
+                              '--incremental',
+                              typecheckCache ? 'true' : 'false',
+                              ...(typecheckCache ? ['--tsBuildInfoFile', typecheckCache] : []),
+                          ],
+                          project,
+                      ),
+                      suite: 'project',
+                  },
+              ]
+            : []),
+        ...(!fix ? [{ ...astStep('Архитектура'), suite: 'library' }] : []),
+        { ...nodeStep('Границы', [script('check-boundary.mjs')]), suite: 'library' },
+        {
+            ...nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']),
+            suite: 'library',
+        },
+        {
+            ...nodeStep('Тесты', [
+                '--import',
+                'tsx',
+                '--import',
+                pathToFileURL(script('check/unit-runtime.mjs')).href,
+                '--test',
+                ...(process.env.CI ? ['--test-concurrency=2'] : []),
+                '--test-reporter',
+                pathToFileURL(script('check/reporter.mjs')).href,
+                'src/**/*.test.ts',
+                'tools/**/*.test.ts',
+            ]),
+            suite: 'library',
+        },
+        ...(projectTests.length
+            ? [
+                  {
+                      ...nodeStep(
+                          'Тесты проекта',
+                          [
+                              ...(config.testConditions ?? []).map(
+                                  (condition) => `--conditions=${condition}`,
+                              ),
+                              '--import',
+                              pathToFileURL(require.resolve('tsx')).href,
+                              '--test',
+                              '--test-reporter',
+                              pathToFileURL(script('check/reporter.mjs')).href,
+                              ...projectTests,
+                          ],
+                          project,
+                      ),
+                      suite: 'project',
+                  },
+              ]
+            : []),
+        {
+            ...nodeStep('Браузер', [
+                require.resolve('@playwright/test/cli'),
+                'test',
+                '--config',
+                'tools/browser/playwright.config.ts',
+                ...(shard ? ['--shard', shard] : []),
+            ]),
+            suite: 'browser',
+        },
+        ...(fix ? projectChecks.slice(1) : projectChecks).map((step) => ({
+            ...step,
+            suite: 'project',
+        })),
+    ];
+    return steps.filter(
+        (step) =>
+            suite === 'all' ||
+            step.required ||
+            (suite === 'standard' ? step.suite !== 'browser' : step.suite === suite),
+    );
 }
 
 export function runUiChecks(options = {}) {
-  const suite = options.suite ?? 'standard';
-  return runSteps(uiCheckSteps(options), { label: suite === 'all' ? 'UI' : `UI (${suite})` });
+    const suite = options.suite ?? 'standard';
+    return runSteps(uiCheckSteps(options), { label: suite === 'all' ? 'UI' : `UI (${suite})` });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  try {
-    process.exitCode = await runUiChecks() ? 0 : 1;
-  } catch (error) {
-    console.error(`✗ UI — проверка не выполнена\n  ${error instanceof Error ? error.message : String(error)}`);
-    process.exitCode = 1;
-  }
+    try {
+        process.exitCode = (await runUiChecks()) ? 0 : 1;
+    } catch (error) {
+        console.error(
+            `✗ UI — проверка не выполнена\n  ${error instanceof Error ? error.message : String(error)}`,
+        );
+        process.exitCode = 1;
+    }
 }

@@ -3,7 +3,10 @@ import type { ScrollbarOptions } from '../src/components/ScrollArea/scrollbar';
 import type { ExtractOptions } from './utilities/extract';
 import type { ObserverMargin } from '../src/core/base/observer-margin';
 import type { UiMessageOverrides } from '../src/core/base/message-defaults';
-import type { CarouselBehaviorDefaults, MotionDefaultOverrides } from '../src/core/base/motion-defaults';
+import type {
+    CarouselBehaviorDefaults,
+    MotionDefaultOverrides,
+} from '../src/core/base/motion-defaults';
 import type {
     MotionEasingOverrides,
     MotionEasingName,
@@ -71,6 +74,8 @@ export interface UiSkins {
 
 /** Конфиг проекта для CLI `delba-ui` и плагина `withUi` (default export `ui.config.ts`). Пути — от папки проекта. */
 export interface UiConfig {
+    /** Application directory relative to the loaded configuration file. Defaults to the invoking cwd. */
+    readonly root?: string;
     /** Исходники для генератора утилит; сам кит сканируется всегда. По умолчанию `['src']`. */
     readonly scan?: readonly string[];
     /** Значения, которые на вызовах пишут именем (`size='lg'`), а скан видит только литералы. */

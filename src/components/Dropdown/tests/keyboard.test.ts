@@ -55,3 +55,21 @@ test('forward Tab enters an open menu but Shift+Tab remains native', () => {
   assert.deepEqual(dropdownKeyboard.command(forward.event, forward.scope), { action: 'focus', target: forward.first });
   assert.equal(dropdownKeyboard.command(backward.event, backward.scope), undefined);
 });
+
+test('migrated context menu navigation retains both edges, wrap and foreign-key behavior', () => {
+  const { event, scope, first, last } = setup('ArrowDown');
+  for (const [key, target, expected] of [
+    ['ArrowDown', first, last], ['ArrowDown', last, first], ['ArrowUp', first, last],
+    ['Home', last, first], ['End', first, last], ['ArrowDown', scope.panel, first],
+    ['ArrowUp', scope.panel, last],
+  ] as const) {
+    event.key = key;
+    Object.assign(event, { target });
+    assert.deepEqual(dropdownKeyboard.command(event, scope), { action: 'focus', target: expected });
+  }
+  event.key = 'Enter';
+  assert.equal(dropdownKeyboard.command(event, scope), undefined);
+  (scope.panel as unknown as MenuNode).children = [];
+  event.key = 'ArrowDown';
+  assert.equal(dropdownKeyboard.command(event, scope), undefined);
+});

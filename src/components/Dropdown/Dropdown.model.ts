@@ -40,6 +40,8 @@ export function useDropdown({
   ref,
   trigger,
   anchorRef: externalAnchorRef,
+  point,
+  initialFocus,
   focusRegions = [],
   closeOn,
   keyboard = 'menu',
@@ -61,10 +63,11 @@ export function useDropdown({
   blockOutsideClick = false,
   ...rootProps
 }: WithRef<DropdownProps, HTMLDivElement>) {
+  const external = !trigger;
   const {
     side = 'start',
     offset = 8,
-    portal = Boolean(externalAnchorRef),
+    portal = external,
     matchTriggerWidth = false,
     keepMounted = true,
     inheritVariables = NO_VARIABLES,
@@ -97,16 +100,21 @@ export function useDropdown({
   const presence = useOpenPresence(open, Boolean(openAnimate));
   const setPresenceRef = useMergedRefs(presence.ref, setMotionNode);
   const setSurfaceRef = useMergedRefs(surfaceRef, externalSurfaceRef, setPresenceRef);
-  const geometryRef = externalAnchorRef ?? geometryAnchorRef ?? anchorRef;
+  const pointRef = useRef<HTMLElement | null>(null);
+  pointRef.current = point?.target ?? (typeof document === 'undefined' ? null : document.body);
+  const geometryRef = externalAnchorRef ?? (point !== undefined ? pointRef : geometryAnchorRef ?? anchorRef);
   const focusOnOpen = useRef<'first' | 'last' | null>(null);
+  const wasOpen = useRef(false);
+  if (open && !wasOpen.current && initialFocus) focusOnOpen.current = initialFocus;
+  wasOpen.current = open;
   const scopeRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLDivElement>(null);
   const [rootNode, setRootNode] = useState<HTMLDivElement | null>(null);
   const setRootRef = useMergedRefs(rootRef, ref, setRootNode);
-  const setPanelRef = useMergedRefs(panelRef, externalAnchorRef ? ref : undefined);
+  const setPanelRef = useMergedRefs(panelRef, external ? ref : undefined);
   const [gapPixels, setGapPixels] = useState(0);
   const generatedId = useId();
-  const id = externalAnchorRef ? (rootProps.id ?? generatedId) : generatedId;
+  const id = external ? (rootProps.id ?? generatedId) : generatedId;
   const parentIds = useContext(DropdownAncestors);
   const ownIds = [...parentIds, id];
 
@@ -135,10 +143,11 @@ export function useDropdown({
     open,
     portal,
     anchorRef: geometryRef,
+    anchorPoint: point ?? undefined,
     positionRef: panelRef,
     surfaceRef,
     regions: [rootRef, anchorRef, ...focusRegions],
-    outsideRefs: [externalAnchorRef ?? anchorRef, surfaceRef],
+    outsideRefs: point !== undefined ? [surfaceRef] : [externalAnchorRef ?? anchorRef, surfaceRef],
     placement: 'bottom',
     align: side,
     gap: gapPixels,
@@ -164,7 +173,7 @@ export function useDropdown({
     const focus = () => {
       const direction = focusOnOpen.current;
       if (!direction) return;
-      if (!anchorRef.current?.contains(panel.ownerDocument.activeElement)) {
+      if (!initialFocus && !anchorRef.current?.contains(panel.ownerDocument.activeElement)) {
         focusOnOpen.current = null;
         observer.disconnect();
         return;
@@ -184,7 +193,7 @@ export function useDropdown({
       owner.cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [open, portalNode]);
+  }, [open, portalNode, initialFocus]);
 
   useLayoutEffect(() => {
     const owner = (rootRef.current ?? geometryRef.current)?.ownerDocument.defaultView;
@@ -197,7 +206,7 @@ export function useDropdown({
             anchor: geometryRef.current,
             panel: panelRef.current,
             probe: probeRef.current,
-            scope: scopeRef.current ?? (externalAnchorRef ? surfaceRef.current : null),
+            scope: scopeRef.current ?? (external ? surfaceRef.current : null),
           },
           offset,
           inheritVariables,
@@ -232,9 +241,9 @@ export function useDropdown({
       activeElement &&
       panelRef.current?.contains(activeElement)
     ) {
-      (returnFocus?.current ?? externalAnchorRef?.current ?? anchorRef.current)?.focus();
+      (returnFocus?.current ?? (external ? geometryRef.current : anchorRef.current))?.focus();
     }
-  }, [open, returnFocus, externalAnchorRef]);
+  }, [open, returnFocus, external, geometryRef]);
 
   const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
     if (closeOn?.blur === false) return;
@@ -242,7 +251,7 @@ export function useDropdown({
     const next = event.relatedTarget;
     const owner = event.currentTarget.ownerDocument.defaultView;
     if (!owner) return;
-    if (!(next instanceof owner.Node) && !externalAnchorRef) return;
+    if (!(next instanceof owner.Node) && !external) return;
     if (
       next instanceof owner.Element &&
       next
@@ -287,7 +296,7 @@ export function useDropdown({
   return {
     scope: {
       ids: ownIds,
-      external: Boolean(externalAnchorRef),
+      external,
       portal,
       target: portalNode,
       ref: scopeRef,
@@ -321,17 +330,17 @@ export function useDropdown({
       },
     },
     panel: {
-      probe: externalAnchorRef ? { ref: probeRef, style: { width: `calc(${Math.abs(offset)} * var(--rpx))` } } : undefined,
+      probe: external ? { ref: probeRef, style: { width: `calc(${Math.abs(offset)} * var(--rpx))` } } : undefined,
       props: {
-        ...(externalAnchorRef ? rootProps : {}),
-        ...(externalAnchorRef ? stateProps(state) : {}),
+        ...(external ? rootProps : {}),
+        ...(external ? stateProps(state) : {}),
         ref: setPanelRef,
         id,
         'data-dropdown-ancestors': ownIds.join(' '),
         style: {
           '--dropdown-offset': `calc(${offset} * var(--rpx))`,
           '--dropdown-viewport-padding': `${viewportPadding}px`,
-          ...(externalAnchorRef ? style : null),
+          ...(external ? style : null),
           ...(portal ? floatingStyle : null),
         } as CSSProperties,
         'data-side': side,
@@ -340,19 +349,19 @@ export function useDropdown({
         'aria-hidden': !open,
         inert: !open,
         onClick: composeEventHandlers(
-          externalAnchorRef ? rootProps.onClick : undefined,
+          external ? rootProps.onClick : undefined,
           handlePanelClick,
         ),
-        onBlur: externalAnchorRef
+        onBlur: external
           ? composeEventHandlers(onBlur, handleBlur, { cancelable: true })
           : undefined,
-        onKeyDown: externalAnchorRef
+        onKeyDown: external
           ? composeEventHandlers(onKeyDown, handleKeyDown, { cancelable: true })
           : undefined,
       },
       open,
       portal,
-      className: externalAnchorRef ? className : undefined,
+      className: external ? className : undefined,
       openAnimate,
       present: presence.present,
       keepMounted,
