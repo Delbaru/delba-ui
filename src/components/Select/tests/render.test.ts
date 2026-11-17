@@ -75,3 +75,17 @@ test('loading does not describe an error that the skeleton replaces', () => {
   assert.doesNotMatch(html, /aria-describedby="country-error"/);
   assert.doesNotMatch(html, /id="country-error"/);
 });
+
+test('search owns one editable field and keeps the selected id separate from its query', () => {
+  const html = renderToStaticMarkup(createElement(Select<string>, {
+    id: 'city', name: 'city', label: 'City', value: 'saved',
+    search: { value: 'query', onChange() {} },
+    options: [{ value: 'saved', label: 'Saved city' }],
+  }));
+  assert.equal((html.match(/role="combobox"/g) ?? []).length, 1);
+  assert.equal((html.match(/id="city"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /role="button"/);
+  assert.match(html, /aria-controls="city-listbox"/);
+  assert.match(html, /value="Saved city"/);
+  assert.match(html, /type="hidden" name="city" value="saved"/);
+});

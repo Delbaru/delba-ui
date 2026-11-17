@@ -19,7 +19,6 @@ import {
 import { FieldFrame } from '../Field';
 import { useCollapseState } from '../../hooks/useCollapseState';
 import { Dropdown } from '../Dropdown';
-import { Input } from '../Input';
 import { Skeleton } from '../Skeleton';
 import { isValueArray, selectFormValues } from './options';
 import { SelectOptions } from './SelectOptions/SelectOptions';
@@ -188,7 +187,8 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
         ref={geometryRef}
         open={select.popup.open}
         keyboard={search ? 'content' : undefined}
-        initialFocus={search ? 'first' : undefined}
+        preserveFocus={Boolean(search)}
+        returnFocus={search ? select.trigger.inputRef : undefined}
         onOpenChange={select.popup.change}
         onClick={(event) => {
           if (
@@ -201,10 +201,11 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
         }}
         trigger={
           <SelectTrigger
-              {...select.trigger.accessibility}
-              id={select.id}
+              {...(!search ? select.trigger.accessibility : {})}
+              id={search ? undefined : select.id}
               select={select}
-              loading={loading && !search}
+              search={search ? { ...search, placeholder: search.placeholder ?? placeholder } : undefined}
+              loading={loading}
               disabled={disabled}
               placeholderColor={placeholderColor}
           />
@@ -225,27 +226,10 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
           anchorRef: geometryRef,
           inheritVariables: PANEL_VARIABLES,
           className: cx(styles.Dropdown, search && styles.SearchDropdown),
-          style: { '--select-visible-options': String(select.popup.visibleOptions + (search ? 1 : 0)) } as CSSProperties,
+          style: { '--select-visible-options': String(select.popup.visibleOptions) } as CSSProperties,
           onKeyDown: select.trigger.onKeyDown,
         }}
       >
-        {search && <Input
-            value={search.value}
-            onChange={(event) => search.onChange(event.currentTarget.value)}
-            placeholder={search.placeholder ?? placeholder}
-            aria-label={search.placeholder ?? placeholder}
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded={select.popup.open}
-            aria-controls={select.popup.id}
-            aria-busy={loading || undefined}
-            aria-activedescendant={select.popup.open && select.focus.index >= 0 && select.popup.options[select.focus.index]
-              ? `${select.id}-option-${select.focus.index}` : undefined}
-            autoComplete="off"
-            disabled={disabled}
-            w={['100%', '100%', '100%']}
-              h={['var(--select-height)', 'var(--select-height)', 'var(--select-height)']}
-        />}
         {search && loading && <Skeleton h={[16, 16, 16]} />}
         <SelectOptions select={select} multiple={multiple} />
       </Dropdown>

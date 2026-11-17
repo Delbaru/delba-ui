@@ -16,7 +16,7 @@ function SearchSelectFixture() {
     }, 500);
     return () => window.clearTimeout(timer);
   }, [query]);
-  return <form aria-label="Search select form">
+  return <form aria-label="Search select form" style={{ maxWidth: 360 }}>
     <label><input type="checkbox" checked={keepOpen} onChange={event => setKeepOpen(event.target.checked)} />Keep selection open</label>
     <Select
         aria-label="Async city"
@@ -32,10 +32,14 @@ function SearchSelectFixture() {
         loading={loading}
         closeOnSelect={!keepOpen}
         required
-        w={[280, 280, 280]}
+        w={['100%', '100%', '100%']}
         h={[44, 44, 44]}
+        p={[[12, 16], [12, 16], [12, 16]]}
+        r={[0, 0, 0]}
+        border={['1px solid var(--line)', '1px solid var(--line)', '1px solid var(--line)']}
+        panel={{ r: [0, 0, 0] }}
     />
-    <button type="button" style={{ marginLeft: 320 }}>Outside searchable select</button>
+    <button type="button" style={{ marginTop: 300 }}>Outside searchable select</button>
   </form>;
 }
 

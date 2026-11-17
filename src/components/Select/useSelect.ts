@@ -138,8 +138,9 @@ export function useSelect<T extends string>(
   const id = idProp ?? generatedId;
   const innerRef = useRef<HTMLDivElement>(null);
   const fieldRef = useMergedRefs(innerRef, ref);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const focusField = useCallback(() => {
-    if (!disabled) innerRef.current?.focus();
+    if (!disabled) (searchInputRef.current ?? innerRef.current)?.focus();
   }, [disabled]);
   const [internalError, setInternalError] = useState<string>();
   const displayError = errorProp ?? internalError;
@@ -407,7 +408,7 @@ export function useSelect<T extends string>(
       },
     },
     focus: { index: focusedIndex, set: setFocusedIndex, ref: setOptionRef, indexOf: optionIndexOf },
-    trigger: { ref: fieldRef, accessibility: triggerAccessibilityProps, onKeyDown: handleKeyDown },
+    trigger: { ref: fieldRef, inputRef: searchInputRef, accessibility: triggerAccessibilityProps, onKeyDown: handleKeyDown },
     motion: {
       ref: setMotionNode,
       handlers: motionHandlers,

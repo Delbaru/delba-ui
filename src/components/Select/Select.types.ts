@@ -33,7 +33,7 @@ export interface SelectBaseProps<T extends string = string>
   style?: CSSProperties;
 
   options: readonly SelectItem<T>[];
-  /** Search Input inside the shared dropdown. Keeps typing available while async options load. */
+  /** Editable main field with shared dropdown options. Keeps typing available while async options load. */
   search?: SelectSearchProps;
   /** Имя поля в FormData. При multiple каждое выбранное значение отправляется отдельной записью. */
   name?: string;

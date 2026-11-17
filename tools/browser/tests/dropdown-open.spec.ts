@@ -3,34 +3,40 @@ import { expect, test } from '@playwright/test';
 test('single search select can keep the panel open for a refining async query', async ({ page }) => {
   await page.goto('/?dropdown-open');
   await page.getByLabel('Keep selection open').check();
-  const trigger = page.getByRole('button', { name: 'Async city', exact: true });
+  const trigger = page.getByRole('combobox', { name: 'Find city' });
   await trigger.click();
   const search = page.getByRole('combobox', { name: 'Find city' });
   await search.fill('Coarse');
   await expect(page.getByRole('option', { name: 'Coarse First', exact: true })).toBeVisible();
   await search.press('Enter');
-  await expect(trigger).toHaveText('Coarse First');
+  await expect(trigger).toHaveValue('Coarse');
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
   await expect(search).toBeFocused();
   await search.fill('House');
   await expect(page.getByRole('option', { name: 'House First', exact: true })).toBeVisible();
   await expect(search).toBeFocused();
-  await expect(trigger).toHaveText('Coarse First');
+  await expect(trigger).toHaveValue('House');
 });
 
 test('search select keeps input focus across async options and preserves the committed label', async ({ page }) => {
   await page.goto('/?dropdown-open');
-  const trigger = page.getByRole('button', { name: 'Async city', exact: true });
+  const trigger = page.getByRole('combobox', { name: 'Find city' });
   await trigger.click();
   const search = page.getByRole('combobox', { name: 'Find city' });
   await expect(search).toBeFocused();
+  const fieldBox = await search.boundingBox();
   await search.fill('New York');
   await expect(search).toBeFocused();
-  await expect(trigger).toHaveText('Saved city');
+  await expect(page.getByRole('combobox')).toHaveCount(1);
   await expect(search).toHaveAttribute('aria-busy', 'true');
   await search.press('Enter');
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByRole('option', { name: 'New York First', exact: true })).toBeVisible();
+  const list = page.getByRole('listbox');
+  await expect(list.locator('input')).toHaveCount(0);
+  const currentBox = await search.boundingBox();
+  expect(currentBox?.y).toBe(fieldBox?.y);
+  expect(await page.getByRole('option').first().evaluate(node => parseFloat(getComputedStyle(node).paddingLeft))).toBeGreaterThan(5);
   await page.screenshot({ path: test.info().outputPath('search-select.png') });
   await search.press('Home');
   await search.press('End');
@@ -42,14 +48,14 @@ test('search select keeps input focus across async options and preserves the com
   await search.press('ArrowUp');
   await search.press('Enter');
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
-  await expect(trigger).toHaveText('New York First');
+  await expect(trigger).toHaveValue('New York First');
   await expect(trigger).toBeFocused();
   expect(await page.getByRole('form', { name: 'Search select form' }).evaluate(node => new FormData(node as HTMLFormElement).get('city'))).toBe('New York-1');
   await trigger.click();
   await search.fill('Late');
   await search.press('Escape');
   await expect(trigger).toBeFocused();
-  await expect(trigger).toHaveText('New York First');
+  await expect(trigger).toHaveValue('New York First');
   await page.waitForTimeout(650);
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await trigger.click();
@@ -57,6 +63,40 @@ test('search select keeps input focus across async options and preserves the com
   await outside.click();
   await expect(outside).toBeFocused();
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('search select uses one styled field above a spaced panel on desktop and mobile', async ({ page }) => {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/?dropdown-open');
+    const input = page.getByRole('combobox', { name: 'Find city' });
+    await expect(input).toHaveValue('Saved city');
+    const before = await input.boundingBox();
+    await input.click();
+    await input.fill('City');
+    const option = page.getByRole('option', { name: 'City First', exact: true });
+    await expect(option).toBeVisible();
+    await expect(page.getByRole('combobox')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Async city', exact: true })).toHaveCount(0);
+    const after = await input.boundingBox();
+    expect(after?.y).toBe(before?.y);
+    const geometry = await input.evaluate(node => {
+      const field = node.closest('[class*="SelectTrigger"]')?.parentElement;
+      const rect = field?.getBoundingClientRect();
+      const style = field && getComputedStyle(field);
+      return { y: rect?.bottom ?? 0, border: parseFloat(style?.borderLeftWidth ?? '0'), padding: parseFloat(style?.paddingLeft ?? '0') };
+    });
+    expect(geometry.border).toBeGreaterThan(0);
+    expect(geometry.padding).toBeGreaterThan(5);
+    const panel = page.getByRole('listbox').locator('..');
+    expect((await panel.boundingBox())?.y).toBeGreaterThanOrEqual(geometry.y - 2);
+    expect(await option.evaluate(node => parseFloat(getComputedStyle(node).paddingLeft))).toBeGreaterThan(5);
+    await page.screenshot({ path: test.info().outputPath('search-select-' + width + '.png') });
+    await input.press('ArrowDown');
+    await input.press('Enter');
+    await expect(input).toBeFocused();
+    await expect(input).toHaveAttribute('aria-expanded', 'false');
+  }
 });
 
 for (const reducedMotion of ['reduce', 'no-preference'] as const) {

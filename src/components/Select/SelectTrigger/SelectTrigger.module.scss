@@ -5,6 +5,18 @@
     cursor: inherit;
     outline: none;
   }
+  .SearchControl {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+  }
+  .SearchRow {
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    min-height: 0;
+  }
   .TriggerContent {
     flex: 1;
     min-width: 0;
