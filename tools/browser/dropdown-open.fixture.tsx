@@ -7,7 +7,21 @@ export function DropdownOpenFixture() {
   const [open, setOpen] = useState(false);
   const [accept, setAccept] = useState(true);
   const [mounted, setMounted] = useState(true);
+  const [point, setPoint] = useState<{ x: number; y: number; target: HTMLElement } | null>(null);
   return <section aria-label="Animated dropdown contracts" style={{ padding: 20 }}>
+    <button onClick={(event) => {
+      const target = event.currentTarget;
+      const rect = target.getBoundingClientRect();
+      setPoint({ x: rect.left, y: rect.bottom, target });
+    }}>Point menu opener</button>
+    <button>Outside point menu</button>
+    <Dropdown
+        point={point}
+        open={point !== null}
+        onOpenChange={(next) => { if (!next && accept) setPoint(null); }}
+        initialFocus="first"
+        panel={{ 'data-testid': 'point-menu-surface', style: { padding: 16, background: 'white' } }}
+    >{point && <button>Point menu action</button>}</Dropdown>
     <Select
       aria-label="Animated select"
       options={[{ value: 'one', label: 'First option' }, { value: 'two', label: 'Second option' }]}

@@ -101,9 +101,13 @@ export function useDropdown({
   const setPresenceRef = useMergedRefs(presence.ref, setMotionNode);
   const setSurfaceRef = useMergedRefs(surfaceRef, externalSurfaceRef, setPresenceRef);
   const pointRef = useRef<HTMLElement | null>(null);
-  pointRef.current = point?.target ?? (typeof document === 'undefined' ? null : document.body);
+  // A closed point menu retains its document and opener through the closing commit.
+  if (point !== null) {
+    pointRef.current = point?.target ?? (typeof document === 'undefined' ? null : document.body);
+  }
   const geometryRef = externalAnchorRef ?? (point !== undefined ? pointRef : geometryAnchorRef ?? anchorRef);
   const focusOnOpen = useRef<'first' | 'last' | null>(null);
+  const closeFocusPolicy = useRef<'restore' | 'preserve' | null>(null);
   const wasOpen = useRef(false);
   if (open && !wasOpen.current && initialFocus) focusOnOpen.current = initialFocus;
   wasOpen.current = open;
@@ -137,6 +141,10 @@ export function useDropdown({
   const close = (reason: DropdownChangeReason = 'content') => {
     focusOnOpen.current = null;
     if (!open) return;
+    const panel = panelRef.current;
+    const ownsFocus = panel?.contains(panel.ownerDocument.activeElement);
+    closeFocusPolicy.current =
+      ownsFocus && reason !== 'outside' && reason !== 'blur' ? 'restore' : 'preserve';
     changeOpen(false, reason);
   };
   const floating = useFloatingSurface({
@@ -234,15 +242,23 @@ export function useDropdown({
   ]);
 
   useLayoutEffect(() => {
-    const activeElement = panelRef.current?.ownerDocument.activeElement;
+    if (open) return;
+    const target = returnFocus === false
+      ? null
+      : returnFocus?.current ?? (external ? geometryRef.current : anchorRef.current);
+    const panel = panelRef.current;
+    const ownerDocument = panel?.ownerDocument ?? target?.ownerDocument;
+    const activeElement = ownerDocument?.activeElement;
+    const removedFocusedChild =
+      closeFocusPolicy.current === 'restore' && activeElement === ownerDocument?.body;
     if (
-      !open &&
-      returnFocus !== false &&
+      closeFocusPolicy.current !== 'preserve' &&
       activeElement &&
-      panelRef.current?.contains(activeElement)
+      (panel?.contains(activeElement) || removedFocusedChild)
     ) {
-      (returnFocus?.current ?? (external ? geometryRef.current : anchorRef.current))?.focus();
+      target?.focus();
     }
+    closeFocusPolicy.current = null;
   }, [open, returnFocus, external, geometryRef]);
 
   const handleBlur = (event: FocusEvent<HTMLDivElement>) => {

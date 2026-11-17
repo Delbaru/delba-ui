@@ -149,3 +149,38 @@ test('outside click uses the painted surface rather than empty positioning space
   await page.mouse.click(painted.x + painted.width + 40, painted.y + 12);
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 });
+test('point menu restores its opener after Escape clears point and removes focused children', async ({ page }) => {
+  await page.goto('/?dropdown-open');
+  const opener = page.getByRole('button', { name: 'Point menu opener', exact: true });
+  await opener.focus();
+  await opener.press('Enter');
+  const action = page.getByRole('button', { name: 'Point menu action', exact: true });
+  await expect(action).toBeFocused();
+  await action.press('Escape');
+  await expect(action).toHaveCount(0);
+  await expect(opener).toBeFocused();
+});
+
+test('point menu outside dismissal preserves the clicked control focus', async ({ page }) => {
+  await page.goto('/?dropdown-open');
+  const opener = page.getByRole('button', { name: 'Point menu opener', exact: true });
+  await opener.focus();
+  await opener.press('Enter');
+  await expect(page.getByRole('button', { name: 'Point menu action', exact: true })).toBeFocused();
+  const outside = page.getByRole('button', { name: 'Outside point menu', exact: true });
+  await outside.click();
+  await expect(page.getByRole('button', { name: 'Point menu action', exact: true })).toHaveCount(0);
+  await expect(outside).toBeFocused();
+});
+
+test('point menu keeps focus inside when its controlled owner rejects closing', async ({ page }) => {
+  await page.goto('/?dropdown-open');
+  await page.getByLabel('Accept dropdown state').uncheck();
+  const opener = page.getByRole('button', { name: 'Point menu opener', exact: true });
+  await opener.focus();
+  await opener.press('Enter');
+  const action = page.getByRole('button', { name: 'Point menu action', exact: true });
+  await expect(action).toBeFocused();
+  await action.press('Escape');
+  await expect(action).toBeFocused();
+});
