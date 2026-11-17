@@ -561,6 +561,18 @@ SSR-проверки Icon были записаны в `render.test.tsx`, хот
 включает все три SSR-сценария. При добавлении теста проверяй не только отдельную
 команду, но и совпадение его пути с glob штатного runner.
 
+При интеграции config-loader тот же пропуск повторился для
+`tools/tests/config-loader.test.mjs`: оба штатных входа принимали только `*.test.ts`.
+В `npm test` и library-шаг `npm run check` добавлен `tools/**/*.test.mjs`;
+проверка — два сценария composition для CommonJS и ESM в полном library-gate.
+
+### Свежий самостоятельный checkout требует runtime-генераты
+
+`npm run check` в новом worktree падал на отсутствующих `inline-icons.ts` и
+`motion-config.ts`: эти файлы игнорируются Git, а прямой library-runner не делает
+генерацию. Подготовка — `node tools/cli.mjs build` из корня кита, затем
+`npm run check`; потребительский CLI уже включает генерацию первым шагом.
+
 ### Collapse owner: shorthand свойства остаются настоящим API
 
 `unanimated-conditional` видел только PropertyAssignment и ошибочно отвергал

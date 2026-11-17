@@ -183,6 +183,7 @@ export function uiCheckSteps({
                 pathToFileURL(script('check/reporter.mjs')).href,
                 'src/**/*.test.ts',
                 'tools/**/*.test.ts',
+                'tools/**/*.test.mjs',
             ]),
             suite: 'library',
         },
