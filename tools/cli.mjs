@@ -16,6 +16,14 @@ const cwd = process.cwd();
 let root = cwd;
 const argv = process.argv.slice(2);
 const command = argv[0];
+if ((argv.includes('--failed') || argv.includes('--report')) && !['check', 'test'].includes(command)) {
+    console.error('[ui] --failed and --report require check or test');
+    process.exit(1);
+}
+if (argv.includes('--report') && (!argv[argv.indexOf('--report') + 1] || argv[argv.indexOf('--report') + 1].startsWith('--'))) {
+    console.error('[ui] --report requires a file path');
+    process.exit(1);
+}
 const configArg = argv.includes('--config')
     ? argv[argv.indexOf('--config') + 1]
     : path.resolve(cwd) === KIT
@@ -179,6 +187,11 @@ async function check() {
             fix: argv.includes('--fix'),
             configFiles: configFile ? [configFile] : [],
         }),
+        {
+            reportFile: argv.includes('--report') ? argv[argv.indexOf('--report') + 1] : path.join(root, '.verification/ui-check.json'),
+            failedOnly: argv.includes('--failed'),
+            profile: { root, configFile, update: argv.includes('--update'), fix: argv.includes('--fix') },
+        },
     );
 }
 
@@ -195,6 +208,8 @@ async function test() {
         typecheckCache: argv.includes('--typecheck-cache')
             ? argv[argv.indexOf('--typecheck-cache') + 1] || ''
             : undefined,
+        failedOnly: argv.includes('--failed'),
+        reportFile: argv.includes('--report') ? argv[argv.indexOf('--report') + 1] : undefined,
     });
 }
 
@@ -208,7 +223,7 @@ const commands = {
 
 if (!commands[command]) {
     console.error(
-        'Usage: delba-ui <build|watch|check|test> [--update] [--fix] [--config ui.config.ts] [--suite standard|all|library|project|browser] [--shard index/total] [--typecheck-cache file]\n       delba-ui startup --url <running production URL> [--font "selector=family"] [--max-cls 0.001]',
+        'Usage: delba-ui <build|watch|check|test> [--update] [--fix] [--config ui.config.ts] [--suite standard|all|library|project|browser] [--shard index/total] [--typecheck-cache file] [--failed] [--report file]\n       delba-ui startup --url <running production URL> [--font "selector=family"] [--max-cls 0.001]',
     );
     process.exit(1);
 }

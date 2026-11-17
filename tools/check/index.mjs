@@ -1,10 +1,12 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { check, projectRules } from './architecture.mjs';
 import { runNode, runSteps } from './run.mjs';
+import { runNodeTests } from './verify.mjs';
 
 const TOOLS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const KIT = path.dirname(TOOLS);
@@ -18,6 +20,45 @@ const astStep = (name, ...args) => ({
         return { ok: diagnostics.length === 0, diagnostics };
     },
 });
+
+/** Own Playwright's saved selection; never attest stale state after an early runner failure. */
+export async function runBrowserTests({ root = KIT, reportFile, failedOnly = false, shard } = {}) {
+    const state = path.join(root, 'tools/browser/.test-results/.last-run.json');
+    const receipt = `${reportFile}.browser-state.json`;
+    const digest = () => createHash('sha256').update(readFileSync(state)).digest('hex');
+    const stamp = () => {
+        const stat = statSync(state, { bigint: true });
+        return `${stat.mtimeNs}:${stat.ctimeNs}`;
+    };
+    let previousStamp;
+    if (failedOnly) {
+        try {
+            const previous = JSON.parse(readFileSync(state, 'utf8'));
+            if (previous.status !== 'failed' || !previous.failedTests?.length ||
+                JSON.parse(readFileSync(receipt, 'utf8')).hash !== digest()) {
+                return { ok: false, output: '--failed requires matching failed Playwright state.' };
+            }
+            previousStamp = stamp();
+        } catch {
+            return { ok: false, output: '--failed requires previous Playwright state.' };
+        }
+    } else {
+        rmSync(state, { force: true });
+    }
+    // A retry still needs .last-run as input, but its old receipt must not survive.
+    rmSync(receipt, { force: true });
+    const result = await runNode([
+        require.resolve('@playwright/test/cli'), 'test',
+        '--config', 'tools/browser/playwright.config.ts',
+        ...(shard ? ['--shard', shard] : []),
+        ...(failedOnly ? ['--last-failed'] : []),
+    ], root);
+    if (existsSync(state) && (!failedOnly || stamp() !== previousStamp)) {
+        mkdirSync(path.dirname(receipt), { recursive: true });
+        writeFileSync(receipt, JSON.stringify({ hash: digest() }));
+    }
+    return result;
+}
 
 /** Один список шагов для быстрой проверки проекта и полной проверки UI. */
 export function projectSteps(
@@ -79,6 +120,7 @@ export function uiCheckSteps({
     suite = 'standard',
     shard,
     typecheckCache,
+    reportFile = path.join(requestedProject ?? KIT, '.verification', `ui-${suite}.json`),
 } = {}) {
     const project =
         requestedProject && path.relative(KIT, path.resolve(requestedProject)) !== ''
@@ -172,51 +214,46 @@ export function uiCheckSteps({
             suite: 'library',
         },
         {
-            ...nodeStep('Тесты', [
+            name: 'Тесты',
+            run: ({ failedOnly = false } = {}) => runNodeTests({
+              cwd: KIT,
+              files: ['src/**/*.test.ts', 'tools/**/*.test.ts', 'tools/**/*.test.mjs'],
+              stateFile: `${reportFile}.library-tests`,
+              failedOnly,
+              nodeArgs: [
                 '--import',
                 'tsx',
                 '--import',
                 pathToFileURL(script('check/unit-runtime.mjs')).href,
-                '--test',
                 ...(process.env.CI ? ['--test-concurrency=2'] : []),
-                '--test-reporter',
-                pathToFileURL(script('check/reporter.mjs')).href,
-                'src/**/*.test.ts',
-                'tools/**/*.test.ts',
-                'tools/**/*.test.mjs',
-            ]),
+              ],
+            }),
             suite: 'library',
         },
         ...(projectTests.length
             ? [
                   {
-                      ...nodeStep(
-                          'Тесты проекта',
-                          [
+                      name: 'Тесты проекта',
+                      run: ({ failedOnly = false } = {}) => runNodeTests({
+                          cwd: project,
+                          files: projectTests,
+                          stateFile: `${reportFile}.project-tests`,
+                          failedOnly,
+                          nodeArgs: [
                               ...(config.testConditions ?? []).map(
                                   (condition) => `--conditions=${condition}`,
                               ),
                               '--import',
                               pathToFileURL(require.resolve('tsx')).href,
-                              '--test',
-                              '--test-reporter',
-                              pathToFileURL(script('check/reporter.mjs')).href,
-                              ...projectTests,
                           ],
-                          project,
-                      ),
+                      }),
                       suite: 'project',
                   },
               ]
             : []),
         {
-            ...nodeStep('Браузер', [
-                require.resolve('@playwright/test/cli'),
-                'test',
-                '--config',
-                'tools/browser/playwright.config.ts',
-                ...(shard ? ['--shard', shard] : []),
-            ]),
+            name: 'Браузер',
+            run: ({ failedOnly = false } = {}) => runBrowserTests({ reportFile, failedOnly, shard }),
             suite: 'browser',
         },
         ...(fix ? projectChecks.slice(1) : projectChecks).map((step) => ({
@@ -234,12 +271,26 @@ export function uiCheckSteps({
 
 export function runUiChecks(options = {}) {
     const suite = options.suite ?? 'standard';
-    return runSteps(uiCheckSteps(options), { label: suite === 'all' ? 'UI' : `UI (${suite})` });
+    const reportFile = path.resolve(options.reportFile ?? path.join(options.project ?? KIT, '.verification', `ui-${suite}.json`));
+    return runSteps(uiCheckSteps({ ...options, reportFile }), {
+        label: suite === 'all' ? 'UI' : `UI (${suite})`,
+        reportFile,
+        failedOnly: options.failedOnly,
+        profile: { project: options.project, configArg: options.configArg, suite,
+            shard: options.shard, fix: Boolean(options.fix), typecheckCache: options.typecheckCache },
+    });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     try {
-        process.exitCode = (await runUiChecks()) ? 0 : 1;
+        const args = process.argv.slice(2);
+        if (args.includes('--report') && (!args[args.indexOf('--report') + 1] || args[args.indexOf('--report') + 1].startsWith('--'))) {
+            throw new Error('--report requires a file path');
+        }
+        process.exitCode = (await runUiChecks({
+            failedOnly: args.includes('--failed'),
+            reportFile: args.includes('--report') ? args[args.indexOf('--report') + 1] : undefined,
+        })) ? 0 : 1;
     } catch (error) {
         console.error(
             `✗ UI — проверка не выполнена\n  ${error instanceof Error ? error.message : String(error)}`,

@@ -15,6 +15,7 @@ src/core/_scrollbar-policy.scss
 
 # Ссылки pnpm на peer-зависимости: кит — пакет воркспейса проекта
 node_modules
+.verification/
 
 # Артефакты браузерной проверки
 tools/browser/.test-results/

@@ -217,6 +217,7 @@ test('consumer test conditions resolve server-only exports without changing libr
         assert.equal((await step()?.run())?.ok, false);
         assert.equal((await step({ testConditions: ['react-server'] })?.run())?.ok, true);
     } finally {
+        fs.rmSync(path.join(fixture, '.verification'), { recursive: true, force: true });
         for (const file of ['package.json', 'src/server.test.ts', 'node_modules/server-probe/package.json', 'node_modules/server-probe/server.js', 'node_modules/server-probe/client.js']) {
             fs.unlinkSync(path.join(fixture, file));
         }

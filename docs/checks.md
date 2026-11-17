@@ -23,6 +23,56 @@ npm run ui:test --silent            # из корня serdcaBezGranic, без з
 `delba-ui check` остаётся быстрой проверкой приложения, включая `--update` для его планки.
 Отдельные `typecheck`, `test` и `boundary` сохранены для диагностики конкретного шага.
 
+После полного прогона исправляй все найденные независимые ошибки пакетом,
+затем повторяй только упавшее. После исправлений нужен один финальный полный профиль:
+
+```sh
+npm run check
+npm run check -- --failed
+delba-ui test --suite project --report .verification/ui-project.json
+delba-ui test --suite project --report .verification/ui-project.json --failed
+```
+
+По умолчанию отчёт лежит в `.verification/ui-<suite>.json` корня приложения/кита.
+В отчёте только статусы шагов и хеш профиля, без логов и окружения. Отсутствующий
+или чужой отчёт, изменённый набор шагов, suite, config path либо флаги профиля
+запрещают `--failed`; зелёный предыдущий отчёт также требует финального полного
+прогона. Исправления исходников не меняют профиль. Subset не объявляется полным PASS.
+Обязательная подготовка и зависимости повторяются перед упавшими/заблокированными
+шагами; остальные успешные проверки пропускаются. Подготовка, не прошедшая проверку,
+явно блокирует зависимые шаги, не скрывая ошибки независимых проверок.
+
+Экспорт `@delba/ui/verify` — тонкий вход для адаптеров потребителей:
+
+```js
+import { runNode, runNodeTests, runSteps } from '@delba/ui/verify';
+await runSteps([
+  { id: 'generate', name: 'Генерация', run: () => runNode(['tools/generate.mjs'], process.cwd()) },
+  { id: 'tests', name: 'Тесты', dependsOn: ['generate'], run: ({ failedOnly }) => runNodeTests({
+    cwd: process.cwd(), files: ['src/**/*.test.ts'], nodeArgs: ['--import', 'tsx'],
+    stateFile: '.verification/tests.state', failedOnly,
+  }) },
+], { reportFile: '.verification/project.json', failedOnly: process.argv.includes('--failed'), profile: 'project' });
+```
+
+`runSteps` возвращает boolean; шаг имеет `id` (по умолчанию name), name, run,
+необязательные `dependsOn` и `required`. Зависимости предшествуют шагу в списке.
+В старом линейном плане required блокирует все последующие шаги; в явном плане
+dependsOn блокирует только зависимых. `run` получает `{ failedOnly }`: true только
+для ранее упавшего шага, false для подготовки и ранее заблокированных шагов.
+`runNodeTests` возвращает результат runNode и summary с числом выполненных тестов
+и упавших файлов; runSteps показывает число тестов в короткой строке результата.
+
+Node 24.7+ повторяет case через [native rerun state](https://nodejs.org/api/cli.html#--test-rerun-failures).
+Node 22 выполняет полный запуск без изменения engines и повторяет только упавшие
+файлы. Если runner/preload упал до сообщения файла, следующий повтор явно сообщает
+о запуске упавшего test-шага целиком. Пустой/пропущенный набор не считается успехом.
+Профиль Node включает cwd, files, nodeArgs и версию Node; files и glob передаются
+без изменения. Состояние suite не является кешем и не проверяет HEAD/содержимое
+исходников. Playwright повторяется через `--last-failed`; отсутствие либо изменение
+его сохранённого состояния требует нового полного browser-прогона. Не разделяй один
+report/stateFile между параллельными запусками.
+
 В свежем самостоятельном checkout перед `npm run check` выполни
 `node tools/cli.mjs build`: игнорируемые runtime-генераты нужны типам и unit-тестам.
 Потребительский `delba-ui test` выполняет генерацию первым шагом самостоятельно.
