@@ -207,6 +207,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
               search={search ? { ...search, placeholder: search.placeholder ?? placeholder } : undefined}
               loading={loading}
               disabled={disabled}
+              required={required}
               placeholderColor={placeholderColor}
           />
         }

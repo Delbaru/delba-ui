@@ -1413,3 +1413,10 @@ handles.ts создаёт React Context и использует useContext/useEf
 Input до и после открытия, единственность combobox, рамку/отступы внешнего поля
 и padding вариантов с точными пропсами DSelect. Screenshot и приёмка темы
 потребителя обязательны: функциональный pass не доказывает оформление.
+
+При переносе trigger в Input обязательность передаётся отдельным required:
+Input владеет aria-required и нативной валидацией, поэтому один aria-spread
+не сохраняет договор. Select включает nativeValidation для этого required поля.
+SSR-регрессия required search проверяет оба атрибута на самом combobox,
+их отсутствие у optional и отсутствие aria-required у div; до исправления
+она воспроизводила потерю обязательности, обнаруженную consumer checkout test.

@@ -89,3 +89,22 @@ test('search owns one editable field and keeps the selected id separate from its
   assert.match(html, /value="Saved city"/);
   assert.match(html, /type="hidden" name="city" value="saved"/);
 });
+
+test('required search marks the native combobox while optional search stays optional', () => {
+  for (const required of [true, false]) {
+    const html = renderToStaticMarkup(createElement(Select<string>, {
+      id: 'city', required, name: 'city',
+      search: { value: '', onChange() {} }, options: [],
+    }));
+    const input = html.match(/<input[^>]*role="combobox"[^>]*>/)?.[0];
+    assert.ok(input);
+    if (required) {
+      assert.match(input, / aria-required="true"/);
+      assert.match(input, / required=""/);
+    } else {
+      assert.doesNotMatch(input, / aria-required=/);
+      assert.doesNotMatch(input, / required=/);
+    }
+    assert.doesNotMatch(html, /<div[^>]*aria-required=/);
+  }
+});

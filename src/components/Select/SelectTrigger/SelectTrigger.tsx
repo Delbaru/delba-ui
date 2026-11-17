@@ -16,6 +16,7 @@ export function SelectTrigger<T extends string>({
   search,
   loading,
   disabled,
+  required,
   placeholderColor,
   ref,
   className,
@@ -27,6 +28,7 @@ export function SelectTrigger<T extends string>({
     search?: SelectSearchProps;
     loading: boolean;
     disabled?: boolean;
+    required?: boolean;
     placeholderColor?: string;
   } & Omit<FlexProps, 'children'>,
   HTMLElement
@@ -70,6 +72,8 @@ export function SelectTrigger<T extends string>({
           aria-activedescendant={select.popup.open && select.focus.index >= 0 && select.popup.options[select.focus.index] ? `${select.id}-option-${select.focus.index}` : undefined}
           autoComplete="off"
           disabled={disabled}
+          required={required}
+          nativeValidation
           error={select.feedback.error}
           className={styles.SearchControl}
           rowClassName={styles.SearchRow}
