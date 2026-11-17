@@ -8,6 +8,12 @@ import type { SelectItem } from './options';
 import type { SelectRenderValuePayload } from './useSelect';
 type VariantKey = 'primary' | 'primaryFill' | 'secondary';
 type SizeKey = 'default' | 'fullWidth';
+/** Controlled query; async requests, cancellation and option filtering belong to the caller. */
+export interface SelectSearchProps {
+  value: string;
+  onChange(value: string): void;
+  placeholder?: string;
+}
 /** Пропсы Select без значения. Обёртке: `SelectBaseProps<T> & SelectValueProps<T>`, а не `extends SelectProps`. */
 export interface SelectBaseProps<T extends string = string>
   extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue' | 'onChange' | 'dir' | 'rel'>,
@@ -27,12 +33,15 @@ export interface SelectBaseProps<T extends string = string>
   style?: CSSProperties;
 
   options: readonly SelectItem<T>[];
+  /** Search Input inside the shared dropdown. Keeps typing available while async options load. */
+  search?: SelectSearchProps;
   /** Имя поля в FormData. При multiple каждое выбранное значение отправляется отдельной записью. */
   name?: string;
   /** ID формы, когда Select расположен вне её DOM-поддерева. */
   form?: string;
 
 
+  /** Close after committing an option. Defaults to true for single, false for multiple. */
   closeOnSelect?: boolean;
 
   /** Показывать уже выбранные значения в dropdown. */

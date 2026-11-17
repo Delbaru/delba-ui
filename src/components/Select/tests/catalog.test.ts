@@ -2,6 +2,18 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { moveSelectFocus, resolveSelectCatalog } from '../options';
 
+test('async selection fallback preserves only the label and never republishes stale choices', () => {
+  const saved = { value: 'a', label: 'Saved city' };
+  const input = { options: [], value: 'a', multiple: false, showSelected: true, selectedFallback: [saved] } as const;
+  const pending = resolveSelectCatalog(input);
+  assert.equal(pending.selectedOption, saved);
+  assert.equal(pending.hasValue, true);
+  assert.deepEqual(pending.options, []);
+  const updated = { value: 'a', label: 'Updated city' };
+  assert.equal(resolveSelectCatalog({ ...input, options: [updated] }).selectedOption, updated);
+  assert.equal(resolveSelectCatalog({ ...input, value: null }).selectedOption, null);
+});
+
 test('one catalog projection removes selected options and their empty group together', () => {
   const selected = { value: 'a', label: 'A' };
   const available = { value: 'b', label: 'B' };

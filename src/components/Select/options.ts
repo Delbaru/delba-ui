@@ -131,14 +131,16 @@ export function resolveSelectCatalog<T extends string>(input: {
   value: T | null | T[];
   multiple: boolean;
   showSelected: boolean;
+  selectedFallback?: readonly SelectOption<T>[];
 }) {
   const items = flattenSelectItems(input.options);
   const all = items.flatMap((item) => (item.type === 'option' ? [item.option] : []));
   const many = input.multiple && isValueArray(input.value) ? input.value : [];
   const single = !input.multiple && !isValueArray(input.value) ? input.value : null;
-  const selectedOptions = input.multiple ? all.filter((option) => many.includes(option.value)) : [];
+  const selectedCatalog = [...all, ...(input.selectedFallback ?? []).filter(option => !all.some(current => defaultEqual(current.value, option.value)))];
+  const selectedOptions = input.multiple ? selectedCatalog.filter((option) => many.includes(option.value)) : [];
   const selectedOption = !input.multiple
-    ? (all.find((option) => defaultEqual(option.value, single)) ?? null)
+    ? (selectedCatalog.find((option) => defaultEqual(option.value, single)) ?? null)
     : null;
   const available = input.showSelected
     ? all

@@ -19,13 +19,15 @@ import {
 import { FieldFrame } from '../Field';
 import { useCollapseState } from '../../hooks/useCollapseState';
 import { Dropdown } from '../Dropdown';
+import { Input } from '../Input';
+import { Skeleton } from '../Skeleton';
 import { isValueArray, selectFormValues } from './options';
 import { SelectOptions } from './SelectOptions/SelectOptions';
 import { SelectTrigger } from './SelectTrigger/SelectTrigger';
 import { UI_MESSAGES } from '../../core/base/messages';
 import { useSelect } from './useSelect';
 import type { SelectProps } from './Select.types';
-export type { SelectProps, SelectBaseProps, SelectValueProps } from './Select.types';
+export type { SelectProps, SelectBaseProps, SelectValueProps, SelectSearchProps } from './Select.types';
 
 const c = createLayoutClasses(styles, { local: { h: 'height' } });
 
@@ -50,13 +52,14 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
     fieldClassName,
     style,
     options,
+    search,
     name,
     form,
     value: valueProp,
     defaultValue,
     onChange,
     multiple,
-    closeOnSelect = false,
+    closeOnSelect = multiple !== true,
     showSelected = true,
     renderValue,
     placeholder = DEFAULT_PLACEHOLDER,
@@ -112,6 +115,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
 
   const select = useSelect(ref, {
     options,
+    search,
     form,
     value: valueProp,
     defaultValue,
@@ -183,13 +187,15 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
       <Dropdown
         ref={geometryRef}
         open={select.popup.open}
+        keyboard={search ? 'content' : undefined}
+        initialFocus={search ? 'first' : undefined}
         onOpenChange={select.popup.change}
         onClick={(event) => {
           if (
             event.target === event.currentTarget &&
             !event.defaultPrevented &&
             !disabled &&
-            !loading
+            (!loading || search)
           )
             select.popup.change(!select.popup.open);
         }}
@@ -198,7 +204,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
               {...select.trigger.accessibility}
               id={select.id}
               select={select}
-              loading={loading}
+              loading={loading && !search}
               disabled={disabled}
               placeholderColor={placeholderColor}
           />
@@ -218,10 +224,29 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
           matchTriggerWidth: true,
           anchorRef: geometryRef,
           inheritVariables: PANEL_VARIABLES,
-          className: styles.Dropdown,
+          className: cx(styles.Dropdown, search && styles.SearchDropdown),
+          style: { '--select-visible-options': String(select.popup.visibleOptions + (search ? 1 : 0)) } as CSSProperties,
           onKeyDown: select.trigger.onKeyDown,
         }}
       >
+        {search && <Input
+            value={search.value}
+            onChange={(event) => search.onChange(event.currentTarget.value)}
+            placeholder={search.placeholder ?? placeholder}
+            aria-label={search.placeholder ?? placeholder}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={select.popup.open}
+            aria-controls={select.popup.id}
+            aria-busy={loading || undefined}
+            aria-activedescendant={select.popup.open && select.focus.index >= 0 && select.popup.options[select.focus.index]
+              ? `${select.id}-option-${select.focus.index}` : undefined}
+            autoComplete="off"
+            disabled={disabled}
+            w={['100%', '100%', '100%']}
+              h={['var(--select-height)', 'var(--select-height)', 'var(--select-height)']}
+        />}
+        {search && loading && <Skeleton h={[16, 16, 16]} />}
         <SelectOptions select={select} multiple={multiple} />
       </Dropdown>
 

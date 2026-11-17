@@ -1,5 +1,64 @@
 import { expect, test } from '@playwright/test';
 
+test('single search select can keep the panel open for a refining async query', async ({ page }) => {
+  await page.goto('/?dropdown-open');
+  await page.getByLabel('Keep selection open').check();
+  const trigger = page.getByRole('button', { name: 'Async city', exact: true });
+  await trigger.click();
+  const search = page.getByRole('combobox', { name: 'Find city' });
+  await search.fill('Coarse');
+  await expect(page.getByRole('option', { name: 'Coarse First', exact: true })).toBeVisible();
+  await search.press('Enter');
+  await expect(trigger).toHaveText('Coarse First');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(search).toBeFocused();
+  await search.fill('House');
+  await expect(page.getByRole('option', { name: 'House First', exact: true })).toBeVisible();
+  await expect(search).toBeFocused();
+  await expect(trigger).toHaveText('Coarse First');
+});
+
+test('search select keeps input focus across async options and preserves the committed label', async ({ page }) => {
+  await page.goto('/?dropdown-open');
+  const trigger = page.getByRole('button', { name: 'Async city', exact: true });
+  await trigger.click();
+  const search = page.getByRole('combobox', { name: 'Find city' });
+  await expect(search).toBeFocused();
+  await search.fill('New York');
+  await expect(search).toBeFocused();
+  await expect(trigger).toHaveText('Saved city');
+  await expect(search).toHaveAttribute('aria-busy', 'true');
+  await search.press('Enter');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('option', { name: 'New York First', exact: true })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('search-select.png') });
+  await search.press('Home');
+  await search.press('End');
+  await search.press('Space');
+  await expect(search).toHaveValue('New York ');
+  await search.fill('New York');
+  await expect(page.getByRole('option', { name: 'New York Second', exact: true })).toBeVisible();
+  await search.press('ArrowDown');
+  await search.press('ArrowUp');
+  await search.press('Enter');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger).toHaveText('New York First');
+  await expect(trigger).toBeFocused();
+  expect(await page.getByRole('form', { name: 'Search select form' }).evaluate(node => new FormData(node as HTMLFormElement).get('city'))).toBe('New York-1');
+  await trigger.click();
+  await search.fill('Late');
+  await search.press('Escape');
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveText('New York First');
+  await page.waitForTimeout(650);
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  const outside = page.getByRole('button', { name: 'Outside searchable select' });
+  await outside.click();
+  await expect(outside).toBeFocused();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});
+
 for (const reducedMotion of ['reduce', 'no-preference'] as const) {
   test(`select delegates panel motion and preserves selection and focus (${reducedMotion})`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion });

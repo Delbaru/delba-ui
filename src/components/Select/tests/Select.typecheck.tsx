@@ -16,6 +16,8 @@ export function selectTypeChecks(
   setCountries: Dispatch<SetStateAction<Country[]>>,
 ) {
   const single = <Select options={options} value={country} onChange={setCountry} />;
+  const searchable = <Select options={options} value={country} onChange={setCountry}
+    search={{ value: '', onChange: (query: string) => { void query; } }} loading closeOnSelect={false} />;
   const multiple = <Select options={options} multiple value={countries} onChange={setCountries} />;
   const defaults = <Select options={options} multiple defaultValue={['ru']} />;
 
@@ -34,6 +36,7 @@ export function selectTypeChecks(
     single,
     multiple,
     defaults,
+    searchable,
     invalidSingle,
     invalidMultiple,
     invalidChange,

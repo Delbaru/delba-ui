@@ -1,6 +1,43 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dropdown } from '../../src/components/Dropdown';
 import { Select } from '../../src/components/Select';
+
+function SearchSelectFixture() {
+  const [query, setQuery] = useState('');
+  const [value, setValue] = useState<string | null>('saved');
+  const [loading, setLoading] = useState(false);
+  const [keepOpen, setKeepOpen] = useState(false);
+  const [options, setOptions] = useState([{ value: 'saved', label: 'Saved city' }]);
+  useEffect(() => {
+    if (!query) return;
+    const timer = window.setTimeout(() => {
+      setOptions([{ value: `${query}-1`, label: `${query} First` }, { value: `${query}-2`, label: `${query} Second` }]);
+      setLoading(false);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+  return <form aria-label="Search select form">
+    <label><input type="checkbox" checked={keepOpen} onChange={event => setKeepOpen(event.target.checked)} />Keep selection open</label>
+    <Select
+        aria-label="Async city"
+        name="city"
+        value={value}
+        onChange={setValue}
+        search={{ value: query, placeholder: 'Find city', onChange(next) {
+          setQuery(next);
+          setLoading(true);
+          setOptions([]);
+        } }}
+        options={options}
+        loading={loading}
+        closeOnSelect={!keepOpen}
+        required
+        w={[280, 280, 280]}
+        h={[44, 44, 44]}
+    />
+    <button type="button" style={{ marginLeft: 320 }}>Outside searchable select</button>
+  </form>;
+}
 
 export function DropdownOpenFixture() {
   const anchor = useRef<HTMLDivElement>(null);
@@ -9,6 +46,7 @@ export function DropdownOpenFixture() {
   const [mounted, setMounted] = useState(true);
   const [point, setPoint] = useState<{ x: number; y: number; target: HTMLElement } | null>(null);
   return <section aria-label="Animated dropdown contracts" style={{ padding: 20 }}>
+    <SearchSelectFixture />
     <button onClick={(event) => {
       const target = event.currentTarget;
       const rect = target.getBoundingClientRect();

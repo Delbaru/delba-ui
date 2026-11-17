@@ -43,6 +43,17 @@
       var(--floating-available, 100vh)
     );
   }
+  .SearchDropdown {
+    display: flex;
+    flex-direction: column;
+    > * {
+      flex-shrink: 0;
+    }
+    > [role='listbox'] {
+      flex-shrink: 1;
+      min-height: 0;
+    }
+  }
   @mixin select-classes($bp: null) {
     $p: if(
       sass($bp == null): '' ; else: '#{$bp}_',

@@ -11,9 +11,14 @@
 ## Основной API
 
 - `options`: `{ value, label, children?, selectedChildren? }` или группы `{ label, options }`.
+- `search={{ value, onChange, placeholder? }}` добавляет Input поиска в общую панель.
+  Запросы, отмена устаревших ответов и фильтрация options остаются у потребителя.
+  Kit не фильтрует повторно серверные подсказки. Выбранная подпись сохраняется,
+  когда options временно очищены; устаревшие варианты не возвращаются в список.
 - Одиночный режим: `value: T | null`, `onChange(value: T | null)`.
 - `multiple=true`: `value: T[]`, `onChange(value: T[])`; `defaultValue` — неуправляемый режим.
-- `closeOnSelect=false` влияет на multiple; одиночный выбор закрывает список.
+- `closeOnSelect` по умолчанию true для одиночного выбора, false для multiple.
+  Явное false сохраняет поиск открытым после промежуточного выбора.
   `showSelected=true`, `visibleOptions=4`, `loading=false`.
 - `variant`: `primary`/`primaryFill`/`secondary`; `size`: `default`/`fullWidth`.
   Resolver задаёт `primary` и `default` без явной геометрии.
@@ -40,7 +45,29 @@ export function FormatField() {
 
 ## Состояния и ограничения
 
+Для асинхронных подсказок используйте тот же Select; options и loading поступают
+от владельца запроса. Например, управляемое поле принимает уже найденные города:
+
+```tsx
+import { useState } from 'react';
+import { Select, type SelectBaseProps } from '@delba/ui';
+
+export function CitySelect({ options, loading, search }: Pick<SelectBaseProps, 'options' | 'loading' | 'search'>) {
+  const [city, setCity] = useState<string | null>(null);
+  return <Select label="Город" name="city" value={city} onChange={setCity}
+    options={options} loading={loading} search={search} closeOnSelect />;
+}
+```
+
+Потребитель передаёт `search={{ value: query, onChange: setQuery }}` и не меняет
+выбранный ID только из-за загрузки следующей порции options. Отмена устаревшего
+fetch принадлежит тому же эффекту, который выполняет запрос.
+
 Loading сохраняет шеврон и блокирует раскрытие; disabled запрещает выбор.
+С search панель и ввод остаются доступны во время loading, список временно пуст,
+а выбор заблокирован. Открытие фокусирует Input; стрелки/Enter выбирают вариант,
+Space/Home/End редактируют текст. Escape возвращает фокус триггеру; поздние
+результаты не открывают закрытую панель. FormData содержит выбранный ID, не запрос.
 Multiple отправляет несколько записей одного `name`. У каждого пункта нужен текстовый
 `label`, даже при кастомной разметке. Управление open списка принадлежит Select.
 

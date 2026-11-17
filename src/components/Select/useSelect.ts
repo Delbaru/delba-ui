@@ -9,6 +9,7 @@ import {
   type Ref,
 } from 'react';
 import type React from 'react';
+import type { SelectSearchProps } from './Select.types';
 
 import { useMergedRefs } from '../../core';
 import { useFieldFeedback, type FieldMessage } from '../Field';
@@ -35,6 +36,7 @@ export interface SelectRenderValuePayload<T extends string = string> {
 /** Значение внутри хука — общий `T | null | T[]`; тип своей ветки `multiple` наружу отдаёт Select. */
 export interface SelectConfig<T extends string> extends SharedMotionProps {
   options: readonly SelectItem<T>[];
+  search?: SelectSearchProps;
   value?: T | null | T[];
   defaultValue?: T | null | T[];
   onChange: (value: T | null | T[]) => void;
@@ -66,6 +68,7 @@ export function useSelect<T extends string>(
 ) {
   const {
     options,
+    search,
     value: valueProp,
     defaultValue,
     onChange,
@@ -95,10 +98,12 @@ export function useSelect<T extends string>(
   );
 
   const value = valueProp !== undefined ? valueProp : uncontrolledValue;
+  const selectedMemory = useRef<SelectOption<T>[]>([]);
 
   const catalog = useMemo(
-    () => resolveSelectCatalog({ options, value, multiple, showSelected }),
-    [options, value, multiple, showSelected],
+    () => resolveSelectCatalog({ options: search && loading ? [] : options, value, multiple, showSelected,
+      selectedFallback: search ? selectedMemory.current : undefined }),
+    [options, value, multiple, showSelected, search, loading],
   );
   const {
     selectedOption,
@@ -109,6 +114,9 @@ export function useSelect<T extends string>(
     single: valueSingle,
     hasValue: hasSelectedValue,
   } = catalog;
+  useEffect(() => {
+    selectedMemory.current = selectedOption ? [selectedOption] : selectedOptions;
+  }, [selectedOption, selectedOptions]);
 
   const defaultDisplayContent = hasSelectedValue
     ? multiple
@@ -201,13 +209,13 @@ export function useSelect<T extends string>(
   const openDropdown = useCallback(() => {
     // `loading` держит список закрытым: варианты ещё едут, и раскрытый пустой список
     // человек прочитает как «выбирать не из чего», а не как «подожди».
-    if (disabled || loading || dropdownOptions.length === 0) return;
+    if (disabled || (!search && (loading || dropdownOptions.length === 0))) return;
 
     setOpen(true);
     setFocusedIndex(
       getFocusedOptionIndex(dropdownOptions, multiple, selectedOption, selectedOptions),
     );
-  }, [disabled, loading, dropdownOptions, multiple, selectedOption, selectedOptions]);
+  }, [disabled, loading, dropdownOptions, multiple, selectedOption, selectedOptions, search]);
 
   const closeDropdown = useCallback(
     (shouldValidate = true) => {
@@ -257,7 +265,7 @@ export function useSelect<T extends string>(
   useEffect(() => {
     if (!open) return;
 
-    if (loading || dropdownOptions.length === 0) {
+    if (!search && (loading || dropdownOptions.length === 0)) {
       setOpen(false);
       setFocusedIndex(-1);
       return;
@@ -267,7 +275,7 @@ export function useSelect<T extends string>(
       if (currentIndex < 0) return 0;
       return Math.min(currentIndex, dropdownOptions.length - 1);
     });
-  }, [dropdownOptions.length, loading, open]);
+  }, [dropdownOptions.length, loading, open, search]);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -290,6 +298,7 @@ export function useSelect<T extends string>(
   const handleSelect = useCallback(
     (option: SelectOption<T>) => {
       if (disabled || loading) return;
+      if (search) selectedMemory.current = [option, ...selectedOptions.filter(current => !defaultEqual(current.value, option.value))];
       const optionIndex = dropdownOptions.findIndex((current) =>
         defaultEqual(current.value, option.value));
       let next: T | T[] = option.value;
@@ -301,7 +310,7 @@ export function useSelect<T extends string>(
       }
       commitValue(next);
 
-      if (!multiple || closeOnSelect) closeDropdown(false);
+      if (closeOnSelect) closeDropdown(false);
       else setFocusedIndex(optionIndex);
     },
     [
@@ -313,12 +322,15 @@ export function useSelect<T extends string>(
       loading,
       multiple,
       valueArray,
+      search,
+      selectedOptions,
     ],
   );
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
       if (disabled) return;
+      if (event.nativeEvent.isComposing) return;
       if (event.key === 'Escape' && open) {
         event.preventDefault();
         event.stopPropagation();
@@ -329,6 +341,7 @@ export function useSelect<T extends string>(
         if (open) closeDropdown();
         return;
       }
+      if (search && (event.target as HTMLElement).tagName === 'INPUT' && [' ', 'Home', 'End'].includes(event.key)) return;
 
       const chooseFocused = () => {
         const option = dropdownOptions[focusedIndex];
@@ -350,7 +363,7 @@ export function useSelect<T extends string>(
       event.preventDefault();
       command();
     },
-    [closeDropdown, disabled, dropdownOptions, focusedIndex, handleSelect, open, openDropdown],
+    [closeDropdown, disabled, dropdownOptions, focusedIndex, handleSelect, open, openDropdown, search],
   );
 
   const optionIndexOf = (option: SelectOption<T>) =>
