@@ -8,6 +8,14 @@ import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 import type { ButtonHoverAnimate } from './hover/buttonHover';
 import type { ButtonIdleAnimate } from './idle/buttonIdle';
+import type { ActionInvocationResult } from '../../hooks/useActionInvocation';
+
+/** Only an explicit object enables the new tooltip API. */
+export interface ButtonTooltipOptions {
+  label: React.ReactNode;
+  direction?: 'right' | 'left' | 'top' | 'bottom';
+  gap?: number;
+}
 
 export type ButtonVariant = 'primary' | 'secondary' | 'secondaryFill' | 'tertiary';
 export type ButtonSize = 'small' | 'medium' | 'large';
@@ -51,10 +59,14 @@ export interface ButtonProps
 
   linkState?: StateLinkInput;
 
-  /** Подсказка при наведении или фокусе; изменение текста сохраняет DOM-узел кнопки. */
-  tooltip?: React.ReactNode;
-  /** Tooltip position relative to the button: right, left, top, bottom. Default: right */
+  /** Tooltip only when explicitly requested. ReactNode is a temporary kit compatibility form. */
+  tooltip?: ButtonTooltipOptions | React.ReactNode;
+  /** @deprecated Direction belongs to the tooltip object. */
   tooltipDirection?: 'right' | 'left' | 'top' | 'bottom';
-  /** Gap between button and tooltip in px. Default: 8 */
+  /** @deprecated Gap belongs to the tooltip object. */
   tooltipGap?: number;
+  /** Called exactly once when a click handler settles (not for disabled/reentrant clicks). */
+  onActionSettled?: (result: ActionInvocationResult) => void;
+  /** Optional diagnostic name surfaced to the app's single failure handler. */
+  actionName?: string;
 }

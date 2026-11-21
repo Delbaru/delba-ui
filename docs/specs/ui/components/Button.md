@@ -15,7 +15,9 @@
 - `variant`: `primary`, `secondary`, `secondaryFill`, `tertiary`;
   `size`: `small`, `medium`, `large`. В функции дефолты варианта/размера не назначаются.
 - `disabled=false` блокирует действие; `onClick` получает событие.
-- `animate`, `collapse`, `tooltip`; направление tooltip — `right`, отступ — `8` px.
+- `onClick` может вернуть Promise: kit контролирует `loading`, reentry, ошибки и `onActionSettled` (`success`/`failed`/`cancelled`). Отказ с `name='AbortError'` означает отмену. Для RTK Query используйте `.unwrap()`.
+- На уровне клиентского приложения один `ActionInvocationProvider(onFailure)` связывает ошибки с уведомлениями; успехи автоматически не всплывают. Без provider отказ логируется в консоль.
+- `animate`, `collapse`, `tooltip={{ label, direction?, gap? }}`; направление по умолчанию `right`, отступ `8` px. Старые `tooltipDirection`, `tooltipGap` и `tooltip={ReactNode}` временно совместимы.
 - `ref` указывает на фактический DOM-элемент; `className` и тема оформляют основу.
 
 ## Пример
@@ -49,6 +51,18 @@ Disabled блокируется до пользовательского дейс
 и `surface={false}`. Позиционирование/видимость принадлежат useTooltip,
 портал и переход — Tooltip; Button не содержит второй fade-движок.
 Стабильные соседние позиции кнопки и портала сохраняют DOM при смене tooltip.
+
+## Общий контроллер действия
+
+[ActionInvocationProvider и useActionInvocation](ActionInvocationProvider.md) описывают полный договор.
+
+`useActionInvocation<A>()` принимает любые аргументы действия, в том числе без аргументов
+для Enter и click одного composer. `ActionInvocationProvider` принимает
+`isCancelled?: (error:unknown)=>boolean` и `scopeKey?:string|number`;
+по умолчанию AbortError, app различает `OsRequestError(kind='cancelled')`.
+Ошибки onSettled/onFailure/predicate не блокируют pending; отказ отправляется
+актуальному provider той же сессии даже после unmount потомка, но запрос за
+пользователя kit не отменяет. Field errors — зона формы/app adapter.
 
 ## Приёмка изменения
 

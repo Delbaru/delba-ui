@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { useLinkPrefetch } from '../../hooks/useLinkPrefetch';
-import { useId } from 'react';
+import { isValidElement, useId } from 'react';
 import type React from 'react';
 
 import styles from './Button.module.scss';
 
 import { boxLayout, composeEventHandlers, composeInteractionHandlers, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type WithRef } from '../../core';
 import { useTooltip } from '../../hooks/useTooltip';
+import { useActionInvocation } from '../../hooks/useActionInvocation';
 import { useAnimationVisibility } from '../../hooks/useAnimationVisibility';
 import { useSharedMotion } from '../../hooks/useSharedMotion';
 import { CollapseWrap } from '../Collapse/CollapseWrap';
@@ -59,28 +60,38 @@ export function Button({
   tooltip,
   tooltipDirection = 'right',
   tooltipGap = 8,
+  onActionSettled,
+  actionName,
+  'aria-busy': ariaBusy,
   'aria-describedby': ariaDescribedBy,
   ...props
 }: WithRef<ButtonProps, HTMLElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
+  const { pending, invoke } = useActionInvocation({ action: onClick, onSettled: onActionSettled, actionName });
+  const effectiveDisabled = disabled || pending;
   const isLink = Boolean(href);
   const useNextLink = isLink && shouldUseNextLink(href, target, download);
-  const prepare = useLinkPrefetch(prefetch, href, useNextLink && !newTab && !disabled);
+  const prepare = useLinkPrefetch(prefetch, href, useNextLink && !newTab && !effectiveDisabled);
   const Comp = (useNextLink ? Link : isLink ? 'a' : 'button') as React.ElementType;
   const linkProps = resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer });
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
   const hover = buttonHoverProps(animate);
   const idle = buttonIdleProps(animate);
-  const setIdleNode = useAnimationVisibility(idle['data-button-idle'] === 'glow' && !disabled);
+  const setIdleNode = useAnimationVisibility(idle['data-button-idle'] === 'glow' && !effectiveDisabled);
   const tooltipId = useId();
-  const hasTooltip = Boolean(tooltip);
-  const describedBy = [ariaDescribedBy, hasTooltip ? tooltipId : undefined].filter(Boolean).join(' ') || undefined;
-  const { anchorRef, tooltipRef, anchorHandlers, bubbleProps } = useTooltip({
-    enabled: hasTooltip,
-    direction: tooltipDirection,
-    gap: tooltipGap,
+  const isConfig = Boolean(tooltip && typeof tooltip === 'object' && !isValidElement(tooltip) && 'label' in tooltip);
+  const tooltipConfig = isConfig ? tooltip as { label: React.ReactNode; direction?: 'top' | 'bottom' | 'left' | 'right'; gap?: number } : null;
+  const tooltipLabel: React.ReactNode = tooltipConfig ? tooltipConfig.label : tooltip as React.ReactNode;
+  const hasTooltip = tooltipLabel !== null && tooltipLabel !== undefined && tooltipLabel !== false && tooltipLabel !== '';
+  const { anchorRef, tooltipRef, anchorHandlers, bubbleProps, isActive } = useTooltip({
+    enabled: hasTooltip && !effectiveDisabled,
+    direction: tooltipConfig?.direction ?? tooltipDirection,
+    gap: tooltipConfig?.gap ?? tooltipGap,
+    hoverDelayMs: 400,
+    resetKey: tooltipLabel,
   });
+  const describedBy = [ariaDescribedBy, isActive ? tooltipId : undefined].filter(Boolean).join(' ') || undefined;
   const setBehaviorRefs = useMergedRefs(anchorRef, setMotionNode, setIdleNode);
   const setRefs = useMergedRefs(setBehaviorRefs, ref);
 
@@ -91,27 +102,28 @@ export function Button({
         ...rest,
         ...linkProps,
         ...(useNextLink ? { prefetch: prepare.prefetch } : null),
-        ...(!useNextLink && disabled ? { href: undefined } : null),
-        tabIndex: disabled ? -1 : rest.tabIndex,
-        'aria-disabled': disabled ? true : rest['aria-disabled'],
+        ...(!useNextLink && effectiveDisabled ? { href: undefined } : null),
+        tabIndex: effectiveDisabled ? -1 : rest.tabIndex,
+        'aria-disabled': effectiveDisabled ? true : rest['aria-disabled'],
       }
-    : { ...rest, type: type ?? 'button', disabled };
+    : { ...rest, type: type ?? 'button', disabled: effectiveDisabled };
 
   const handleClick: React.MouseEventHandler<HTMLElement> = (event) => {
-    if (disabled) {
+    if (effectiveDisabled) {
       event.preventDefault();
       event.stopPropagation();
       return;
     }
 
-    onClick?.(event as React.MouseEvent<HTMLButtonElement>);
+    // Invokes the user callback once. Never prevents native submit/link navigation.
+    invoke(event as React.MouseEvent<HTMLButtonElement>);
   };
 
   const interactions = composeInteractionHandlers(
     composeInteractionHandlers(anchorHandlers, motionHandlers ?? {}),
     { onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp, onClick: handleClick, onFocus, onBlur },
   );
-  const interactionHandlers = stateLinkProps(disabled ? undefined : linkState, {
+  const interactionHandlers = stateLinkProps(effectiveDisabled ? undefined : linkState, {
     ...interactions,
     onMouseEnter: composeEventHandlers(interactions.onMouseEnter, prepare.onIntent),
     onFocus: composeEventHandlers(interactions.onFocus, prepare.onIntent),
@@ -138,8 +150,9 @@ export function Button({
         ...idle.style,
         ...style,
       }}
-      {...stateProps(state, disabled && 'disabled')}
+      {...stateProps(state, effectiveDisabled && 'disabled', pending && 'loading')}
       {...anchorProps}
+      aria-busy={ariaBusy ?? (pending || undefined)}
       {...revealAttrs}
       data-button-hover={hover['data-button-hover']}
       data-button-idle={idle['data-button-idle']}
@@ -157,7 +170,7 @@ export function Button({
   );
 
   const tooltipNode = hasTooltip ? (
-    <ButtonTooltip ref={tooltipRef} id={tooltipId} bubble={bubbleProps}>{tooltip}</ButtonTooltip>
+    <ButtonTooltip ref={tooltipRef} id={tooltipId} bubble={bubbleProps}>{tooltipLabel}</ButtonTooltip>
   ) : null;
 
   // Постоянная позиция кнопки в дереве сохраняет DOM и фокус при смене tooltip.

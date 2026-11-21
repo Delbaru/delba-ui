@@ -180,6 +180,7 @@ export function useDropdown({
     if (!panel) return;
     const owner = panel.ownerDocument.defaultView;
     if (!owner) return;
+    if (initialFocus) panel.focus({ preventScroll: true });
     const focus = () => {
       const direction = focusOnOpen.current;
       if (!direction) return;
@@ -193,7 +194,7 @@ export function useDropdown({
       if (!next) return;
       focusOnOpen.current = null;
       observer.disconnect();
-      next.focus();
+      next.focus({ preventScroll: true });
     };
     // Collapse may mount its children or remove hidden after the opening commit.
     const observer = new owner.MutationObserver(focus);
@@ -258,10 +259,21 @@ export function useDropdown({
       activeElement &&
       (panel?.contains(activeElement) || removedFocusedChild)
     ) {
-      target?.focus();
+      target?.focus({ preventScroll: true });
     }
     closeFocusPolicy.current = null;
   }, [open, returnFocus, external, geometryRef]);
+
+  useLayoutEffect(() => {
+    if (!open || returnFocus === false) return;
+    const panel = panelRef.current;
+    const target = returnFocus?.current ?? (external ? geometryRef.current : anchorRef.current);
+    return () => {
+      if (closeFocusPolicy.current !== 'preserve' && panel?.contains(panel.ownerDocument.activeElement)) {
+        target?.focus({ preventScroll: true });
+      }
+    };
+  }, [open, returnFocus, external, geometryRef, portalNode]);
 
   const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
     if (closeOn?.blur === false) return;
@@ -295,7 +307,7 @@ export function useDropdown({
     }
     event.preventDefault();
     event.stopPropagation();
-    if (command.action === 'focus') command.target.focus();
+    if (command.action === 'focus') command.target.focus({ preventScroll: true });
     else if (command.action === 'open') {
       focusOnOpen.current = command.edge;
       changeOpen(true);
@@ -354,6 +366,7 @@ export function useDropdown({
         ...(external ? stateProps(state) : {}),
         ref: setPanelRef,
         id,
+        tabIndex: rootProps.tabIndex ?? (initialFocus ? -1 : undefined),
         'data-dropdown-ancestors': ownIds.join(' '),
         style: {
           '--dropdown-offset': `calc(${offset} * var(--rpx))`,

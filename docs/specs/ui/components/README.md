@@ -55,6 +55,7 @@
 | [Modal](Modal.md) | Модальный сценарий поверх страницы |
 | [ModalProvider](ModalProvider.md) | Стек, контекст и программное открытие Modal |
 | [Tooltip](Tooltip.md) | Короткая дополнительная подсказка |
+| [ActionInvocationProvider](ActionInvocationProvider.md) | Однократное действие, pending и обработка отказа |
 | [ToastProvider](ToastProvider.md) | Очередь уведомлений через useToast |
 | [TabTrack](TabTrack.md) | Движущийся индикатор выбранного элемента |
 | [InteractionScope](InteractionScope.md) | Активность области без дополнительной DOM-обёртки |

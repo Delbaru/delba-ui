@@ -163,6 +163,20 @@ TS7006 у `LexicalComposer.initialConfig.onError`: параметр `nextError` 
 
 ---
 
+### Tooltip: отмена hover не отменяет клавиатурный focus
+
+Глобальный scroll/pointerover вызывал общий dismiss и скрывал подсказку сразу
+после focus: браузер сам прокручивал страницу к триггеру. Без нового focus-события
+она не возвращалась. Теперь scroll и уход указателя очищают hover/таймер;
+Escape, blur, dragstart и pointerdown закрывают оба состояния. Смена label
+сохраняет фактический DOM focus и стабильный aria-describedby, очищая pending hover.
+Проверка: `tools/browser/tests/regressions.spec.ts --grep "Button tooltip keeps|Icon tooltip keeps"`
+со штатным `tools/browser/playwright.config.ts` — оба сценария прошли; точный
+DTooltip.lifecycle.test.tsx потребителя дополнительно проверяет смену label,
+сохранение focus/ID и отмену pending hover при scroll, Escape, drag и pointerdown.
+
+---
+
 ### Портальный список дёргался при прокрутке и прилипал к верху экрана
 
 Фильтр-`Select` на сайте АКК: при открытом списке и прокрутке колесом панель отставала от поля на кадр,
@@ -499,6 +513,18 @@ Collapse локальным селектором, не меняя вложенн
 updatePosition с onTransition общего CollapseWrap: пересчёт после подготовки поверхности,
 до отрисовки. Немедленная проверка alignment внутри прокрученной Modal воспроизводила сбой;
 после исправления четыре повторения прошли без ожидания/ослабления утверждения теста.
+
+**Точечное меню в transformed dialog.** Перенос проектного контекстного меню
+на Dropdown вынес портал из dialog и оставил fixed-координаты относительно окна,
+хотя transform создавал другую систему координат. Обычный focus также прокручивал
+документ. Для point портал остаётся в ближайшем dialog; общий floating hook
+ограничивает координаты containing block и переводит их в локальную систему.
+Dropdown использует preventScroll при входе, стрелках и восстановлении, включая
+unmount панели, владевшей фокусом. Проверка потребителя: точные
+`src/shared/ui/DMenu/DContextMenu.test.tsx` и
+`src/shared/ui/DMenu/tests/DContextMenu.kit.test.tsx` в CRMV2 проверяют координаты,
+queued/реальную прокрутку, клавиатуру, Escape и возврат фокуса. Адресный прогон
+обоих сценариев прошёл; визуальный браузерный сценарий проверяется отдельно.
 
 ## Modal: прокрутку удерживает слой, а не виджет
 
@@ -930,6 +956,9 @@ capture по-прежнему корректно завершают перета
 **Проверка.** Реальные CDP touchStart/move/end по дочернему тексту меняют позицию,
 а следующий вертикальный touch-жест прокручивает документ без смены слайда;
 `native-carousel.spec.ts` также проверяет mouse drag, отмену и unmount.
+Общий `beginPointerGesture` соблюдает ту же границу target владельца;
+`core/base/tests/pointer-gesture.test.ts` проверяет всплывший lostcapture
+потомка и последующее успешное завершение жеста родителя.
 
 ## Событие границ карусели не является событием смены слайда
 

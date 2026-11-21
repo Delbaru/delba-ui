@@ -18,7 +18,8 @@
 
 `useTooltip()` даёт anchorRef, tooltipRef, anchorHandlers и bubbleProps.
 Его defaults: enabled=true, direction=bottom, align=center, gap=8,
-viewportPadding=8 px, lazyPortal=false, keepPositionWhenInactive=true.
+viewportPadding=8 px, lazyPortal=false, keepPositionWhenInactive=true,
+hoverDelayMs=0 (у Button — 400). Scroll и уход указателя отменяют hover; Escape, blur, dragstart и pointerdown закрывают подсказку. Keyboard focus сохраняет её при автопрокрутке к триггеру. Fade-out и портал остаются у Tooltip.
 
 ## Пример
 
@@ -49,6 +50,13 @@ Tooltip не устанавливает обработчики триггера 
 Роль поверхности — tooltip. useTooltip не предоставляет focus trap, dismissal по
 Escape или полноценную интерактивную popover-модель: для формы/действий выбери Dropdown.
 SSR не создаёт portalNode до клиентского эффекта.
+
+Hover timer / P2: `hoverDelayMs=400` на Button/DTooltip; во время
+отложенного hover уже работают scroll/Escape/pointerover/pointerdown/drag/blur
+cancellation listeners, поэтому подсказка не появляется после dismissal.
+`resetKey` очищает hover и таймер при смене label, сохраняя фактический DOM focus; unmount
+очищает таймеры. Kit hook default `hoverDelayMs=0` для совместимости.
+`DTooltip` — as-child фасад, не второй portal/positioner.
 
 ## Приёмка
 

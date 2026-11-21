@@ -28,8 +28,12 @@ export interface UseFloatingSurfaceOptions {
   onDismiss(reason: FloatingDismissReason): void;
 }
 
-export function resolveFloatingPortalHost(anchor: HTMLElement | null): HTMLElement | null {
+export function resolveFloatingPortalHost(anchor: HTMLElement | null, pointMenu = false): HTMLElement | null {
   if (!anchor) return null;
+  if (pointMenu) {
+    const dialog = anchor.closest<HTMLElement>('[role="dialog"]');
+    if (dialog) return dialog;
+  }
   const modal = anchor.closest<HTMLElement>('[role="dialog"][aria-modal="true"]');
   return modal?.parentElement ?? anchor.ownerDocument.body;
 }
@@ -58,7 +62,7 @@ export function useFloatingSurface({
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
-    const nextPortalNode = portal ? resolveFloatingPortalHost(anchorRef.current) : null;
+    const nextPortalNode = portal ? resolveFloatingPortalHost(anchorRef.current, Boolean(anchorPoint)) : null;
     setPortalNode((current) => current === nextPortalNode ? current : nextPortalNode);
   });
 

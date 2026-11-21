@@ -2,6 +2,15 @@
 
 # Оснастка: генератор, сабмодуль, скрипты
 
+### Capture listeners в Node EventTarget снимаются с явными options
+
+Pointer-helper unit использует Node EventTarget. При `addEventListener(type, fn,
+true)` и `removeEventListener(type, fn, true)` capture-listener в этом harness
+оставался активным: второй generated click также поглощался после one-shot cleanup.
+Обе операции используют `{capture:true}`; повторный click должен проходить.
+Воспроизведение: `node --import tsx --test src/core/base/tests/pointer-gesture.test.ts`,
+сценарий `successful drag blocks only matching pointer-generated click`.
+
 ### Общий marker guard проверяет потребителей без автоматического baseline
 
 Anatomy-check ограничен src/components кита и не защищал CMS/project className.

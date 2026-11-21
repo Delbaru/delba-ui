@@ -96,6 +96,55 @@ preload может передаваться HTTP Link, а не только DOM.
 Вне области наклон возвращается в покой; фокус даёт устойчивый наклон без курсора.
 Без scope сохраняются прежние element/viewport-режимы; scope относится к element.
 
+## Pointer-жесты
+
+`beginPointerGesture(start, options)` из `@delba/ui` объединяет lifecycle
+перетаскивания окон, карточек и разделителей. Источник —
+`src/core/base/pointer-gesture.ts`; продуктовые координаты, порядок, права,
+сохранение и клавиатурные действия остаются у потребителя.
+
+```tsx
+const session = beginPointerGesture(event, {
+  threshold: 4,
+  preventSelection: true,
+  suppressClick: true,
+  onMove: pointer => preview(pointer.clientX, pointer.clientY),
+  onFinish: result => {
+    if (result.reason === 'up' && result.started) commit();
+    else rollback();
+  },
+});
+// При замене жеста или размонтировании:
+session?.cancel();
+```
+
+`start.currentTarget` — реальный HTMLElement. Вход также содержит `button`,
+`pointerId`, `clientX`, `clientY`, необязательный `isPrimary`. Вторичная кнопка
+или неосновной pointer возвращают `null`. Порог задан в CSS px (по умолчанию 0);
+capture и `onStart` включаются строго после его превышения. До этого вложенный
+контрол сохраняет обычный click/focus. `onMove` начинает поступать после активации.
+
+`onFinish` вызывается один раз с `reason`, `started` и последними координатами.
+Причины: `up`, `pointercancel`, `lostcapture`, `escape`, `blur`, `hidden`,
+`dispose`. Только `up` означает завершение, при котором потребитель может
+сохранить результат; `cancel()` завершает с `dispose`. Потребитель не должен
+обновлять размонтированный экран из этого callback. Cleanup освобождает capture,
+selection lock и слушатели; отмена в `onStart` исключает последующий `onMove`.
+
+`suppressClick` поглощает только generated pointer click на исходном элементе
+или его потомке. Keyboard click, другой pointer и другие элементы остаются
+доступными. После Escape/blur/lostcapture suppression ждёт up того же pointer;
+pointercancel и dispose не создают нового suppression. Повторный жест снимает
+оставшийся guard для своего источника. Это не глобальная временная блокировка
+кликов. Типы `PointerGestureStart`, `PointerGestureOptions`,
+`PointerGestureResult`, `PointerGestureEndReason`, `PointerGestureSession`
+экспортируются тем же публичным входом.
+
+Критерии: subthreshold click/focus, успешный drag и scoped click, cancel/Escape,
+blur/hidden/lostcapture, cleanup/unmount и повторный жест. Unit-сценарии —
+`src/core/base/tests/pointer-gesture.test.ts`; настоящий capture/click/focus
+проверяется на рабочем потребителе в браузере.
+
 ## Полосы и медиазапросы
 
 `@use '@delba/ui/mixins' as m` предоставляет `m.breakpoint(m|t|d)` для непропсовых

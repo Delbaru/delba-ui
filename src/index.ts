@@ -107,3 +107,21 @@ export * from './components/PhoneField';
 
 export { useScrollProgress, type ScrollProgressOptions } from './hooks/useScrollProgress';
 export { PageTransition, type PageTransitionProps, type PageTransitionAnimate } from './components/PageTransition';
+export {
+  ActionInvocationProvider,
+  useActionInvocation,
+  type ActionInvocationResult,
+  type ActionFailureContext,
+  type ActionFailureHandler,
+  type ActionCancellationPredicate,
+  type ActionInvocationOptions,
+  type ActionInvocationController,
+} from './hooks/useActionInvocation';
+export {
+  beginPointerGesture,
+  type PointerGestureStart,
+  type PointerGestureResult,
+  type PointerGestureEndReason,
+  type PointerGestureOptions,
+  type PointerGestureSession,
+} from './core/base/pointer-gesture';

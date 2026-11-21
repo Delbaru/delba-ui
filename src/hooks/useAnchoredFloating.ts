@@ -165,6 +165,18 @@ function documentOrigin(floatingNode: HTMLElement): { left: number; top: number 
   };
 }
 
+/** A transformed ancestor establishes the containing block even for fixed panels. */
+function fixedContainingBlock(node: HTMLElement): HTMLElement | null {
+  const view = node.ownerDocument.defaultView;
+  if (!view) return null;
+  for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+    const style = view.getComputedStyle(parent);
+    const transformed = [style.transform, style.perspective, style.filter].some(value => value && value !== 'none');
+    if (transformed || /(?:paint|layout|strict|content)/.test(style.contain) || /(?:transform|perspective|filter)/.test(style.willChange)) return parent;
+  }
+  return null;
+}
+
 /**
  * Сколько высоты у панели ЕСТЬ на выбранной стороне якоря. Уезжает на корень панели переменной
  * `--floating-available`, а распоряжается ей вёрстка панели (`SharedPopover`: max-height + свой
@@ -249,13 +261,25 @@ export function useAnchoredFloating({
     strategyRef.current = nextStrategy;
     // В координатах документа сторона не переворачивается: до панели у низа экрана докручивают
     // страницу, а перевёрнутая вверх уходила под липкую шапку и была недоступна.
-    const nextPlacement = nextStrategy === 'document'
+    const nextPlacement = anchorPoint || nextStrategy === 'document'
       ? preferredPlacement
       : resolvePlacement(preferredPlacement, anchorRect, floatingRect, gap, viewportPadding, view);
     const viewportPosition = resolveAlignedPosition(nextPlacement, align, anchorRect, floatingRect, gap, viewportPadding, view, nextStrategy === 'fixed');
     // Координаты документа — от offsetParent панели; position ставим до замера: от неё зависит offsetParent.
     floatingNode.style.position = nextStrategy === 'document' ? 'absolute' : 'fixed';
-    const origin = nextStrategy === 'document' ? documentOrigin(floatingNode) : { left: 0, top: 0 };
+    const containingBlock = nextStrategy === 'fixed' ? fixedContainingBlock(floatingNode) : null;
+    const blockRect = containingBlock?.getBoundingClientRect();
+    if (blockRect) {
+      viewportPosition.left = clamp(viewportPosition.left, blockRect.left + viewportPadding,
+        Math.max(blockRect.left + viewportPadding, blockRect.right - floatingRect.width - viewportPadding));
+      viewportPosition.top = clamp(viewportPosition.top, blockRect.top + viewportPadding,
+        Math.max(blockRect.top + viewportPadding, blockRect.bottom - floatingRect.height - viewportPadding));
+    }
+    const origin = nextStrategy === 'document' ? documentOrigin(floatingNode)
+      : blockRect && containingBlock ? {
+        left: blockRect.left + containingBlock.clientLeft - containingBlock.scrollLeft,
+        top: blockRect.top + containingBlock.clientTop - containingBlock.scrollTop,
+      } : { left: 0, top: 0 };
     const nextSnapshot = {
       ...viewportPosition,
       left: viewportPosition.left - origin.left,
@@ -366,8 +390,8 @@ export function useAnchoredFloating({
 
   const style: FloatingStyle = {
     position: snapshot.strategy === 'document' ? 'absolute' : 'fixed',
-    left: 'var(--floating-left)',
-    top: 'var(--floating-top)',
+    left: anchorPoint ? `${Math.round(resolvedLeft)}px` : 'var(--floating-left)',
+    top: anchorPoint ? `${Math.round(resolvedTop)}px` : 'var(--floating-top)',
     '--floating-left': `${Math.round(resolvedLeft)}px`,
     '--floating-top': `${Math.round(resolvedTop)}px`,
   };
