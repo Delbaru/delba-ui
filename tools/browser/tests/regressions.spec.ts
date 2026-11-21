@@ -3619,10 +3619,14 @@ test('date calendar inside Modal stays in its focus scope and Escape restores th
 test('date calendar inside Modal waits for visibility before Tab focus and cancels a dismissed request', async ({ page }) => {
   await openFixture(page);
   await page.getByRole('button', { name: 'Open calendar focus modal' }).click();
-  const date = page.getByTestId('modal-date');
-  const toggle = page.getByTestId('modal-calendar-control').getByRole('button');
-  const previousMonth = page.getByRole('button', { name: 'Previous month' });
-  const hidden = await page.addStyleTag({ content: '[class*="_Calendar_"] { visibility: hidden !important; }' });
+  const modal = page.getByRole('dialog', { name: 'Calendar focus modal', exact: true });
+  await expect(modal).toBeVisible();
+  const date = modal.getByTestId('modal-date');
+  const toggle = modal.getByTestId('modal-calendar-control').getByRole('button', { name: 'Открыть календарь', exact: true });
+  // Dropdown portals into the Modal host beside the dialog surface.
+  const calendar = page.getByRole('group', { name: 'Открыть календарь', exact: true });
+  const previousMonth = calendar.getByRole('button', { name: 'Previous month', exact: true });
+  const hidden = await page.addStyleTag({ content: '[role="group"][aria-label="Открыть календарь"] { visibility: hidden !important; }' });
   await toggle.click();
   await date.press('Tab');
   await expect(date).toBeFocused();
@@ -3631,7 +3635,7 @@ test('date calendar inside Modal waits for visibility before Tab focus and cance
 
   await previousMonth.press('Escape');
   await expect(date).toBeFocused();
-  const hiddenAgain = await page.addStyleTag({ content: '[class*="_Calendar_"] { visibility: hidden !important; }' });
+  const hiddenAgain = await page.addStyleTag({ content: '[role="group"][aria-label="Открыть календарь"] { visibility: hidden !important; }' });
   await toggle.click();
   await date.press('Tab');
   await date.press('Escape');
