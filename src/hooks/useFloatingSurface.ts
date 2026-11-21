@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useLayoutEffect, useState, type FocusEvent, type KeyboardEvent, type RefObject } from 'react';
-import { useAnchoredFloating, type FloatingAlign, type FloatingAnchorPoint, type FloatingPlacement } from './useAnchoredFloating';
+import { useAnchoredFloating, type FloatingAlign, type FloatingAnchorPoint, type FloatingPlacement, type FloatingStrategy } from './useAnchoredFloating';
 import { useOutsideDismiss, type DismissRef } from './useOutsideDismiss';
 
 export type FloatingDismissReason = 'outside' | 'blur' | 'escape';
@@ -18,6 +18,8 @@ export interface UseFloatingSurfaceOptions {
   outsideRefs?: readonly DismissRef[];
   regions?: readonly DismissRef[];
   placement?: FloatingPlacement;
+  /** Coordinate strategy forwarded to the positioning owner. */
+  strategy?: FloatingStrategy;
   align?: FloatingAlign;
   gap?: number;
   viewportPadding?: number;
@@ -44,6 +46,7 @@ export function useFloatingSurface({
   outsideRefs,
   regions = [],
   placement,
+  strategy,
   align,
   gap,
   viewportPadding,
@@ -65,6 +68,7 @@ export function useFloatingSurface({
     floatingRef: positionedRef,
     isActive: portal && open,
     placement,
+    strategy,
     align,
     gap,
     viewportPadding,
@@ -101,6 +105,7 @@ export function useFloatingSurface({
     portalNode,
     style: portal ? floating.style : undefined,
     placement: floating.placement,
+    strategy: floating.strategy,
     isPositioned: floating.isPositioned,
     updatePosition: floating.updatePosition,
     dismissProps,

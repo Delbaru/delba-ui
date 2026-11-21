@@ -19,6 +19,17 @@ type FloatingStyle = CSSProperties & {
   '--floating-top'?: string;
 };
 
+/**
+ * - `fixed` — координаты окна (`position: fixed`), пересчёт на каждой прокрутке; панель не выходит за
+ *   края экрана. Тултип и календарь: короткоживущие, рядом с курсором.
+ * - `document` — координаты документа (`position: absolute` от offsetParent): прокрутку страницы
+ *   браузер двигает вместе с якорем сам, без кадра отставания, а по вертикали панель не зажата
+ *   экраном — уходит за край вместе с якорем, а не прилипает к нему. Пересчёт — при изменении
+ *   размеров и прокрутке вложенных контейнеров. Якорь в fixed/sticky-предке (шапка, окно) — как `fixed`:
+ *   иначе панель уехала бы от прилипшего якоря.
+ */
+export type FloatingStrategy = 'fixed' | 'document';
+
 type UseAnchoredFloatingOptions = {
   anchorRef: RefObject<Element | null>;
   anchorPoint?: FloatingAnchorPoint;
@@ -34,6 +45,8 @@ type UseAnchoredFloatingOptions = {
    * за экран и анимация исчезновения не видна. До первого позиционирования всё равно прячем.
    */
   keepPositionWhenInactive?: boolean;
+  /** Система координат панели (см. `FloatingStrategy`). По умолчанию `fixed`. */
+  strategy?: FloatingStrategy;
 };
 
 type FloatingSnapshot = {
@@ -41,9 +54,11 @@ type FloatingSnapshot = {
   left: number;
   top: number;
   isPositioned: boolean;
+  /** Фактическая система координат: `document` откатывается в `fixed` у закреплённого якоря. */
+  strategy: FloatingStrategy;
 };
 
-type FloatingPosition = Omit<FloatingSnapshot, 'isPositioned'>;
+type FloatingPosition = Omit<FloatingSnapshot, 'isPositioned' | 'strategy'>;
 
 const HIDDEN_POSITION = -9999;
 
@@ -85,6 +100,8 @@ function resolveAlignedPosition(
   gap: number,
   viewportPadding: number,
   view: Window,
+  clampTop = true,
+
 ): FloatingPosition {
   const viewportWidth = view.innerWidth;
   const viewportHeight = view.innerHeight;
@@ -121,7 +138,30 @@ function resolveAlignedPosition(
   return {
     placement,
     left: clamp(left, viewportPadding, maxLeft),
-    top: clamp(top, viewportPadding, maxTop),
+    top: clampTop ? clamp(top, viewportPadding, maxTop) : top,
+  };
+}
+
+/** Якорь живёт в fixed/sticky-предке: координаты документа его не догонят при прокрутке страницы. */
+function hasPinnedAncestor(node: Element): boolean {
+  const view = node.ownerDocument.defaultView;
+  if (!view) return false;
+  for (let current: Element | null = node; current && current !== node.ownerDocument.documentElement; current = current.parentElement) {
+    const position = view.getComputedStyle(current).position;
+    if (position === 'fixed' || position === 'sticky') return true;
+  }
+  return false;
+}
+
+/** Смещение от окна к системе offsetParent панели: её `left/top` при `position: absolute`. */
+function documentOrigin(floatingNode: HTMLElement): { left: number; top: number } {
+  const parent = floatingNode.offsetParent;
+  const view = floatingNode.ownerDocument.defaultView;
+  if (!view || !(parent instanceof view.HTMLElement)) return { left: -(view?.scrollX ?? 0), top: -(view?.scrollY ?? 0) };
+  const rect = parent.getBoundingClientRect();
+  return {
+    left: rect.left + parent.clientLeft - parent.scrollLeft,
+    top: rect.top + parent.clientTop - parent.scrollTop,
   };
 }
 
@@ -156,7 +196,8 @@ function areSnapshotsEqual(left: FloatingSnapshot, right: FloatingSnapshot) {
   return left.placement === right.placement
     && left.isPositioned === right.isPositioned
     && Math.round(left.left) === Math.round(right.left)
-    && Math.round(left.top) === Math.round(right.top);
+    && Math.round(left.top) === Math.round(right.top)
+    && left.strategy === right.strategy;
 }
 
 export function useAnchoredFloating({
@@ -169,6 +210,7 @@ export function useAnchoredFloating({
   gap = 8,
   viewportPadding = 8,
   keepPositionWhenInactive = false,
+  strategy = 'fixed',
 }: UseAnchoredFloatingOptions) {
   const frameRef = useRef<{ view: Window; id: number } | null>(null);
   const connection = useRef<{
@@ -179,11 +221,14 @@ export function useAnchoredFloating({
     dispose(): void;
   } | null>(null);
   const hasEverPositionedRef = useRef(false);
+  // Фактическая система координат последнего замера — для фильтра прокрутки без ре-рендера.
+  const strategyRef = useRef<FloatingStrategy>(strategy);
   const [snapshot, setSnapshot] = useState<FloatingSnapshot>({
     placement: preferredPlacement,
     left: HIDDEN_POSITION,
     top: HIDDEN_POSITION,
     isPositioned: false,
+    strategy,
   });
 
   const updatePosition = useCallback(() => {
@@ -200,26 +245,45 @@ export function useAnchoredFloating({
     // посчитается по контентной ширине панели, и кламп у края экрана уедет.
     floatingNode.style.setProperty('--floating-anchor-width', `${Math.round(anchorRect.width)}px`);
     const floatingRect = floatingNode.getBoundingClientRect();
-    const nextPlacement = resolvePlacement(preferredPlacement, anchorRect, floatingRect, gap, viewportPadding, view);
+    const nextStrategy: FloatingStrategy = strategy === 'document' && !anchorPoint && !hasPinnedAncestor(anchorNode) ? 'document' : 'fixed';
+    strategyRef.current = nextStrategy;
+    // В координатах документа сторона не переворачивается: до панели у низа экрана докручивают
+    // страницу, а перевёрнутая вверх уходила под липкую шапку и была недоступна.
+    const nextPlacement = nextStrategy === 'document'
+      ? preferredPlacement
+      : resolvePlacement(preferredPlacement, anchorRect, floatingRect, gap, viewportPadding, view);
+    const viewportPosition = resolveAlignedPosition(nextPlacement, align, anchorRect, floatingRect, gap, viewportPadding, view, nextStrategy === 'fixed');
+    // Координаты документа — от offsetParent панели; position ставим до замера: от неё зависит offsetParent.
+    floatingNode.style.position = nextStrategy === 'document' ? 'absolute' : 'fixed';
+    const origin = nextStrategy === 'document' ? documentOrigin(floatingNode) : { left: 0, top: 0 };
     const nextSnapshot = {
-      ...resolveAlignedPosition(nextPlacement, align, anchorRect, floatingRect, gap, viewportPadding, view),
+      ...viewportPosition,
+      left: viewportPosition.left - origin.left,
+      top: viewportPosition.top - origin.top,
+
       isPositioned: true,
+      strategy: nextStrategy,
     };
 
     floatingNode.style.setProperty('--floating-left', `${Math.round(nextSnapshot.left)}px`);
     floatingNode.style.setProperty('--floating-top', `${Math.round(nextSnapshot.top)}px`);
     floatingNode.style.setProperty(
       '--floating-available',
-      `${Math.round(resolveAvailableHeight(nextPlacement, anchorRect, gap, viewportPadding, view))}px`
+      // В документе высота не ужимается до остатка экрана под якорем — только до высоты окна.
+      `${Math.round(nextStrategy === 'document'
+        ? Math.max(0, view.innerHeight - 2 * viewportPadding)
+        : resolveAvailableHeight(nextPlacement, anchorRect, gap, viewportPadding, view))}px`
+
     );
     hasEverPositionedRef.current = true;
 
     setSnapshot((currentSnapshot) => (
       areSnapshotsEqual(currentSnapshot, nextSnapshot) ? currentSnapshot : nextSnapshot
     ));
-  }, [align, anchorRef, anchorPoint?.x, anchorPoint?.y, floatingRef, gap, isActive, preferredPlacement, viewportPadding]);
+  }, [align, anchorRef, anchorPoint?.x, anchorPoint?.y, floatingRef, gap, isActive, preferredPlacement, strategy, viewportPadding]);
   const updateRef = useRef(updatePosition);
   updateRef.current = updatePosition;
+
 
   const scheduleUpdatePosition = useCallback(() => {
     const view = anchorRef.current?.ownerDocument.defaultView;
@@ -264,9 +328,15 @@ export function useAnchoredFloating({
     resizeObserver?.observe(anchorNode);
     resizeObserver?.observe(floatingNode);
 
+    // Capture includes nested native scrollers, not just the page viewport. В координатах документа
+    // прокрутку самой страницы браузер отрабатывает сам — пересчёт только у вложенных контейнеров.
+    const handleScroll = (event: Event) => {
+      if (strategyRef.current === 'document' && event.target === anchorNode.ownerDocument) return;
+      scheduleUpdatePosition();
+    };
     view.addEventListener('resize', scheduleUpdatePosition);
-    // Capture includes nested native scrollers, not just the page viewport.
-    view.addEventListener('scroll', scheduleUpdatePosition, true);
+    view.addEventListener('scroll', handleScroll, true);
+
 
     const dispose = () => {
       if (frameRef.current !== null) {
@@ -276,7 +346,8 @@ export function useAnchoredFloating({
 
       resizeObserver?.disconnect();
       view.removeEventListener('resize', scheduleUpdatePosition);
-      view.removeEventListener('scroll', scheduleUpdatePosition, true);
+      view.removeEventListener('scroll', handleScroll, true);
+
     };
     connection.current = { anchor: anchorNode, floating: floatingNode, view, schedule: scheduleUpdatePosition, dispose };
   });
@@ -294,7 +365,7 @@ export function useAnchoredFloating({
   const resolvedTop = shouldUseResolvedPosition ? snapshot.top : HIDDEN_POSITION;
 
   const style: FloatingStyle = {
-    position: 'fixed',
+    position: snapshot.strategy === 'document' ? 'absolute' : 'fixed',
     left: 'var(--floating-left)',
     top: 'var(--floating-top)',
     '--floating-left': `${Math.round(resolvedLeft)}px`,
@@ -304,6 +375,8 @@ export function useAnchoredFloating({
   return {
     placement: snapshot.placement,
     isPositioned: snapshot.isPositioned,
+    /** Фактическая система координат: `document` у закреплённого якоря становится `fixed`. */
+    strategy: snapshot.strategy,
     style,
     updatePosition,
   };

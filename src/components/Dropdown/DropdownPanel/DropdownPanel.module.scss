@@ -28,6 +28,7 @@
     }
 
     &.portalPanel {
+      &[data-strategy='document'] { z-index: var(--z-anchored, var(--z-under-floating)); }
       position: fixed;
       right: auto;
       bottom: auto;
