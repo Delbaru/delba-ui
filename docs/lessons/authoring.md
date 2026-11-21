@@ -1517,3 +1517,13 @@ VideoPlayer уже документирует MM:SS для короткого в
 tools/browser/tests/regressions.spec.ts --grep "waits for visibility|timeline keyboard"`
 из кита после интеграции всех изменений, затем полный browser suite потребителя.
 
+## Поисковый диалог явно сохраняет viewport-позиционирование
+
+После интеграции document-позиционирования Dropdown список стран PhoneField
+унаследовал новый default: стратегия намеренно не переворачивает панель и не
+зажимает её по вертикали. У нижнего края окна поисковый диалог терял доступную
+область. CountryPicker явно выбирает panel.strategy=fixed, как InputCalendar;
+обычные Dropdown сохраняют прокрутку вместе с документом. Воспроизведение и
+проверка исправления: browser regression PhoneField у края viewport в
+`tools/browser/tests/regressions.spec.ts`, затем полный browser suite потребителя.
+
