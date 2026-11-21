@@ -79,7 +79,13 @@ export const CountryPicker = memo(function CountryPicker({
   return (
     <Dropdown
       className={styles.CountryPicker}
-      panel={{ portal: true, side: 'start', className: styles.countryPanel, keepMounted: false }}
+      panel={{
+        portal: true,
+        strategy: 'fixed',
+        side: 'start',
+        className: styles.countryPanel,
+        keepMounted: false,
+      }}
       trigger={
         <Button
             type="button"
