@@ -9,6 +9,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 
+import { focusWhenReady } from '../../../core/base/focus';
 import { UI_MESSAGES } from '../../../core/base/messages';
 import * as dates from '../../../core/fields/date';
 import { Calendar } from '../../Calendar';
@@ -52,12 +53,17 @@ export function useDatePicker({
   const surfaceRef = useRef<HTMLElement | null>(null);
   const validatedValue = useRef<string | null>(null);
   const popupAnchorRef = anchorRef ?? rootRef;
+  const calendarFocus = useRef<AbortController | null>(null);
+  useEffect(() => () => calendarFocus.current?.abort(), [isOpen, available]);
 
   useEffect(() => {
     if (!available) setIsOpen(false);
   }, [available]);
 
-  const cancel = useCallback(() => setIsOpen(false), []);
+  const cancel = useCallback(() => {
+    calendarFocus.current?.abort();
+    setIsOpen(false);
+  }, []);
 
   const enter = useCallback(() => {
     validatedValue.current = null;
@@ -107,7 +113,10 @@ export function useDatePicker({
           surfaceRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
         if (firstControl) {
           event.preventDefault();
-          firstControl.focus();
+          calendarFocus.current?.abort();
+          const pending = new AbortController();
+          calendarFocus.current = pending;
+          void focusWhenReady(firstControl, { signal: pending.signal });
           return;
         }
       }

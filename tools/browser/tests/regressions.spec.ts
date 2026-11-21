@@ -3549,6 +3549,7 @@ test('motion profiler records static and enabled 40-Text updates as an observati
   await expect(box).toContainText('Profile text B 40');
   const staticTextUpdate = await page.evaluate(() => window.__motionProfileUpdate);
 
+
   await page.evaluate(() => {
     window.__motionProfileUpdate = null;
   });
@@ -3571,6 +3572,7 @@ test('motion profiler records static and enabled 40-Text updates as an observati
   expect(observation.staticTextUpdate?.phase).toMatch(/^(update|nested-update)$/);
   expect(observation.enabled?.phase).toMatch(/^(update|nested-update)$/);
   expect(observation.motionTextUpdate?.phase).toMatch(/^(update|nested-update)$/);
+
 });
 
 test('date calendar inside Modal stays in its focus scope and Escape restores the input', async ({
@@ -3613,9 +3615,34 @@ test('date calendar inside Modal stays in its focus scope and Escape restores th
   await expect(modal).toBeVisible();
 });
 
-test('scroll selector recomputes changed closures without another scroll event', async ({
-  page,
-}) => {
+
+test('date calendar inside Modal waits for visibility before Tab focus and cancels a dismissed request', async ({ page }) => {
+  await openFixture(page);
+  await page.getByRole('button', { name: 'Open calendar focus modal' }).click();
+  const date = page.getByTestId('modal-date');
+  const toggle = page.getByTestId('modal-calendar-control').locator('[data-input-action="true"]');
+  const previousMonth = page.getByRole('button', { name: 'Previous month' });
+  const hidden = await page.addStyleTag({ content: '[class*="_Calendar_"] { visibility: hidden !important; }' });
+  await toggle.click();
+  await date.press('Tab');
+  await expect(date).toBeFocused();
+  await hidden.evaluate((node) => node.remove());
+  await expect(previousMonth).toBeFocused();
+
+  await previousMonth.press('Escape');
+  await expect(date).toBeFocused();
+  const hiddenAgain = await page.addStyleTag({ content: '[class*="_Calendar_"] { visibility: hidden !important; }' });
+  await toggle.click();
+  await date.press('Tab');
+  await date.press('Escape');
+  await toggle.click();
+  await hiddenAgain.evaluate((node) => node.remove());
+  await expect(previousMonth).toBeVisible();
+  await expect(date).toBeFocused();
+});
+
+test('scroll selector recomputes changed closures without another scroll event', async ({ page }) => {
+
   await openFixture(page);
   const result = page.getByTestId('scroll-selector-result');
   await page.evaluate(() => window.scrollTo(0, 500));

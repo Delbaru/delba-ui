@@ -265,7 +265,7 @@ rAF-цикл прогресса крутится только пока есть 
 проектные редакторы используют публичный экспорт, без копии селектора в меню.
 Функция выбирает кандидатов и не перехватывает Tab или фокус самостоятельно.
 
-`focusWhenReady(target, { preventScroll = true, timeout = 1000 })` (`src/core/base/focus.ts`) — фокус,
+`focusWhenReady(target, { preventScroll = true, timeout = 1000, signal })` (`src/core/base/focus.ts`) — фокус,
 который ждёт, пока поле станет фокусируемым. Обычный `focus()` молча не срабатывает внутри свёрнутого
 `collapse` (`inert`) и до монтирования узла; этот ловит снятие `inert`/`hidden`/`disabled` и появление
 узла `MutationObserver`-ом, без опроса по кадрам. `target` — узел или `ref` (поля кита отдают в `ref`
