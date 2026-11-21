@@ -1502,3 +1502,18 @@ next с нулевым main-axis offset и весь профиль из 15 nativ
 него считается уже от неё. Лечение: блокируется только корень. Inline `!important` проект не
 перекрывает своим CSS. Проверять на прокрученной странице: сверху координаты совпадают и баг не виден.
 
+## Browser regression следует текущему публичному договору
+
+В календарном сценарии селектор `[data-input-action="true"]` совпал с управляющим
+контейнером и вложенной SVG: настоящий click остановился из-за strict mode.
+Внутри modal-calendar-control выбирается единственный доступный button через
+getByRole; ввод Tab/Escape и проверки отложенного фокуса остаются прежними.
+
+VideoPlayer уже документирует MM:SS для короткого времени, а clock.test.ts
+проверяет границу часа. Browser assertion продолжал ожидать HH:MM:SS для двух
+минут. Ожидание aria-valuetext обновлено до `00:05 из 02:00`; точные seek-позиции,
+клавиатурные шаги и endpoints сохранены. Воспроизведение и проверка исправлений:
+`pnpm exec playwright test --config tools/browser/playwright.config.ts
+tools/browser/tests/regressions.spec.ts --grep "waits for visibility|timeline keyboard"`
+из кита после интеграции всех изменений, затем полный browser suite потребителя.
+

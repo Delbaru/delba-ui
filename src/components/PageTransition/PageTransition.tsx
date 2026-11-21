@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import type {} from 'react/canary';
 import { motionDefaults } from '../../core/base/motion-config';
 import { motionDistanceCss } from '../../core/base/distance';
 import { readMotionTimeMs } from '../../core/base/timing';

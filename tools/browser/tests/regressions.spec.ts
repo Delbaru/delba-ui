@@ -3365,7 +3365,7 @@ test('VideoPlayer timeline keyboard moves by documented increments and endpoints
   await timeline.focus();
   await timeline.press('ArrowRight');
   await expect(timeline).toHaveAttribute('aria-valuenow', '5');
-  await expect(timeline).toHaveAttribute('aria-valuetext', '00:00:05 из 00:02:00');
+  await expect(timeline).toHaveAttribute('aria-valuetext', '00:05 из 02:00');
   await timeline.press('PageUp');
   await expect(timeline).toHaveAttribute('aria-valuenow', '17');
   await timeline.press('Home');
@@ -3620,7 +3620,7 @@ test('date calendar inside Modal waits for visibility before Tab focus and cance
   await openFixture(page);
   await page.getByRole('button', { name: 'Open calendar focus modal' }).click();
   const date = page.getByTestId('modal-date');
-  const toggle = page.getByTestId('modal-calendar-control').locator('[data-input-action="true"]');
+  const toggle = page.getByTestId('modal-calendar-control').getByRole('button');
   const previousMonth = page.getByRole('button', { name: 'Previous month' });
   const hidden = await page.addStyleTag({ content: '[class*="_Calendar_"] { visibility: hidden !important; }' });
   await toggle.click();
