@@ -1430,3 +1430,46 @@ SSR-регрессия required search проверяет оба атрибут�
 панелью над полем и ограниченной высотой проверяет границы текста каждой строки,
 отсутствие пересечений и настоящий overflow списка. До исправления textTop
 выходил за верх строки; после исправления строки сохраняют высоту и прокручиваются.
+
+### NativeCarousel: первое измерение и выделение при drag
+
+При одном слайде offsets остаются `[0]` до и после первого измерения. Сравнение
+только offsets оставляло size/span нулевыми и скрывало единственный слайд через
+aria-hidden/inert. Update сравнивает также размер viewport, span и gap.
+Регрессия `a single slide is visible and interactive after initial measurement
+and resize` проверяет первый mount, ввод и responsive resize.
+
+Readonly-редактор с явным user-select:text перекрывал запрет выделения предка.
+При начале принятого drag карусель снимает только своё начатое выделение, а
+активное drag-состояние запрещает выделение потомкам. Поля и ссылки не запускают
+жест; до/после него выделение разрешено. `real mouse drag changes page and
+interacting with a field keeps its input` проверяет текст с явным userSelect.
+
+### Один владелец позиции: transform и native focus scroll
+
+`overflow:hidden` остаётся программно прокручиваемой областью. Фокус на поле
+появляющегося слайда сдвигал viewport, а движок одновременно применял transform:
+после анимации карточки оставались между позициями. Enhanced viewport теперь
+использует overflow:clip; fallback без JS остаётся scroll/snap. Регрессия
+`focusing a newly visible field during motion cannot add native viewport scrolling`
+фокусирует реальное поле во время next, проверяет offset и сохранность фокуса.
+
+
+## NativeCarousel: не запрещать cross-axis focus-scroll ради единственного владельца позиции
+
+Замена enhanced `overflow: hidden` на `clip` убрала второй нативный offset при
+фокусе нового поля во время движения. Но она также запретила `scrollIntoView` по
+поперечной оси: ссылка чуть ниже фиксированной высоты viewport оставалась частично
+обрезанной, её центр попадал в родительский контейнер и обычный клик не проходил.
+Отмена touch была только триггером теста; подавление клика уже корректно сбрасывалось.
+
+Enhanced viewport сохраняет `hidden`. Двигатель удерживает нулевым только нативный
+scroll offset оси transform-трека через scroll listener, оставляя поперечную ось
+доступной браузерному фокусу. Слушатель снимается при destroy; при смене ориентации
+сбрасывается новая ось. Нет таймеров или постоянного animation-frame цикла.
+
+Воспроизведение и проверка: `native-carousel-rapid.spec.ts` — cancelled native touch
+затем настоящий link.click и смена hash; `native-carousel.spec.ts` — focus во время
+next с нулевым main-axis offset и весь профиль из 15 native сценариев. Не заменять
+клик на force и не увеличивать высоту fixture, чтобы скрыть clipping.
+

@@ -122,6 +122,10 @@ export function uiCheckSteps({
     typecheckCache,
     reportFile = path.join(requestedProject ?? KIT, '.verification', `ui-${suite}.json`),
 } = {}) {
+    if (config.testConcurrency !== undefined && (!Number.isInteger(config.testConcurrency) || config.testConcurrency < 1 || config.testConcurrency > 16)) {
+        throw new Error('testConcurrency must be an integer from 1 to 16');
+    }
+    const testConcurrency = config.testConcurrency ?? (process.env.CI ? 2 : undefined);
     const project =
         requestedProject && path.relative(KIT, path.resolve(requestedProject)) !== ''
             ? requestedProject
@@ -240,6 +244,7 @@ export function uiCheckSteps({
                           stateFile: `${reportFile}.project-tests`,
                           failedOnly,
                           nodeArgs: [
+                              ...(testConcurrency ? [`--test-concurrency=${testConcurrency}`] : []),
                               ...(config.testConditions ?? []).map(
                                   (condition) => `--conditions=${condition}`,
                               ),
@@ -276,6 +281,7 @@ export function runUiChecks(options = {}) {
         label: suite === 'all' ? 'UI' : `UI (${suite})`,
         reportFile,
         failedOnly: options.failedOnly,
+        concurrency: options.config?.checkConcurrency ?? 1,
         profile: { project: options.project, configArg: options.configArg, suite,
             shard: options.shard, fix: Boolean(options.fix), typecheckCache: options.typecheckCache },
     });

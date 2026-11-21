@@ -15,7 +15,7 @@ export function formatStep(name, { ok, output = '', warnings = '', diagnostics =
   const code = !ok ? 31 : warnings ? 33 : 32;
   const symbol = !ok ? '✗' : warnings ? '⚠' : '✓';
   const mark = paint(code, symbol, color);
-  const details = (!ok ? output : warnings).trim();
+  const details = (ok ? [output, warnings].filter(Boolean).join('\n') : output).trim();
   return `${mark} ${label}${details ? `\n${details.split('\n').map((line) => `  ${line}`).join('\n')}` : ''}`;
 }
 

@@ -51,7 +51,7 @@ export async function runNodeTests({ cwd = process.cwd(), files, nodeArgs = [], 
     ...nodeArgs, '--test', ...(native && file ? [`--test-rerun-failures=${file}`] : []),
     '--test-reporter', reporting.href,
     ...selectedFiles,
-  ], root);
+  ], root, { showOutput: true });
   let events;
   try {
     events = JSON.parse(fs.readFileSync(eventsFile, 'utf8'));

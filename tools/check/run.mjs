@@ -8,7 +8,7 @@ import { formatStep } from './format.mjs';
 import { startProgress } from './progress.mjs';
 
 /** Node запускается без shell: одинаковые аргументы на Windows и Unix. */
-export function runNode(args, cwd) {
+export function runNode(args, cwd, { showOutput = false } = {}) {
   return new Promise((resolve) => {
     const env = { ...process.env, FORCE_COLOR: '0' };
     // Playwright assigns FORCE_COLOR to its workers; an inherited NO_COLOR makes Node warn.
@@ -28,7 +28,7 @@ export function runNode(args, cwd) {
     child.on('error', (error) => resolve({ ok: false, output: error.message }));
     child.on('close', (code, signal) => resolve({
       ok: code === 0,
-      output: code === 0 ? '' : `${stripVTControlCharacters(output).trim()}\n${signal ? `Процесс остановлен: ${signal}.` : `Код завершения: ${code}.`}`.trim(),
+      output: code === 0 ? (showOutput ? stripVTControlCharacters(output).trim() : '') : `${stripVTControlCharacters(output).trim()}\n${signal ? `Процесс остановлен: ${signal}.` : `Код завершения: ${code}.`}`.trim(),
       warnings: code === 0 ? stripVTControlCharacters(warnings).trim() : '',
       signal,
     }));
@@ -44,8 +44,10 @@ export async function runSteps(steps, {
   reportFile,
   failedOnly = false,
   profile,
+  concurrency = 1,
 } = {}) {
-  const ids = steps.map((step) => step.id ?? step.name);
+  if (![1, 2].includes(concurrency)) throw new Error('checkConcurrency must be 1 or 2');
+  const ids = steps.map((step, index) => step.id ?? (reportFile ? step.name : `${index}:${step.name}`));
   const identity = createHash('sha256').update(JSON.stringify({
     cwd: process.cwd(), label, profile,
     steps: steps.map((step, index) => ({ id: ids[index], required: Boolean(step.required), dependsOn: step.dependsOn ?? [] })),
@@ -95,14 +97,15 @@ export async function runSteps(steps, {
   let ok = true;
   let stopped = false;
   const started = performance.now();
-  for (const [index, step] of steps.entries()) {
+  async function execute(index) {
+    const step = steps[index];
     const id = ids[index];
-    if (!selected.has(id)) continue;
+    if (!selected.has(id)) return;
     if (stopped || (step.dependsOn ?? []).some((dependency) => statuses.get(dependency) !== 'passed')) {
       statuses.set(id, 'blocked');
       ok = false;
       write(formatStep(`${step.name} — заблокировано подготовкой`, { ok: false }, { color }));
-      continue;
+      return;
     }
     let result;
     const stepStarted = performance.now();
@@ -119,6 +122,16 @@ export async function runSteps(steps, {
     ok = result.ok && ok;
     statuses.set(id, result.ok ? 'passed' : 'failed');
     if (result.signal || (!result.ok && step.required && !explicitDependencies)) stopped = true;
+  }
+  for (let index = 0; index < steps.length;) {
+    const batch = [index++];
+    if (!steps[batch[0]].required) {
+      while (batch.length < concurrency && index < steps.length && !steps[index].required &&
+        !(steps[index].dependsOn ?? []).some((id) => batch.some((pending) => ids[pending] === id))) {
+        batch.push(index++);
+      }
+    }
+    await Promise.all(batch.map(execute));
   }
   if (file) {
     fs.mkdirSync(path.dirname(file), { recursive: true });

@@ -39,6 +39,8 @@ export function Gallery() {
 
 - `label` обязателен; корень — focusable region, ref указывает на настоящий div.
 - `children` сохраняют по одному mounted экземпляру, включая видео и формы.
+- Один слайд остаётся видимым при первом измерении и resize, даже когда список
+  страниц `[0]` не изменился. Доступность учитывает фактический размер viewport.
 - `slidesPerView`, `gap`, `orientation` — `[desktop, mobile, tablet]`.
 - `controller` необязателен: без него создаётся внутренний стабильный контроллер.
 - `controller.prev/next/goTo` возвращают результат перехода; активная команда отменяется
@@ -78,3 +80,10 @@ Unit-проверки геометрии/контроллера/инерции/�
 [Реализация](../../../../src/components/NativeCarousel/NativeCarousel.tsx) ·
 [контроллер](../../../../src/components/NativeCarousel/controller.ts) ·
 [CarouselProgress](CarouselProgress.md) · [CarouselTimer](CarouselTimer.md).
+
+Enhanced viewport сохраняет `overflow: hidden` для cross-axis focus-scroll. Двигатель
+сбрасывает нативный offset только оси трека (`scrollLeft` горизонтально, `scrollTop`
+вертикально), не меняя cross-axis offset: фокус на появляющемся поле
+во время движения не должен добавлять нативный scrollLeft/scrollTop поверх
+transform трека. Без JS сохраняется обычный scroll/snap fallback. Браузерная
+приёмка фокусирует новое поле во время next и проверяет нулевой native offset.
