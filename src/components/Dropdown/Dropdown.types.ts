@@ -1,6 +1,7 @@
 import type { MouseEventHandler, ReactElement, ReactNode, RefObject } from 'react';
 import type { ComponentStateValue } from '../../core';
 import type { FloatingDismissReason } from '../../hooks/useFloatingSurface';
+import type { FloatingStrategy } from '../../hooks/useAnchoredFloating';
 import type { OpenAnimate } from '../../core/reveal/reveal';
 import type { BoxProps } from '../Box';
 import type { CollapseSettings } from '../Collapse/CollapseWrap';
@@ -21,6 +22,8 @@ export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'colla
   anchorRef?: RefObject<HTMLElement | null>;
   /** Minimum distance from viewport edges in native pixels. Default 8. */
   viewportPadding?: number;
+  /** Portal coordinates; document follows page scroll, fixed stays within the viewport. Default document. */
+  strategy?: FloatingStrategy;
   /** DOM data-атрибуты поверхности панели, включая проектные маркеры портала. */
   [attribute: `data-${string}`]: string | number | boolean | undefined;
   /** Край триггера, к которому прижата панель. */

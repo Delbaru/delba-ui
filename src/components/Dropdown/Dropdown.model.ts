@@ -75,6 +75,7 @@ export function useDropdown({
     animate: panelAnimate,
     anchorRef: geometryAnchorRef,
     viewportPadding = VIEWPORT_PADDING,
+    strategy = 'document',
     ...panelProps
   } = panel;
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -157,7 +158,7 @@ export function useDropdown({
     regions: [rootRef, anchorRef, ...focusRegions],
     outsideRefs: point !== undefined ? [surfaceRef] : [externalAnchorRef ?? anchorRef, surfaceRef],
     placement: 'bottom',
-    strategy: 'document',
+    strategy,
     align: side,
     gap: gapPixels,
     viewportPadding,

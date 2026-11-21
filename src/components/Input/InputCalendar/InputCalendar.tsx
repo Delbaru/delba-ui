@@ -182,6 +182,7 @@ export function InputCalendar({ calendar }: { calendar: CalendarModel }) {
         portal: true,
         keepMounted: false,
         viewportPadding: 8,
+        strategy: 'fixed',
         className: styles.InputCalendar,
         animate: { when: 'open', effect: 'fade', duration: 'fast' },
       }}

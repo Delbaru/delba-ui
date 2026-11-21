@@ -47,7 +47,10 @@ export async function runSteps(steps, {
   concurrency = 1,
 } = {}) {
   if (![1, 2].includes(concurrency)) throw new Error('checkConcurrency must be 1 or 2');
-  const ids = steps.map((step, index) => step.id ?? (reportFile ? step.name : `${index}:${step.name}`));
+  const ids = steps.map((step, index) => step.id ?? (
+    !reportFile && steps.filter((candidate) => candidate.name === step.name).length > 1
+      ? `${index}:${step.name}` : step.name
+  ));
   const identity = createHash('sha256').update(JSON.stringify({
     cwd: process.cwd(), label, profile,
     steps: steps.map((step, index) => ({ id: ids[index], required: Boolean(step.required), dependsOn: step.dependsOn ?? [] })),

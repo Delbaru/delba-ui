@@ -25,6 +25,9 @@
 panel defaults: side=start, offset=8 дизайн-единиц, matchTriggerWidth=false,
 keepMounted=true, viewportPadding=8 CSS px. portal=false с trigger и true с внешним
 anchorRef и point. panel.anchorRef меняет геометрию trigger-сценария, сохраняя его клавиатуру.
+panel.strategy=document прокручивает портал вместе со страницей и использует --z-anchored;
+fixed удерживает панель в окне. Закреплённый якорь и point используют fixed автоматически.
+InputCalendar явно выбирает fixed, сохраняя календарь в доступной области окна.
 Внешний anchorRef не создаёт trigger или дополнительную корневую обёртку.
 inheritVariables переносит выбранные CSS-переменные в портал.
 
@@ -54,7 +57,7 @@ Disabled-trigger не открывается. Tab входит в панель, 
     onOpenChange={setOpen}
     keyboard="content"
     preserveFocus
-    panel={{ portal: true, animate: { when: 'open', effect: 'fade', duration: 'fast' } }}
+    panel={{ portal: true, strategy: 'fixed', animate: { when: 'open', effect: 'fade', duration: 'fast' } }}
 >
   <Calendar value={value} onValueChange={setValue} />
 </Dropdown>
