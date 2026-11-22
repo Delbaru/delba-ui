@@ -5,6 +5,9 @@ description: 'Общая механика анимаций @delba/ui: appearance
 
 # Motion UI-кита
 
+Для браузерной диагностики Reveal, scroll roots и переходов используй
+[browser guide](../../../docs/browser-verification.md); общий порядок QA — shared `delba-browser`.
+
 Применяй по задаче без отдельного вызова. Прочитай [принципы](../../../docs/specs/architecture/principles.md)
 и [спецификацию движения](../../../docs/specs/ui/motion.md); если меняется публичный
 договор — также [API](../../../docs/specs/architecture/api.md). Новый результат

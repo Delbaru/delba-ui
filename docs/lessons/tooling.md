@@ -706,4 +706,24 @@ runtime-модулю. Подключение только в tsconfig кита �
 Воспроизведение: `npm run typecheck` из кита; проверка исправления — эта команда
 и `pnpm exec delba-ui test` из потребителя после интеграции всех изменений.
 
+### Shared skills проверяются по установленному источнику, а не только локальному имени
+
+`agent-docs check` считал каждый `.claude/skills/<name>` локальным навыком и искал
+канонический источник только в `.agents/skills` checkout. Поэтому действительная
+цепочка ссылок Claude → установленный shared skill → toolkit отвергалась как orphan.
+Внешний источник теперь разрешает installer manifest с owner `delba-toolkit`:
+`~/.delba/state/toolkit/install.json` либо явный `DELBA_TOOLKIT_MANIFEST`.
+Проверка сверяет ownership paths записи, настоящий symlink установленного навыка
+и realpath обеих ссылок с canonical target. Имя `delba-*` само по себе ничего
+не разрешает; локальный источник имеет приоритет при коллизии. Отсутствующий target,
+перенаправленная ссылка, отдельная копия и чужой источник остаются ошибками;
+sync не заменяет чужую shared ссылку автоматически.
+
+Воспроизведение и проверка: `node --test tools/tests/agent-docs.test.mjs` из корня
+кита создаёт настоящие временные links и manifest, проверяет check/sync, orphan,
+коллизии обычного и symlink локального источника, отсутствие и подмену target,
+копии, дубли и неверные ownership paths. Затем `node tools/agent-docs.mjs check .`
+проверяет действительные источники checkout. Эти команды прошли 22 ноября 2026;
+это не подтверждение обновления глобальной установки toolkit.
+
 

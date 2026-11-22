@@ -1,8 +1,45 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, symlinkSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const read = (file) => readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+const samePath = (left, right) => process.platform === 'win32'
+    ? path.resolve(left).toLowerCase() === path.resolve(right).toLowerCase()
+    : path.resolve(left) === path.resolve(right);
+
+/** The installer receipt authorizes sources; names alone never authorize external links. */
+function installedSkills(manifestFile) {
+    if (!existsSync(manifestFile)) return new Map();
+    const manifest = JSON.parse(read(manifestFile));
+    if (manifest.version !== 1 || manifest.owner !== 'delba-toolkit' ||
+        !path.isAbsolute(manifest.root ?? '') || !path.isAbsolute(manifest.skillsDir ?? '') ||
+        !Array.isArray(manifest.skills)) throw new Error(`${manifestFile}: неверный install manifest`);
+    const skills = new Map();
+    for (const item of manifest.skills) {
+        if (typeof item.name !== 'string' || !/^[a-z][a-z0-9-]*$/.test(item.name) || skills.has(item.name) ||
+            typeof item.path !== 'string' || typeof item.target !== 'string' ||
+            !samePath(item.path, path.join(manifest.skillsDir, item.name)) ||
+            !samePath(item.target, path.join(manifest.root, 'skills', item.name))) {
+            throw new Error(`${manifestFile}: неверное владение shared skill`);
+        }
+        skills.set(item.name, item);
+    }
+    return skills;
+}
+
+function checkInstalledLink(link, installed) {
+    if (!installed) throw new Error(`${link}: нет канонического источника`);
+    const sourceLink = lstatSync(installed.path, { throwIfNoEntry: false });
+    const destination = lstatSync(link, { throwIfNoEntry: false });
+    if (!sourceLink?.isSymbolicLink() || !destination?.isSymbolicLink() ||
+        !existsSync(path.join(installed.target, 'SKILL.md')) || !existsSync(installed.path) || !existsSync(link) ||
+        !samePath(realpathSync(installed.path), realpathSync(installed.target)) ||
+        !samePath(realpathSync(link), realpathSync(installed.target))) {
+        throw new Error(`${link}: неверная установленная shared ссылка`);
+    }
+    metadata(path.join(installed.target, 'SKILL.md'));
+}
 
 function markdownFiles(directory) {
     return readdirSync(directory, { withFileTypes: true }).flatMap((item) => {
@@ -78,11 +115,13 @@ function checkLinks(file, diagnostics) {
     }
 }
 
-export function run(mode, roots) {
+export function run(mode, roots, options = {}) {
     if (!['check', 'sync'].includes(mode) || !roots.length) {
         throw new Error('Usage: node tools/agent-docs.mjs check|sync <repository> [...]');
     }
     const diagnostics = [];
+    const manifestFile = options.sharedManifest ?? process.env.DELBA_TOOLKIT_MANIFEST ??
+        path.join(os.homedir(), '.delba', 'state', 'toolkit', 'install.json');
     let count = 0;
     for (const directory of roots) {
         const root = path.resolve(directory);
@@ -100,7 +139,7 @@ export function run(mode, roots) {
         }
         const files = [agents];
         for (const folder of readdirSync(sources, { withFileTypes: true })
-            .filter((item) => item.isDirectory())
+            .filter((item) => item.isDirectory() || item.isSymbolicLink())
             .sort((a, b) => a.name.localeCompare(b.name))) {
             const canonical = path.join(sources, folder.name, 'SKILL.md');
             if (!existsSync(canonical)) {
@@ -121,13 +160,19 @@ export function run(mode, roots) {
         }
         const links = path.join(root, '.claude/skills');
         if (existsSync(links)) {
+            let shared;
             for (const folder of readdirSync(links, { withFileTypes: true })) {
                 if (!existsSync(path.join(sources, folder.name, 'SKILL.md'))) {
-                    diagnostics.push(`${links}/${folder.name}: нет канонического источника`);
+                    try {
+                        shared ??= installedSkills(manifestFile);
+                        checkInstalledLink(path.join(links, folder.name), shared.get(folder.name));
+                    } catch (error) {
+                        diagnostics.push(error.message);
+                    }
                 }
             }
         }
-        for (const name of ['agents.md', 'project.md', 'development.md', 'Library.md', 'authoring.md', 'backend.md', 'frontend.md']) {
+        for (const name of ['agents.md', 'project.md', 'development.md', 'Library.md', 'authoring.md', 'backend.md', 'frontend.md', 'browser-verification.md']) {
             const file = path.join(root, 'docs', name);
             if (existsSync(file)) files.push(file);
         }
