@@ -16,6 +16,8 @@ export interface DropdownTriggerProps {
 }
 
 export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'collapse' | 'animate'> {
+  /** Owning surface for the portal and fixed placement bounds; defaults to modal/document context. */
+  boundaryRef?: RefObject<HTMLElement | null>;
   /** An owner's open drives enter/exit; without it the existing collapse behavior is preserved. */
   animate?: BoxProps['animate'] | OpenAnimate;
   /** Geometry anchor; keyboard focus and trigger semantics remain attached to trigger. */

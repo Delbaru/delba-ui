@@ -33,6 +33,8 @@ export type FloatingStrategy = 'fixed' | 'document';
 type UseAnchoredFloatingOptions = {
   anchorRef: RefObject<Element | null>;
   anchorPoint?: FloatingAnchorPoint;
+  /** A fixed surface remains inside this owner even when it has no transform/ARIA modal role. */
+  boundaryRef?: RefObject<HTMLElement | null>;
   floatingRef: RefObject<HTMLElement | null>;
   isActive: boolean;
   placement?: FloatingPlacement;
@@ -215,6 +217,7 @@ function areSnapshotsEqual(left: FloatingSnapshot, right: FloatingSnapshot) {
 export function useAnchoredFloating({
   anchorRef,
   anchorPoint,
+  boundaryRef,
   floatingRef,
   isActive,
   placement: preferredPlacement = 'bottom',
@@ -269,11 +272,12 @@ export function useAnchoredFloating({
     floatingNode.style.position = nextStrategy === 'document' ? 'absolute' : 'fixed';
     const containingBlock = nextStrategy === 'fixed' ? fixedContainingBlock(floatingNode) : null;
     const blockRect = containingBlock?.getBoundingClientRect();
-    if (blockRect) {
-      viewportPosition.left = clamp(viewportPosition.left, blockRect.left + viewportPadding,
-        Math.max(blockRect.left + viewportPadding, blockRect.right - floatingRect.width - viewportPadding));
-      viewportPosition.top = clamp(viewportPosition.top, blockRect.top + viewportPadding,
-        Math.max(blockRect.top + viewportPadding, blockRect.bottom - floatingRect.height - viewportPadding));
+    const boundaryRect = boundaryRef?.current?.getBoundingClientRect() ?? blockRect;
+    if (boundaryRect) {
+      viewportPosition.left = clamp(viewportPosition.left, boundaryRect.left + viewportPadding,
+        Math.max(boundaryRect.left + viewportPadding, boundaryRect.right - floatingRect.width - viewportPadding));
+      viewportPosition.top = clamp(viewportPosition.top, boundaryRect.top + viewportPadding,
+        Math.max(boundaryRect.top + viewportPadding, boundaryRect.bottom - floatingRect.height - viewportPadding));
     }
     const origin = nextStrategy === 'document' ? documentOrigin(floatingNode)
       : blockRect && containingBlock ? {
@@ -304,7 +308,7 @@ export function useAnchoredFloating({
     setSnapshot((currentSnapshot) => (
       areSnapshotsEqual(currentSnapshot, nextSnapshot) ? currentSnapshot : nextSnapshot
     ));
-  }, [align, anchorRef, anchorPoint?.x, anchorPoint?.y, floatingRef, gap, isActive, preferredPlacement, strategy, viewportPadding]);
+  }, [align, anchorRef, anchorPoint?.x, anchorPoint?.y, boundaryRef, floatingRef, gap, isActive, preferredPlacement, strategy, viewportPadding]);
   const updateRef = useRef(updatePosition);
   updateRef.current = updatePosition;
 
@@ -351,6 +355,7 @@ export function useAnchoredFloating({
     const resizeObserver = view.ResizeObserver ? new view.ResizeObserver(scheduleUpdatePosition) : null;
     resizeObserver?.observe(anchorNode);
     resizeObserver?.observe(floatingNode);
+    if (boundaryRef?.current) resizeObserver?.observe(boundaryRef.current);
 
     // Capture includes nested native scrollers, not just the page viewport. В координатах документа
     // прокрутку самой страницы браузер отрабатывает сам — пересчёт только у вложенных контейнеров.

@@ -100,3 +100,12 @@ Target точечного меню не считается pointer-inside: кл�
 панель его краями. Point размещается с clamp возле курсора; обычные anchor панели
 сохраняют выбор стороны. Вход, стрелки и возврат фокуса используют preventScroll;
 unmount открытой панели возвращает фокус только когда она им владела.
+
+`panel.boundaryRef?: RefObject<HTMLElement | null>` явно задаёт поверхность-владельца
+портала и границы fixed-позиционирования. Это необходимо для немодальных окон
+с role=region/tabpanel: роль не заменяется на dialog ради выбора портала.
+Потребитель передаёт реальный DOM ref; kit не знает проектных selectors.
+Без boundaryRef сохраняется автоматический modal/document host. Clamp к границе
+независим от преобразования координат transformed containing block; оба выполняет
+общий useAnchoredFloating. Keyboard/outside dismissal и возврат focus остаются
+у Dropdown, второй portal/positioner потребителю не нужен.

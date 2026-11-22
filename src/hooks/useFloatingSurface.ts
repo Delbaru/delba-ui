@@ -11,6 +11,8 @@ export interface UseFloatingSurfaceOptions {
   portal?: boolean;
   anchorRef: RefObject<HTMLElement | null>;
   anchorPoint?: FloatingAnchorPoint;
+  /** Explicit portal owner and fixed positioning boundary, independent of ARIA role. */
+  boundaryRef?: RefObject<HTMLElement | null>;
   /** External layer owners may keep their own dismissal policy. */
   dismiss?: boolean;
   positionRef?: RefObject<HTMLElement | null>;
@@ -44,6 +46,7 @@ export function useFloatingSurface({
   portal = true,
   anchorRef,
   anchorPoint,
+  boundaryRef,
   dismiss: dismissEnabled = true,
   positionRef,
   surfaceRef,
@@ -62,13 +65,14 @@ export function useFloatingSurface({
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
-    const nextPortalNode = portal ? resolveFloatingPortalHost(anchorRef.current, Boolean(anchorPoint)) : null;
+    const nextPortalNode = portal ? boundaryRef?.current ?? resolveFloatingPortalHost(anchorRef.current, Boolean(anchorPoint)) : null;
     setPortalNode((current) => current === nextPortalNode ? current : nextPortalNode);
   });
 
   const floating = useAnchoredFloating({
     anchorRef,
     anchorPoint,
+    boundaryRef,
     floatingRef: positionedRef,
     isActive: portal && open,
     placement,

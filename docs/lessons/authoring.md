@@ -520,7 +520,12 @@ updatePosition с onTransition общего CollapseWrap: пересчёт по�
 документ. Для point портал остаётся в ближайшем dialog; общий floating hook
 ограничивает координаты containing block и переводит их в локальную систему.
 Dropdown использует preventScroll при входе, стрелках и восстановлении, включая
-unmount панели, владевшей фокусом. Проверка потребителя: точные
+unmount панели, владевшей фокусом. Managed-окно с role=region не определяется
+автоматическим dialog-selector: потребитель передаёт panel.boundaryRef, а общий
+владелец выбирает портал и clamp по его DOM-границе независимо от ARIA-роли.
+CRM-selector остаётся у проектного DContextMenu. Точные регрессии также проходят
+transformed region, регион без transform и внешний закрывающий клик без активации
+страницы. Проверка потребителя: точные
 `src/shared/ui/DMenu/DContextMenu.test.tsx` и
 `src/shared/ui/DMenu/tests/DContextMenu.kit.test.tsx` в CRMV2 проверяют координаты,
 queued/реальную прокрутку, клавиатуру, Escape и возврат фокуса. Адресный прогон
