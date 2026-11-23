@@ -1,0 +1,234 @@
+@use 'sass:map';
+@use 'sass:list';
+$fills: () !default;
+$lines: () !default;
+$texts: () !default;
+$icon-colors: () !default;
+$shadows: () !default;
+
+// Словари осей доступны всем, кто @use'ит этот файл.
+@forward './_axes-tokens.scss';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ДВИЖОК ОСЕЙ. Здесь ТОЛЬКО логика: словари живут в core/axes.ts (единственный
+// источник) и приезжают сюда автогенератом _axes-tokens.scss.
+//
+// Покоящийся скин печатается НЕ здесь: глобальные классы .sk_fill_*/.sk_border_*
+// генерятся один раз в _axes-classes.scss. Этот файл нужен состояниям — их через
+// класс не выразить (`:hover`, `[state~='…']`).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Привязка к нативному псевдоклассу ────────────────────────────────────────
+// Состояние живёт в двух видах: CSS-псевдокласс (:hover) и токен атрибута
+// ([state~='hover'], управление извне). Ключ `pseudo` решает, давать ли первый;
+// второй есть всегда.
+//
+// ⚠️ ЛОВУШКА `active`: у кнопок state='active' значит «ВЫБРАН», а не «нажат».
+// Такие пресеты ОБЯЗАНЫ ставить pseudo: false, иначе выбранным будет светиться
+// любой элемент под нажатой мышью.
+$auto-pseudo: (hover, active, focus, focus-visible, focus-within);
+$opt-pseudo: (disabled, checked);
+
+@function _binds-pseudo($state, $props) {
+  $ask: map.get($props, pseudo);
+
+  @if list.index($auto-pseudo, $state) {
+    @return $ask != false;
+  }
+  @if list.index($opt-pseudo, $state) {
+    @return $ask == true;
+  }
+  @return false;
+}
+
+// Суффикс-страж: подавляет состояние, когда взведён другой токен.
+// guard: active → &:not([state~='active']):hover — ховер не мигает на выбранном.
+@function _guard($tokens) {
+  $out: '';
+
+  @each $token in $tokens {
+    $out: '#{$out}:not([state~=\'#{$token}\'])';
+
+    @if list.index($opt-pseudo, $token) {
+      $out: '#{$out}:not(:#{$token})';
+    }
+  }
+  @return $out;
+}
+
+// ── Резолверы словарей ───────────────────────────────────────────────────────
+// Имена осей пишутся без кавычек (fill: surface), Sass парсит часть из них как
+// цвета — ищем ключ по интерполированной строке, иначе map.get промахнётся.
+@function _key($name) {
+  @return '#{$name}';
+}
+
+@function fill($name) {
+  @if not map.has-key($fills, _key($name)) {
+    @error 'fill: неизвестное значение «#{$name}». Есть: #{map.keys($fills)}.';
+  }
+  @return map.get($fills, _key($name));
+}
+
+@function text-color($name) {
+  @if not map.has-key($texts, _key($name)) {
+    @error 'textColor: неизвестное значение «#{$name}». Есть: #{map.keys($texts)}.';
+  }
+  @return map.get($texts, _key($name));
+}
+
+@function icon-color($name) {
+  @if not map.has-key($icon-colors, _key($name)) {
+    @error 'iconColor: неизвестное значение «#{$name}». Есть: #{map.keys($icon-colors)}.';
+  }
+  @return map.get($icon-colors, _key($name));
+}
+
+// Применить цветовые оси тем же словарём, что и статические классы.
+@mixin axes($fill, $border) {
+  @if $fill != null {
+    background: fill($fill);
+  }
+
+  @if $border != null {
+    @if $border == none {
+      border-color: transparent;
+    } @else {
+      @if not map.has-key($lines, _key($border)) {
+        @error 'border: неизвестное значение «#{$border}». Есть: #{map.keys($lines)}, none.';
+      }
+
+      $spec: map.get($lines, _key($border));
+      $style: solid;
+
+      @if list.length($spec) > 2 {
+        $style: list.nth($spec, 3);
+      }
+
+      border: calc(#{list.nth($spec, 1)} * var(--rpx)) $style list.nth($spec, 2);
+    }
+  }
+}
+
+// ── Тело: словарь глаголов ───────────────────────────────────────────────────
+// Один словарь описывает и resting-слой (@include base(...)), и состояния
+// (@include states(...)) — состояние отличается только селектором.
+@mixin base($props) {
+  @include _state-body($props);
+}
+
+@mixin _state-body($props) {
+  @include axes(map.get($props, fill), map.get($props, border));
+
+  $opacity: map.get($props, opacity);
+
+  @if $opacity != null {
+    opacity: $opacity;
+  }
+
+  $cursor: map.get($props, cursor);
+
+  @if $cursor != null {
+    cursor: $cursor;
+  }
+
+  $pointer: map.get($props, pointerEvents);
+
+  @if $pointer != null {
+    pointer-events: $pointer;
+  }
+
+  $shadow: map.get($props, shadow);
+
+  @if $shadow == none {
+    box-shadow: none;
+  } @else if $shadow != null {
+    @if not map.has-key($shadows, '#{$shadow}') {
+      @error 'Unknown shadow: #{$shadow}';
+    }
+    box-shadow: map.get($shadows, '#{$shadow}');
+  }
+
+  $text-color: map.get($props, textColor);
+
+  @if $text-color != null {
+    color: text-color($text-color);
+
+    .text {
+      color: text-color($text-color);
+    }
+  }
+
+  // Основной глагол покраски глифа: канал (stroke/fill) выбирает компонент.
+  $icon-color: map.get($props, iconColor);
+
+  @if $icon-color != null {
+    --icon-color: #{icon-color($icon-color)};
+  }
+
+  $icon-stroke: map.get($props, iconStroke);
+
+  @if $icon-stroke != null {
+    .icon path {
+      stroke: icon-color($icon-stroke);
+    }
+  }
+
+  $icon-fill: map.get($props, iconFill);
+
+  @if $icon-fill != null {
+    .icon path {
+      fill: icon-color($icon-fill);
+    }
+  }
+
+  $icon-opacity: map.get($props, iconOpacity);
+
+  @if $icon-opacity != null {
+    .icon {
+      opacity: $icon-opacity;
+    }
+  }
+
+  // border-color БЕЗ пересборки border: меняем только цвет, толщину/стиль
+  // resting-рамки сохраняем.
+  $border-color: map.get($props, borderColor);
+
+  @if $border-color != null {
+    border-color: icon-color($border-color);
+  }
+}
+
+// ── Движок состояний ─────────────────────────────────────────────────────────
+// Карта состояний → правила. Новое состояние (любое имя) = ОДНА строка в карте.
+//
+// Служебные ключи (не глаголы, а модификаторы селектора):
+//   guard: active           → подавить состояние, когда взведён другой токен
+//   guard: (disabled active) → список: гасим по любому из токенов
+//   tone:  error            → скоупить состояние атрибутом (&[data-tone='error'])
+@mixin states($map) {
+  @each $state, $props in $map {
+    $guard: map.get($props, guard);
+    $tone: map.get($props, tone);
+
+    $prefix: '';
+
+    @if $guard != null {
+      $prefix: '#{$prefix}#{_guard($guard)}';
+    }
+    @if $tone != null {
+      $prefix: '#{$prefix}[data-tone=\'#{$tone}\']';
+    }
+
+    @if _binds-pseudo($state, $props) {
+      &#{$prefix}:#{$state},
+      &#{$prefix}[state~='#{$state}'] {
+        @include _state-body($props);
+      }
+    } @else {
+      &#{$prefix}[state~='#{$state}'] {
+        @include _state-body($props);
+      }
+    }
+  }
+}

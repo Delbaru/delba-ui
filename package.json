@@ -33,7 +33,9 @@
     "./config-loader": {
       "types": "./tools/config-loader.d.mts",
       "default": "./tools/config-loader.mjs"
-    }
+    },
+    "./skin/runtime": "./src/skin/runtime.tsx",
+    "./skin/effects": "./src/skin/_effects.scss"
   },
   "bin": {
     "delba-ui": "./tools/cli.mjs"

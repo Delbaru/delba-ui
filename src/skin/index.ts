@@ -33,6 +33,8 @@ export interface SkinDef<A extends AxisDict, P extends Record<string, SkinPreset
   axes: A;
   defaults?: AxisValues<A>;
   presets: P;
+  /** Optional numeric axes supplied by a consumer. */
+  scales?: Record<string, readonly number[]>;
 }
 
 export const defineSkin = <A extends AxisDict, P extends Record<string, SkinPreset<A>>>(def: SkinDef<A, P>) => def;
@@ -53,7 +55,7 @@ export function resolveSkin<A extends AxisDict, P extends Record<string, SkinPre
   const defaults: Readonly<Record<string, unknown>> = def.defaults ?? {};
   const given: Readonly<Record<string, unknown>> = props;
   const axes: Record<string, unknown> = {};
-  for (const key of Object.keys(def.axes)) axes[key] = given[key] ?? fromPreset?.[key] ?? defaults[key];
+  for (const key of [...Object.keys(def.axes), ...Object.keys(def.scales ?? {})]) axes[key] = given[key] ?? fromPreset?.[key] ?? defaults[key];
 
   const name = (key: string) => (typeof axes[key] === 'string' ? axes[key] : undefined);
   const fill = name('fill');

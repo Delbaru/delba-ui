@@ -104,7 +104,7 @@ export function projectSteps(
             [script('check-migration.mjs'), ...(config.rules ?? ['src']), ...configs],
             root,
         ),
-        nodeStep('Анатомия D-компонентов', [script('check-d-component-anatomy.mjs')], root),
+        ...(config.componentAnatomy === false ? [] : [nodeStep('Анатомия D-компонентов', [script('check-d-component-anatomy.mjs')], root)]),
         astStep('Архитектура проекта', root, {
             rules: projectRules,
             dirs: config.rules ?? ['src'],
