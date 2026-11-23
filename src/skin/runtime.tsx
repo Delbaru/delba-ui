@@ -154,9 +154,9 @@ export function useSkin<A extends AxisDict, S extends ScaleDict>(
     style,
     // Передаём ref напрямую: React 19 сам вызывает cleanup callback-ref.
     ref,
-    // Скаляр пресета → responsive-массив дома; проп инстанса уже в этой форме.
-    w: w ?? (presetW !== undefined ? [presetW] : undefined),
-    h: h ?? (presetH !== undefined ? [presetH] : undefined),
-    grow: grow ?? (preset?.grow ? [1] : undefined),
+    // Полные кортежи сохраняют геометрию на всех полосах и при strictTuple.
+    w: w ?? (presetW !== undefined ? [presetW, presetW, presetW] : undefined),
+    h: h ?? (presetH !== undefined ? [presetH, presetH, presetH] : undefined),
+    grow: grow ?? (preset?.grow ? [1, 1, 1] : undefined),
   };
 }
