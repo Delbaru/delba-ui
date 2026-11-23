@@ -1,185 +1,33 @@
 #!/usr/bin/env node
-import { ownsNativeReset, ownsResponsiveTokens } from './check/rules/stylesheet-infrastructure.mjs';
-// Красные линии дизайн-системы как проверка с храповиком: сколько нарушений в каждом файле
-// сейчас — записано в планку, и сборка падает, только если где-то их стало БОЛЬШЕ. Старое
-// не ломает сборку, новое не проходит; починил — `--update` опускает планку.
-//
-//   node <UI>/tools/check-rules.mjs --baseline <file.json> [--update] <папки проекта…>
+// Public controls retain their native focus/form and link semantics.
+// Visual presentation, source formatting, responsive CSS, conditional rendering
+// and the internal component anatomy are not product acceptance gates.
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { constTupleRule, globalComponentClassRule, rawInputRule } from './check/rules/project-props.mjs';
-
+import { rawInputRule } from './check/rules/project-props.mjs';
 import { jsxFormatRule } from './check/rules/jsx-format.mjs';
-import { unanimatedConditionalRule } from './check/rules/unanimated-conditional.mjs';
 
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'generated', 'public', 'UI']);
-const GRID_PROPS = 'w|h|minW|maxW|minH|maxH|p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|r';
 
+/** Behaviour-related boundary checks only. Source prettiness uses the opt-in formatter. */
 export const RULES = {
-  'global-component-class': {
-    ext: /\.[cm]?[jt]sx?$/,
-    ast: globalComponentClassRule,
-    baseline: false,
-    hint: 'собственный styles.Name без глобального именного дубля или fallback; utility/vendor классы сохраняются',
-  },
-  'jsx-format': {
+  'raw-button': {
     ext: /\.tsx$/,
-    ast: jsxFormatRule,
-    hint: 'короткий тег — в строку, длинный — по одному пропу на строку. Исправить: npm run ui:test --silent -- --fix',
+    test: line => /<button[\s>]/.test(line),
+    hint: 'Примените публичную кнопку с единым pending/focus/action договором.',
   },
-  'raw-button': { ext: /\.tsx$/, test: (line) => /<button[\s>]/.test(line), hint: 'SharedButton*' },
   'raw-input': {
     ext: /\.tsx$/,
     ast: rawInputRule,
-    hint: 'SharedInput / SharedCheckbox / SharedRadio',
+    hint: 'Примените публичный контрол; системный file picker и согласованный range owner остаются допустимыми.',
   },
   'raw-anchor': {
     ext: /\.tsx$/,
-    test: (line) => /<a[\s>]/.test(line),
-    hint: "Text as='a' или Button href",
-  },
-  'inline-svg': {
-    ext: /\.tsx$/,
-    test: (line) => /<svg[\s>]/.test(line),
-    hint: 'файл в public/icons + Icon',
-  },
-  // Появление по интерактивному состоянию анимируется; CMS-данные сами по себе не требуют motion.
-  'unanimated-conditional': {
-    ext: /\.tsx$/,
-    client: true,
-    ast: unanimatedConditionalRule,
-    hint: 'collapse / animate с соответствующим триггером и ключом',
-  },
-  'off-grid-number': {
-    ext: /\.tsx$/,
-    // Одно место — одно нарушение: полный кортеж `[6, 6, 6]` — это одно число, а не три.
-    count: (line) =>
-      [...line.matchAll(new RegExp(`\\b(${GRID_PROPS})=\\{(\\[[^\\]]*\\]|-?\\d+)\\}`, 'g'))].reduce(
-        (total, m) =>
-          total +
-          new Set(
-            (m[2].replace(/'[^']*'|"[^"]*"/g, '').match(/-?\d+/g) ?? []).filter((n) => {
-              const size = Math.abs(Number(n));
-              // Тонкая линия — геометрия, а не шаг отступов. Не разрешаем 1–2px padding/gap.
-              return (
-                size % 4 !== 0 &&
-                !(/^(w|h|minW|maxW|minH|maxH)$/.test(m[1]) && (size === 1 || size === 2))
-              );
-            }),
-          ).size,
-        0,
-      ),
-    hint: 'размер кратный 4',
-  },
-  'raw-transition': {
-    ext: /\.scss$/,
-    test: (line) =>
-      /transition[\w-]*\s*:/.test(line) &&
-      /\b\d*\.?\d+m?s\b/.test(line) &&
-      !line.includes('var(--t'),
-    hint: 'var(--t-fast|--t-normal|--t-slow)',
-  },
-  'media-query': {
-    ext: /\.scss$/,
-    test: (line, file = '', text = '', offset = 0) => /@media\b/.test(line) && !ownsResponsiveTokens(text, file, offset),
-    hint: 'responsive-кортеж пропа; для скрытия hide={[desktop, mobile, tablet]}',
-  },
-  // Проп раньше SCSS (docs/rules.md): то, что говорится пропом, в модуле — брак, который ревью ловило много раз.
-  'scss-zero-spacing': {
-    ext: /\.scss$/,
-    test: (line, file = '', text = '', offset = 0) => /^\s*(margin|padding)(-[a-z]+)?\s*:\s*0\s*;/.test(line) && !ownsNativeReset(text, file, offset),
-    hint: 'проп m / p = [0, 0, 0]',
-  },
-  'scss-flex-none': {
-    ext: /\.scss$/,
-    test: (line) => /^\s*flex\s*:\s*none\b/.test(line),
-    hint: 'minW / minH у элемента',
-  },
-  'scss-theme-rescope': {
-    ext: /\.module\.scss$/,
-    test: (line) =>
-      /^\s*--(text|text-muted|background|primary|secondary|tertiary)(-[a-z0-9]+)?\s*:/.test(line),
-    hint: 'цвет пропом color у текста, а не переопределением токена темы',
-  },
-  'margin-between': {
-    ext: /\.tsx$/,
-    test: (line) => /\s(mt|mb)=\{/.test(line),
-    hint: 'gap у Flex-родителя',
-  },
-  // Генератор утилит видит только литералы на месте вызова: константа даёт мёртвый класс.
-  'const-tuple': {
-    ext: /\.tsx$/,
-    ast: constTupleRule,
-    test: (line) => constTupleRule.test(line),
-    hint: 'литерал на месте вызова',
-  },
-  // Корневой класс модуля = имя компонента: виджет находится в DOM по имени.
-  'module-root-class': {
-    ext: /\.module\.scss$/,
-    file: (lines, file) => moduleRootClassViolation(lines.join('\n'), file),
-    hint: 'корневой класс = имя компонента',
+    test: line => /<a[\s>]/.test(line),
+    hint: 'Примените ссылочный контракт кита, сохранив native navigation и клавиатуру.',
   },
 };
-
-function stripScssComments(source) {
-  let result = '';
-  let quote;
-  let blockComment = false;
-  let lineComment = false;
-  for (let index = 0; index < source.length; index += 1) {
-    const character = source[index];
-    const next = source[index + 1];
-    if (lineComment) {
-      if (character === '\n') {
-        result += character;
-        lineComment = false;
-      }
-      continue;
-    }
-    if (blockComment) {
-      if (character === '*' && next === '/') {
-        blockComment = false;
-        index += 1;
-      } else if (character === '\n') {
-        result += character;
-      }
-      continue;
-    }
-    if (quote) {
-      result += character;
-      if (character === '\\') {
-        result += next ?? '';
-        index += 1;
-      } else if (character === quote) {
-        quote = undefined;
-      }
-      continue;
-    }
-    if (character === '"' || character === "'") {
-      quote = character;
-      result += character;
-    } else if (character === '/' && next === '*') {
-      blockComment = true;
-      index += 1;
-    } else if (character === '/' && next === '/' && (index === 0 || /\s/.test(source[index - 1]))) {
-      lineComment = true;
-      index += 1;
-    } else {
-      result += character;
-    }
-  }
-  return result;
-}
-
-function moduleRootClassViolation(source, file) {
-  const stylesheet = stripScssComments(source);
-  if (!stylesheet.includes('{')) return 0;
-
-  const componentName = path.basename(file, '.module.scss').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const rootSelector = new RegExp(`(?:^|[}\\n])\\s*(?:[a-zA-Z][\\w-]*)?\\.${componentName}(?=[\\s.#:[,{])`);
-  return rootSelector.test(stylesheet) ? 0 : 1;
-}
 
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;

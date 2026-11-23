@@ -262,13 +262,15 @@ test('optional member children agree with the JSX rule and stay compact', async 
   assert.deepEqual(jsxFormatRule.count(first, options.filepath, options), []);
 });
 
-test('existing project rules registry reports JSX formatting through its file baseline', () => {
+test('formatter remains available without imposing a project presentation gate', () => {
+  const source = '<Card\n  a="1"\n  b="2"\n/>\n';
+  assert.equal(jsxFormatRule.count(source, 'Example.tsx').length, 1);
+
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jsx-format-'));
   try {
-    fs.writeFileSync(path.join(dir, 'Example.tsx'), '<Card\n  a="1"\n  b="2"\n/>\n');
-    const { counts, places } = countViolations([dir]);
-    assert.equal(counts['jsx-format']?.[path.relative(process.cwd(), path.join(dir, 'Example.tsx')).split(path.sep).join('/')], 1);
-    assert.deepEqual(Object.values(places['jsx-format'] ?? {}).flat(), [1]);
+    fs.writeFileSync(path.join(dir, 'Example.tsx'), source);
+    const { counts } = countViolations([dir]);
+    assert.equal(Object.hasOwn(counts, 'jsx-format'), false);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
