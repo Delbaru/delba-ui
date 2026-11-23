@@ -44,12 +44,15 @@ export const fillClass = skinClass('fill');
 export const borderClass = skinClass('border');
 export const textClass = skinClass('text');
 
-/** Классы шкуры. Резолв оси: проп инстанса > пресет > defaults. */
 /** Структура для резолвера: пресеты содержат оси и, опционально, шкалы. */
-export interface SkinResolvable<A extends AxisDict, S extends Record<string, readonly number[]>> {
+export interface SkinResolvable<
+  A extends AxisDict,
+  S extends Record<string, readonly number[]>,
+  P extends Readonly<Record<string, object>>,
+> {
   axes: A;
   defaults?: AxisValues<A>;
-  presets: Readonly<Record<string, object>>;
+  presets: P;
   scales?: S;
 }
 
@@ -57,10 +60,15 @@ type ResolvedScales<S extends Record<string, readonly number[]>> = {
   -readonly [K in keyof S]?: ResponsiveValue<number>;
 };
 
-export function resolveSkin<A extends AxisDict, S extends Record<string, readonly number[]> = {}>(
-  def: SkinResolvable<A, S>,
+/** Классы шкуры. Приоритет: проп инстанса > пресет > defaults. */
+export function resolveSkin<
+  A extends AxisDict,
+  S extends Record<string, readonly number[]> = {},
+  P extends Readonly<Record<string, object>> = Readonly<Record<string, object>>,
+>(
+  def: SkinResolvable<A, S, P>,
   styles: Readonly<Record<string, string>>,
-  preset: string | undefined,
+  preset: keyof P | undefined,
   props: AxisValues<A> & ResolvedScales<S> = {},
 ) {
   const fromPreset: Readonly<Record<string, unknown>> | undefined =
