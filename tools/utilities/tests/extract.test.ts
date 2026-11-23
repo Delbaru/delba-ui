@@ -182,8 +182,10 @@ test('поле конфига — база и все брейкпоинты', ()
   for (const name of ['gap_12', 'd_gap_12', 'n_gap_12', 'm_gap_12', 't_gap_12', 'p_16_32_16_32', 'n_p_16_32_16_32']) assert.ok(classes.has(name), name);
 });
 
-test('затравка и закрытые словари печатаются без поиска', () => {
-  const classes = classesOf([], { seeds: { r: [24] } });
+test('затравка печатает и парные padding-значения, скрытые за runtime helper', () => {
+  const classes = classesOf([], { seeds: { r: [24], p: [[0, 12], [12, 16]] } });
   assert.ok(classes.has('r_24') && classes.has('m_r_24'));
+  assert.ok(classes.has('p_0_12_0_12') && classes.has('n_p_0_12_0_12'));
+  assert.ok(classes.has('p_12_16_12_16') && classes.has('d_p_12_16_12_16'));
   assert.ok(classes.has('dir_column') && classes.has('n_text_h2') && classes.has('grow_1'));
 });
