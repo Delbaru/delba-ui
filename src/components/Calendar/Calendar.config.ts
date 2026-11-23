@@ -5,6 +5,7 @@ const spacing: ResponsiveValue<number> = [8, 8, 8];
 const padding: ResponsiveValue<number> = [16, 16, 16];
 const radius: ResponsiveValue<number> = [16, 16, 16];
 const width: ResponsiveValue<number> = [336, 336, 336];
+const maximumWidth: ResponsiveValue<string> = ['100%', '100%', '100%'];
 const border: ResponsiveValue<string> = [
   'calc(1 * var(--rpx)) solid var(--line)',
   'calc(1 * var(--rpx)) solid var(--line)',
@@ -26,6 +27,7 @@ export const calendarConfig = {
     p: padding,
     r: radius,
     w: width,
+    maxW: maximumWidth,
     border,
     bg: background,
   },

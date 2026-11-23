@@ -28,13 +28,14 @@ export function CalendarDays({
 }: CalendarDaysProps) {
   return (
     <Flex className={styles.CalendarDays} dir={['column', 'column', 'column']} gap={[8, 8, 8]}>
-      <Grid columns={[7, 7, 7]}>
+      <Grid columns={[7, 7, 7]} gap={[4, 4, 4]}>
         {UI_MESSAGES.calendar.weekdays.map((label, index) => (
           <Flex
               key={index}
               align={['center', 'center', 'center']}
               justify={['center', 'center', 'center']}
-              w={[40, 40, 40]}
+              w={['100%', '100%', '100%']}
+              minW={[0, 0, 0]}
               h={[40, 40, 40]}
           >
             <Text variant={['caption', 'caption', 'caption']} color="var(--text-muted)">
@@ -70,7 +71,8 @@ export function CalendarDays({
               type="button"
               aria-pressed={chosen}
               disabled={dayDisabled}
-              w={[40, 40, 40]}
+              w={['100%', '100%', '100%']}
+              minW={[0, 0, 0]}
               h={[40, 40, 40]}
               r={[8, 8, 8]}
               className={styles.day}
