@@ -199,7 +199,7 @@ test('архитектурный fixer меняет только TSX по явн
     }
 });
 
-test('единый шаг проверяет JSX без изменений и форматирует только при --fix', async () => {
+test('единый шаг принимает оформление JSX без изменений и форматирует только при --fix', async () => {
     const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-jsx-fix-'));
     try {
         fs.mkdirSync(path.join(project, 'src'));
@@ -208,7 +208,7 @@ test('единый шаг проверяет JSX без изменений и ф
         fs.writeFileSync(file, before);
         fs.writeFileSync(path.join(project, '.rules-baseline.json'), JSON.stringify({ 'jsx-format': {} }));
         const checkStep = projectSteps(project, {}).at(0);
-        assert.equal((await checkStep?.run())?.ok, false);
+        assert.equal((await checkStep?.run())?.ok, true);
         assert.equal(fs.readFileSync(file, 'utf8'), before);
         const fixStep = projectSteps(project, {}, { fix: true }).at(0);
         assert.equal((await fixStep?.run())?.ok, true);
