@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useRef, type CSSProperties, type ForwardRefExoticComponent, type MutableRefObject, type Ref, type RefAttributes } from 'react';
+import type { CSSProperties, ForwardRefExoticComponent, Ref, RefAttributes } from 'react';
 
-import { resolveSkin, type AxisDict, type AxisValues, type SkinDef as BaseSkinDef } from './index';
+import { resolveSkin, type AxisDict, type AxisValues } from './index';
 import type { GrowProps, ResponsiveValue, SizePropsShort } from '../core';
 
 
@@ -120,11 +120,6 @@ export interface UseSkinArgs<A extends AxisDict, S extends ScaleDict> {
   grow?: SkinGrow;
   style?: CSSProperties;
   ref?: Ref<HTMLElement>;
-  /**
-   * Корень компонента по узлу, на который атом форвардит ref — когда это разные узлы
-   * (чекбокс форвардит на скрытый input, а красить надо label-карточку).
-   */
-  anchor?: (node: HTMLElement | null) => HTMLElement | null;
 }
 
 export interface UseSkinResult<A extends AxisDict, S extends ScaleDict> {
@@ -136,7 +131,7 @@ export interface UseSkinResult<A extends AxisDict, S extends ScaleDict> {
    */
   className: string;
   style: CSSProperties | undefined;
-  ref: (node: HTMLElement | null) => void;
+  ref: Ref<HTMLElement> | undefined;
   w: SkinW;
   h: SkinH;
   grow: SkinGrow;
@@ -146,32 +141,19 @@ export function useSkin<A extends AxisDict, S extends ScaleDict>(
   def: SkinDef<A, S>,
   args: UseSkinArgs<A, S>,
 ): UseSkinResult<A, S> {
-  const { styles, preset: presetName, props, w, h, grow, style, ref, anchor } = args;
+  const { styles, preset: presetName, props, w, h, grow, style, ref } = args;
 
-  const rootRef = useRef<HTMLElement | null>(null);
-  const setRef = useCallback(
-    (node: HTMLElement | null) => {
-      rootRef.current = anchor ? anchor(node) : node;
-      if (typeof ref === 'function') ref(node);
-      else if (ref) (ref as MutableRefObject<HTMLElement | null>).current = node;
-    },
-    [ref, anchor],
-  );
-
-  const preset = (presetName ? def.presets[presetName] : undefined) as Readonly<Record<string, unknown>> | undefined;
-
-  const resolved = resolveSkin(
-    def as unknown as BaseSkinDef<AxisDict, Record<string, never>>,
-    styles, presetName, props,
-  );
+  const preset = presetName ? def.presets[presetName] : undefined;
+  const resolved = resolveSkin(def, styles, presetName, props);
   const presetW = preset?.w as string | number | undefined;
   const presetH = preset?.h as string | number | undefined;
 
   return {
-    axes: resolved.axes as SkinProps<A, S>,
+    axes: resolved.axes,
     className: resolved.className,
     style,
-    ref: setRef,
+    // Передаём ref напрямую: React 19 сам вызывает cleanup callback-ref.
+    ref,
     // Скаляр пресета → responsive-массив дома; проп инстанса уже в этой форме.
     w: w ?? (presetW !== undefined ? [presetW] : undefined),
     h: h ?? (presetH !== undefined ? [presetH] : undefined),

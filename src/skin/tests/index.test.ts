@@ -15,6 +15,18 @@ test('resolveSkin: проп инстанса > пресет > defaults, дефи
     assert.equal(resolveSkin(skin, styles, 'primary', { fill: 'none' }).className, 'S_skin sk_fill_none sk_border_line sk_text_white S_primary');
 });
 
+test('resolveSkin: шкалы не теряются, а конфиг без scales остаётся допустимым', () => {
+    const scaled = defineSkin({
+        axes: { fill: ['none', 'primary-hover'] } as const,
+        scales: { gap: [4, 8, 16] } as const,
+        defaults: { fill: 'none' },
+        presets: { compact: { gap: 4 }, regular: { gap: 8 } },
+    });
+    assert.equal(resolveSkin(scaled, styles, 'compact').axes.gap, 4);
+    assert.deepEqual(resolveSkin(scaled, styles, 'regular', { gap: [8, 16] }).axes.gap, [8, 16]);
+    assert.equal(resolveSkin(skin, styles, 'primary').axes.fill, 'primary-hover');
+});
+
 test('resolveSkin: border none не печатает класса рамки', () => {
     assert.equal(resolveSkin(skin, styles, 'bare').className, 'S_skin sk_text_white');
 });

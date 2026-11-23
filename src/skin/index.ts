@@ -1,4 +1,4 @@
-import type { LayoutSpaceProps, RadiusPropsShort } from '../core/base/shared-props';
+import type { LayoutSpaceProps, RadiusPropsShort, ResponsiveValue } from '../core/base/shared-props';
 
 // Движок шкур компонентов проекта: `defineSkin` описывает оси, умолчания и пресеты, `resolveSkin`
 // собирает классы. Покой — глобальными классами осей (`sk_*`), состояния — `_states.scss`, который
@@ -45,13 +45,26 @@ export const borderClass = skinClass('border');
 export const textClass = skinClass('text');
 
 /** Классы шкуры. Резолв оси: проп инстанса > пресет > defaults. */
-export function resolveSkin<A extends AxisDict, P extends Record<string, SkinPreset<A>>>(
-  def: SkinDef<A, P>,
+/** Структура для резолвера: пресеты содержат оси и, опционально, шкалы. */
+export interface SkinResolvable<A extends AxisDict, S extends Record<string, readonly number[]>> {
+  axes: A;
+  defaults?: AxisValues<A>;
+  presets: Readonly<Record<string, object>>;
+  scales?: S;
+}
+
+type ResolvedScales<S extends Record<string, readonly number[]>> = {
+  -readonly [K in keyof S]?: ResponsiveValue<number>;
+};
+
+export function resolveSkin<A extends AxisDict, S extends Record<string, readonly number[]> = {}>(
+  def: SkinResolvable<A, S>,
   styles: Readonly<Record<string, string>>,
-  preset: keyof P | undefined,
-  props: AxisValues<A> = {},
+  preset: string | undefined,
+  props: AxisValues<A> & ResolvedScales<S> = {},
 ) {
-  const fromPreset: Readonly<Record<string, unknown>> | undefined = preset === undefined ? undefined : def.presets[preset];
+  const fromPreset: Readonly<Record<string, unknown>> | undefined =
+    preset === undefined ? undefined : (def.presets[preset] as Readonly<Record<string, unknown>> | undefined);
   const defaults: Readonly<Record<string, unknown>> = def.defaults ?? {};
   const given: Readonly<Record<string, unknown>> = props;
   const axes: Record<string, unknown> = {};
@@ -63,7 +76,7 @@ export function resolveSkin<A extends AxisDict, P extends Record<string, SkinPre
   const text = name('textColor');
 
   return {
-    axes: axes as AxisValues<A>,
+    axes: axes as AxisValues<A> & ResolvedScales<S>,
     className: [
       styles.skin,
       fill && fillClass(fill),
