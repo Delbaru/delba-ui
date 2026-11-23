@@ -1,4 +1,5 @@
-import type { LayoutSpaceProps, RadiusPropsShort, ResponsiveValue } from '../core/base/shared-props';
+import type { LayoutSpaceProps, RadiusPropsShort } from '../core/base/shared-props';
+import type { ResponsiveValue } from '../core/base/responsive';
 
 // Движок шкур компонентов проекта: `defineSkin` описывает оси, умолчания и пресеты, `resolveSkin`
 // собирает классы. Покой — глобальными классами осей (`sk_*`), состояния — `_states.scss`, который
@@ -7,6 +8,11 @@ import type { LayoutSpaceProps, RadiusPropsShort, ResponsiveValue } from '../cor
 
 export type AxisDict = Record<string, readonly string[]>;
 export type AxisValues<A extends AxisDict> = { -readonly [K in keyof A]?: A[K][number] };
+export type ScaleDict = Record<string, readonly number[]>;
+export type ScaleValues<S extends ScaleDict> = { -readonly [K in keyof S]?: S[K][number] };
+export type SkinValues<A extends AxisDict, S extends ScaleDict = Record<never, never>> = AxisValues<A> & {
+  -readonly [K in keyof S]?: ResponsiveValue<number>;
+};
 
 type BorderName<A extends AxisDict> = Exclude<A['border'] extends readonly (infer B)[] ? B : never, 'none'>;
 
@@ -27,17 +33,27 @@ export interface SkinEffects<A extends AxisDict> {
  */
 export type SkinStateStyle<A extends AxisDict> = AxisValues<A> & SkinEffects<A> & { pseudo?: boolean; guard?: string };
 
-export type SkinPreset<A extends AxisDict> = AxisValues<A> & SkinEffects<A> & { states?: Record<string, SkinStateStyle<A>> };
+export type SkinPreset<A extends AxisDict, S extends ScaleDict = Record<never, never>> =
+  AxisValues<A> & ScaleValues<S> & SkinEffects<A> & { states?: Record<string, SkinStateStyle<A>> };
 
-export interface SkinDef<A extends AxisDict, P extends Record<string, SkinPreset<A>>> {
+export interface SkinDef<
+  A extends AxisDict,
+  P extends Record<string, SkinPreset<A, S>>,
+  S extends ScaleDict = Record<never, never>,
+> {
   axes: A;
   defaults?: AxisValues<A>;
   presets: P;
   /** Optional numeric axes supplied by a consumer. */
-  scales?: Record<string, readonly number[]>;
+  scales?: S;
 }
 
-export const defineSkin = <A extends AxisDict, P extends Record<string, SkinPreset<A>>>(def: SkinDef<A, P>) => def;
+/** Keep literal axis/scale dictionaries and preset names through the pure definition. */
+export const defineSkin = <
+  const A extends AxisDict,
+  const P extends Record<string, SkinPreset<A, S>>,
+  const S extends ScaleDict = Record<never, never>,
+>(def: SkinDef<A, P, S>) => def;
 
 const skinClass = (axis: string) => (name: string) => `sk_${axis}_${name.replace(/-/g, '_')}`;
 export const fillClass = skinClass('fill');
@@ -47,7 +63,7 @@ export const textClass = skinClass('text');
 /** Структура для резолвера: пресеты содержат оси и, опционально, шкалы. */
 export interface SkinResolvable<
   A extends AxisDict,
-  S extends Record<string, readonly number[]>,
+  S extends ScaleDict,
   P extends Readonly<Record<string, object>>,
 > {
   axes: A;
@@ -56,20 +72,16 @@ export interface SkinResolvable<
   scales?: S;
 }
 
-type ResolvedScales<S extends Record<string, readonly number[]>> = {
-  -readonly [K in keyof S]?: ResponsiveValue<number>;
-};
-
 /** Классы шкуры. Приоритет: проп инстанса > пресет > defaults. */
 export function resolveSkin<
   A extends AxisDict,
-  S extends Record<string, readonly number[]> = {},
+  S extends ScaleDict = Record<never, never>,
   P extends Readonly<Record<string, object>> = Readonly<Record<string, object>>,
 >(
   def: SkinResolvable<A, S, P>,
   styles: Readonly<Record<string, string>>,
   preset: keyof P | undefined,
-  props: AxisValues<A> & ResolvedScales<S> = {},
+  props: NoInfer<SkinValues<A, S>> = {},
 ) {
   const fromPreset: Readonly<Record<string, unknown>> | undefined =
     preset === undefined ? undefined : (def.presets[preset] as Readonly<Record<string, unknown>> | undefined);
@@ -84,7 +96,7 @@ export function resolveSkin<
   const text = name('textColor');
 
   return {
-    axes: axes as AxisValues<A> & ResolvedScales<S>,
+    axes: axes as SkinValues<A, S>,
     className: [
       styles.skin,
       fill && fillClass(fill),

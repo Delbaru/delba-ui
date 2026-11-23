@@ -24,6 +24,7 @@ test('resolveSkin: шкалы не теряются, а конфиг без scal
     });
     assert.equal(resolveSkin(scaled, styles, 'compact').axes.gap, 4);
     assert.deepEqual(resolveSkin(scaled, styles, 'regular', { gap: [8, null, 16] }).axes.gap, [8, null, 16]);
+    assert.equal(resolveSkin(scaled, styles, 'regular', { gap: 0 }).axes.gap, 0);
     assert.equal(resolveSkin(skin, styles, 'primary').axes.fill, 'primary-hover');
 });
 

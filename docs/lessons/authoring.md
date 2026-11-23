@@ -2,6 +2,27 @@
 
 # Компоненты, типы и пропы
 
+### Skin factory сохраняет точный словарь шкал до resolver
+
+`scales?: ScaleDict` расширял известные имена до строковой индексной сигнатуры:
+числовые responsive-шкалы начинали конфликтовать со строковой осью `fill` даже
+у skin без scales. Вывод generic из props экземпляра также мог расширять словарь.
+Pure-пресет при этом вообще не включал шкалы. Исправление: передавать literal
+словарь одним generic через definition, preset и resolver; отсутствие шкал означает
+пустой словарь, а `NoInfer` оставляет props только потребителем этого договора.
+
+Дополнительно `ResponsiveValue` импортируется из владеющего им
+`core/base/responsive`, а не из `shared-props`, где тип не экспортируется.
+Generic DOM-элемента проходит через аргументы и результат `useSkin`: иначе
+`Ref<HTMLElement>` нельзя вернуть в нативный input. Ref передаётся напрямую,
+сохраняя callback cleanup React 19 без собственной обёртки.
+
+Воспроизведение: [contracts.typecheck.tsx](../../src/skin/tests/contracts.typecheck.tsx)
+проверяет точные имена/ступени, skin без шкал, отклонение лишних props и refs input/button.
+`pnpm --filter @delba/ui typecheck` из корня потребителя прошёл. Из кита команда
+`node --import tsx --import ./tools/check/unit-runtime.mjs --test "src/skin/tests/*.test.ts" "tools/utilities/tests/extract.test.ts"`
+прошла 26 тестов: 9 skin и 17 extractor, включая полные tuples, `null` и `0`.
+
 ### Scoped perspective не теряет ввод до первого ответа observer
 
 Visibility observer сначала сообщает false. Scoped pointermove/focus отбрасывали

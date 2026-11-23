@@ -2,8 +2,8 @@
 
 import type { CSSProperties, ForwardRefExoticComponent, Ref, RefAttributes } from 'react';
 
-import { resolveSkin, type AxisDict, type AxisValues } from './index';
-import type { GrowProps, ResponsiveValue, SizePropsShort } from '../core';
+import { resolveSkin, type AxisDict, type AxisValues, type ScaleDict, type ScaleValues, type SkinValues } from './index';
+import type { GrowProps, SizePropsShort } from '../core/base/shared-props';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -27,17 +27,11 @@ export type SkinComponent<P, E = HTMLElement> = ForwardRefExoticComponent<P & Re
 
 // ── Описание компонента ──────────────────────────────────────────────────────
 
-export type { AxisDict, AxisValues } from './index';
-export type ScaleDict = Record<string, readonly number[]>;
+export type { AxisDict, AxisValues, ScaleDict, ScaleValues } from './index';
 
-
-/** Шкала в ПРЕСЕТЕ: строго ступенька лестницы — мимо SPACE не пройдёт. */
-export type ScaleValues<S extends ScaleDict> = { -readonly [K in keyof S]?: S[K][number] };
 
 /** Оси и шкалы инстанса. Шкалы свободнее, чем в пресете: gap responsive. */
-export type SkinProps<A extends AxisDict, S extends ScaleDict> = AxisValues<A> & {
-  -readonly [K in keyof S]?: ResponsiveValue<number>;
-};
+export type SkinProps<A extends AxisDict, S extends ScaleDict = Record<never, never>> = SkinValues<A, S>;
 
 /**
  * «Эффекты» — глаголы движка base()/states() из _axes.scss, которые НЕ являются осями
@@ -74,7 +68,7 @@ export type SkinStateStyle<A extends AxisDict> = AxisValues<A> & SkinEffects & {
 export type SkinStates<A extends AxisDict> = Record<string, SkinStateStyle<A>>;
 
 /** Пресет (роль): комбинация осей + эффектов под одним именем + свои состояния. */
-export type SkinPreset<A extends AxisDict, S extends ScaleDict> = AxisValues<A> &
+export type SkinPreset<A extends AxisDict, S extends ScaleDict = Record<never, never>> = AxisValues<A> &
   ScaleValues<S> &
   SkinEffects & {
     w?: string | number;
@@ -84,7 +78,7 @@ export type SkinPreset<A extends AxisDict, S extends ScaleDict> = AxisValues<A> 
     states?: SkinStates<A>;
   };
 
-export interface SkinConfig<A extends AxisDict, S extends ScaleDict> {
+export interface SkinConfig<A extends AxisDict, S extends ScaleDict = Record<never, never>> {
   /** Имя компонента — для отладки и будущей dev-панели. */
   component: string;
   /** Как зовётся проп-пресет ('skin' у бокса, 'variant' у полей). */
@@ -93,13 +87,13 @@ export interface SkinConfig<A extends AxisDict, S extends ScaleDict> {
   /** Оси, которой тут нет, при незаданности не будет и в пропах атома. */
   defaults?: AxisValues<A>;
   scales?: S;
-  presets: Readonly<Record<string, SkinPreset<A, S>>>;
+  presets: Readonly<Record<string, SkinPreset<NoInfer<A>, NoInfer<S>>>>;
 }
 
-export type SkinDef<A extends AxisDict, S extends ScaleDict> = SkinConfig<A, S>;
+export type SkinDef<A extends AxisDict, S extends ScaleDict = Record<never, never>> = SkinConfig<A, S>;
 
 /** No scales is a typed empty dictionary, not an open index signature. */
-export function defineSkin<A extends AxisDict, S extends ScaleDict = {}>(config: SkinConfig<A, S>): SkinDef<A, S> {
+export function defineSkin<const A extends AxisDict, const S extends ScaleDict = Record<never, never>>(config: SkinConfig<A, S>): SkinDef<A, S> {
   return config;
 }
 
@@ -110,7 +104,7 @@ type SkinW = SizePropsShort['w'];
 type SkinH = SizePropsShort['h'];
 type SkinGrow = GrowProps['grow'];
 
-export interface UseSkinArgs<A extends AxisDict, S extends ScaleDict> {
+export interface UseSkinArgs<A extends AxisDict, S extends ScaleDict = Record<never, never>, E extends HTMLElement = HTMLElement> {
   /** CSS-модуль компонента: отсюда .skin и .skin-<пресет>. */
   styles: Record<string, string>;
   preset?: string;
@@ -120,10 +114,11 @@ export interface UseSkinArgs<A extends AxisDict, S extends ScaleDict> {
   h?: SkinH;
   grow?: SkinGrow;
   style?: CSSProperties;
-  ref?: Ref<HTMLElement>;
+  /** Native ref, forwarded unchanged so React owns callback cleanup. */
+  ref?: Ref<E>;
 }
 
-export interface UseSkinResult<A extends AxisDict, S extends ScaleDict> {
+export interface UseSkinResult<A extends AxisDict, S extends ScaleDict = Record<never, never>, E extends HTMLElement = HTMLElement> {
   axes: SkinProps<A, S>;
   /**
    * Только классы СКИНА. className инстанса ядро не принимает: у половины компонентов
@@ -132,16 +127,16 @@ export interface UseSkinResult<A extends AxisDict, S extends ScaleDict> {
    */
   className: string;
   style: CSSProperties | undefined;
-  ref: Ref<HTMLElement> | undefined;
+  ref: Ref<E> | undefined;
   w: SkinW;
   h: SkinH;
   grow: SkinGrow;
 }
 
-export function useSkin<A extends AxisDict, S extends ScaleDict>(
+export function useSkin<A extends AxisDict, S extends ScaleDict = Record<never, never>, E extends HTMLElement = HTMLElement>(
   def: SkinDef<A, S>,
-  args: UseSkinArgs<A, S>,
-): UseSkinResult<A, S> {
+  args: UseSkinArgs<NoInfer<A>, NoInfer<S>, E>,
+): UseSkinResult<A, S, E> {
   const { styles, preset: presetName, props, w, h, grow, style, ref } = args;
 
   const preset = presetName ? def.presets[presetName] : undefined;
