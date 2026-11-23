@@ -98,7 +98,8 @@ export interface SkinConfig<A extends AxisDict, S extends ScaleDict> {
 
 export type SkinDef<A extends AxisDict, S extends ScaleDict> = SkinConfig<A, S>;
 
-export function defineSkin<A extends AxisDict, S extends ScaleDict>(config: SkinConfig<A, S>): SkinDef<A, S> {
+/** No scales is a typed empty dictionary, not an open index signature. */
+export function defineSkin<A extends AxisDict, S extends ScaleDict = {}>(config: SkinConfig<A, S>): SkinDef<A, S> {
   return config;
 }
 
