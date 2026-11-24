@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useActionInvocation } from '../../hooks/useActionInvocation';
 import {
   acknowledgeDraft, createDraft, receiveDraft, resetDraft, sameValue, setField, snapshotValue,
@@ -27,22 +27,26 @@ function hasErrors(errors: object): boolean {
 export function useForm<T extends object, R>(options: FormOptions<T, R>): FormController<T> {
   const { scope, draft, initial } = options;
   const key = draft?.key ?? '';
-  const entries = useMemo(() => new Map<string, Entry<T>>(), [scope]);
+  type Owner = { scope: string; token: symbol; entries: Map<string, Entry<T>> };
+  const createOwner = (): Owner => ({ scope, token: Symbol(), entries: new Map() });
+  const [storedOwner, setOwner] = useState<Owner>(createOwner);
+  const owner = storedOwner.scope === scope ? storedOwner : createOwner();
   const [, render] = useState(0);
   const notify = () => render(value => value + 1);
   const storageKey = draft && scope ? draftStorageKey(scope, key) : undefined;
   const storage = draft?.storage;
   const persist = draft?.persist ?? [];
-  let existing = entries.get(key);
-  if (!existing) {
-    existing = { draft: createDraft(initial), ready: !draft, persisted: !draft, error: undefined, storageKey, persist };
-    entries.set(key, existing);
-  }
-  const entry = existing;
-  const current = useRef({ entries, entry });
-  useLayoutEffect(() => { current.current = { entries, entry }; }, [entries, entry]);
+  const existing = owner.entries.get(key);
+  const entry: Entry<T> = existing ?? {
+    draft: createDraft(initial), ready: !draft, persisted: !draft, error: undefined, storageKey, persist,
+  };
+  // A render may be interrupted. Do not mutate the previously committed owner map.
+  const entries = existing ? owner.entries : new Map(owner.entries).set(key, entry);
+  if (owner !== storedOwner || entries !== owner.entries) setOwner({ ...owner, entries });
+  const current = useRef({ owner: owner.token, entry });
+  useLayoutEffect(() => { current.current = { owner: owner.token, entry }; }, [owner.token, entry]);
   const mounted = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
@@ -86,25 +90,51 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     }
   };
 
+  // Storage listeners follow the latest committed options, not the render in
+  // which the subscription was first established.
+  const subscription = useRef<{
+    entry: Entry<T>; storageKey: string | undefined; storage: DraftStorage | undefined;
+    read: (restore: boolean) => void;
+  } | null>(null);
+  useLayoutEffect(() => {
+    subscription.current = { entry, storageKey, storage, read: readStored };
+    return () => { subscription.current = null; };
+  });
+
   useEffect(() => {
     if (!storageKey) return;
-    readStored(!entry.ready);
+    let active = true;
+    const read = (restore: boolean) => {
+      const latest = subscription.current;
+      if (!active || !latest || latest.entry !== entry ||
+          latest.storageKey !== storageKey || latest.storage !== storage) return false;
+      latest.read(restore);
+      return true;
+    };
+    if (!read(!entry.ready)) return;
     entry.ready = true;
     notify();
     const receive = () => {
-      readStored(false);
-      notify();
+      if (read(false)) notify();
     };
     // The owner of a compatibility storage adapter also owns same-tab subscriptions.
-    if (storage) return storage.subscribe(receive);
+    if (storage) {
+      const unsubscribe = storage.subscribe(receive);
+      return () => { active = false; unsubscribe(); };
+    }
     const onStorage = (event: StorageEvent) => {
       if (event.key !== storageKey && event.key !== null) return;
       try {
         if (event.storageArea === localStorage) receive();
-      } catch { entry.persisted = false; notify(); }
+      } catch {
+        if (active && subscription.current?.entry === entry) {
+          entry.persisted = false;
+          notify();
+        }
+      }
     };
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    return () => { active = false; window.removeEventListener('storage', onStorage); };
   }, [entry, storageKey, storage]);
 
   useEffect(() => {
@@ -117,7 +147,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
 
   const equal = options.equal ?? ((_field: FieldName<T>, left: T[FieldName<T>], right: T[FieldName<T>]) => sameValue(left, right));
   const disabled = !!options.disabled || !scope;
-  const isOwner = () => mounted.current && current.current.entries === entries;
+  const isOwner = () => mounted.current && current.current.owner === owner.token;
   const isCurrent = () => isOwner() && current.current.entry === entry;
   const set = <K extends FieldName<T>>(name: K, value: T[K]) => {
     if (!isCurrent() || !entry.ready || disabled) return;

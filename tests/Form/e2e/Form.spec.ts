@@ -112,3 +112,15 @@ test('StrictMode shared surfaces reject duplicate submit, acknowledge unmount an
   await expect(page.getByTestId('shared-calls')).toHaveText('2');
   await expect(secondSend).toBeEnabled();
 });
+
+
+test('persistent subscription uses the latest committed initial values', async ({ page }) => {
+  await page.goto('/');
+  const text = page.getByRole('textbox', { name: 'Subscription text' });
+  await expect(text).toHaveValue('Initial');
+  await text.fill('Persisted');
+  await page.getByRole('button', { name: 'Change subscription default' }).click();
+  await expect(text).toHaveValue('Persisted');
+  await page.getByRole('button', { name: 'Remove subscription text' }).click();
+  await expect(text).toHaveValue('Latest');
+});

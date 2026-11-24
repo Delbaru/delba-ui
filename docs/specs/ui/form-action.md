@@ -51,3 +51,8 @@ Version-aware adapters may return a monotonically changing `revision` and implem
 
 Shared admission subscriptions are keyed by the exact scoped operation. Local
 buttons without a shared admission key do not subscribe to the shared store.
+
+Form draft-key creation replaces the owner map rather than mutating an earlier
+render's map. A committed scope token remains stable across draft-key changes.
+Storage subscriptions read the latest committed options and ignore callbacks
+from a detached key or adapter. These lifecycle paths require browser acceptance.

@@ -156,12 +156,48 @@ function SharedForms() {
   );
 }
 
+function SubscriptionForm() {
+  const [initialText, setInitialText] = useState('Initial');
+  const storage = useMemo<DraftStorage>(() => {
+    let raw: string | null = null;
+    const listeners = new Set<() => void>();
+    return {
+      read: () => ({ raw, persisted: true }),
+      write: next => {
+        raw = next;
+        listeners.forEach(listener => listener());
+        return true;
+      },
+      subscribe: listener => {
+        listeners.add(listener);
+        return () => { listeners.delete(listener); };
+      },
+    };
+  }, []);
+  const form = ui.form.use({
+    scope: 'subscription-owner',
+    preset: 'message',
+    initial: { text: initialText },
+    draft: { key: 'subscription-room', persist: ['text'], storage },
+    submit: () => undefined,
+  });
+  return (
+    <section aria-label="Subscription form">
+      <Flex ui={{ form }}>
+        <Input name="text" aria-label="Subscription text" />
+      </Flex>
+      <Button onClick={() => setInitialText('Latest')}>Change subscription default</Button>
+      <Button onClick={() => storage.write('{}')}>Remove subscription text</Button>
+    </section>
+  );
+}
+
 export function FormFixture() {
   return (
     <ActionInvocationProvider onFailure={() => undefined}>
       <MessageForm />
       <EditForm />
-      <StrictMode><SharedForms /></StrictMode>
+      <StrictMode><SharedForms /><SubscriptionForm /></StrictMode>
     </ActionInvocationProvider>
   );
 }
