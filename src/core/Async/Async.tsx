@@ -31,10 +31,10 @@ export function useAsyncContent(options: AsyncOptions | undefined, children: Rea
         <span role="alert">{typeof options.error === 'function'
             ? options.error(state.error, state.retry) : options.error ?? 'Не удалось загрузить.'}</span>
     ) : null;
+    if (failure && !state.keepCurrent) return { children: failure, busy: false };
     if (state.phase !== 'idle') {
         return { children: options.loading ?? <span role="status">Загрузка…</span>, busy: true };
     }
-    if (failure && !state.keepCurrent) return { children: failure, busy: false };
     return { children: <>{failure}{state.empty && options.empty !== undefined ? options.empty : children}</>,
         busy: state.refreshing };
 }

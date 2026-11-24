@@ -6,6 +6,8 @@ export type AsyncSource<T> = {
     isFetching?: boolean;
     loading?: boolean;
     refreshing?: boolean;
+    /** Explicit empty result, including successful undefined data. */
+    empty?: boolean;
     refetch?: () => unknown;
     error?: unknown;
 };
@@ -20,10 +22,10 @@ export function isAsyncEmpty(data: unknown): boolean {
 
 export function asyncSourceState<T>(from: AsyncSource<T>) {
     const data = 'currentData' in from ? from.currentData : from.data;
-    const pending = Boolean((from.loading ?? from.isLoading) && data === undefined || !from.error && data === undefined);
+    const pending = data === undefined && Boolean((from.loading ?? from.isLoading) || (!from.error && from.empty !== true));
     const networkFailure = Boolean(from.error && typeof from.error === 'object' &&
         'status' in from.error && from.error.status === 0);
     const keepCurrent = networkFailure && data !== undefined;
-    return { data, pending, keepCurrent, empty: isAsyncEmpty(data),
+    return { data, pending, keepCurrent, empty: !pending && (from.empty ?? isAsyncEmpty(data)),
         refreshing: Boolean(from.refreshing ?? from.isFetching) && data !== undefined };
 }

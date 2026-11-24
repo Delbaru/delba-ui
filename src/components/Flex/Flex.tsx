@@ -166,7 +166,11 @@ export function Flex({
       aria-describedby={[anchorProps['aria-describedby'], popup.describedBy].filter(Boolean).join(' ') || undefined}
       aria-haspopup={anchorProps['aria-haspopup'] ?? (popupOptions && popupOptions.preset !== 'tooltip' ? 'menu' : undefined)}
       aria-expanded={anchorProps['aria-expanded'] ?? (popupOptions && popupOptions.preset !== 'tooltip' ? popup.open : undefined)}
+      data-ui-collection={ui?.collection?.domId}
+      data-ui-collection-item={selectable?.collectionId}
+      data-ui-collection-key={selectable?.key}
       data-ui-selectable={selectable ? '' : undefined}
+      data-ui-form-scope={ui?.form ? '' : undefined}
       aria-selected={anchorProps['aria-selected'] ?? selectable?.checked}
       {...stateLinkProps(linkState, {
         onMouseEnter: composeEventHandlers(
@@ -182,7 +186,7 @@ export function Flex({
         onBlur: composeEventHandlers(onBlur, popupOptions ? popup.onBlur : undefined),
       })}
       onContextMenu={composeEventHandlers(onContextMenu, popupOptions ? popup.onContextMenu : undefined, { cancelable: true })}
-      onKeyDown={composeEventHandlers(composeEventHandlers(onKeyDown, selectable?.onKeyDown), popupOptions ? popup.onKeyDown : undefined, { cancelable: true })}
+      onKeyDown={composeEventHandlers(composeEventHandlers(onKeyDown, popupOptions ? popup.onKeyDown : undefined, { cancelable: true }), selectable?.onKeyDown, { cancelable: true })}
       onAnimationEnd={contentMotion.onAnimationEnd}
       onSubmit={ui?.form && as === 'form' && !isLink ? (event: React.FormEvent<HTMLElement>) => {
         if (event.target !== event.currentTarget) return;

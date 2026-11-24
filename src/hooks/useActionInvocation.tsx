@@ -90,7 +90,7 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
 }: ActionInvocationOptions<A>): ActionInvocationController<A> {
   const services = useContext(InvocationContext);
   const onSettledRef = useRef(onSettled);
-  const committed = useRef({ action, onSuccess, onCancel, actionName, services });
+  const committed = useRef({ action, onSuccess, onCancel, actionName, services, admissionKey });
   const cancellation = useRef<(() => boolean) | null>(null);
   const mounted = useRef(false);
   const currentScope = useRef(services?.scopeKey);
@@ -113,7 +113,7 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
 
   useLayoutEffect(() => {
     onSettledRef.current = onSettled;
-    committed.current = { action, onSuccess, onCancel, actionName, services };
+    committed.current = { action, onSuccess, onCancel, actionName, services, admissionKey };
     if (currentScope.current === services?.scopeKey && currentIdentity.current === identity) return;
     currentScope.current = services?.scopeKey;
     currentIdentity.current = identity;
@@ -122,11 +122,11 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     activeTicket.current = null;
     cancellation.current = null;
     setPending(false);
-  }, [services, identity, onSettled, action, onSuccess, onCancel, actionName]);
+  }, [services, identity, onSettled, action, onSuccess, onCancel, actionName, admissionKey]);
 
   const invoke = (...args: A): Promise<ActionInvocationResult> | undefined => {
     const invocation = committed.current;
-    if (!mounted.current || !invocation.action || activeTicket.current !== null ||
+    if (!mounted.current || !invocation.action || invocation.admissionKey !== admissionKey || activeTicket.current !== null ||
         currentScope.current !== services?.scopeKey || currentIdentity.current !== identity) return undefined;
     if (services && (!services.alive.current || services.currentScope.current !== services.scopeKey)) return undefined;
     const release = sharedKey === undefined ? undefined : admission.acquire(sharedKey);

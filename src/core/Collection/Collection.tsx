@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useLayoutEffect, useRef, useState, type MouseEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { createContext, useContext, useId, useLayoutEffect, useRef, useState, type MouseEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { changeSelection, emptySelection, pruneSelection, rangeKeys, selectedItems, type Selection } from './Selection';
 
 export type CollectionDefinition<T> = {
@@ -10,6 +10,8 @@ export type CollectionDefinition<T> = {
 
 export interface CollectionItem {
   checked: boolean;
+  collectionId?: string;
+  key?: string;
   toggle(): void;
   selectRange(): void;
   onMouseDown(event: MouseEvent<HTMLElement>): void;
@@ -19,6 +21,7 @@ export interface CollectionItem {
 
 export interface CollectionScope {
   token: symbol;
+  domId?: string;
   item(id: string): CollectionItem;
 }
 
@@ -34,8 +37,10 @@ export interface CollectionController<T> extends CollectionScope {
   clear(): void;
 }
 
-export function defineCollection<T>(name: string, key: (item: T) => string): CollectionDefinition<T> {
-  return { token: Symbol(name), key };
+export function defineCollection<T extends { id: string }>(name: string): CollectionDefinition<T>;
+export function defineCollection<T>(name: string, key: (item: T) => string): CollectionDefinition<T>;
+export function defineCollection<T>(name: string, key?: (item: T) => string): CollectionDefinition<T> {
+  return { token: Symbol(name), key: key ?? (item => (item as { id: string }).id) };
 }
 
 function interactive(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>): boolean {
@@ -58,6 +63,7 @@ export function useCollection<T>(
   options: { scope: string; retainMissing?: boolean; mode?: 'single' | 'multiple' },
 ): CollectionController<T> {
   const { scope, retainMissing = false, mode = 'multiple' } = options;
+  const domId = useId();
   type State = { scope: string; token: symbol; mode: typeof mode; owner: symbol; selection: Selection<T> };
   const createState = (): State => ({
     scope, token: definition.token, mode, owner: Symbol(), selection: emptySelection<T>(),
@@ -68,7 +74,7 @@ export function useCollection<T>(
   const visible = new Map(items.map(item => [definition.key(item), item]));
   // Keep refreshed previews commit-bound. A caller may reconstruct every item on
   // each render, so writing previews into render-phase state would loop.
-  const committed = useRef<{ owner: symbol; retained: ReadonlyMap<string, T> } | null>(null);
+  const committed = useRef<{ owner: symbol; retained: ReadonlyMap<string, T>; visible: ReadonlyMap<string, T>; retainMissing: boolean; mode: typeof mode } | null>(null);
   const retained = new Map(state.selection.retained);
   if (retainMissing && committed.current?.owner === state.owner) {
     for (const id of state.selection.ids) {
@@ -80,24 +86,34 @@ export function useCollection<T>(
   );
   if (state !== stored || !retainMissing && selection !== state.selection) setState({ ...state, selection });
   useLayoutEffect(() => {
-    committed.current = { owner: state.owner, retained: selection.retained };
+    committed.current = { owner: state.owner, retained: selection.retained, visible, retainMissing, mode };
   });
-  const keys = [...visible.keys()];
   const selected = selectedItems(selection, visible, retainMissing);
   const ids = selection.ids.filter(id => retainMissing || visible.has(id));
-  const change = (operation: 'select' | 'unselect' | 'toggle' | 'range', requested: readonly string[]) =>
-    setState(previous => previous.owner !== state.owner ? previous : {
-      ...previous,
-      selection: changeSelection({
-        ...previous.selection,
-        retained: new Map([...previous.selection.retained, ...selection.retained]),
-      }, visible, requested, operation, retainMissing, mode),
+  const change = (operation: 'select' | 'unselect' | 'toggle' | 'range' | 'all', requested: readonly string[]) => {
+    const current = committed.current;
+    if (!current || current.owner !== state.owner) return;
+    setState(previous => {
+      if (previous.owner !== current.owner) return previous;
+      const previews = new Map(previous.selection.retained);
+      for (const id of previous.selection.ids) {
+        if (current.retained.has(id)) previews.set(id, current.retained.get(id)!);
+      }
+      const keys = [...current.visible.keys()];
+      const targets = operation === 'range'
+        ? rangeKeys(keys, previous.selection.anchor, requested[0])
+        : operation === 'all' ? (current.mode === 'single' ? keys.slice(0, 1) : keys) : requested;
+      return { ...previous, selection: changeSelection(
+        { ...previous.selection, retained: previews }, current.visible, targets,
+        operation === 'all' ? 'select' : operation, current.retainMissing, current.mode,
+      ) };
     });
+  };
   const toggle = (id: string) => change('toggle', [id]);
   const item = (id: string): CollectionItem => ({
-    checked: ids.includes(id),
+    checked: ids.includes(id), collectionId: domId, key: id,
     toggle: () => toggle(id),
-    selectRange: () => mode === 'single' ? change('select', [id]) : change('range', rangeKeys(keys, selection.anchor, id)),
+    selectRange: () => mode === 'single' ? change('select', [id]) : change('range', [id]),
     onMouseDown(event) {
       if (mode === 'single' || event.defaultPrevented || !event.shiftKey || interactive(event) || hasTextSelection(event)) return;
       event.preventDefault();
@@ -109,7 +125,7 @@ export function useCollection<T>(
         toggle(id);
       } else if (event.shiftKey) {
         event.preventDefault();
-        change('range', rangeKeys(keys, selection.anchor, id));
+        change('range', [id]);
       } else if (event.ctrlKey || event.metaKey || ids.length) {
         event.preventDefault();
         toggle(id);
@@ -117,19 +133,39 @@ export function useCollection<T>(
     },
     onKeyDown(event) {
       if (event.defaultPrevented || interactive(event) || hasTextSelection(event)) return;
+      if (event.target !== event.currentTarget) return;
+      if (mode === 'multiple' && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+        event.preventDefault(); event.stopPropagation(); change('all', []); return;
+      }
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+        const root = event.currentTarget.closest('[data-ui-collection]');
+        if (root?.getAttribute('data-ui-collection') !== domId) return;
+        const nodes = [...root.querySelectorAll<HTMLElement>('[data-ui-collection-item]')].filter(node =>
+          node.getAttribute('data-ui-collection-item') === domId && node.getClientRects().length > 0 && !node.closest('[inert]'));
+        const index = nodes.indexOf(event.currentTarget);
+        if (index < 0) return;
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? nodes.length - 1 :
+          Math.max(0, Math.min(nodes.length - 1, index + (event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1)));
+        const target = nodes[next];
+        const key = target?.getAttribute('data-ui-collection-key');
+        if (!target || key == null) return;
+        event.preventDefault(); event.stopPropagation(); target.focus();
+        if (mode === 'multiple' && event.shiftKey) change('range', [key]);
+        return;
+      }
       if (event.key !== ' ' && event.key !== 'Spacebar') return;
       event.preventDefault();
       event.stopPropagation();
-      if (mode === 'multiple' && event.shiftKey) change('range', rangeKeys(keys, selection.anchor, id));
+      if (mode === 'multiple' && event.shiftKey) change('range', [id]);
       else toggle(id);
     },
   });
   return {
-    token: definition.token, items: [...visible.values()], selected, ids, count: ids.length, item,
+    token: definition.token, domId, items: [...visible.values()], selected, ids, count: ids.length, item,
     select: id => change('select', [id]),
     unselect: id => change('unselect', [id]),
     toggle,
-    selectAll: () => change('select', mode === 'single' ? keys.slice(0, 1) : keys),
+    selectAll: () => change('all', []),
     clear: () => setState(previous => previous.owner !== state.owner ? previous : { ...previous, selection: emptySelection<T>() }),
   };
 }
