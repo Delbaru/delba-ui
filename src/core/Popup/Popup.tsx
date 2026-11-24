@@ -10,10 +10,12 @@ export type TooltipPopup = { preset: 'tooltip'; text: ReactNode; position?: 'top
 type PopupController = { close(): void };
 type MenuContent = ReactNode | ((popup: PopupController) => ReactNode);
 type Panel = NonNullable<DropdownProps['panel']>;
+export type PopupPlacement = 'top' | 'bottom' | 'left' | 'right';
+export type MenuPosition = PopupPlacement | `${PopupPlacement}-${'start' | 'end'}`;
 export type PopupOptions =
     | TooltipPopup
     | { preset: 'context'; on?: 'rightClick'; label?: string; children: MenuContent; panel?: Panel; boundary?: (opener: HTMLElement) => HTMLElement | null }
-    | { preset: 'menu'; on?: 'click' | 'hover'; label?: string; children: MenuContent; panel?: Panel; position?: 'bottom-start' | 'bottom-end' | 'bottom'; consume?: boolean };
+    | { preset: 'menu'; on?: 'click' | 'hover'; label?: string; children: MenuContent; panel?: Panel; position?: MenuPosition; consume?: boolean };
 
 function inside(event: MouseEvent<HTMLElement> | FocusEvent<HTMLElement>) {
     const view = event.currentTarget.ownerDocument.defaultView;
@@ -56,6 +58,10 @@ export function usePopup(options?: PopupOptions) {
     const menu = options?.preset === 'menu';
     const hover = menu && options.on === 'hover';
     const visible = context ? Boolean(point) : menu && open;
+    const menuId = useId();
+    const position = menu ? options.position ?? (hover ? 'top' : 'bottom-start') : 'bottom-start';
+    const placement = position.split('-')[0] as PopupPlacement;
+    const align = position.endsWith('-start') ? 'start' : position.endsWith('-end') ? 'end' : 'center';
     let content: ReactNode = null;
     if (visible && options && options.preset !== 'tooltip') {
         content = typeof options.children === 'function' ? options.children({ close }) : options.children;
@@ -63,8 +69,11 @@ export function usePopup(options?: PopupOptions) {
 
     function inRegion(target: EventTarget | null) {
         const view = anchor.current?.ownerDocument.defaultView;
-        return Boolean(view && target instanceof view.Node &&
-            (anchor.current?.contains(target) || surface.current?.contains(target)));
+        if (!view || !(target instanceof view.Node)) return false;
+        if (anchor.current?.contains(target) || surface.current?.contains(target)) return true;
+        // Reuse Dropdown's logical ancestry for portals nested inside this menu.
+        return target instanceof view.Element && Boolean(target.closest('[data-dropdown-ancestors]')
+            ?.getAttribute('data-dropdown-ancestors')?.split(' ').includes(menuId));
     }
     function leave(target: EventTarget | null, preserveFocus = false) {
         if (!hover || inRegion(target)) return;
@@ -140,15 +149,16 @@ export function usePopup(options?: PopupOptions) {
             boundary={options.boundary?.(point.opener)} panel={options.panel}>{content}</ContextPopup>
     ) : menu && open ? (
         <Dropdown anchorRef={anchor} surfaceRef={surface} open onOpenChange={next => { if (!next) close(); }}
-            role="menu" aria-label={options.label} keyboard="menu" initialFocus={!hover || keyboard ? 'first' : undefined}
+            id={menuId} role="menu" aria-label={options.label} keyboard="menu" initialFocus={!hover || keyboard ? 'first' : undefined}
             returnFocus={hover && !keyboard ? false : anchor} closeOn={{ escape: true, blur: true }}
-            panel={{ ...options.panel, portal: true, side: options.position === 'bottom-end' ? 'end' : options.position === 'bottom' ? 'center' : options.panel?.side ?? 'start',
+            panel={{ ...options.panel, portal: true, placement: options.position || hover ? placement : options.panel?.placement ?? placement,
+                side: options.position || hover ? align : options.panel?.side ?? align,
                 onMouseEnter: event => { options.panel?.onMouseEnter?.(event); if (hover) clearTimer(); },
                 onMouseLeave: event => { options.panel?.onMouseLeave?.(event); leave(event.relatedTarget, true); },
                 onFocus: event => { options.panel?.onFocus?.(event); if (hover) clearTimer(); },
                 onBlur: event => { options.panel?.onBlur?.(event); leave(event.relatedTarget); },
             }}>
-            {content}
+            {closeDropdown => typeof options.children === 'function' ? options.children({ close: closeDropdown }) : options.children}
         </Dropdown>
     ) : tooltipOptions ? (
         <Tooltip as="span" ref={tooltip.tooltipRef} id={tooltipId} {...tooltip.bubbleProps}>{tooltipOptions.text}</Tooltip>
@@ -157,5 +167,6 @@ export function usePopup(options?: PopupOptions) {
         anchor: tooltipOptions ? tooltip.anchorRef : anchor, popup, onContextMenu, onKeyDown, onClick,
         onMouseEnter, onMouseLeave, onFocus, onBlur, open: visible,
         describedBy: tooltipOptions && tooltip.isActive ? tooltipId : undefined,
+        controls: menu && visible ? menuId : undefined,
     };
 }

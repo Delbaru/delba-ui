@@ -76,6 +76,7 @@ export function useDropdown({
     anchorRef: geometryAnchorRef,
     viewportPadding = VIEWPORT_PADDING,
     strategy = 'document',
+    placement = 'bottom',
     boundaryRef,
     ...panelProps
   } = panel;
@@ -110,9 +111,7 @@ export function useDropdown({
   const geometryRef = externalAnchorRef ?? (point !== undefined ? pointRef : geometryAnchorRef ?? anchorRef);
   const focusOnOpen = useRef<'first' | 'last' | null>(null);
   const closeFocusPolicy = useRef<'restore' | 'preserve' | null>(null);
-  const wasOpen = useRef(false);
-  if (open && !wasOpen.current && initialFocus) focusOnOpen.current = initialFocus;
-  wasOpen.current = open;
+
   const scopeRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLDivElement>(null);
   const [rootNode, setRootNode] = useState<HTMLDivElement | null>(null);
@@ -159,7 +158,7 @@ export function useDropdown({
     surfaceRef,
     regions: [rootRef, anchorRef, ...focusRegions],
     outsideRefs: point !== undefined ? [surfaceRef] : [externalAnchorRef ?? anchorRef, surfaceRef],
-    placement: 'bottom',
+    placement,
     strategy,
     align: side,
     gap: gapPixels,
@@ -177,7 +176,9 @@ export function useDropdown({
   }, [requestedOpen, blocked, controlledOpen, onOpenChange]);
 
   useEffect(() => {
-    if (!open || !focusOnOpen.current) return;
+    if (!open) return;
+    if (initialFocus) focusOnOpen.current = initialFocus;
+    if (!focusOnOpen.current) return;
     const panel = panelRef.current;
     if (!panel) return;
     const owner = panel.ownerDocument.defaultView;
@@ -414,6 +415,7 @@ export function useDropdown({
       surface: {
         ...panelProps,
         ref: setSurfaceRef,
+        onPointerDownCapture: composeEventHandlers(panelProps.onPointerDownCapture, dismissProps.onPointerDownCapture),
         onMouseDownCapture: composeEventHandlers(
           panelProps.onMouseDownCapture,
           composeEventHandlers(

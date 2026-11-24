@@ -1,7 +1,7 @@
 import type { MouseEventHandler, ReactElement, ReactNode, RefObject } from 'react';
 import type { ComponentStateValue } from '../../core';
 import type { FloatingDismissReason } from '../../hooks/useFloatingSurface';
-import type { FloatingStrategy } from '../../hooks/useAnchoredFloating';
+import type { FloatingStrategy, FloatingPlacement } from '../../hooks/useAnchoredFloating';
 import type { OpenAnimate } from '../../core/reveal/reveal';
 import type { BoxProps } from '../Box';
 import type { CollapseSettings } from '../Collapse/CollapseWrap';
@@ -30,6 +30,8 @@ export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'colla
   [attribute: `data-${string}`]: string | number | boolean | undefined;
   /** Край триггера, к которому прижата панель. */
   side?: 'start' | 'center' | 'end';
+  /** Preferred edge of a portalled panel; the existing geometry engine may flip it. */
+  placement?: FloatingPlacement;
   /** Зазор от триггера в дизайн-единицах. */
   offset?: number;
   /** Вынести панель из обрезающего контейнера в слой страницы или активной Modal. */

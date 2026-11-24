@@ -174,6 +174,7 @@ export function Flex({
       aria-busy={anchorProps['aria-busy'] ?? asyncContent.busy}
       data-ui-popup-trigger={popupOptions ? '' : undefined}
       aria-describedby={[anchorProps['aria-describedby'], popup.describedBy].filter(Boolean).join(' ') || undefined}
+      aria-controls={anchorProps['aria-controls'] ?? popup.controls}
       aria-haspopup={anchorProps['aria-haspopup'] ?? (popupOptions && popupOptions.preset !== 'tooltip' ? 'menu' : undefined)}
       aria-expanded={anchorProps['aria-expanded'] ?? (popupOptions && popupOptions.preset !== 'tooltip' ? popup.open : undefined)}
       data-ui-collection={ui?.collection?.domId}

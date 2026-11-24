@@ -10,3 +10,8 @@ opens a click menu, Escape on the trigger closes it. Full touch/hover/nested
 focus and browser acceptance remain outstanding.
 
 Flex accepts tooltip/menu/context. Button accepts menu/context as well as its existing styled tooltip. `menu.on` supports `click` or `hover`; hover uses the same Dropdown with a short leave grace period, keyboard/tap fallback, no automatic pointer focus steal. `position: 'bottom' | 'bottom-start' | 'bottom-end'` aligns the menu; native anchor navigation and submit/reset are not intercepted unless `consume: true` is explicit. Context triggers ignore nested controls. Touch context menu, nested portal traversal and browser focus verification remain gates.
+
+Menu positions accept top/bottom/left/right, with optional -start/-end alignment.
+Hover defaults to top, click to bottom-start. The existing portal geometry
+engine may flip at the viewport boundary. Native touch pointer outside dismissal
+and Dropdown logical ancestry are shared with other portalled surfaces.

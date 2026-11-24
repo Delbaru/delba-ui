@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, type RefObject, type SyntheticEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject, type SyntheticEvent } from 'react';
 
 export type DismissRef = RefObject<HTMLElement | null>;
 
@@ -19,6 +19,7 @@ export interface UseOutsideDismissOptions {
  */
 export interface OutsideDismissInsideProps {
   onMouseDownCapture: (event: SyntheticEvent) => void;
+  onPointerDownCapture: (event: SyntheticEvent) => void;
 }
 
 /**
@@ -44,7 +45,7 @@ export function useOutsideDismiss(
   { enabled = true, escape = true, blockOutsideClick = false }: UseOutsideDismissOptions = {},
 ): OutsideDismissInsideProps {
   const dismissRef = useRef(onDismiss);
-  dismissRef.current = onDismiss;
+
 
   const insideEventRef = useRef<Event | null>(null);
   const onMouseDownCapture = useCallback((event: SyntheticEvent) => {
@@ -52,7 +53,10 @@ export function useOutsideDismiss(
   }, []);
 
   const nodesRef = useRef<readonly DismissRef[]>([]);
-  nodesRef.current = Array.isArray(refs) ? refs : [refs as DismissRef];
+  useLayoutEffect(() => {
+    dismissRef.current = onDismiss;
+    nodesRef.current = Array.isArray(refs) ? refs : [refs as DismissRef];
+  });
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -79,14 +83,19 @@ export function useOutsideDismiss(
         dismissRef.current();
       };
 
+      const handleTouch = (event: PointerEvent) => {
+        if (event.pointerType === 'touch') handlePointerDown(event);
+      };
       const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key === 'Escape' && !event.defaultPrevented) dismissRef.current();
       };
 
       ownerDocument.addEventListener('mousedown', handlePointerDown);
+      ownerDocument.addEventListener('pointerdown', handleTouch);
       if (escape) ownerDocument.addEventListener('keydown', handleKeyDown);
       cleanups.push(() => {
         ownerDocument.removeEventListener('mousedown', handlePointerDown);
+        ownerDocument.removeEventListener('pointerdown', handleTouch);
         if (escape) ownerDocument.removeEventListener('keydown', handleKeyDown);
         // Keep the pending once listener after a close; it still owns the following click.
         if (swallowTimer === undefined) ownerDocument.removeEventListener('click', swallowClick, true);
@@ -99,5 +108,5 @@ export function useOutsideDismiss(
     // Object refs may acquire another target document after any commit.
   });
 
-  return { onMouseDownCapture };
+  return { onMouseDownCapture, onPointerDownCapture: onMouseDownCapture };
 }
