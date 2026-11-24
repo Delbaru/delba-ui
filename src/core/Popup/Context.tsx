@@ -7,7 +7,8 @@ export type ContextPoint = { x: number; y: number; opener: HTMLElement };
 type Panel = NonNullable<DropdownProps['panel']>;
 
 /** Reuse Dropdown's portal, geometry, keyboard and focus restoration. */
-export function ContextPopup({ point, onClose, children, label = 'Действия', boundary, panel, onOpen }: {
+export function ContextPopup({ id, point, onClose, children, label = 'Действия', boundary, panel, onOpen }: {
+    id?: string;
     point: ContextPoint;
     onClose: () => void;
     children: ReactNode;
@@ -69,6 +70,7 @@ export function ContextPopup({ point, onClose, children, label = 'Действи
 
     return (
         <Dropdown
+            id={id}
             point={{ x: point.x, y: point.y, target: point.opener }}
             open
             onOpenChange={next => { if (!next) close(); }}

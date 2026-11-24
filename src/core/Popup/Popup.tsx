@@ -27,6 +27,11 @@ function nestedControl(event: MouseEvent<HTMLElement>) {
     return Boolean(control && control !== event.currentTarget && event.currentTarget.contains(control));
 }
 
+/** Touch-only browsers synthesize mouse enter before click; do not toggle twice. */
+function coarsePointer(element: HTMLElement) {
+    return element.ownerDocument.defaultView?.matchMedia('(pointer: coarse)').matches === true;
+}
+
 export function usePopup(options?: PopupOptions) {
     const anchor = useRef<HTMLElement | null>(null);
     const surface = useRef<HTMLElement | null>(null);
@@ -86,12 +91,12 @@ export function usePopup(options?: PopupOptions) {
     function onMouseEnter(event: MouseEvent<HTMLElement>) {
         if (!inside(event) || nestedControl(event)) return;
         if (tooltipOptions) tooltip.anchorHandlers.onMouseEnter();
-        if (hover) { clearTimer(); setOpen(true); }
+        if (hover && !coarsePointer(event.currentTarget)) { clearTimer(); setOpen(true); }
     }
     function onMouseLeave(event: MouseEvent<HTMLElement>) {
         if (!inside(event)) return;
         if (tooltipOptions) tooltip.anchorHandlers.onMouseLeave();
-        leave(event.relatedTarget, true);
+        if (!coarsePointer(event.currentTarget)) leave(event.relatedTarget, true);
     }
     function onFocus(event: FocusEvent<HTMLElement>) {
         if (event.target !== event.currentTarget) return;
@@ -133,8 +138,7 @@ export function usePopup(options?: PopupOptions) {
     function onClick(event: MouseEvent<HTMLElement>) {
         if (!menu || event.defaultPrevented || !inside(event) || nestedControl(event)) return;
         // Hover has a tap/keyboard fallback; desktop pointer clicks do not close its panel.
-        if (hover && event.detail !== 0 &&
-            !event.currentTarget.ownerDocument.defaultView?.matchMedia('(pointer: coarse)').matches) return;
+        if (hover && event.detail !== 0 && !coarsePointer(event.currentTarget)) return;
         const nativeNavigation = event.currentTarget.matches('a[href],button[type="submit"],button[type="reset"]');
         if (nativeNavigation && options.consume !== true) return;
         if (options.consume !== false) event.preventDefault();
@@ -145,7 +149,7 @@ export function usePopup(options?: PopupOptions) {
     }
 
     const popup = context && point ? (
-        <ContextPopup point={point} onClose={close} label={options.label}
+        <ContextPopup id={menuId} point={point} onClose={close} label={options.label}
             boundary={options.boundary?.(point.opener)} panel={options.panel}>{content}</ContextPopup>
     ) : menu && open ? (
         <Dropdown anchorRef={anchor} surfaceRef={surface} open onOpenChange={next => { if (!next) close(); }}
@@ -167,6 +171,6 @@ export function usePopup(options?: PopupOptions) {
         anchor: tooltipOptions ? tooltip.anchorRef : anchor, popup, onContextMenu, onKeyDown, onClick,
         onMouseEnter, onMouseLeave, onFocus, onBlur, open: visible,
         describedBy: tooltipOptions && tooltip.isActive ? tooltipId : undefined,
-        controls: menu && visible ? menuId : undefined,
+        controls: visible && (menu || context) ? menuId : undefined,
     };
 }

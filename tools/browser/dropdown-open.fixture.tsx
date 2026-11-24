@@ -79,6 +79,14 @@ function PopupDoorFixture() {
         children: <button type="button" role="menuitem">Popup door action</button>,
       } : undefined,
     }}>Open menu</Flex>
+    <Flex role="button" aria-label="Hover popup trigger" ui={{ popup: {
+      preset: 'menu', on: 'hover', label: 'Hover popup actions',
+      children: <button type="button" role="menuitem">Hover popup action</button>,
+    } }}>Hover or tap</Flex>
+    <Flex aria-label="Context popup trigger" ui={{ popup: {
+      preset: 'context', label: 'Context popup actions',
+      children: <button type="button" role="menuitem">Context popup action</button>,
+    } }}>Right click or keyboard</Flex>
   </section>;
 }
 
