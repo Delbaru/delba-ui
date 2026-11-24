@@ -19,3 +19,5 @@ commit; dynamic changes after restoration and browser behavior need integration 
 transition controls; `Flex ui={{collapse}}` supplies controlled options.
 No second motion engine; current commands are intent-only, transition completion
 is still available on the existing CollapseWrap ref contract.
+
+Both `height` and `width` accept an RPX numeric value or `{ min, max }` (either bound optional). `p` accepts top/right/bottom/left RPX padding on the same viewport; explicit Flex layout wins.

@@ -22,7 +22,7 @@ The owner supplies a trusted scope and optional draft key; no global form data.
 `form.action` references the same action controller as `form.submit`. A button may
 also use `ui={{ action: { preset: 'default', run: command } }}` for a standalone
 operation. Do not provide both onClick and ui.action for the same command.
-A named Input/Textarea uses its nearest form unless explicitly controlled.
+Named Input/Textarea (string), Select (string/null or string array) and Checkbox (boolean) use the nearest compatible form field unless explicitly controlled. The caller's change callback still runs. Custom scopes may expose `hasField` to distinguish an explicitly undefined optional field from an unknown name. Files remain custom fields through `ui.form.field.use<File[]>(name)` and never enter browser storage.
 Custom fields use `ui.form.field.use<T>(name)`; native submit is opt-in with
 Flex as="form", and editors with their own Enter semantics call form.submit.
 

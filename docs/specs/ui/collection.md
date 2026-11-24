@@ -22,3 +22,5 @@ selection. With retainMissing disabled, disappearing IDs are forgotten rather
 than silently selected again when they reappear. Portal events outside the item
 DOM do not activate it. With retainMissing enabled, the owner must explicitly
 unselect a confirmed deleted ID (absence may mean pagination).
+
+Retained off-page previews remember the most recent committed loaded object. Reconstructed items do not cause a render-phase state update. Nested selectable surfaces do not toggle ancestors; interactive descendants retain their own behavior.

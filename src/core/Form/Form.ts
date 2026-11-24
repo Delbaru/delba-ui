@@ -206,7 +206,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
 
   const values = entry.draft.values;
   const changes = Object.fromEntries((Object.keys(values) as FieldName<T>[])
-    .filter(name => !equal(name, values[name], entry.draft.baseline[name]))
+    .filter(name => !sameValue(values[name], entry.draft.baseline[name]))
     .map(name => [name, values[name]])) as Partial<T>;
   const dirty = (Object.keys(values) as FieldName<T>[]).some(name => !equal(name, values[name], entry.draft.baseline[name]));
   const replace = (next: DraftSnapshot<T>) => {

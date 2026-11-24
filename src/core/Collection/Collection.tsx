@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, type MouseEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, useRef, useState, type MouseEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { changeSelection, emptySelection, pruneSelection, rangeKeys, selectedItems, type Selection } from './Selection';
 
 export type CollectionDefinition<T> = {
@@ -66,15 +66,32 @@ export function useCollection<T>(
   const state = stored.scope === scope && stored.token === definition.token && stored.mode === mode
     ? stored : createState();
   const visible = new Map(items.map(item => [definition.key(item), item]));
-  const selection = pruneSelection(state.selection, visible, retainMissing);
-  if (state !== stored || selection !== state.selection) setState({ ...state, selection });
+  // Keep refreshed previews commit-bound. A caller may reconstruct every item on
+  // each render, so writing previews into render-phase state would loop.
+  const committed = useRef<{ owner: symbol; retained: ReadonlyMap<string, T> } | null>(null);
+  const retained = new Map(state.selection.retained);
+  if (retainMissing && committed.current?.owner === state.owner) {
+    for (const id of state.selection.ids) {
+      if (committed.current.retained.has(id)) retained.set(id, committed.current.retained.get(id)!);
+    }
+  }
+  const selection = pruneSelection(
+    retainMissing ? { ...state.selection, retained } : state.selection, visible, retainMissing,
+  );
+  if (state !== stored || !retainMissing && selection !== state.selection) setState({ ...state, selection });
+  useLayoutEffect(() => {
+    committed.current = { owner: state.owner, retained: selection.retained };
+  });
   const keys = [...visible.keys()];
   const selected = selectedItems(selection, visible, retainMissing);
   const ids = selection.ids.filter(id => retainMissing || visible.has(id));
   const change = (operation: 'select' | 'unselect' | 'toggle' | 'range', requested: readonly string[]) =>
     setState(previous => previous.owner !== state.owner ? previous : {
       ...previous,
-      selection: changeSelection(previous.selection, visible, requested, operation, retainMissing, mode),
+      selection: changeSelection({
+        ...previous.selection,
+        retained: new Map([...previous.selection.retained, ...selection.retained]),
+      }, visible, requested, operation, retainMissing, mode),
     });
   const toggle = (id: string) => change('toggle', [id]);
   const item = (id: string): CollectionItem => ({
