@@ -22,6 +22,7 @@ type Entry<T extends object> = {
   storageRevision?: number;
   persistedText?: string;
   browserStorage?: DraftStorage;
+  storageBinding?: { storage: DraftStorage | undefined };
 };
 function hasErrors(errors: object): boolean {
   return Object.values(errors).some(Boolean);
@@ -50,9 +51,15 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const entries = existing ? owner.entries : new Map(owner.entries).set(key, entry);
   if (owner !== storedOwner || entries !== owner.entries) setOwner({ ...owner, entries });
   const disabled = !!options.disabled || !scope;
-  const current = useRef({ owner: owner.token, entry, disabled, storage });
+  const current = useRef({ owner: owner.token, entry, disabled, storage, selection: Symbol() });
   useLayoutEffect(() => {
-    current.current = { owner: owner.token, entry, disabled, storage };
+    // Adapter identity is committed, never taken from an interrupted render.
+    if (!entry.storageBinding || entry.storageBinding.storage !== storage) {
+      entry.storageBinding = { storage };
+    }
+    const previous = current.current;
+    const sameSelection = previous.owner === owner.token && previous.entry === entry && previous.storage === storage;
+    current.current = { owner: owner.token, entry, disabled, storage, selection: sameSelection ? previous.selection : Symbol() };
   }, [owner.token, entry, disabled, storage]);
   const mounted = useRef(false);
   useLayoutEffect(() => {
@@ -165,9 +172,13 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
       if (hasErrors(options.validate?.(entry.draft.values) ?? {})) return;
       const submitted = snapshotValue(entry.draft);
       const submittedRevision = entry.storageRevision;
+      const submittedBinding = entry.storageBinding;
+      const submittedSelection = current.current.selection;
       entry.error = undefined;
       try {
         const result = await options.submit(submitted.values);
+        // A replacement adapter (including A → B → A) must not receive an old settlement.
+        if (entry.storageBinding !== submittedBinding) return;
         if (!isOwner()) {
           // Only an explicit, session-guarded adapter may acknowledge after unmount.
           // Never restore a closed form or erase a later revision of shared text.
@@ -183,14 +194,14 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
         if (storage) readStored(false);
         entry.draft = acknowledgeDraft(entry.draft, submitted, saved, options.consume);
         save();
-        if (isCurrent()) {
+        if (isCurrent() && current.current.selection === submittedSelection) {
           try { options.onSuccess?.(result, submitted.values, entry.draft.values); }
           catch (error) { console.error('Form acknowledgement callback failed', error); }
         }
       } catch (error) {
-        if (!isOwner()) throw new DOMException('Form scope changed', 'AbortError');
+        if (!isOwner() || entry.storageBinding !== submittedBinding) throw new DOMException('Form scope changed', 'AbortError');
         if (!isAbortActionError(error)) entry.error = error;
-        if (!isCurrent()) throw new DOMException('Form scope changed', 'AbortError');
+        if (!isCurrent() || current.current.selection !== submittedSelection) throw new DOMException('Form scope changed', 'AbortError');
         throw error;
       } finally {
         if (isOwner()) notify();

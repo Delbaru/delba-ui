@@ -201,3 +201,27 @@ test('action key changes suppress local stale settlement without releasing admis
   await expect(page.getByTestId('keyed-action-settled')).toHaveText('1');
   await expect(page.getByTestId('keyed-action-success')).toHaveText('1');
 });
+
+
+test('replacing the storage adapter does not acknowledge an old submission into a new binding', async ({ page }) => {
+  await page.goto('/');
+  const text = page.getByRole('textbox', { name: 'Storage binding text' });
+  const submit = page.getByRole('button', { name: 'Submit storage binding' });
+  const swap = page.getByRole('button', { name: 'Switch storage adapter' });
+  const confirm = page.getByRole('button', { name: 'Confirm storage binding' });
+  await expect(text).toHaveValue('draft A');
+  await submit.click();
+  await swap.click();
+  await expect(text).toHaveValue('draft B');
+  await expect(submit).toBeDisabled();
+  await swap.click();
+  await expect(text).toHaveValue('draft A');
+  await confirm.click();
+  await expect(submit).toBeEnabled();
+  await expect(text).toHaveValue('draft A');
+  await expect(page.getByTestId('storage-binding-success')).toHaveText('0');
+  await submit.click();
+  await confirm.click();
+  await expect(text).toHaveValue('');
+  await expect(page.getByTestId('storage-binding-success')).toHaveText('1');
+});

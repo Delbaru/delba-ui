@@ -209,6 +209,7 @@ export function FormFixture() {
       <NamedFieldsFixture />
       <EditForm />
       <ActionKeyFixture />
+      <StorageBindingFixture />
       <StrictMode><SharedForms /><SubscriptionForm /></StrictMode>
     </ActionInvocationProvider>
   );
@@ -273,6 +274,40 @@ function ActionKeyFixture() {
       <output data-testid="keyed-action-cancelled">{cancelled}</output>
       <output data-testid="keyed-action-settled">{settled}</output>
       <output data-testid="keyed-action-success">{success}</output>
+    </section>
+  );
+}
+
+function StorageBindingFixture() {
+  const [index, setIndex] = useState(0);
+  const [success, setSuccess] = useState(0);
+  const finish = useRef<(() => void) | null>(null);
+  const stores = useMemo(() => ['draft A', 'draft B'].map((text): DraftStorage => {
+    let raw = JSON.stringify({ text });
+    let revision = 0;
+    return {
+      read: () => ({ raw, revision, persisted: true }),
+      write: next => { raw = next; revision++; return true; },
+      subscribe: () => () => undefined,
+    };
+  }), []);
+  const form = ui.form.use({
+    scope: 'storage-binding-fixture',
+    preset: 'message',
+    initial: initialMessage,
+    draft: { key: 'same-key', persist: ['text'], storage: stores[index] },
+    submit: () => new Promise<void>(resolve => { finish.current = resolve; }),
+    onSuccess: () => setSuccess(count => count + 1),
+  });
+  return (
+    <section aria-label="Storage binding fixture">
+      <Flex as="form" ui={{ form }}>
+        <Input name="text" aria-label="Storage binding text" />
+        <Button type="submit" ui={{ action: form.action }}>Submit storage binding</Button>
+      </Flex>
+      <Button onClick={() => setIndex(value => 1 - value)}>Switch storage adapter</Button>
+      <Button onClick={() => finish.current?.()}>Confirm storage binding</Button>
+      <output data-testid="storage-binding-success">{success}</output>
     </section>
   );
 }
