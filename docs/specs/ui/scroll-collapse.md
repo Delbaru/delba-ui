@@ -21,3 +21,9 @@ No second motion engine; current commands are intent-only, transition completion
 is still available on the existing CollapseWrap ref contract.
 
 Both `height` and `width` accept an RPX numeric value or `{ min, max }` (either bound optional). `p` accepts top/right/bottom/left RPX padding on the same viewport; explicit Flex layout wins.
+
+Collapse accepts the existing animation options (axis, gap, gapSide, fade,
+keepMounted, appear, overflowVisibleWhenOpen, onFound/onEnd/onTransition).
+`collapse.trigger` is a convenience for a button's aria-expanded/onClick;
+`collapse.controls` exposes the original mounted CollapseControls ref. An
+explicit feed anchor centers only its own viewport, not an ancestor page.

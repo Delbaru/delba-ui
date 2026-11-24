@@ -24,3 +24,9 @@ DOM do not activate it. With retainMissing enabled, the owner must explicitly
 unselect a confirmed deleted ID (absence may mean pagination).
 
 Retained off-page previews remember the most recent committed loaded object. Reconstructed items do not cause a render-phase state update. Nested selectable surfaces do not toggle ancestors; interactive descendants retain their own behavior.
+
+`ui.collection.define<T extends {id: string}>(name)` may omit the key
+selector; the existing explicit selector overload remains. Flex collections
+and selectable items carry a scoped DOM identity. Arrow keys/Home/End move
+focus within that collection, Shift extends the range, Ctrl/Cmd+A selects
+loaded items. Embedded controls keep their native keyboard behavior.

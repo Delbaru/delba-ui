@@ -133,7 +133,7 @@ export type { DraftStorage, FormOptions, FormController, FormScope, FormErrors, 
 export type { CollectionDefinition, CollectionController, CollectionScope, CollectionItem } from './core/Collection/Collection';
 
 export type { ScrollOptions } from './core/Scroll/Surface';
-export type { CollapseDoor } from './core/Collapse/Collapse';
+export type { CollapseDoor, CollapseDoorOptions } from './core/Collapse/Collapse';
 
 export type { AsyncOptions } from './core/Async/Async';
 export { asyncSourceState, isAsyncEmpty, type AsyncSource } from './core/Async/State';

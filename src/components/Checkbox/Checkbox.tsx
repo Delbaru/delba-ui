@@ -119,7 +119,7 @@ export function Checkbox({
                     className={styles.Input}
                     {...inputProps}
                     onChange={composeEventHandlers(inputProps.onChange, (event) => {
-                        if (bound) field.change(event.currentTarget.checked);
+                        if (bound && !inputProps.readOnly) field.change(event.currentTarget.checked);
                         else if (inputProps.checked === undefined) setUncontrolledChecked(event.currentTarget.checked);
                     })}
                 />

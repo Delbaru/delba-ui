@@ -33,3 +33,11 @@ test('loading phase reverses and reduced motion releases immediately', () => {
     assert.equal(completeAsyncPhase('leaving'), 'idle');
     assert.equal(syncAsyncPhase('leaving', false, true), 'idle');
 });
+
+test('explicit empty is a completed result, but never falls back to stale data', () => {
+    const empty = asyncSourceState({ data: ['previous'], currentData: undefined, empty: true });
+    assert.equal(empty.data, undefined);
+    assert.equal(empty.pending, false);
+    assert.equal(empty.empty, true);
+    assert.equal(asyncSourceState({ currentData: undefined, empty: true, loading: true }).pending, true);
+});

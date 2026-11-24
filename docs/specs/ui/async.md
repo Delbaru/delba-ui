@@ -4,3 +4,8 @@
 
 Flex without async options does not subscribe to the reduced-motion media query
 for this mechanism or schedule its phase timers. Other motion owners are unchanged.
+
+An explicit `source.empty: true` marks successful empty/undefined data (unless
+initial loading is still active). Undefined `currentData` without that flag
+still never falls back to a different argument. Errors without retainable
+current data take precedence over the loading phase.

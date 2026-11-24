@@ -6,8 +6,12 @@ export function createActionAdmission() {
   const listeners = new Set<() => void>();
   const scopedListeners = new Map<string, Set<() => void>>();
   const notify = (key: string) => {
-    listeners.forEach(listener => listener());
-    scopedListeners.get(key)?.forEach(listener => listener());
+    const deliver = (listener: () => void) => {
+      try { listener(); }
+      catch (error) { console.error('UI admission subscriber failed', error); }
+    };
+    [...listeners].forEach(deliver);
+    [...(scopedListeners.get(key) ?? [])].forEach(deliver);
   };
   return {
     pending: (key: string) => active.has(key),

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isAbortActionError } from '../action-invocation.model';
+import { isAbortActionError } from '../../../src/hooks/action-invocation.model';
 
 test('AbortError is cancellation, including a plain RTK-shaped error', () => {
   assert.equal(isAbortActionError({ name: 'AbortError', message: 'aborted' }), true);

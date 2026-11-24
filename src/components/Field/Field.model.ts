@@ -53,6 +53,7 @@ export function restoreNativeDraftAfterBindingChange(
     previous.controlled !== current.controlled;
 
   if (!changed || current.controlled || current.binding !== 'native' || !current.node) return;
+  if (current.node.type === 'file' && value !== '') return;
   if (current.node.value !== value) current.node.value = value;
 }
 

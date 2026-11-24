@@ -69,3 +69,11 @@ The default adapter does not acknowledge after unmount because it cannot
 prove the original authenticated owner is still active. Explicit guarded
 adapters retain that capability. Cross-tab draft sync is not cross-tab
 admission, atomic compare-and-swap or durable server idempotency.
+
+Standalone action options may specify `identity`, `admissionKey`,
+`onSuccess`, and `onCancel`. Form options also accept `onCancel`.
+`cancel?.()` requests the consumer's cooperative abort at most once; it does
+not release admission or claim that a server command rolled back. AbortError
+is cancellation, not a form validation failure. A nested non-native form
+scope inside a native form handles text input Enter locally; custom editors
+retain their own key handling. Native submit remains opt-in.
