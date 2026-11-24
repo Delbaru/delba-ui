@@ -127,9 +127,10 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const invocation = useActionInvocation({
     // Switching rooms does not release the active ticket. The old request may still commit.
     identity: scope,
+    admissionKey: storageKey,
     action: async () => {
       if (!isCurrent() || disabled || !entry.ready) return;
-      if (storage) readStored(false);
+      if (storageKey) readStored(false);
       if (hasErrors(options.validate?.(entry.draft.values) ?? {})) return;
       const submitted = snapshotValue(entry.draft);
       entry.error = undefined;
@@ -172,7 +173,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
 
   const submit = () => {
     if (!isCurrent() || disabled || !entry.ready) return undefined;
-    if (storage) readStored(false);
+    if (storageKey) readStored(false);
     if (hasErrors(options.validate?.(entry.draft.values) ?? {})) { notify(); return undefined; }
     return invocation.invoke();
   };

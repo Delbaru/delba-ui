@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createActionAdmission } from './ActionAdmission';
 import { isAbortActionError } from './action-invocation.model';
 
 /** A result is never implicitly treated as an exception by the controller. */
@@ -22,6 +23,8 @@ interface ActionInvocationServices {
 }
 
 const InvocationContext = createContext<ActionInvocationServices | null>(null);
+const admission = createActionAdmission();
+const noPending = () => false;
 
 /** A client session boundary owns errors; the kit never imports a CRM service. */
 export function ActionInvocationProvider({
@@ -36,11 +39,13 @@ export function ActionInvocationProvider({
   const alive = useRef(false);
   const failureRef = useRef(onFailure);
   const cancelledRef = useRef(isCancelled);
-  failureRef.current = onFailure;
-  cancelledRef.current = isCancelled;
   const currentScope = useRef(scopeKey);
-  currentScope.current = scopeKey;
-  useEffect(() => {
+  useLayoutEffect(() => {
+    failureRef.current = onFailure;
+    cancelledRef.current = isCancelled;
+    currentScope.current = scopeKey;
+  }, [onFailure, isCancelled, scopeKey]);
+  useLayoutEffect(() => {
     alive.current = true;
     return () => { alive.current = false; };
   }, []);
@@ -58,6 +63,8 @@ export interface ActionInvocationOptions<A extends readonly unknown[]> {
   actionName?: string;
   /** Optional local identity (form/record) in addition to the provider scope. */
   identity?: string;
+  /** Explicitly shared operation identity; remains held through unmount until settlement. */
+  admissionKey?: string;
 }
 export interface ActionInvocationController<A extends readonly unknown[]> {
   pending: boolean;
@@ -72,42 +79,53 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
 
 /** One hook instance can be invoked from both keyboard and pointer triggers. */
 export function useActionInvocation<A extends readonly unknown[] = []>({
-  action, onSettled, actionName, identity,
+  action, onSettled, actionName, identity, admissionKey,
 }: ActionInvocationOptions<A>): ActionInvocationController<A> {
   const services = useContext(InvocationContext);
   const onSettledRef = useRef(onSettled);
-  onSettledRef.current = onSettled;
   const mounted = useRef(false);
   const currentScope = useRef(services?.scopeKey);
-  currentScope.current = services?.scopeKey;
   const currentIdentity = useRef(identity);
-  currentIdentity.current = identity;
+  const generation = useRef(0);
   const sequence = useRef(0);
   const activeTicket = useRef<number | null>(null);
   const [pending, setPending] = useState(false);
 
-  useEffect(() => {
+  const sharedKey = admissionKey === undefined ? undefined : JSON.stringify([services?.scopeKey, identity, admissionKey]);
+  const sharedPending = useSyncExternalStore(admission.subscribe,
+    () => sharedKey !== undefined && admission.pending(sharedKey), noPending);
+
+  useLayoutEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
 
-  useEffect(() => {
-    // A new session may start new actions; old settlements have no local owner.
-    sequence.current += 1;
+  useLayoutEffect(() => {
+    onSettledRef.current = onSettled;
+    if (currentScope.current === services?.scopeKey && currentIdentity.current === identity) return;
+    currentScope.current = services?.scopeKey;
+    currentIdentity.current = identity;
+    // Only a committed identity change releases local ownership, not StrictMode effect replay.
+    generation.current++;
     activeTicket.current = null;
     setPending(false);
-  }, [services?.scopeKey, identity]);
+  }, [services?.scopeKey, identity, onSettled]);
 
   const invoke = (...args: A): Promise<ActionInvocationResult> | undefined => {
-    if (!action || activeTicket.current !== null) return undefined;
+    if (!mounted.current || !action || activeTicket.current !== null ||
+        currentScope.current !== services?.scopeKey || currentIdentity.current !== identity) return undefined;
+    if (services && (!services.alive.current || services.currentScope.current !== services.scopeKey)) return undefined;
+    const release = sharedKey === undefined ? undefined : admission.acquire(sharedKey);
+    if (sharedKey !== undefined && !release) return undefined;
 
     // Acquire before calling user code: even synchronous recursion cannot reenter.
     const ticket = ++sequence.current;
     activeTicket.current = ticket;
     const startedScope = currentScope.current;
     const startedIdentity = currentIdentity.current;
+    const startedGeneration = generation.current;
     const report = (error: unknown) => {
-      if (startedIdentity !== currentIdentity.current) return;
+      if (startedGeneration !== generation.current || startedIdentity !== currentIdentity.current) return;
       if (!services) {
         console.error('Unhandled UI action failure', error);
         return;
@@ -141,6 +159,7 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
         activeTicket.current = null;
         if (mounted.current) setPending(false);
       }
+      release?.();
       return result;
     };
 
@@ -159,5 +178,5 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     );
   };
 
-  return { pending, invoke };
+  return { pending: pending || sharedPending, invoke };
 }

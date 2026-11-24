@@ -42,3 +42,7 @@ native submit, accessibility and consumer compile must still be verified.
 A consumer may temporarily supply `draft.storage` for a pre-existing shared draft namespace. The adapter implements read/write/subscribe, owns persistence and must scope subscriptions; the form still owns submission/reconciliation and non-persisted values. `form.update(name, change)` and `field.update(change)` operate on the latest value, not a stale rendered array.
 
 For editing records, `refresh` supplies the last confirmed values and preserves dirty fields. `equal` may express domain normalization for dirty/refresh comparisons (e.g. decimal spelling); revision-based acknowledgement still distinguishes edits made after submit. `changes` remains exact field differences for patch construction. The form controller does not decide field permissions.
+
+### Shared admission (stabilization)
+
+Draft forms with the same scoped storage key share one in-process admission ticket through useActionInvocation, including independently mounted surfaces. The ticket lives until actual settlement, not until a component unmounts. Local owner changes do not release that shared ticket. This is not a durable server idempotency receipt and does not coordinate browser tabs. Independent forms without a shared key retain local admission. Browser integration/StrictMode acceptance is still required.
