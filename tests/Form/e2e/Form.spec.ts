@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('message Enter and button share admission; failure and late edits keep files', async ({ page }) => {
-  await page.goto('/__ui_fixture__');
+  await page.goto('/');
   const text = page.getByRole('textbox', { name: 'Form message', exact: true });
   const send = page.getByRole('button', { name: 'Submit message' });
   await expect(text).toBeEnabled();
@@ -33,7 +33,7 @@ test('message Enter and button share admission; failure and late edits keep file
 });
 
 test('room and owner switch isolate drafts and old settlements; only text survives reload', async ({ page }) => {
-  await page.goto('/__ui_fixture__');
+  await page.goto('/');
   const text = page.getByRole('textbox', { name: 'Form message', exact: true });
   await expect(text).toBeEnabled();
   await text.fill('room-a draft');
@@ -59,7 +59,7 @@ test('room and owner switch isolate drafts and old settlements; only text surviv
 });
 
 test('edit form validates, keeps later edits, and binds the nearest context', async ({ page }) => {
-  await page.goto('/__ui_fixture__');
+  await page.goto('/');
   const title = page.getByRole('textbox', { name: 'Edit title' });
   const note = page.getByRole('textbox', { name: 'Edit note' });
   const nested = page.getByRole('textbox', { name: 'Nested title' });
