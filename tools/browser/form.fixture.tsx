@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { StrictMode, useMemo, useRef, useState } from 'react';
+import type { DraftStorage } from '../../src/core/Form/Form.types';
 import { ui } from '../../src/ui';
 import { Button } from '../../src/components/Button/Button';
 import { Flex } from '../../src/components/Flex/Flex';
@@ -98,11 +99,69 @@ function EditForm() {
   );
 }
 
+
+function SharedSurface({ label, storage, submit }: {
+  label: string; storage: DraftStorage; submit: () => Promise<void>;
+}) {
+  const form = ui.form.use({
+    scope: 'shared-owner', preset: 'message', initial: initialMessage,
+    draft: { key: 'shared-room', persist: ['text'], storage },
+    consume: ['files'],
+    validate: values => values.text.trim() ? {} : { text: 'Required' },
+    submit,
+  });
+  return (
+    <Flex as="form" ui={{ form }} dir={['column', 'column', 'column']}>
+      <Input name="text" aria-label={label + ' text'} />
+      <Button type="submit" ui={{ action: form.action }}>{label} send</Button>
+    </Flex>
+  );
+}
+
+function SharedForms() {
+  const [first, showFirst] = useState(true);
+  const [calls, setCalls] = useState(0);
+  const finish = useRef<(() => void) | null>(null);
+  const storage = useMemo<DraftStorage>(() => {
+    let raw = '{"text":""}';
+    let revision = 0;
+    const listeners = new Set<() => void>();
+    const write = (next: string) => {
+      if (raw !== next) { raw = next; revision++; }
+      listeners.forEach(listener => listener());
+      return true;
+    };
+    return {
+      read: () => ({ raw, revision, persisted: true }),
+      write,
+      acknowledge: (expected, next) => expected === revision && write(next),
+      subscribe: listener => {
+        listeners.add(listener);
+        return () => { listeners.delete(listener); };
+      },
+    };
+  }, []);
+  const submit = () => {
+    setCalls(value => value + 1);
+    return new Promise<void>(resolve => { finish.current = resolve; });
+  };
+  return (
+    <section aria-label="Shared form surfaces">
+      {first && <SharedSurface label="First surface" storage={storage} submit={submit} />}
+      <SharedSurface label="Second surface" storage={storage} submit={submit} />
+      <output data-testid="shared-calls">{calls}</output>
+      <Button onClick={() => showFirst(value => !value)}>Toggle first surface</Button>
+      <Button onClick={() => finish.current?.()}>Confirm shared message</Button>
+    </section>
+  );
+}
+
 export function FormFixture() {
   return (
     <ActionInvocationProvider onFailure={() => undefined}>
       <MessageForm />
       <EditForm />
+      <StrictMode><SharedForms /></StrictMode>
     </ActionInvocationProvider>
   );
 }

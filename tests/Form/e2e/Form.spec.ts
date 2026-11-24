@@ -83,3 +83,32 @@ test('edit form validates, keeps later edits, and binds the nearest context', as
   await page.getByRole('button', { name: 'Clear edit' }).click();
   await expect(title).toHaveValue('Original');
 });
+
+
+test('StrictMode shared surfaces reject duplicate submit, acknowledge unmount and preserve edited-back text', async ({ page }) => {
+  await page.goto('/');
+  const first = page.getByRole('textbox', { name: 'First surface text' });
+  const second = page.getByRole('textbox', { name: 'Second surface text' });
+  const secondSend = page.getByRole('button', { name: 'Second surface send' });
+  await expect(first).toBeEnabled();
+  await first.fill('shared');
+  await expect(second).toHaveValue('shared');
+  await first.press('Enter');
+  await expect(secondSend).toBeDisabled();
+  await second.press('Enter');
+  await expect(page.getByTestId('shared-calls')).toHaveText('1');
+  await page.getByRole('button', { name: 'Toggle first surface' }).click();
+  await page.getByRole('button', { name: 'Confirm shared message' }).click();
+  await expect(second).toHaveValue('');
+
+  await page.getByRole('button', { name: 'Toggle first surface' }).click();
+  await first.fill('same');
+  await first.press('Enter');
+  await second.fill('other');
+  await second.fill('same');
+  await page.getByRole('button', { name: 'Toggle first surface' }).click();
+  await page.getByRole('button', { name: 'Confirm shared message' }).click();
+  await expect(second).toHaveValue('same');
+  await expect(page.getByTestId('shared-calls')).toHaveText('2');
+  await expect(secondSend).toBeEnabled();
+});

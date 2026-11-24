@@ -7,7 +7,7 @@ import {
   type DraftSnapshot, type FieldName,
 } from './Draft';
 import { decodeDraft, draftStorageKey, encodeDraft } from './Storage';
-import type { FormController, FormErrors, FormOptions } from './Form.types';
+import type { DraftStorage, FormController, FormErrors, FormOptions } from './Form.types';
 
 type Entry<T extends object> = {
   draft: DraftSnapshot<T>;
@@ -67,9 +67,9 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const readStored = (restore: boolean) => {
     if (!storageKey || (!storage && !restore && !entry.persisted)) return;
     try {
-      const stored = storage?.read() ?? { raw: localStorage.getItem(storageKey), persisted: true };
+      const stored: ReturnType<DraftStorage['read']> = storage?.read() ?? { raw: localStorage.getItem(storageKey), persisted: true };
       const remote = decodeDraft(stored.raw, initial, persist);
-      const revision = 'revision' in stored ? stored.revision : undefined;
+      const revision = stored.revision;
       const changedExternally = entry.storageRevision !== undefined && revision !== undefined && revision !== entry.storageRevision;
       for (const name of persist) {
         // Shared message drafts intentionally reflect the same owner's other surface.
