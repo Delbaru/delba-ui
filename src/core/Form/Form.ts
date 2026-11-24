@@ -80,11 +80,9 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
 
   useEffect(() => {
     if (!storageKey) return;
-    if (!entry.ready) {
-      readStored(true);
-      entry.ready = true;
-      notify();
-    }
+    readStored(!entry.ready);
+    entry.ready = true;
+    notify();
     const receive = () => {
       readStored(false);
       notify();
@@ -106,6 +104,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const isCurrent = () => isOwner() && current.current.entry === entry;
   const set = <K extends FieldName<T>>(name: K, value: T[K]) => {
     if (!isCurrent() || !entry.ready || disabled) return;
+    if (storage) readStored(false);
     entry.draft = setField(entry.draft, name, value);
     entry.error = undefined;
     save();
@@ -119,8 +118,9 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     // Switching rooms does not release the active ticket. The old request may still commit.
     identity: scope,
     action: async () => {
-      if (!isCurrent() || disabled || !entry.ready || hasErrors(options.validate?.(entry.draft.values) ?? {})) return;
+      if (!isCurrent() || disabled || !entry.ready) return;
       if (storage) readStored(false);
+      if (hasErrors(options.validate?.(entry.draft.values) ?? {})) return;
       const submitted = snapshotValue(entry.draft);
       entry.error = undefined;
       try {
@@ -133,7 +133,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
         entry.draft = acknowledgeDraft(entry.draft, submitted, saved, options.consume);
         save();
         if (isCurrent()) {
-          try { options.onSuccess?.(result, submitted.values); }
+          try { options.onSuccess?.(result, submitted.values, entry.draft.values); }
           catch (error) { console.error('Form acknowledgement callback failed', error); }
         }
       } catch (error) {
@@ -161,7 +161,9 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   };
 
   const submit = () => {
-    if (!isCurrent() || disabled || !entry.ready || hasErrors(options.validate?.(entry.draft.values) ?? Object.create(null))) return undefined;
+    if (!isCurrent() || disabled || !entry.ready) return undefined;
+    if (storage) readStored(false);
+    if (hasErrors(options.validate?.(entry.draft.values) ?? {})) { notify(); return undefined; }
     return invocation.invoke();
   };
   const unsaved = [...entries.values()].some(target =>

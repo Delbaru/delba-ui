@@ -22,7 +22,7 @@ export type FormOptions<T extends object, R> = {
   saved?: (result: R, submitted: T) => T;
   /** Submitted array items removed by identity, even after later additions. */
   consume?: readonly FieldName<T>[];
-  onSuccess?: (result: R, submitted: T) => void;
+  onSuccess?: (result: R, submitted: T, current: T) => void;
   /** Optional adaptation of a rejected command into addressed field errors. */
   errorsFrom?: (error: unknown) => FormErrors<T>;
 };
