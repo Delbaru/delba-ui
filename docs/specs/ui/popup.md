@@ -8,3 +8,5 @@ popup preset or closing a controlled Flex collapse clears the popup state;
 a hidden surface must not revive its old menu on reopening. Keyboard ArrowDown
 opens a click menu, Escape on the trigger closes it. Full touch/hover/nested
 focus and browser acceptance remain outstanding.
+
+Flex accepts tooltip/menu/context. Button accepts menu/context as well as its existing styled tooltip. `menu.on` supports `click` or `hover`; hover uses the same Dropdown with a short leave grace period, keyboard/tap fallback, no automatic pointer focus steal. `position: 'bottom' | 'bottom-start' | 'bottom-end'` aligns the menu; native anchor navigation and submit/reset are not intercepted unless `consume: true` is explicit. Context triggers ignore nested controls. Touch context menu, nested portal traversal and browser focus verification remain gates.

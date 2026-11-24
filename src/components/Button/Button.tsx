@@ -8,6 +8,7 @@ import type React from 'react';
 import styles from './Button.module.scss';
 
 import { boxLayout, composeEventHandlers, composeInteractionHandlers, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type WithRef } from '../../core';
+import { usePopup } from '../../core/Popup/Popup';
 import { useTooltip } from '../../hooks/useTooltip';
 import { useActionInvocation } from '../../hooks/useActionInvocation';
 import { useAnimationVisibility } from '../../hooks/useAnimationVisibility';
@@ -54,6 +55,8 @@ export function Button({
   onMouseDown,
   onMouseUp,
   onClick,
+  onKeyDown,
+  onContextMenu,
   ui,
   onFocus,
   onBlur,
@@ -87,7 +90,9 @@ export function Button({
   const idle = buttonIdleProps(animate);
   const setIdleNode = useAnimationVisibility(idle['data-button-idle'] === 'glow' && !effectiveDisabled);
   const tooltipId = useId();
-  const popupTooltip = ui?.popup;
+  const popupTooltip = ui?.popup?.preset === 'tooltip' ? ui.popup : undefined;
+  const menuOptions = !effectiveDisabled && ui?.popup && ui.popup.preset !== 'tooltip' ? ui.popup : undefined;
+  const popup = usePopup(menuOptions);
   const resolvedTooltip = popupTooltip ? { label: popupTooltip.text, direction: popupTooltip.position ?? 'top' } : tooltip;
   const isConfig = Boolean(resolvedTooltip && typeof resolvedTooltip === 'object' && !isValidElement(resolvedTooltip) && 'label' in resolvedTooltip);
   const tooltipConfig = isConfig ? resolvedTooltip as { label: React.ReactNode; direction?: 'top' | 'bottom' | 'left' | 'right'; gap?: number } : null;
@@ -102,7 +107,8 @@ export function Button({
   });
   const describedBy = [ariaDescribedBy, isActive ? tooltipId : undefined].filter(Boolean).join(' ') || undefined;
   const setBehaviorRefs = useMergedRefs(anchorRef, setMotionNode, setIdleNode);
-  const setRefs = useMergedRefs(setBehaviorRefs, ref);
+  const setPopupRefs = useMergedRefs(setBehaviorRefs, popup.anchor);
+  const setRefs = useMergedRefs(setPopupRefs, ref);
 
   // Native anchors can be disabled without changing their host node by removing href. Next Link
   // requires a valid href prop, so that branch keeps its source href and blocks activation below.
@@ -140,8 +146,11 @@ export function Button({
   );
   const interactionHandlers = stateLinkProps(effectiveDisabled ? undefined : linkState, {
     ...interactions,
-    onMouseEnter: composeEventHandlers(interactions.onMouseEnter, prepare.onIntent),
-    onFocus: composeEventHandlers(interactions.onFocus, prepare.onIntent),
+    onMouseEnter: composeEventHandlers(composeEventHandlers(interactions.onMouseEnter, prepare.onIntent), menuOptions ? popup.onMouseEnter : undefined),
+    onMouseLeave: composeEventHandlers(interactions.onMouseLeave, menuOptions ? popup.onMouseLeave : undefined),
+    onClick: composeEventHandlers(interactions.onClick, menuOptions ? popup.onClick : undefined, { cancelable: true }),
+    onFocus: composeEventHandlers(composeEventHandlers(interactions.onFocus, prepare.onIntent), menuOptions ? popup.onFocus : undefined),
+    onBlur: composeEventHandlers(interactions.onBlur, menuOptions ? popup.onBlur : undefined),
   });
 
   const button = (
@@ -172,6 +181,11 @@ export function Button({
       data-button-hover={hover['data-button-hover']}
       data-button-idle={idle['data-button-idle']}
       aria-describedby={describedBy}
+      data-ui-popup-trigger={menuOptions ? '' : undefined}
+      aria-haspopup={rest['aria-haspopup'] ?? (menuOptions ? 'menu' : undefined)}
+      aria-expanded={rest['aria-expanded'] ?? (menuOptions ? popup.open : undefined)}
+      onKeyDown={composeEventHandlers(onKeyDown, menuOptions ? popup.onKeyDown : undefined, { cancelable: true })}
+      onContextMenu={composeEventHandlers(onContextMenu, menuOptions ? popup.onContextMenu : undefined, { cancelable: true })}
       {...interactionHandlers}
     >
       {idle['data-button-idle'] === 'glow' && (
@@ -189,7 +203,7 @@ export function Button({
   ) : null;
 
   // Постоянная позиция кнопки в дереве сохраняет DOM и фокус при смене tooltip.
-  const result = <>{button}{tooltipNode}</>;
+  const result = <>{button}{tooltipNode}{popup.popup}</>;
 
   if (!collapse) return result;
   return <CollapseWrap {...collapse} as="span" inline>{result}</CollapseWrap>;

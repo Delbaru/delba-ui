@@ -162,22 +162,24 @@ export function Flex({
       data-scroll-axis={scroll?.axis ?? (anchorProps as { 'data-scroll-axis'?: string })['data-scroll-axis']}
       tabIndex={anchorProps.tabIndex ?? (selectable || popupOptions ? 0 : undefined)}
       aria-busy={anchorProps['aria-busy'] ?? asyncContent.busy}
-      aria-haspopup={anchorProps['aria-haspopup'] ?? (popupOptions ? 'menu' : undefined)}
-      aria-expanded={anchorProps['aria-expanded'] ?? (popupOptions ? popup.open : undefined)}
+      data-ui-popup-trigger={popupOptions ? '' : undefined}
+      aria-describedby={[anchorProps['aria-describedby'], popup.describedBy].filter(Boolean).join(' ') || undefined}
+      aria-haspopup={anchorProps['aria-haspopup'] ?? (popupOptions && popupOptions.preset !== 'tooltip' ? 'menu' : undefined)}
+      aria-expanded={anchorProps['aria-expanded'] ?? (popupOptions && popupOptions.preset !== 'tooltip' ? popup.open : undefined)}
       data-ui-selectable={selectable ? '' : undefined}
       aria-selected={anchorProps['aria-selected'] ?? selectable?.checked}
       {...stateLinkProps(linkState, {
         onMouseEnter: composeEventHandlers(
           composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter),
-          prepare.onIntent,
+          composeEventHandlers(prepare.onIntent, popupOptions ? popup.onMouseEnter : undefined),
         ),
         onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),
-        onMouseLeave: composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave),
+        onMouseLeave: composeEventHandlers(composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave), popupOptions ? popup.onMouseLeave : undefined),
         onMouseDown: composeEventHandlers(onMouseDown, selectable?.onMouseDown),
         onMouseUp,
         onClick: composeEventHandlers(composeEventHandlers(onClick, selectable?.onClick), popupOptions ? popup.onClick : undefined, { cancelable: true }),
-        onFocus: composeEventHandlers(onFocus, prepare.onIntent),
-        onBlur,
+        onFocus: composeEventHandlers(composeEventHandlers(onFocus, prepare.onIntent), popupOptions ? popup.onFocus : undefined),
+        onBlur: composeEventHandlers(onBlur, popupOptions ? popup.onBlur : undefined),
       })}
       onContextMenu={composeEventHandlers(onContextMenu, popupOptions ? popup.onContextMenu : undefined, { cancelable: true })}
       onKeyDown={composeEventHandlers(composeEventHandlers(onKeyDown, selectable?.onKeyDown), popupOptions ? popup.onKeyDown : undefined, { cancelable: true })}
