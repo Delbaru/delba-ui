@@ -87,9 +87,11 @@ export function Button({
   const idle = buttonIdleProps(animate);
   const setIdleNode = useAnimationVisibility(idle['data-button-idle'] === 'glow' && !effectiveDisabled);
   const tooltipId = useId();
-  const isConfig = Boolean(tooltip && typeof tooltip === 'object' && !isValidElement(tooltip) && 'label' in tooltip);
-  const tooltipConfig = isConfig ? tooltip as { label: React.ReactNode; direction?: 'top' | 'bottom' | 'left' | 'right'; gap?: number } : null;
-  const tooltipLabel: React.ReactNode = tooltipConfig ? tooltipConfig.label : tooltip as React.ReactNode;
+  const popupTooltip = ui?.popup;
+  const resolvedTooltip = popupTooltip ? { label: popupTooltip.text, direction: popupTooltip.position ?? 'top' } : tooltip;
+  const isConfig = Boolean(resolvedTooltip && typeof resolvedTooltip === 'object' && !isValidElement(resolvedTooltip) && 'label' in resolvedTooltip);
+  const tooltipConfig = isConfig ? resolvedTooltip as { label: React.ReactNode; direction?: 'top' | 'bottom' | 'left' | 'right'; gap?: number } : null;
+  const tooltipLabel: React.ReactNode = tooltipConfig ? tooltipConfig.label : resolvedTooltip as React.ReactNode;
   const hasTooltip = tooltipLabel !== null && tooltipLabel !== undefined && tooltipLabel !== false && tooltipLabel !== '';
   const { anchorRef, tooltipRef, anchorHandlers, bubbleProps, isActive } = useTooltip({
     enabled: hasTooltip && !effectiveDisabled,

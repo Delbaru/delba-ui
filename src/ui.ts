@@ -1,3 +1,4 @@
+import { usePopup } from './core/Popup/Popup';
 import { useAsync } from './core/Async/Async';
 import { useActionInvocation } from './hooks/useActionInvocation';
 import { useForm, useFormField } from './core/Form';
@@ -7,6 +8,7 @@ import { defineCollection, useCollection, useCollectionItem } from './core/Colle
 
 /** Shared UI mechanisms; product owners supply their own commands and scopes. */
 export const ui = {
+  popup: { use: usePopup },
   async: { use: useAsync },
   form: { use: useForm, field: { use: useFormField } },
   action: { use: useActionInvocation },

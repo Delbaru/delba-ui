@@ -139,3 +139,6 @@ export type { AsyncOptions } from './core/Async/Async';
 export { asyncSourceState, isAsyncEmpty, type AsyncSource } from './core/Async/State';
 export { useAsyncPresence } from './core/Async/Presence';
 export { syncAsyncPhase, completeAsyncPhase, type AsyncPhase } from './core/Async/Phase';
+
+export { ContextPopup, type ContextPoint } from './core/Popup/Context';
+export type { TooltipPopup, PopupOptions } from './core/Popup/Popup';

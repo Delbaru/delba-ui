@@ -8,6 +8,7 @@ import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 import type { ButtonHoverAnimate } from './hover/buttonHover';
 import type { ButtonIdleAnimate } from './idle/buttonIdle';
+import type { TooltipPopup } from '../../core/Popup/Popup';
 import type { ActionOptions } from '../../core/Form';
 import type { ActionInvocationResult } from '../../hooks/useActionInvocation';
 
@@ -41,7 +42,7 @@ export interface ButtonProps
   animate?: ButtonAnimate;
   children?: React.ReactNode;
   /** Use the existing action lifecycle, or an externally owned controller (e.g. a form). */
-  ui?: { action?: ActionOptions };
+  ui?: { action?: ActionOptions; popup?: TooltipPopup };
   style?: CSSProperties;
   /** Сворачивает кнопку целиком; для ширины укажите `axis: 'column'`. */
   collapse?: CollapseOptions;
