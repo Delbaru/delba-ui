@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { changeSelection, emptySelection, rangeKeys, selectedItems } from '../../../src/core/Collection/Selection';
+
+const a = { id: 'a', label: 'old' };
+const b = { id: 'b', label: 'second' };
+const c = { id: 'c', label: 'third' };
+const visible = new Map([['a', a], ['b', b], ['c', c]]);
+
+test('range follows visible order in both directions and ignores unloaded anchor', () => {
+  assert.deepEqual(rangeKeys(['a', 'b', 'c'], 'c', 'a'), ['a', 'b', 'c']);
+  assert.deepEqual(rangeKeys(['a', 'c'], 'b', 'c'), ['c']);
+  assert.deepEqual(rangeKeys(['a'], 'a', 'missing'), []);
+});
+
+test('selection is by ID; current records replace old selected previews', () => {
+  const selected = changeSelection(emptySelection<typeof a>(), visible, ['a', 'b'], 'select', true);
+  const updated = { ...a, label: 'new' };
+  assert.deepEqual(selectedItems(selected, new Map([['a', updated]]), true), [updated, b]);
+  assert.deepEqual(selectedItems(selected, new Map([['a', updated]]), false), [updated]);
+  const toggled = changeSelection(selected, visible, ['a'], 'toggle', true);
+  assert.deepEqual(toggled.ids, ['b']);
+  assert.equal(toggled.retained.has('a'), false);
+});
+
+test('select all is limited to loaded keys; missing selection is explicit opt-in', () => {
+  const selected = changeSelection(emptySelection<typeof a>(), visible, ['a'], 'select', false);
+  const next = changeSelection(selected, new Map([['c', c]]), ['c'], 'select', false);
+  assert.deepEqual(next.ids, ['c']);
+  assert.equal(next.retained.size, 0);
+  assert.deepEqual(emptySelection<typeof a>().ids, []);
+});

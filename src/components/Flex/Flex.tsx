@@ -26,6 +26,7 @@ import { useContentMotion } from '../../hooks/useContentMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { InteractionScope } from '../../core/InteractionScope';
 import { FormContext } from '../../core/Form';
+import { CollectionContext } from '../../core/Collection/Collection';
 
 import type { FlexProps } from './Flex.types';
 export type { FlexProps } from './Flex.types';
@@ -38,6 +39,7 @@ export function Flex({
   children,
   ui,
   onSubmit,
+  onKeyDown,
   className = '',
   style,
   gap,
@@ -111,6 +113,10 @@ export function Flex({
   const surfaceRef = useMergedRefs(ref, interactionRef);
   const setRefs = useMergedRefs(setMotionNode, contentMotion.ref, surfaceRef);
 
+  const selectable = ui?.selectable;
+  let scopedChildren = contentMotion.children;
+  if (ui?.form) scopedChildren = <FormContext form={ui.form}>{scopedChildren}</FormContext>;
+  if (ui?.collection) scopedChildren = <CollectionContext collection={ui.collection}>{scopedChildren}</CollectionContext>;
   const content = (active = false) => (
     <Comp
       ref={setRefs}
@@ -139,6 +145,8 @@ export function Flex({
       data-motion-scope={motionScope ? '' : undefined}
       {...stateProps(state, trackInteraction && active && 'interacting')}
       {...anchorProps}
+      tabIndex={anchorProps.tabIndex ?? (selectable ? 0 : undefined)}
+      aria-selected={anchorProps['aria-selected'] ?? selectable?.checked}
       {...stateLinkProps(linkState, {
         onMouseEnter: composeEventHandlers(
           composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter),
@@ -146,12 +154,13 @@ export function Flex({
         ),
         onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),
         onMouseLeave: composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave),
-        onMouseDown,
+        onMouseDown: composeEventHandlers(onMouseDown, selectable?.onMouseDown),
         onMouseUp,
-        onClick,
+        onClick: composeEventHandlers(onClick, selectable?.onClick),
         onFocus: composeEventHandlers(onFocus, prepare.onIntent),
         onBlur,
       })}
+      onKeyDown={composeEventHandlers(onKeyDown, selectable?.onKeyDown)}
       onAnimationEnd={contentMotion.onAnimationEnd}
       onSubmit={ui?.form && as === 'form' && !isLink ? (event: React.FormEvent<HTMLElement>) => {
         if (event.target !== event.currentTarget) return;
@@ -161,7 +170,7 @@ export function Flex({
         if (!ui.form?.disabled && ui.form?.ready) void ui.form.submit();
       } : onSubmit}
     >
-      {ui?.form ? <FormContext form={ui.form}>{contentMotion.children}</FormContext> : contentMotion.children}
+      {scopedChildren}
     </Comp>
   );
 

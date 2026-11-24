@@ -1,6 +1,7 @@
 import type React from 'react';
 import type { CSSProperties } from 'react';
 import type { FormScope } from '../../core/Form';
+import type { CollectionScope, CollectionItem } from '../../core/Collection/Collection';
 import type {
   BoxLayoutProps,
   ComponentStateValue,
@@ -45,7 +46,7 @@ export interface FlexProps
     LinkPrefetchProps {
   children?: React.ReactNode;
   /** Scope named descendants without adding a DOM node. */
-  ui?: { form?: FormScope };
+  ui?: { form?: FormScope; collection?: CollectionScope; selectable?: CollectionItem };
   style?: CSSProperties;
   state?: ComponentStateValue;
   /** Добавляет state="interacting" при указателе, фокусе или открытом дочернем контроле.

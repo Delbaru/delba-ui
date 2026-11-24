@@ -49,3 +49,5 @@
 подтверждённые причины ошибок — в [lessons](../Library.md). Общий вход — [Library](../Library.md).
 
 - [Form / Action — pilot](ui/form-action.md)
+
+- [Collection — pilot](ui/collection.md)
