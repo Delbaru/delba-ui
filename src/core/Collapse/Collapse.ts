@@ -20,7 +20,7 @@ export interface CollapseDoor {
  */
 export type CollapseDoorOptions = CollapseStateOptions & Omit<CollapseSettings, 'onOpenChange' | 'ref'>;
 
-export function useCollapse(options: CollapseDoorOptions = {}): CollapseDoor {
+export function useCollapse(options: CollapseDoorOptions = {}): CollapseDoor & { trigger: NonNullable<CollapseDoor['trigger']>; controls: RefObject<CollapseControls | null> } {
   const state = useCollapseState(options);
   const ref = useRef<CollapseControls | null>(null);
   const latest = useRef(state);

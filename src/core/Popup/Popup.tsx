@@ -63,7 +63,7 @@ export function usePopup(options?: PopupOptions) {
     const placement = position.split('-')[0] as PopupPlacement;
     const align = position.endsWith('-start') ? 'start' : position.endsWith('-end') ? 'end' : 'center';
     let content: ReactNode = null;
-    if (visible && options && options.preset !== 'tooltip') {
+    if (context && point) {
         content = typeof options.children === 'function' ? options.children({ close }) : options.children;
     }
 

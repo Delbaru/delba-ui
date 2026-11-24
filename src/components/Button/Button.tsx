@@ -186,6 +186,7 @@ export function Button({
       data-button-idle={idle['data-button-idle']}
       aria-describedby={describedBy}
       data-ui-popup-trigger={menuOptions ? '' : undefined}
+      aria-controls={rest['aria-controls'] ?? popup.controls}
       aria-haspopup={rest['aria-haspopup'] ?? (menuOptions ? 'menu' : undefined)}
       aria-expanded={rest['aria-expanded'] ?? (menuOptions ? popup.open : undefined)}
       onKeyDown={composeEventHandlers(onKeyDown, menuOptions ? popup.onKeyDown : undefined, { cancelable: true })}

@@ -20,6 +20,7 @@ type Entry<T extends object> = {
   persist: readonly FieldName<T>[];
   lastReceived?: T;
   storageRevision?: number;
+  persistedText?: string;
   browserStorage?: DraftStorage;
 };
 function hasErrors(errors: object): boolean {
@@ -60,7 +61,9 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     if (!storageKey || !storage) return;
     try {
       const raw = encodeDraft(entry.draft.values, persist);
+      if (browserStorage && entry.persisted && raw === entry.persistedText) return;
       entry.persisted = storage.write(raw);
+      if (entry.persisted && browserStorage) entry.persistedText = raw;
       if (entry.persisted || !browserStorage) entry.storageRevision = storage.read().revision;
     } catch {
       entry.persisted = false;
@@ -73,6 +76,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
       const stored = storage.read();
       if (browserStorage && !stored.persisted) { entry.persisted = false; return; }
       const remote = decodeDraft(stored.raw, initial, persist);
+      if (browserStorage && stored.persisted) entry.persistedText = encodeDraft({ ...initial, ...remote }, persist);
       const revision = stored.revision;
       const changedExternally = entry.storageRevision !== undefined && revision !== undefined && revision !== entry.storageRevision;
       for (const name of persist) {
