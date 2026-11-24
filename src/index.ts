@@ -134,3 +134,8 @@ export type { CollectionDefinition, CollectionController, CollectionScope, Colle
 
 export type { ScrollOptions } from './core/Scroll/Surface';
 export type { CollapseDoor } from './core/Collapse/Collapse';
+
+export type { AsyncOptions } from './core/Async/Async';
+export { asyncSourceState, isAsyncEmpty, type AsyncSource } from './core/Async/State';
+export { useAsyncPresence } from './core/Async/Presence';
+export { syncAsyncPhase, completeAsyncPhase, type AsyncPhase } from './core/Async/Phase';

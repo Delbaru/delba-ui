@@ -53,3 +53,5 @@
 - [Collection — pilot](ui/collection.md)
 
 - [Scroll / Collapse — pilot](ui/scroll-collapse.md)
+
+- [Async — pilot](ui/async.md)

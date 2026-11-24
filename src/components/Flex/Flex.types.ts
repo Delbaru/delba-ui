@@ -1,4 +1,5 @@
 import type React from 'react';
+import type { AsyncOptions } from '../../core/Async/Async';
 import type { CSSProperties } from 'react';
 import type { FormScope } from '../../core/Form';
 import type { ScrollOptions } from '../../core/Scroll/Surface';
@@ -48,7 +49,7 @@ export interface FlexProps
     LinkPrefetchProps {
   children?: React.ReactNode;
   /** Scope named descendants without adding a DOM node. */
-  ui?: { form?: FormScope; collection?: CollectionScope; selectable?: CollectionItem; scroll?: ScrollOptions; collapse?: CollapseDoor };
+  ui?: { async?: AsyncOptions; form?: FormScope; collection?: CollectionScope; selectable?: CollectionItem; scroll?: ScrollOptions; collapse?: CollapseDoor };
   style?: CSSProperties;
   state?: ComponentStateValue;
   /** Добавляет state="interacting" при указателе, фокусе или открытом дочернем контроле.

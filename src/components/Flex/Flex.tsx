@@ -26,6 +26,7 @@ import { useContentMotion } from '../../hooks/useContentMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { InteractionScope } from '../../core/InteractionScope';
 import { FormContext } from '../../core/Form';
+import { useAsyncContent } from '../../core/Async/Async';
 import { useScrollSurface } from '../../core/Scroll/Surface';
 import { CollectionContext } from '../../core/Collection/Collection';
 
@@ -90,6 +91,7 @@ export function Flex({
   ...props
 }: WithRef<FlexProps, HTMLElement>) {
   const scroll = useScrollSurface(ui?.scroll);
+  const asyncContent = useAsyncContent(ui?.async, children);
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, { ...scroll?.layout, ...box });
   const collapseInput = ui?.collapse?.settings ?? collapse;
@@ -110,7 +112,7 @@ export function Flex({
   const contentAnimate = isSharedMotionAnimate(animate) ? undefined : animate;
   const contentMotion = useContentMotion({
     ...resolveContentAnimate(contentAnimate),
-    children,
+    children: asyncContent.children,
     onAnimationEnd: anchorProps.onAnimationEnd,
   });
   const interactionRef = useRef<HTMLElement>(null);
@@ -153,6 +155,7 @@ export function Flex({
       {...anchorProps}
       data-scroll-axis={scroll?.axis ?? (anchorProps as { 'data-scroll-axis'?: string })['data-scroll-axis']}
       tabIndex={anchorProps.tabIndex ?? (selectable ? 0 : undefined)}
+      aria-busy={anchorProps['aria-busy'] ?? asyncContent.busy}
       aria-selected={anchorProps['aria-selected'] ?? selectable?.checked}
       {...stateLinkProps(linkState, {
         onMouseEnter: composeEventHandlers(
