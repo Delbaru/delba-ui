@@ -14,6 +14,8 @@ type Entry<T extends object> = {
   ready: boolean;
   persisted: boolean;
   error: unknown;
+  storageKey?: string;
+  persist: readonly FieldName<T>[];
 };
 function hasErrors<T extends object>(errors: FormErrors<T>): boolean {
   return Object.values(errors).some(Boolean);
@@ -30,7 +32,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const persist = draft?.persist ?? [];
   let existing = entries.get(key);
   if (!existing) {
-    existing = { draft: createDraft(initial), ready: !draft, persisted: !draft, error: undefined };
+    existing = { draft: createDraft(initial), ready: !draft, persisted: !draft, error: undefined, storageKey, persist };
     entries.set(key, existing);
   }
   const entry = existing;
@@ -70,8 +72,9 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   useEffect(() => {
     if (!storageKey) return;
     const receive = (event: StorageEvent) => {
-      if (event.storageArea !== localStorage || (event.key !== storageKey && event.key !== null)) return;
+      if (event.key !== storageKey && event.key !== null) return;
       try {
+        if (event.storageArea !== localStorage) return;
         const remote = decodeDraft(event.newValue, initial, persist);
         for (const name of persist) {
           if (!sameValue(entry.draft.values[name], entry.draft.baseline[name])) continue;
@@ -98,10 +101,13 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     save();
     notify();
   };
-  const errors = options.validate?.(entry.draft.values) ?? {};
-  const valid = !hasErrors(errors);
+  const clientErrors: FormErrors<T> = options.validate?.(entry.draft.values) ?? Object.create(null);
+  const serverErrors = entry.error === undefined ? undefined : options.errorsFrom?.(entry.error);
+  const errors: FormErrors<T> = { ...serverErrors, ...clientErrors };
+  const valid = !hasErrors(clientErrors);
   const invocation = useActionInvocation({
-    identity: JSON.stringify([scope, key]),
+    // Switching rooms does not release the active ticket. The old request may still commit.
+    identity: scope,
     action: async () => {
       if (!isCurrent() || disabled || !entry.ready || hasErrors(options.validate?.(entry.draft.values) ?? {})) return;
       const submitted = snapshotValue(entry.draft);
@@ -113,7 +119,10 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
           (options.preset === 'message' ? initial : submitted.values);
         entry.draft = acknowledgeDraft(entry.draft, submitted, saved, options.consume);
         save();
-        if (isCurrent()) options.onSuccess?.(result, submitted.values);
+        if (isCurrent()) {
+          try { options.onSuccess?.(result, submitted.values); }
+          catch (error) { console.error('Form acknowledgement callback failed', error); }
+        }
       } catch (error) {
         if (!isOwner()) throw new DOMException('Form scope changed', 'AbortError');
         entry.error = error;
@@ -138,11 +147,22 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     notify();
   };
 
+  const submit = () => {
+    if (!isCurrent() || disabled || !entry.ready || hasErrors(options.validate?.(entry.draft.values) ?? Object.create(null))) return undefined;
+    return invocation.invoke();
+  };
+  const unsaved = [...entries.values()].some(target =>
+    (Object.keys(target.draft.values) as FieldName<T>[]).some(name => {
+      const value = target.draft.values[name];
+      if (sameValue(value, target.draft.baseline[name])) return false;
+      return !target.storageKey || !target.persisted || !target.persist.includes(name) || typeof value !== 'string';
+    }),
+  );
+
   return {
     values, changes, dirty, valid, errors, disabled, ready: entry.ready,
     error: entry.error, persisted: entry.persisted,
-    unsaved: dirty && (!storageKey || !entry.persisted || Object.keys(changes).some(name =>
-      !persist.includes(name as FieldName<T>) || typeof values[name as FieldName<T>] !== 'string')),
+    unsaved,
     loading: invocation.pending,
     set,
     readField: name => Object.hasOwn(values, name) ? values[name as FieldName<T>] : undefined,
@@ -153,7 +173,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     reset: () => replace(resetDraft(entry.draft, entry.draft.baseline)),
     clear: () => replace(resetDraft(entry.draft, initial)),
     receive: next => replace(receiveDraft(entry.draft, next)),
-    submit: invocation.invoke,
-    action: { preset: 'default', controller: invocation },
+    submit,
+    action: { preset: 'default', controller: { pending: invocation.pending, invoke: submit }, disabled: disabled || !entry.ready || !valid },
   };
 }

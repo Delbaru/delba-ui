@@ -16,6 +16,8 @@ export type FormOptions<T extends object, R> = {
   /** Submitted array items removed by identity, even after later additions. */
   consume?: readonly FieldName<T>[];
   onSuccess?: (result: R, submitted: T) => void;
+  /** Optional adaptation of a rejected command into addressed field errors. */
+  errorsFrom?: (error: unknown) => FormErrors<T>;
 };
 
 export interface FormScope {
@@ -28,8 +30,8 @@ export interface FormScope {
 }
 
 export type ActionOptions =
-  | { preset: 'default'; run: () => unknown; controller?: never }
-  | { preset: 'default'; controller: ActionInvocationController<[]>; run?: never };
+  | { preset: 'default'; run: () => unknown; controller?: never; disabled?: boolean }
+  | { preset: 'default'; controller: ActionInvocationController<[]>; run?: never; disabled?: boolean };
 
 export interface FormController<T extends object> extends FormScope {
   values: T;

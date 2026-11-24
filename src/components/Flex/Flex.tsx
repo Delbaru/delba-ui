@@ -154,6 +154,7 @@ export function Flex({
       })}
       onAnimationEnd={contentMotion.onAnimationEnd}
       onSubmit={ui?.form && as === 'form' && !isLink ? (event: React.FormEvent<HTMLElement>) => {
+        if (event.target !== event.currentTarget) return;
         onSubmit?.(event);
         if (event.defaultPrevented) return;
         event.preventDefault();

@@ -40,7 +40,7 @@ export function removeSubmitted(current: readonly unknown[], submitted: readonly
 export type DraftSnapshot<T extends object> = {
   values: T;
   baseline: T;
-  revisions: Readonly<Partial<Record<FieldName<T>, number>>>;
+  revisions: Readonly<Record<string, number | undefined>>;
 };
 
 export function createDraft<T extends object>(initial: T): DraftSnapshot<T> {

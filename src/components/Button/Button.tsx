@@ -76,7 +76,7 @@ export function Button({
     actionName,
   });
   const pending = action?.controller?.pending ?? local.pending;
-  const effectiveDisabled = disabled || pending;
+  const effectiveDisabled = disabled || pending || !!action?.disabled;
   const isLink = Boolean(href);
   const useNextLink = isLink && shouldUseNextLink(href, target, download);
   const prepare = useLinkPrefetch(prefetch, href, useNextLink && !newTab && !effectiveDisabled);

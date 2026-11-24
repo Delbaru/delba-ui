@@ -13,7 +13,7 @@ const form = ui.form.use({
 return (
   <Flex as="form" dir={['column', 'column', 'column']} ui={{ form }}>
     <Input name="title" />
-    <Button ui={{ action: form.action }}>Save</Button>
+    <Button type="submit" ui={{ action: form.action }}>Save</Button>
   </Flex>
 );
 ```
@@ -31,7 +31,7 @@ Flex as="form", and editors with their own Enter semantics call form.submit.
 values to initial; explicit consume fields remove submitted array items by identity.
 Only explicitly selected strings enter localStorage; other values remain in
 memory. Scope changes isolate owner state; changing a draft key within the same
-hook instance retains in-memory drafts. Storage failure is observable as persisted=false.
+hook instance retains in-memory drafts. An in-flight submit keeps its ticket during a draft-key change; a late result can acknowledge its original draft only. Storage failure is observable as persisted=false.
 Field validation is supplied by the consumer; submission errors use the existing
 ActionInvocationProvider and are retained on the form. Never infer authorization.
 
