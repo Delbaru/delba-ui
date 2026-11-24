@@ -40,3 +40,5 @@ Browser and React integration acceptance, scope lifetime, nested forms,
 native submit, accessibility and consumer compile must still be verified.
 
 A consumer may temporarily supply `draft.storage` for a pre-existing shared draft namespace. The adapter implements read/write/subscribe, owns persistence and must scope subscriptions; the form still owns submission/reconciliation and non-persisted values. `form.update(name, change)` and `field.update(change)` operate on the latest value, not a stale rendered array.
+
+For editing records, `refresh` supplies the last confirmed values and preserves dirty fields. `equal` may express domain normalization for dirty/refresh comparisons (e.g. decimal spelling); revision-based acknowledgement still distinguishes edits made after submit. `changes` remains exact field differences for patch construction. The form controller does not decide field permissions.

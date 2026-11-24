@@ -16,6 +16,7 @@ type Entry<T extends object> = {
   error: unknown;
   storageKey?: string;
   persist: readonly FieldName<T>[];
+  lastReceived?: T;
 };
 function hasErrors(errors: object): boolean {
   return Object.values(errors).some(Boolean);
@@ -99,6 +100,15 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     return () => window.removeEventListener('storage', onStorage);
   }, [entry, storageKey, storage]);
 
+  useEffect(() => {
+    const incoming = options.refresh;
+    if (!incoming || sameValue(entry.lastReceived, incoming)) return;
+    entry.lastReceived = snapshotValue(incoming);
+    entry.draft = receiveDraft(entry.draft, incoming, options.equal);
+    notify();
+  }, [entry, options.refresh, options.equal]);
+
+  const equal = options.equal ?? ((_field: FieldName<T>, left: T[FieldName<T>], right: T[FieldName<T>]) => sameValue(left, right));
   const disabled = !!options.disabled || !scope;
   const isOwner = () => mounted.current && current.current.entries === entries;
   const isCurrent = () => isOwner() && current.current.entry === entry;
@@ -151,7 +161,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const changes = Object.fromEntries((Object.keys(values) as FieldName<T>[])
     .filter(name => !sameValue(values[name], entry.draft.baseline[name]))
     .map(name => [name, values[name]])) as Partial<T>;
-  const dirty = Object.keys(changes).length > 0;
+  const dirty = (Object.keys(values) as FieldName<T>[]).some(name => !equal(name, values[name], entry.draft.baseline[name]));
   const replace = (next: DraftSnapshot<T>) => {
     if (!isCurrent() || disabled || !entry.ready) return;
     entry.draft = next;
@@ -169,7 +179,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const unsaved = [...entries.values()].some(target =>
     (Object.keys(target.draft.values) as FieldName<T>[]).some(name => {
       const value = target.draft.values[name];
-      if (sameValue(value, target.draft.baseline[name])) return false;
+      if (equal(name, value, target.draft.baseline[name])) return false;
       return !target.storageKey || !target.persisted || !target.persist.includes(name) || typeof value !== 'string';
     }),
   );
@@ -180,7 +190,10 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     unsaved,
     loading: invocation.pending,
     set,
-    update: (name, change) => set(name, change(entry.draft.values[name])),
+    update: (name, change) => {
+      if (storage && isCurrent()) readStored(false);
+      set(name, change(entry.draft.values[name]));
+    },
     readField: name => Object.hasOwn(values, name) ? values[name as FieldName<T>] : undefined,
     writeField: (name, value) => {
       if (Object.hasOwn(values, name)) set(name as FieldName<T>, value as T[FieldName<T>]);
@@ -188,12 +201,13 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     updateField: (name, change) => {
       if (!Object.hasOwn(entry.draft.values, name)) return;
       const field = name as FieldName<T>;
+      if (storage && isCurrent()) readStored(false);
       set(field, change(entry.draft.values[field]) as T[typeof field]);
     },
     fieldError: name => errors[name as FieldName<T>],
     reset: () => replace(resetDraft(entry.draft, entry.draft.baseline)),
     clear: () => replace(resetDraft(entry.draft, initial)),
-    receive: next => replace(receiveDraft(entry.draft, next)),
+    receive: next => replace(receiveDraft(entry.draft, next, options.equal)),
     submit,
     action: { preset: 'default', controller: { pending: invocation.pending, invoke: submit }, disabled: disabled || !entry.ready || !valid },
   };

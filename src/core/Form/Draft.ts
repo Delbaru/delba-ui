@@ -37,6 +37,8 @@ export function removeSubmitted(current: readonly unknown[], submitted: readonly
   });
 }
 
+export type FieldEquality<T extends object> = (field: FieldName<T>, left: T[FieldName<T>], right: T[FieldName<T>]) => boolean;
+
 export type DraftSnapshot<T extends object> = {
   values: T;
   baseline: T;
@@ -59,10 +61,14 @@ export function setField<T extends object, K extends FieldName<T>>(
 }
 
 /** Refresh changes untouched fields only. */
-export function receiveDraft<T extends object>(draft: DraftSnapshot<T>, initial: T): DraftSnapshot<T> {
+export function receiveDraft<T extends object>(draft: DraftSnapshot<T>, initial: T,
+  equal: FieldEquality<T> = (_field, left, right) => sameValue(left, right),
+): DraftSnapshot<T> {
   let next = draft;
   for (const name of Object.keys(initial) as FieldName<T>[]) {
-    if (sameValue(draft.values[name], draft.baseline[name])) next = setField(next, name, initial[name]);
+    if (equal(name, draft.values[name], draft.baseline[name]) || equal(name, draft.values[name], initial[name])) {
+      next = setField(next, name, initial[name]);
+    }
   }
   return { ...next, baseline: snapshotValue(initial) };
 }

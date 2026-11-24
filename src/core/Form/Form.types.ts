@@ -1,5 +1,5 @@
 import type { ActionInvocationController } from '../../hooks/useActionInvocation';
-import type { FieldName } from './Draft';
+import type { FieldName, FieldEquality } from './Draft';
 
 export type FormErrors<T extends object> = Partial<Record<FieldName<T>, string>>;
 
@@ -15,6 +15,10 @@ export type FormOptions<T extends object, R> = {
   scope: string;
   preset: 'default' | 'message';
   initial: T;
+  /** Latest confirmed data, separate from reset/clear defaults. */
+  refresh?: T;
+  /** Domain-specific equivalence (e.g. normalized decimal input). */
+  equal?: FieldEquality<T>;
   draft?: { key: string; persist: readonly FieldName<T>[]; storage?: DraftStorage };
   disabled?: boolean;
   validate?: (values: T) => FormErrors<T>;

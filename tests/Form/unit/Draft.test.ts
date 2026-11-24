@@ -42,3 +42,13 @@ test('scoped persistence saves text only and does not restore unknown keys', () 
   assert.notEqual(draftStorageKey('a:b', 'c'), draftStorageKey('a', 'b:c'));
   assert.notEqual(draftStorageKey('owner-a', 'room'), draftStorageKey('owner-b', 'room'));
 });
+
+
+test('domain equality permits normalized numeric and title refresh without discarding other edits', () => {
+    const base = { title: 'Task', hours: '1', note: 'old' };
+    const edited = setField(setField(setField(createDraft(base), 'title', ' Task '), 'hours', '1.00'), 'note', 'local');
+    const equal = (field: keyof typeof base, a: string, b: string) =>
+        field === 'hours' ? Number(a) === Number(b) : field === 'title' ? a.trim() === b.trim() : a === b;
+    const refreshed = receiveDraft(edited, { title: 'Renamed', hours: '2', note: 'remote' }, equal);
+    assert.deepEqual(refreshed.values, { title: 'Renamed', hours: '2', note: 'local' });
+});

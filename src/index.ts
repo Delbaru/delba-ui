@@ -142,3 +142,5 @@ export { syncAsyncPhase, completeAsyncPhase, type AsyncPhase } from './core/Asyn
 
 export { ContextPopup, type ContextPoint } from './core/Popup/Context';
 export type { TooltipPopup, PopupOptions } from './core/Popup/Popup';
+
+export { createDraft, receiveDraft, type FieldEquality } from './core/Form/Draft';
