@@ -61,6 +61,8 @@ function MessageForm() {
 
 function EditForm() {
   const [calls, setCalls] = useState(0);
+  const [nativeSubmits, setNativeSubmits] = useState(0);
+  const [blockSubmit, setBlockSubmit] = useState(false);
   const finish = useRef<(() => void) | null>(null);
   const form = ui.form.use({
     scope: 'edit-owner',
@@ -84,7 +86,11 @@ function EditForm() {
 
   return (
     <section aria-label="Edit form pilot">
-      <Flex as="form" ui={{ form }} dir={['column', 'column', 'column']} gap={[8, 8, 8]}>
+      <Flex as="form" ui={{ form }} dir={['column', 'column', 'column']} gap={[8, 8, 8]}
+        onSubmit={event => {
+          setNativeSubmits(value => value + 1);
+          if (blockSubmit) event.preventDefault();
+        }}>
         <Input name="title" aria-label="Edit title" errorPlacement="below" />
         <Textarea name="note" aria-label="Edit note" />
         <Flex ui={{ form: nested }} dir={['column', 'column', 'column']}>
@@ -93,6 +99,8 @@ function EditForm() {
         <Button type="submit" ui={{ action: form.action }}>Save edit</Button>
       </Flex>
       <output data-testid="edit-calls">{calls}</output>
+      <output data-testid="native-edit-submits">{nativeSubmits}</output>
+      <Button onClick={() => setBlockSubmit(value => !value)}>Toggle edit submit guard</Button>
       <output data-testid="edit-dirty">{String(form.dirty)}</output>
       <Button onClick={() => finish.current?.()}>Confirm edit</Button>
       <Button onClick={form.reset}>Reset edit</Button>

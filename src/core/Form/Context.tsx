@@ -10,9 +10,14 @@ export function FormContext({ form, children }: { form: FormScope; children: Rea
   return <Context.Provider value={form}>{children}</Context.Provider>;
 }
 
+/** Internal composition: native submit buttons use the nearest form owner. */
+export function useFormScope() {
+  return useContext(Context);
+}
+
 /** Explicitly controlled fields can opt out of their nearest form. */
 export function useFormField<T>(name?: string) {
-  const form = useContext(Context);
+  const form = useFormScope();
   if (!form || !name) return undefined;
   const value = form.readField(name);
   if (form.hasField ? !form.hasField(name) : value === undefined) return undefined;

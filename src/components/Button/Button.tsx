@@ -9,6 +9,7 @@ import styles from './Button.module.scss';
 
 import { boxLayout, composeEventHandlers, composeInteractionHandlers, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink, splitBoxLayout, stateLinkProps, stateProps, useMergedRefs, type WithRef } from '../../core';
 import { usePopup } from '../../core/Popup/Popup';
+import { useFormScope } from '../../core/Form/Context';
 import { useTooltip } from '../../hooks/useTooltip';
 import { useActionInvocation } from '../../hooks/useActionInvocation';
 import { useAnimationVisibility } from '../../hooks/useAnimationVisibility';
@@ -73,6 +74,7 @@ export function Button({
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
   const action = ui?.action;
+  const form = useFormScope();
   const local = useActionInvocation({
     action: action?.controller ? undefined : action?.run ?? onClick,
     onSettled: onActionSettled,
@@ -134,8 +136,13 @@ export function Button({
       return;
     }
 
-    // Invokes the user callback once. Never prevents native submit/link navigation.
+    // The same controller belongs to the native form: let the browser validate
+    // and dispatch submit to that form, rather than bypassing its onSubmit.
     if (action?.controller) {
+      const native = event.currentTarget as HTMLButtonElement;
+      const owner = native.closest('[data-ui-form-scope]');
+      if (!isLink && type === 'submit' && form && form.submit === action.controller.invoke &&
+          native.form && native.form === owner) return;
       event.preventDefault();
       void action.controller.invoke();
     } else {

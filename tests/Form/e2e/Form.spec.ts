@@ -142,3 +142,22 @@ test('named choice and file primitives bind the nearest form and reset', async (
   await expect(page.getByTestId('named-values')).toHaveText('{"enabled":false,"category":null,"tags":[],"files":[]}');
   await expect(page.getByLabel('Named files')).toHaveValue('');
 });
+
+
+test('form-owned submit button respects native onSubmit and its cancellation', async ({ page }) => {
+  await page.goto('/');
+  const title = page.getByRole('textbox', { name: 'Edit title' });
+  const save = page.getByRole('button', { name: 'Save edit' });
+  await title.fill('changed');
+  await page.getByRole('button', { name: 'Toggle edit submit guard' }).click();
+  await save.click();
+  await expect(page.getByTestId('native-edit-submits')).toHaveText('1');
+  await expect(page.getByTestId('edit-calls')).toHaveText('0');
+  await page.getByRole('button', { name: 'Toggle edit submit guard' }).click();
+  await save.click();
+  await expect(page.getByTestId('native-edit-submits')).toHaveText('2');
+  await expect(page.getByTestId('edit-calls')).toHaveText('1');
+  await expect(save).toBeDisabled();
+  await page.getByRole('button', { name: 'Confirm edit' }).click();
+  await expect(title).toHaveValue('CHANGED');
+});
