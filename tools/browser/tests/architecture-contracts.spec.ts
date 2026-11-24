@@ -121,3 +121,21 @@ test('time suffix stays behind typed input and inline errors hide both native te
   await expect(field).not.toHaveCSS('color', 'rgba(0, 0, 0, 0)');
   await expect(field).not.toHaveCSS('-webkit-text-fill-color', 'rgba(0, 0, 0, 0)');
 });
+
+
+test('Async delay hides stale children and explicit undefined empty never restores them', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.clock.install();
+  await openFixture(page);
+  const host = page.getByTestId('async-contract');
+  await expect(host).toHaveText('Previous record');
+  await page.getByRole('button', { name: 'Start async query' }).click();
+  await expect(host).toHaveAttribute('aria-busy', 'true');
+  await expect(host).toBeEmpty();
+  await page.clock.runFor(1100);
+  await expect(host).toHaveText('Delayed placeholder');
+  await page.getByRole('button', { name: 'Complete empty query' }).click();
+  await page.clock.runFor(10);
+  await expect(host).toBeEmpty();
+  await expect(host).toHaveAttribute('aria-busy', 'false');
+});

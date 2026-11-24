@@ -32,9 +32,13 @@ export function useAsyncContent(options: AsyncOptions | undefined, children: Rea
             ? options.error(state.error, state.retry) : options.error ?? 'Не удалось загрузить.'}</span>
     ) : null;
     if (failure && !state.keepCurrent) return { children: failure, busy: false };
+    // The delay is a real waiting period, not an early skeleton or stale child.
+    if (state.phase === 'waiting') return { children: null, busy: true };
     if (state.phase !== 'idle') {
         return { children: options.loading ?? <span role="status">Загрузка…</span>, busy: true };
     }
-    return { children: <>{failure}{state.empty && options.empty !== undefined ? options.empty : children}</>,
+    const content = state.empty && (options.empty !== undefined || state.data === undefined)
+        ? options.empty ?? null : children;
+    return { children: <>{failure}{content}</>,
         busy: state.refreshing };
 }

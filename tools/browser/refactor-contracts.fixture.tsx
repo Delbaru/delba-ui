@@ -28,6 +28,7 @@ export function RefactorContractsFixture() {
     <section>
       <h2>Refactor contracts</h2>
       <PendingControlContracts />
+      <AsyncContracts />
       <Flex>
         <Img
             data-testid="sizes-auto"
@@ -245,6 +246,24 @@ function PendingControlContracts() {
         ))}
       </TabTrack>
       <button type="button" onClick={() => setReordered((current) => !current)}>Reorder tabs</button>
+    </section>
+  );
+}
+
+
+function AsyncContracts() {
+  const [state, setState] = useState<'ready' | 'pending' | 'empty'>('ready');
+  const from = { data: 'Previous record', currentData: state === 'ready' ? 'Previous record' : undefined,
+    loading: state === 'pending', empty: state === 'empty' };
+  return (
+    <section aria-label="Async contracts">
+      <Flex data-testid="async-contract" ui={{ async: {
+        preset: 'default', from, loading: <span>Delayed placeholder</span>, timing: { delay: 1000 },
+      } }}>
+        <span>{from.data}</span>
+      </Flex>
+      <button type="button" onClick={() => setState('pending')}>Start async query</button>
+      <button type="button" onClick={() => setState('empty')}>Complete empty query</button>
     </section>
   );
 }
