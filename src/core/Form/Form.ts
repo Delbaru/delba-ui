@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useActionInvocation } from '../../hooks/useActionInvocation';
 import {
   acknowledgeDraft, createDraft, receiveDraft, resetDraft, sameValue, setField, snapshotValue,
@@ -17,7 +17,7 @@ type Entry<T extends object> = {
   storageKey?: string;
   persist: readonly FieldName<T>[];
 };
-function hasErrors<T extends object>(errors: FormErrors<T>): boolean {
+function hasErrors(errors: object): boolean {
   return Object.values(errors).some(Boolean);
 }
 
@@ -37,7 +37,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   }
   const entry = existing;
   const current = useRef({ entries, entry });
-  current.current = { entries, entry };
+  useLayoutEffect(() => { current.current = { entries, entry }; }, [entries, entry]);
   const mounted = useRef(false);
   useEffect(() => {
     mounted.current = true;
@@ -101,7 +101,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     save();
     notify();
   };
-  const clientErrors: FormErrors<T> = options.validate?.(entry.draft.values) ?? Object.create(null);
+  const clientErrors: FormErrors<T> = options.validate?.(entry.draft.values) ?? {};
   const serverErrors = entry.error === undefined ? undefined : options.errorsFrom?.(entry.error);
   const errors: FormErrors<T> = { ...serverErrors, ...clientErrors };
   const valid = !hasErrors(clientErrors);

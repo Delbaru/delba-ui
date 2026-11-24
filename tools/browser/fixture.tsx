@@ -34,6 +34,7 @@ import { Modal } from '../../src/components/Modal/Modal';
 import { ModalProvider, useModal, useModalAction } from '../../src/components/Modal/ModalProvider';
 import { ModalContextFixture } from './modal-context.fixture';
 import { NativeFieldFixture } from './native-field.fixture';
+import { FormFixture } from './form.fixture';
 import { InViewObjectRefFixture } from './in-view-object-ref.fixture';
 import { LexicalText } from '../../src/components/RichText/RichText';
 import { PhoneField } from '../../src/components/PhoneField/PhoneField';
@@ -2184,6 +2185,7 @@ export function BrowserFixture() {
       <DeclarativeModalContracts />
       <ModalContextFixture />
       <NativeFieldFixture />
+      <FormFixture />
       <InViewObjectRefFixture />
       <ModalSelectField />
       <ModalStackField />
