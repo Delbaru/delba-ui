@@ -164,59 +164,61 @@ export function Button({
     onBlur: composeEventHandlers(interactions.onBlur, menuOptions ? popup.onBlur : undefined),
   });
 
-  const button = (
-    <Comp
-      ref={setRefs}
-      className={cx(
-          styles.Button,
-          'ui-button',
-          ...c.value('variant', variant),
-          ...c.value('size', size),
-          ...c.value('justify', justifyContent),
-          ...c.value('align', alignItems),
-          ...c.value('gap', gap),
-          ...layout,
-          ...c.value('color', color),
-          className,
+  return (
+    <ButtonFrame collapse={collapse}>
+      <Comp
+        ref={setRefs}
+        className={cx(
+            styles.Button,
+            'ui-button',
+            ...c.value('variant', variant),
+            ...c.value('size', size),
+            ...c.value('justify', justifyContent),
+            ...c.value('align', alignItems),
+            ...c.value('gap', gap),
+            ...layout,
+            ...c.value('color', color),
+            className,
+        )}
+        style={{
+          ...(motionStyle ?? null),
+          ...hover.style,
+          ...idle.style,
+          ...style,
+        }}
+        {...stateProps(state, effectiveDisabled && 'disabled', pending && 'loading')}
+        {...anchorProps}
+        aria-busy={ariaBusy ?? (pending || undefined)}
+        {...revealAttrs}
+        data-button-hover={hover['data-button-hover']}
+        data-button-idle={idle['data-button-idle']}
+        aria-describedby={describedBy}
+        data-ui-popup-trigger={menuOptions ? '' : undefined}
+        aria-controls={rest['aria-controls'] ?? popup.controls}
+        aria-haspopup={rest['aria-haspopup'] ?? (menuOptions ? 'menu' : undefined)}
+        aria-expanded={rest['aria-expanded'] ?? (menuOptions ? popup.open : undefined)}
+        onKeyDown={composeEventHandlers(onKeyDown, menuOptions ? popup.onKeyDown : undefined, { cancelable: true })}
+        onContextMenu={composeEventHandlers(onContextMenu, menuOptions ? popup.onContextMenu : undefined, { cancelable: true })}
+        {...interactionHandlers}
+      >
+        {idle['data-button-idle'] === 'glow' && (
+          <>
+            <span aria-hidden="true" className="ui-button-glow" />
+            <span aria-hidden="true" className="ui-button-glow-surface" />
+          </>
+        )}
+        {children}
+      </Comp>
+      {hasTooltip && (
+        <ButtonTooltip ref={tooltipRef} id={tooltipId} bubble={bubbleProps}>{tooltipLabel}</ButtonTooltip>
       )}
-      style={{
-        ...(motionStyle ?? null),
-        ...hover.style,
-        ...idle.style,
-        ...style,
-      }}
-      {...stateProps(state, effectiveDisabled && 'disabled', pending && 'loading')}
-      {...anchorProps}
-      aria-busy={ariaBusy ?? (pending || undefined)}
-      {...revealAttrs}
-      data-button-hover={hover['data-button-hover']}
-      data-button-idle={idle['data-button-idle']}
-      aria-describedby={describedBy}
-      data-ui-popup-trigger={menuOptions ? '' : undefined}
-      aria-controls={rest['aria-controls'] ?? popup.controls}
-      aria-haspopup={rest['aria-haspopup'] ?? (menuOptions ? 'menu' : undefined)}
-      aria-expanded={rest['aria-expanded'] ?? (menuOptions ? popup.open : undefined)}
-      onKeyDown={composeEventHandlers(onKeyDown, menuOptions ? popup.onKeyDown : undefined, { cancelable: true })}
-      onContextMenu={composeEventHandlers(onContextMenu, menuOptions ? popup.onContextMenu : undefined, { cancelable: true })}
-      {...interactionHandlers}
-    >
-      {idle['data-button-idle'] === 'glow' && (
-        <>
-          <span aria-hidden="true" className="ui-button-glow" />
-          <span aria-hidden="true" className="ui-button-glow-surface" />
-        </>
-      )}
-      {children}
-    </Comp>
+      {popup.popup}
+    </ButtonFrame>
   );
+}
 
-  const tooltipNode = hasTooltip ? (
-    <ButtonTooltip ref={tooltipRef} id={tooltipId} bubble={bubbleProps}>{tooltipLabel}</ButtonTooltip>
-  ) : null;
-
-  // Постоянная позиция кнопки в дереве сохраняет DOM и фокус при смене tooltip.
-  const result = <>{button}{tooltipNode}{popup.popup}</>;
-
-  if (!collapse) return result;
-  return <CollapseWrap {...collapse} as="span" inline>{result}</CollapseWrap>;
+// Keep the host at a stable position when a tooltip or popup changes.
+function ButtonFrame({ collapse, children }: { collapse: ButtonProps['collapse']; children: React.ReactNode }) {
+  if (!collapse) return <>{children}</>;
+  return <CollapseWrap {...collapse} as="span" inline>{children}</CollapseWrap>;
 }
