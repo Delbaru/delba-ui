@@ -21,6 +21,7 @@ export function useFormField<T>(name?: string) {
     error: form.fieldError(name),
     disabled: form.disabled || !form.ready,
     change: (value: T) => form.writeField(name, value),
+    update: (change: (previous: T) => T) => form.updateField(name, previous => change(previous as T)),
     submit: form.submit,
   };
 }

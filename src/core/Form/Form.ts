@@ -29,6 +29,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const [, render] = useState(0);
   const notify = () => render(value => value + 1);
   const storageKey = draft && scope ? draftStorageKey(scope, key) : undefined;
+  const storage = draft?.storage;
   const persist = draft?.persist ?? [];
   let existing = entries.get(key);
   if (!existing) {
@@ -47,49 +48,58 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const save = () => {
     if (!storageKey) return;
     try {
-      localStorage.setItem(storageKey, encodeDraft(entry.draft.values, persist));
-      entry.persisted = true;
+      const raw = encodeDraft(entry.draft.values, persist);
+      if (storage) entry.persisted = storage.write(raw);
+      else {
+        localStorage.setItem(storageKey, raw);
+        entry.persisted = true;
+      }
+    } catch {
+      entry.persisted = false;
+    }
+  };
+
+  const readStored = (restore: boolean) => {
+    if (!storageKey) return;
+    try {
+      const stored = storage?.read() ?? { raw: localStorage.getItem(storageKey), persisted: true };
+      const remote = decodeDraft(stored.raw, initial, persist);
+      for (const name of persist) {
+        // Shared message drafts intentionally reflect the same owner's other surface.
+        // Edit forms preserve local dirty fields on external refresh.
+        if (!restore && options.preset !== 'message' &&
+          !sameValue(entry.draft.values[name], entry.draft.baseline[name])) continue;
+        const value = Object.hasOwn(remote, name) ? remote[name] : initial[name];
+        entry.draft = setField(entry.draft, name, value as T[typeof name]);
+      }
+      entry.persisted = stored.persisted;
     } catch {
       entry.persisted = false;
     }
   };
 
   useEffect(() => {
-    if (entry.ready || !storageKey) return;
-    try {
-      const restored = decodeDraft(localStorage.getItem(storageKey), initial, persist);
-      for (const name of Object.keys(restored) as FieldName<T>[]) {
-        entry.draft = setField(entry.draft, name, restored[name] as T[typeof name]);
-      }
-      entry.persisted = true;
-    } catch {
-      entry.persisted = false;
-    }
-    entry.ready = true;
-    notify();
-  }, [entry, storageKey]);
-
-  useEffect(() => {
     if (!storageKey) return;
-    const receive = (event: StorageEvent) => {
+    if (!entry.ready) {
+      readStored(true);
+      entry.ready = true;
+      notify();
+    }
+    const receive = () => {
+      readStored(false);
+      notify();
+    };
+    // The owner of a compatibility storage adapter also owns same-tab subscriptions.
+    if (storage) return storage.subscribe(receive);
+    const onStorage = (event: StorageEvent) => {
       if (event.key !== storageKey && event.key !== null) return;
       try {
-        if (event.storageArea !== localStorage) return;
-        const remote = decodeDraft(event.newValue, initial, persist);
-        for (const name of persist) {
-          if (!sameValue(entry.draft.values[name], entry.draft.baseline[name])) continue;
-          const value = Object.hasOwn(remote, name) ? remote[name] : initial[name];
-          entry.draft = setField(entry.draft, name, value as T[typeof name]);
-        }
-        notify();
-      } catch {
-        entry.persisted = false;
-        notify();
-      }
+        if (event.storageArea === localStorage) receive();
+      } catch { entry.persisted = false; notify(); }
     };
-    window.addEventListener('storage', receive);
-    return () => window.removeEventListener('storage', receive);
-  }, [entry, storageKey]);
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [entry, storageKey, storage]);
 
   const disabled = !!options.disabled || !scope;
   const isOwner = () => mounted.current && current.current.entries === entries;
@@ -110,6 +120,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     identity: scope,
     action: async () => {
       if (!isCurrent() || disabled || !entry.ready || hasErrors(options.validate?.(entry.draft.values) ?? {})) return;
+      if (storage) readStored(false);
       const submitted = snapshotValue(entry.draft);
       entry.error = undefined;
       try {
@@ -117,6 +128,8 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
         if (!isOwner()) return;
         const saved = options.saved?.(result, submitted.values) ??
           (options.preset === 'message' ? initial : submitted.values);
+        // A second surface may have changed persisted text while the request was in flight.
+        if (storage) readStored(false);
         entry.draft = acknowledgeDraft(entry.draft, submitted, saved, options.consume);
         save();
         if (isCurrent()) {
@@ -165,9 +178,15 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     unsaved,
     loading: invocation.pending,
     set,
+    update: (name, change) => set(name, change(entry.draft.values[name])),
     readField: name => Object.hasOwn(values, name) ? values[name as FieldName<T>] : undefined,
     writeField: (name, value) => {
       if (Object.hasOwn(values, name)) set(name as FieldName<T>, value as T[FieldName<T>]);
+    },
+    updateField: (name, change) => {
+      if (!Object.hasOwn(entry.draft.values, name)) return;
+      const field = name as FieldName<T>;
+      set(field, change(entry.draft.values[field]) as T[typeof field]);
     },
     fieldError: name => errors[name as FieldName<T>],
     reset: () => replace(resetDraft(entry.draft, entry.draft.baseline)),

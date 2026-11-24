@@ -3,12 +3,19 @@ import type { FieldName } from './Draft';
 
 export type FormErrors<T extends object> = Partial<Record<FieldName<T>, string>>;
 
+/** Optional consumer-owned persistence transport; it must be scoped and notify all readers. */
+export interface DraftStorage {
+  read(): { raw: string | null; persisted: boolean };
+  write(raw: string): boolean;
+  subscribe(listener: () => void): () => void;
+}
+
 export type FormOptions<T extends object, R> = {
   /** Stable owner identity supplied by the consumer. Never infer a user or session. */
   scope: string;
   preset: 'default' | 'message';
   initial: T;
-  draft?: { key: string; persist: readonly FieldName<T>[] };
+  draft?: { key: string; persist: readonly FieldName<T>[]; storage?: DraftStorage };
   disabled?: boolean;
   validate?: (values: T) => FormErrors<T>;
   submit: (values: T) => R | Promise<R>;
@@ -25,6 +32,7 @@ export interface FormScope {
   disabled: boolean;
   readField(name: string): unknown;
   writeField(name: string, value: unknown): void;
+  updateField(name: string, change: (previous: unknown) => unknown): void;
   fieldError(name: string): string | undefined;
   submit: ActionInvocationController<[]>['invoke'];
 }
@@ -44,6 +52,7 @@ export interface FormController<T extends object> extends FormScope {
   persisted: boolean;
   unsaved: boolean;
   set<K extends FieldName<T>>(name: K, value: T[K]): void;
+  update<K extends FieldName<T>>(name: K, change: (previous: T[K]) => T[K]): void;
   reset(): void;
   clear(): void;
   receive(initial: T): void;

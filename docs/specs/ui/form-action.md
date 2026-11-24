@@ -38,3 +38,5 @@ ActionInvocationProvider and are retained on the form. Never infer authorization
 Tests: root tests/Form/unit/Draft.test.ts covers pure reconciliation and storage.
 Browser and React integration acceptance, scope lifetime, nested forms,
 native submit, accessibility and consumer compile must still be verified.
+
+A consumer may temporarily supply `draft.storage` for a pre-existing shared draft namespace. The adapter implements read/write/subscribe, owns persistence and must scope subscriptions; the form still owns submission/reconciliation and non-persisted values. `form.update(name, change)` and `field.update(change)` operate on the latest value, not a stale rendered array.
