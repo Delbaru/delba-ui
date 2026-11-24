@@ -25,3 +25,13 @@ export function decodeDraft<T extends object>(
       : [],
   )) as Partial<T>;
 }
+
+/** Add an opaque write identity without changing the legacy text-field format.
+ * Choose a free key so even a field named like our metadata remains intact.
+ */
+export function versionDraft(raw: string, version: string): string {
+  const fields = JSON.parse(raw) as Record<string, unknown>;
+  let key = '$delbaDraftVersion';
+  while (Object.hasOwn(fields, key)) key += '$';
+  return JSON.stringify({ ...fields, [key]: { version } });
+}

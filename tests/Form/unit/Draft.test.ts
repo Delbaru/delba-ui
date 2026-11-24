@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { acknowledgeDraft, createDraft, receiveDraft, resetDraft, sameValue, setField, snapshotValue } from '../../../src/core/Form/Draft';
-import { decodeDraft, draftStorageKey, encodeDraft } from '../../../src/core/Form/Storage';
+import { decodeDraft, draftStorageKey, encodeDraft, versionDraft } from '../../../src/core/Form/Storage';
 
 test('message acknowledgement preserves late text and newly selected same-named files', () => {
   const old = new File(['old'], 'a.txt');
@@ -58,4 +58,16 @@ test('an externally changed revision with equal text survives acknowledgement', 
   const submitted = setField(createDraft({ text: '' }), 'text', 'sent');
   const changed = setField(submitted, 'text', 'sent', true);
   assert.equal(acknowledgeDraft(changed, submitted, { text: '' }).values.text, 'sent');
+});
+
+test('versioned browser drafts remain readable by the old text decoder', () => {
+  const initial = { text: '', '$delbaDraftVersion': '' };
+  const raw = encodeDraft({ text: 'same', '$delbaDraftVersion': 'a user field' }, ['text', '$delbaDraftVersion']);
+  const a = versionDraft(raw, 'write-a');
+  const b = versionDraft(raw, 'write-b');
+  assert.notEqual(a, b);
+  assert.deepEqual(decodeDraft(a, initial, ['text', '$delbaDraftVersion']), {
+    text: 'same', '$delbaDraftVersion': 'a user field',
+  });
+  assert.deepEqual(decodeDraft(b, initial, ['text']), { text: 'same' });
 });

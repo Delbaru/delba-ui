@@ -7,6 +7,7 @@ import {
   type DraftSnapshot, type FieldName,
 } from './Draft';
 import { decodeDraft, draftStorageKey, encodeDraft } from './Storage';
+import { createBrowserDraftStorage } from './BrowserStorage';
 import type { DraftStorage, FormController, FormErrors, FormOptions } from './Form.types';
 
 type Entry<T extends object> = {
@@ -18,6 +19,7 @@ type Entry<T extends object> = {
   persist: readonly FieldName<T>[];
   lastReceived?: T;
   storageRevision?: number;
+  browserStorage?: DraftStorage;
 };
 function hasErrors(errors: object): boolean {
   return Object.values(errors).some(Boolean);
@@ -34,12 +36,14 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const [, render] = useState(0);
   const notify = () => render(value => value + 1);
   const storageKey = draft && scope ? draftStorageKey(scope, key) : undefined;
-  const storage = draft?.storage;
-  const persist = draft?.persist ?? [];
+  const persist = (draft?.persist ?? []).filter(name => typeof initial[name] === 'string');
   const existing = owner.entries.get(key);
   const entry: Entry<T> = existing ?? {
     draft: createDraft(initial), ready: !draft, persisted: !draft, error: undefined, storageKey, persist,
+    browserStorage: storageKey ? createBrowserDraftStorage(storageKey) : undefined,
   };
+  const storage = draft?.storage ?? entry.browserStorage;
+  const browserStorage = storage === entry.browserStorage;
   // A render may be interrupted. Do not mutate the previously committed owner map.
   const entries = existing ? owner.entries : new Map(owner.entries).set(key, entry);
   if (owner !== storedOwner || entries !== owner.entries) setOwner({ ...owner, entries });
@@ -52,26 +56,21 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   }, []);
 
   const save = () => {
-    if (!storageKey) return;
+    if (!storageKey || !storage) return;
     try {
       const raw = encodeDraft(entry.draft.values, persist);
-      if (storage) {
-        entry.persisted = storage.write(raw);
-        entry.storageRevision = storage.read().revision;
-      }
-      else {
-        localStorage.setItem(storageKey, raw);
-        entry.persisted = true;
-      }
+      entry.persisted = storage.write(raw);
+      if (entry.persisted || !browserStorage) entry.storageRevision = storage.read().revision;
     } catch {
       entry.persisted = false;
     }
   };
 
   const readStored = (restore: boolean) => {
-    if (!storageKey || (!storage && !restore && !entry.persisted)) return;
+    if (!storageKey || !storage || (browserStorage && !restore && !entry.persisted)) return;
     try {
-      const stored: ReturnType<DraftStorage['read']> = storage?.read() ?? { raw: localStorage.getItem(storageKey), persisted: true };
+      const stored = storage.read();
+      if (browserStorage && !stored.persisted) { entry.persisted = false; return; }
       const remote = decodeDraft(stored.raw, initial, persist);
       const revision = stored.revision;
       const changedExternally = entry.storageRevision !== undefined && revision !== undefined && revision !== entry.storageRevision;
@@ -117,24 +116,9 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     const receive = () => {
       if (read(false)) notify();
     };
-    // The owner of a compatibility storage adapter also owns same-tab subscriptions.
-    if (storage) {
-      const unsubscribe = storage.subscribe(receive);
-      return () => { active = false; unsubscribe(); };
-    }
-    const onStorage = (event: StorageEvent) => {
-      if (event.key !== storageKey && event.key !== null) return;
-      try {
-        if (event.storageArea === localStorage) receive();
-      } catch {
-        if (active && subscription.current?.entry === entry) {
-          entry.persisted = false;
-          notify();
-        }
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => { active = false; window.removeEventListener('storage', onStorage); };
+    if (!storage) return;
+    const unsubscribe = storage.subscribe(receive);
+    return () => { active = false; unsubscribe(); };
   }, [entry, storageKey, storage]);
 
   useEffect(() => {

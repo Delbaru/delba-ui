@@ -56,3 +56,16 @@ Form draft-key creation replaces the owner map rather than mutating an earlier
 render's map. A committed scope token remains stable across draft-key changes.
 Storage subscriptions read the latest committed options and ignore callbacks
 from a detached key or adapter. These lifecycle paths require browser acceptance.
+
+### Default browser storage
+Default drafts notify other mounted forms in the same realm and listen for
+cross-tab storage events. Each write carries an opaque version marker alongside
+the existing text-only fields, readable by the legacy decoder. An adapter entry
+tracks its own revision; equal text after another write does not acknowledge
+the old submitted revision. Only string fields can be persisted or restored
+(even if a consumer accidentally lists a File field). Failed localStorage
+writes keep the local draft unsaved; they do not restore stale disk values.
+The default adapter does not acknowledge after unmount because it cannot
+prove the original authenticated owner is still active. Explicit guarded
+adapters retain that capability. Cross-tab draft sync is not cross-tab
+admission, atomic compare-and-swap or durable server idempotency.
