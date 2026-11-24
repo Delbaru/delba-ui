@@ -4,6 +4,8 @@ import { ui } from '../../src/ui';
 import { Button } from '../../src/components/Button/Button';
 import { Flex } from '../../src/components/Flex/Flex';
 import { Input } from '../../src/components/Input/Input';
+import { Checkbox } from '../../src/components/Checkbox/Checkbox';
+import { Select } from '../../src/components/Select/Select';
 import { Textarea } from '../../src/components/Textarea/Textarea';
 import { ActionInvocationProvider } from '../../src/hooks/useActionInvocation';
 
@@ -196,8 +198,32 @@ export function FormFixture() {
   return (
     <ActionInvocationProvider onFailure={() => undefined}>
       <MessageForm />
+      <NamedFieldsFixture />
       <EditForm />
       <StrictMode><SharedForms /><SubscriptionForm /></StrictMode>
     </ActionInvocationProvider>
+  );
+}
+
+/** Real primitive integration: controller owns choice values and File identity. */
+function NamedFieldsFixture() {
+  const form = ui.form.use({
+    scope: 'named-fields-fixture',
+    preset: 'default',
+    initial: { enabled: false, category: null as string | null, tags: [] as string[], files: [] as File[] },
+    submit: values => values,
+  });
+  const options = [{ value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }];
+  return (
+    <Flex ui={{ form }} dir={['column', 'column', 'column']}>
+      <Checkbox name="enabled" aria-label="Named checkbox" />
+      <Select name="category" aria-label="Named category" options={options} />
+      <Select multiple name="tags" aria-label="Named tags" options={options} />
+      <Input type="file" name="files" multiple aria-label="Named files" />
+      <output data-testid="named-values">{JSON.stringify({
+        ...form.values, files: form.values.files.map(file => file.name),
+      })}</output>
+      <Button onClick={form.reset}>Reset named fields</Button>
+    </Flex>
   );
 }

@@ -124,3 +124,21 @@ test('persistent subscription uses the latest committed initial values', async (
   await page.getByRole('button', { name: 'Remove subscription text' }).click();
   await expect(text).toHaveValue('Latest');
 });
+
+test('named choice and file primitives bind the nearest form and reset', async ({ page }) => {
+  await page.goto('/');
+  const checkbox = page.getByRole('checkbox', { name: 'Named checkbox' });
+  await checkbox.check();
+  await page.getByLabel('Named category').click();
+  await page.getByText('Alpha', { exact: true }).last().click();
+  await page.getByLabel('Named files').setInputFiles({
+    name: 'named.txt', mimeType: 'text/plain', buffer: Buffer.from('file'),
+  });
+  await expect(page.getByTestId('named-values')).toContainText('"enabled":true');
+  await expect(page.getByTestId('named-values')).toContainText('"category":"a"');
+  await expect(page.getByTestId('named-values')).toContainText('"files":["named.txt"]');
+  await page.getByRole('button', { name: 'Reset named fields' }).click();
+  await expect(checkbox).not.toBeChecked();
+  await expect(page.getByTestId('named-values')).toHaveText('{"enabled":false,"category":null,"tags":[],"files":[]}');
+  await expect(page.getByLabel('Named files')).toHaveValue('');
+});
