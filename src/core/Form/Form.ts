@@ -49,8 +49,11 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   // A render may be interrupted. Do not mutate the previously committed owner map.
   const entries = existing ? owner.entries : new Map(owner.entries).set(key, entry);
   if (owner !== storedOwner || entries !== owner.entries) setOwner({ ...owner, entries });
-  const current = useRef({ owner: owner.token, entry });
-  useLayoutEffect(() => { current.current = { owner: owner.token, entry }; }, [owner.token, entry]);
+  const disabled = !!options.disabled || !scope;
+  const current = useRef({ owner: owner.token, entry, disabled, storage });
+  useLayoutEffect(() => {
+    current.current = { owner: owner.token, entry, disabled, storage };
+  }, [owner.token, entry, disabled, storage]);
   const mounted = useRef(false);
   useLayoutEffect(() => {
     mounted.current = true;
@@ -135,17 +138,18 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   }, [entry, options.refresh, options.equal]);
 
   const equal = options.equal ?? ((_field: FieldName<T>, left: T[FieldName<T>], right: T[FieldName<T>]) => sameValue(left, right));
-  const disabled = !!options.disabled || !scope;
   const isOwner = () => mounted.current && current.current.owner === owner.token;
   const isCurrent = () => isOwner() && current.current.entry === entry;
-  const set = <K extends FieldName<T>>(name: K, value: T[K]) => {
-    if (!isCurrent() || !entry.ready || disabled) return;
+  const canEdit = () => isCurrent() && entry.ready && !current.current.disabled && current.current.storage === storage;
+  const update = <K extends FieldName<T>>(name: K, change: (previous: T[K]) => T[K]) => {
+    if (!canEdit()) return;
     if (storage) readStored(false);
-    entry.draft = setField(entry.draft, name, value);
+    entry.draft = setField(entry.draft, name, change(entry.draft.values[name]));
     entry.error = undefined;
     save();
     notify();
   };
+  const set = <K extends FieldName<T>>(name: K, value: T[K]) => update(name, () => value);
   const clientErrors: FormErrors<T> = options.validate?.(entry.draft.values) ?? {};
   const serverErrors = entry.error === undefined ? undefined : options.errorsFrom?.(entry.error);
   const errors: FormErrors<T> = { ...serverErrors, ...clientErrors };
@@ -156,7 +160,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     admissionKey: storageKey,
     onCancel: options.onCancel,
     action: async () => {
-      if (!isCurrent() || disabled || !entry.ready) return;
+      if (!canEdit()) return;
       if (storageKey) readStored(false);
       if (hasErrors(options.validate?.(entry.draft.values) ?? {})) return;
       const submitted = snapshotValue(entry.draft);
@@ -199,16 +203,17 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     .filter(name => !sameValue(values[name], entry.draft.baseline[name]))
     .map(name => [name, values[name]])) as Partial<T>;
   const dirty = (Object.keys(values) as FieldName<T>[]).some(name => !equal(name, values[name], entry.draft.baseline[name]));
-  const replace = (next: DraftSnapshot<T>) => {
-    if (!isCurrent() || disabled || !entry.ready) return;
-    entry.draft = next;
+  const replace = (next: (current: DraftSnapshot<T>) => DraftSnapshot<T>) => {
+    if (!canEdit()) return;
+    if (storage) readStored(false);
+    entry.draft = next(entry.draft);
     entry.error = undefined;
     save();
     notify();
   };
 
   const submit = () => {
-    if (!isCurrent() || disabled || !entry.ready) return undefined;
+    if (!canEdit()) return undefined;
     if (storageKey) readStored(false);
     if (hasErrors(options.validate?.(entry.draft.values) ?? {})) { notify(); return undefined; }
     return invocation.invoke();
@@ -227,10 +232,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     unsaved,
     loading: invocation.pending,
     set,
-    update: (name, change) => {
-      if (storage && isCurrent()) readStored(false);
-      set(name, change(entry.draft.values[name]));
-    },
+    update,
     hasField: name => Object.hasOwn(values, name),
     readField: name => Object.hasOwn(values, name) ? values[name as FieldName<T>] : undefined,
     writeField: (name, value) => {
@@ -239,13 +241,12 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     updateField: (name, change) => {
       if (!Object.hasOwn(entry.draft.values, name)) return;
       const field = name as FieldName<T>;
-      if (storage && isCurrent()) readStored(false);
-      set(field, change(entry.draft.values[field]) as T[typeof field]);
+      update(field, previous => change(previous) as T[typeof field]);
     },
     fieldError: name => errors[name as FieldName<T>],
-    reset: () => replace(resetDraft(entry.draft, entry.draft.baseline)),
-    clear: () => replace(resetDraft(entry.draft, initial)),
-    receive: next => replace(receiveDraft(entry.draft, next, options.equal)),
+    reset: () => replace(current => resetDraft(current, current.baseline)),
+    clear: () => replace(current => resetDraft(current, initial)),
+    receive: next => replace(current => receiveDraft(current, next, options.equal)),
     submit,
     cancel: invocation.cancel,
     action: { preset: 'default', controller: { pending: invocation.pending, invoke: submit, cancel: invocation.cancel }, disabled: disabled || !entry.ready || !valid },

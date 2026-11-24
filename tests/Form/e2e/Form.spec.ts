@@ -161,3 +161,17 @@ test('form-owned submit button respects native onSubmit and its cancellation', a
   await page.getByRole('button', { name: 'Confirm edit' }).click();
   await expect(title).toHaveValue('CHANGED');
 });
+
+
+test('captured field updates cannot run after the same form becomes disabled', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Capture named update' }).click();
+  await page.getByRole('button', { name: 'Toggle named disabled' }).click();
+  await page.getByRole('button', { name: 'Invoke captured named update' }).click();
+  await expect(page.getByTestId('named-updates')).toHaveText('0');
+  await expect(page.getByRole('checkbox', { name: 'Named checkbox' })).not.toBeChecked();
+  await page.getByRole('button', { name: 'Toggle named disabled' }).click();
+  await page.getByRole('button', { name: 'Invoke captured named update' }).click();
+  await expect(page.getByTestId('named-updates')).toHaveText('1');
+  await expect(page.getByRole('checkbox', { name: 'Named checkbox' })).toBeChecked();
+});

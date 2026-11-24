@@ -215,9 +215,13 @@ export function FormFixture() {
 
 /** Real primitive integration: controller owns choice values and File identity. */
 function NamedFieldsFixture() {
+  const [disabled, setDisabled] = useState(false);
+  const [updates, setUpdates] = useState(0);
+  const retainedUpdate = useRef<(() => void) | null>(null);
   const form = ui.form.use({
     scope: 'named-fields-fixture',
     preset: 'default',
+    disabled,
     initial: { enabled: false, category: null as string | null, tags: [] as string[], files: [] as File[] },
     submit: values => values,
   });
@@ -232,6 +236,15 @@ function NamedFieldsFixture() {
         ...form.values, files: form.values.files.map(file => file.name),
       })}</output>
       <Button onClick={form.reset}>Reset named fields</Button>
+      <Button onClick={() => {
+        retainedUpdate.current = () => form.update('enabled', previous => {
+          setUpdates(count => count + 1);
+          return !previous;
+        });
+      }}>Capture named update</Button>
+      <Button onClick={() => setDisabled(value => !value)}>Toggle named disabled</Button>
+      <Button onClick={() => retainedUpdate.current?.()}>Invoke captured named update</Button>
+      <output data-testid="named-updates">{updates}</output>
     </Flex>
   );
 }
