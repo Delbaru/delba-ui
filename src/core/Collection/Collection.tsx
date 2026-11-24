@@ -49,7 +49,7 @@ function interactive(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>
   if (!event.currentTarget.contains(target)) return true;
   const nested = target.closest('[data-ui-selectable]');
   if (nested && nested !== event.currentTarget && event.currentTarget.contains(nested)) return true;
-  const control = target.closest('a,button,input,textarea,select,label,[role="button"],[role="link"],[contenteditable]:not([contenteditable="false"])');
+  const control = target.closest('a,button,input,textarea,select,label,[role="button"],[role="link"],[role="checkbox"],[role="switch"],[role="radio"],[role="combobox"],[role="menuitem"],[contenteditable]:not([contenteditable="false"])');
   return !!control && control !== event.currentTarget;
 }
 
@@ -90,7 +90,7 @@ export function useCollection<T>(
   });
   const selected = selectedItems(selection, visible, retainMissing);
   const ids = selection.ids.filter(id => retainMissing || visible.has(id));
-  const change = (operation: 'select' | 'unselect' | 'toggle' | 'range' | 'all', requested: readonly string[]) => {
+  const change = (operation: 'select' | 'unselect' | 'toggle' | 'range' | 'all', requested: readonly string[], origin?: string) => {
     const current = committed.current;
     if (!current || current.owner !== state.owner) return;
     setState(previous => {
@@ -101,11 +101,11 @@ export function useCollection<T>(
       }
       const keys = [...current.visible.keys()];
       const targets = operation === 'range'
-        ? rangeKeys(keys, previous.selection.anchor, requested[0])
+        ? rangeKeys(keys, previous.selection.anchor, requested[0], origin)
         : operation === 'all' ? (current.mode === 'single' ? keys.slice(0, 1) : keys) : requested;
       return { ...previous, selection: changeSelection(
         { ...previous.selection, retained: previews }, current.visible, targets,
-        operation === 'all' ? 'select' : operation, current.retainMissing, current.mode,
+        operation === 'all' ? 'select' : operation, current.retainMissing, current.mode, origin,
       ) };
     });
   };
@@ -150,7 +150,7 @@ export function useCollection<T>(
         const key = target?.getAttribute('data-ui-collection-key');
         if (!target || key == null) return;
         event.preventDefault(); event.stopPropagation(); target.focus();
-        if (mode === 'multiple' && event.shiftKey) change('range', [key]);
+        if (mode === 'multiple' && event.shiftKey) change('range', [key], id);
         return;
       }
       if (event.key !== ' ' && event.key !== 'Spacebar') return;

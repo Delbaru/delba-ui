@@ -58,3 +58,16 @@ test('retention remembers the last loaded version without requiring another sele
   assert.deepEqual(selectedItems(pruneSelection(refreshed, new Map(), true), new Map(), true), [updated]);
   assert.equal(pruneSelection(refreshed, new Map([['a', updated]]), true), refreshed);
 });
+
+
+test('keyboard range starts from focused item without a loaded anchor and keeps that origin', () => {
+  const keys = ['a', 'b', 'c'];
+  const empty = emptySelection<typeof a>();
+  const first = changeSelection(empty, visible, rangeKeys(keys, empty.anchor, 'b', 'c'), 'range', true, 'multiple', 'c');
+  assert.deepEqual(first.ids, ['b', 'c']);
+  assert.equal(first.anchor, 'c');
+  const extended = changeSelection(first, visible, rangeKeys(keys, first.anchor, 'a', 'b'), 'range', true, 'multiple', 'b');
+  assert.deepEqual(new Set(extended.ids), new Set(keys));
+  assert.equal(extended.anchor, 'c');
+  assert.deepEqual(rangeKeys(keys, 'offpage', 'b', 'c'), ['b', 'c']);
+});

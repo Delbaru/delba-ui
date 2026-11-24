@@ -9,8 +9,10 @@ export function emptySelection<T>(): Selection<T> {
   return { ids: [], retained: new Map(), anchor: null };
 }
 
-export function rangeKeys(keys: readonly string[], anchor: string | null, target: string): string[] {
-  const start = anchor === null ? -1 : keys.indexOf(anchor);
+/** Keyboard extension starts at the focused item if there is no loaded anchor. */
+export function rangeKeys(keys: readonly string[], anchor: string | null, target: string, origin?: string): string[] {
+  const anchored = anchor === null ? -1 : keys.indexOf(anchor);
+  const start = anchored < 0 && origin !== undefined ? keys.indexOf(origin) : anchored;
   const end = keys.indexOf(target);
   if (end < 0) return [];
   return start < 0 ? [target] : keys.slice(Math.min(start, end), Math.max(start, end) + 1);
@@ -46,6 +48,7 @@ export function changeSelection<T>(
   selection: Selection<T>, visible: ReadonlyMap<string, T>, keys: readonly string[],
   operation: 'select' | 'unselect' | 'toggle' | 'range', retainMissing: boolean,
   mode: 'single' | 'multiple' = 'multiple',
+  rangeOrigin?: string,
 ): Selection<T> {
   selection = pruneSelection(selection, visible, retainMissing);
   const ids = new Set(selection.ids);
@@ -71,6 +74,8 @@ export function changeSelection<T>(
   }
   return {
     ids: [...ids], retained,
-    anchor: operation === 'range' ? selection.anchor ?? keys[0] ?? null : keys.at(-1) ?? selection.anchor,
+    anchor: operation === 'range'
+      ? (selection.anchor !== null && visible.has(selection.anchor) ? selection.anchor : rangeOrigin ?? keys[0] ?? null)
+      : keys.at(-1) ?? selection.anchor,
   };
 }
