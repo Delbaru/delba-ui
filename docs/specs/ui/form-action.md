@@ -48,3 +48,6 @@ For editing records, `refresh` supplies the last confirmed values and preserves 
 Draft forms with the same scoped storage key share one in-process admission ticket through useActionInvocation, including independently mounted surfaces. The ticket lives until actual settlement, not until a component unmounts. Local owner changes do not release that shared ticket. This is not a durable server idempotency receipt and does not coordinate browser tabs. Independent forms without a shared key retain local admission. Browser integration/StrictMode acceptance is still required.
 
 Version-aware adapters may return a monotonically changing `revision` and implement `acknowledge(expectedRevision, raw)` with current-owner validation. Form uses this to retain an externally edited-and-restored value, and to acknowledge an unmounted message form only when its adapter proves the submitted revision is still current. Unversioned adapters cannot safely acknowledge after unmount. A failed default localStorage write must not cause stale disk text to replace an unsaved value at submit.
+
+Shared admission subscriptions are keyed by the exact scoped operation. Local
+buttons without a shared admission key do not subscribe to the shared store.

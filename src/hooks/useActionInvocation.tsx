@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { createActionAdmission } from './ActionAdmission';
 import { isAbortActionError } from './action-invocation.model';
 
@@ -92,7 +92,9 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
   const [pending, setPending] = useState(false);
 
   const sharedKey = admissionKey === undefined ? undefined : JSON.stringify([services?.scopeKey, identity, admissionKey]);
-  const sharedPending = useSyncExternalStore(admission.subscribe,
+  const subscribe = useCallback((listener: () => void) =>
+    sharedKey === undefined ? () => {} : admission.subscribeKey(sharedKey, listener), [sharedKey]);
+  const sharedPending = useSyncExternalStore(subscribe,
     () => sharedKey !== undefined && admission.pending(sharedKey), noPending);
 
   useLayoutEffect(() => {

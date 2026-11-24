@@ -14,3 +14,11 @@ Links, inputs and selected native text are not hijacked.
 The owner must provide the appropriate semantic role and accessible name.
 Existing consumer APIs may use the same controller's item handlers during migration.
 Unit checks and browser/consumer acceptance remain separate.
+
+The optional `mode: 'single'` replaces selection on click or select, toggles the
+selected item off, and limits selectAll to the first loaded item. The default
+remains multiple selection. Scope, definition or mode changes reset local
+selection. With retainMissing disabled, disappearing IDs are forgotten rather
+than silently selected again when they reappear. Portal events outside the item
+DOM do not activate it. With retainMissing enabled, the owner must explicitly
+unselect a confirmed deleted ID (absence may mean pagination).

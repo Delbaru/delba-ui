@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { changeSelection, emptySelection, rangeKeys, selectedItems } from '../../../src/core/Collection/Selection';
+import { changeSelection, emptySelection, rangeKeys, selectedItems, pruneSelection } from '../../../src/core/Collection/Selection';
 
 const a = { id: 'a', label: 'old' };
 const b = { id: 'b', label: 'second' };
@@ -29,4 +29,24 @@ test('select all is limited to loaded keys; missing selection is explicit opt-in
   assert.deepEqual(next.ids, ['c']);
   assert.equal(next.retained.size, 0);
   assert.deepEqual(emptySelection<typeof a>().ids, []);
+});
+
+
+test('non-retained removal is permanent even when an ID reappears', () => {
+  const selected = changeSelection(emptySelection<typeof a>(), visible, ['a', 'b'], 'select', true);
+  const pruned = pruneSelection(selected, new Map([['a', a]]), false);
+  assert.deepEqual(pruned.ids, ['a']);
+  assert.equal(pruned.anchor, null);
+  assert.equal(pruned.retained.size, 0);
+  assert.deepEqual(selectedItems(pruned, visible, false), [a]);
+  assert.equal(pruneSelection(pruned, visible, false), pruned);
+  assert.equal(pruneSelection(selected, new Map(), true), selected);
+});
+
+test('single selection replaces the previous ID and toggle clears it', () => {
+  const first = changeSelection(emptySelection<typeof a>(), visible, ['a'], 'select', true, 'single');
+  const next = changeSelection(first, visible, ['b'], 'select', true, 'single');
+  assert.deepEqual(next.ids, ['b']);
+  assert.deepEqual([...next.retained.keys()], ['b']);
+  assert.deepEqual(changeSelection(next, visible, ['b'], 'toggle', true, 'single').ids, []);
 });

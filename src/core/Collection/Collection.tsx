@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, type MouseEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { changeSelection, emptySelection, rangeKeys, selectedItems, type Selection } from './Selection';
+import { changeSelection, emptySelection, pruneSelection, rangeKeys, selectedItems, type Selection } from './Selection';
 
 export type CollectionDefinition<T> = {
   readonly token: symbol;
@@ -41,6 +41,7 @@ export function defineCollection<T>(name: string, key: (item: T) => string): Col
 function interactive(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>): boolean {
   const target = event.target as Element | null;
   if (!target?.closest) return false;
+  if (!event.currentTarget.contains(target)) return true;
   const control = target.closest('a,button,input,textarea,select,[role="button"],[contenteditable="true"]');
   return !!control && control !== event.currentTarget;
 }
@@ -52,36 +53,42 @@ function hasTextSelection(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLEle
 /** Selection is owned by the local instance; the definition never holds user data. */
 export function useCollection<T>(
   definition: CollectionDefinition<T>, items: readonly T[],
-  options: { scope: string; retainMissing?: boolean },
+  options: { scope: string; retainMissing?: boolean; mode?: 'single' | 'multiple' },
 ): CollectionController<T> {
-  const { scope, retainMissing = false } = options;
-  const [state, setState] = useState<{ scope: string; selection: Selection<T> }>(() => ({
-    scope, selection: emptySelection<T>(),
-  }));
-  const selection = state.scope === scope ? state.selection : emptySelection<T>();
-  if (state.scope !== scope) setState({ scope, selection });
+  const { scope, retainMissing = false, mode = 'multiple' } = options;
+  type State = { scope: string; token: symbol; mode: typeof mode; owner: symbol; selection: Selection<T> };
+  const createState = (): State => ({
+    scope, token: definition.token, mode, owner: Symbol(), selection: emptySelection<T>(),
+  });
+  const [stored, setState] = useState<State>(createState);
+  const state = stored.scope === scope && stored.token === definition.token && stored.mode === mode
+    ? stored : createState();
   const visible = new Map(items.map(item => [definition.key(item), item]));
+  const selection = pruneSelection(state.selection, visible, retainMissing);
+  if (state !== stored || selection !== state.selection) setState({ ...state, selection });
   const keys = [...visible.keys()];
   const selected = selectedItems(selection, visible, retainMissing);
   const ids = selection.ids.filter(id => retainMissing || visible.has(id));
   const change = (operation: 'select' | 'unselect' | 'toggle' | 'range', requested: readonly string[]) =>
-    setState(previous => ({
-      scope,
-      selection: changeSelection(previous.scope === scope ? previous.selection : emptySelection<T>(),
-        visible, requested, operation, retainMissing),
-    }));
+    setState(previous => previous.owner !== state.owner ? previous : {
+      ...previous,
+      selection: changeSelection(previous.selection, visible, requested, operation, retainMissing, mode),
+    });
   const toggle = (id: string) => change('toggle', [id]);
   const item = (id: string): CollectionItem => ({
     checked: ids.includes(id),
     toggle: () => toggle(id),
-    selectRange: () => change('range', rangeKeys(keys, selection.anchor, id)),
+    selectRange: () => mode === 'single' ? change('select', [id]) : change('range', rangeKeys(keys, selection.anchor, id)),
     onMouseDown(event) {
-      if (event.defaultPrevented || !event.shiftKey || interactive(event) || hasTextSelection(event)) return;
+      if (mode === 'single' || event.defaultPrevented || !event.shiftKey || interactive(event) || hasTextSelection(event)) return;
       event.preventDefault();
     },
     onClick(event) {
       if (event.defaultPrevented || interactive(event) || hasTextSelection(event)) return;
-      if (event.shiftKey) {
+      if (mode === 'single') {
+        event.preventDefault();
+        toggle(id);
+      } else if (event.shiftKey) {
         event.preventDefault();
         change('range', rangeKeys(keys, selection.anchor, id));
       } else if (event.ctrlKey || event.metaKey || ids.length) {
@@ -93,7 +100,7 @@ export function useCollection<T>(
       if (event.defaultPrevented || interactive(event) || hasTextSelection(event)) return;
       if (event.key !== ' ' && event.key !== 'Spacebar') return;
       event.preventDefault();
-      if (event.shiftKey) change('range', rangeKeys(keys, selection.anchor, id));
+      if (mode === 'multiple' && event.shiftKey) change('range', rangeKeys(keys, selection.anchor, id));
       else toggle(id);
     },
   });
@@ -102,8 +109,8 @@ export function useCollection<T>(
     select: id => change('select', [id]),
     unselect: id => change('unselect', [id]),
     toggle,
-    selectAll: () => change('select', keys),
-    clear: () => setState({ scope, selection: emptySelection<T>() }),
+    selectAll: () => change('select', mode === 'single' ? keys.slice(0, 1) : keys),
+    clear: () => setState(previous => previous.owner !== state.owner ? previous : { ...previous, selection: emptySelection<T>() }),
   };
 }
 

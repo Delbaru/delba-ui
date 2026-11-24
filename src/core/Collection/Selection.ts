@@ -23,11 +23,22 @@ export function selectedItems<T>(selection: Selection<T>, visible: ReadonlyMap<s
   });
 }
 
+/** Forget unloaded records when retention is not explicitly enabled. */
+export function pruneSelection<T>(selection: Selection<T>, visible: ReadonlyMap<string, T>, retainMissing: boolean): Selection<T> {
+  if (retainMissing) return selection;
+  const ids = selection.ids.filter(id => visible.has(id));
+  const anchor = selection.anchor !== null && visible.has(selection.anchor) ? selection.anchor : null;
+  if (ids.length === selection.ids.length && anchor === selection.anchor && !selection.retained.size) return selection;
+  return { ids, anchor, retained: new Map() };
+}
+
 export function changeSelection<T>(
   selection: Selection<T>, visible: ReadonlyMap<string, T>, keys: readonly string[],
   operation: 'select' | 'unselect' | 'toggle' | 'range', retainMissing: boolean,
+  mode: 'single' | 'multiple' = 'multiple',
 ): Selection<T> {
-  const ids = new Set(selection.ids.filter(id => retainMissing || visible.has(id)));
+  selection = pruneSelection(selection, visible, retainMissing);
+  const ids = new Set(selection.ids);
   const retained = new Map(selection.retained);
   for (const key of keys) {
     if (operation === 'unselect' || operation === 'toggle' && ids.has(key)) {
@@ -37,6 +48,10 @@ export function changeSelection<T>(
     }
     const item = visible.get(key);
     if (item === undefined) continue;
+    if (mode === 'single') {
+      ids.clear();
+      retained.clear();
+    }
     ids.add(key);
     if (retainMissing) retained.set(key, item);
   }

@@ -29,3 +29,22 @@ test('old settlement cannot release a newer ticket; subscriptions clean up', () 
   assert.equal(notifications, 3);
   assert.equal(admission.pending('same'), false);
 });
+
+
+test('scoped subscribers observe only their own tickets and unsubscribe independently', () => {
+  const admission = createActionAdmission();
+  let a = 0;
+  let b = 0;
+  const stop = admission.subscribeKey('a', () => { a++; });
+  const stopB = admission.subscribeKey('b', () => { b++; });
+  const release = admission.acquire('a')!;
+  assert.deepEqual([a, b], [1, 0]);
+  release();
+  assert.deepEqual([a, b], [2, 0]);
+  stop();
+  const next = admission.acquire('b')!;
+  assert.deepEqual([a, b], [2, 1]);
+  stopB();
+  next();
+  assert.deepEqual([a, b], [2, 1]);
+});
