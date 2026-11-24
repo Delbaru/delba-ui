@@ -148,14 +148,14 @@ export function uiCheckSteps({
             throw new Error('--shard requires --suite browser and a valid index/total');
         }
     }
-    const source = project ? path.join(project, 'src') : undefined;
-    const projectTests =
-        source && existsSync(source)
-            ? readdirSync(source, { recursive: true })
-                  .filter((file) => /\.test\.(?:[cm]?[jt]s|tsx|jsx)$/.test(file))
-                  .map((file) => path.join('src', file))
-                  .sort()
-            : [];
+    const discoverTests = (root, directories) => directories.flatMap(directory => {
+        const source = path.join(root, directory);
+        return existsSync(source) ? readdirSync(source, { recursive: true })
+            .filter(file => /\.test\.(?:[cm]?[jt]s|tsx|jsx)$/.test(file))
+            .map(file => path.join(directory, file)) : [];
+    }).sort();
+    const projectTests = project ? discoverTests(project, ['src', 'tests']) : [];
+    const rootTests = discoverTests(KIT, ['tests']);
     const projectChecks = project
         ? projectSteps(project, config, {
               strict: true,
@@ -221,7 +221,7 @@ export function uiCheckSteps({
             name: 'Тесты',
             run: ({ failedOnly = false } = {}) => runNodeTests({
               cwd: KIT,
-              files: ['src/**/*.test.ts', 'tools/**/*.test.ts', 'tools/**/*.test.mjs'],
+              files: ['src/**/*.test.ts', 'tools/**/*.test.ts', 'tools/**/*.test.mjs', ...rootTests],
               stateFile: `${reportFile}.library-tests`,
               failedOnly,
               nodeArgs: [
