@@ -10,6 +10,6 @@ export function ScrollbarActivity() {
 }
 
 /** ScrollArea and Modal share the same document observer; refs and consumer DOM handlers remain untouched. */
-export function useScrollbarActivity(): void {
-    useEffect(() => observeScrollbarActivity(document), []);
+export function useScrollbarActivity(enabled = true): void {
+    useEffect(() => enabled ? observeScrollbarActivity(document) : undefined, [enabled]);
 }

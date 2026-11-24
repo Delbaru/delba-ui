@@ -51,3 +51,5 @@
 - [Form / Action — pilot](ui/form-action.md)
 
 - [Collection — pilot](ui/collection.md)
+
+- [Scroll / Collapse — pilot](ui/scroll-collapse.md)

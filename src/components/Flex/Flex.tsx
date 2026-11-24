@@ -26,6 +26,7 @@ import { useContentMotion } from '../../hooks/useContentMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { InteractionScope } from '../../core/InteractionScope';
 import { FormContext } from '../../core/Form';
+import { useScrollSurface } from '../../core/Scroll/Surface';
 import { CollectionContext } from '../../core/Collection/Collection';
 
 import type { FlexProps } from './Flex.types';
@@ -88,8 +89,11 @@ export function Flex({
   linkState,
   ...props
 }: WithRef<FlexProps, HTMLElement>) {
+  const scroll = useScrollSurface(ui?.scroll);
   const { box, rest } = splitBoxLayout(props);
-  const layout = boxLayout(c, box);
+  const layout = boxLayout(c, { ...scroll?.layout, ...box });
+  const collapseInput = ui?.collapse?.settings ?? collapse;
+  const fade = scroll?.fade ?? scrollFade;
   const isLink = Boolean(href);
   const useNextLink = isLink && shouldUseNextLink(href, target, download);
   const prepare = useLinkPrefetch(prefetch, href, useNextLink && !newTab);
@@ -132,12 +136,14 @@ export function Flex({
           ...c.value('justify', justify),
           ...c.value('align', align),
           ...c.value('wrap', wrap),
-          scrollFade && (scrollFade === 'x' ? 'scrollFadeX' : 'scrollFadeY'),
+          fade && (fade === 'x' ? 'scrollFadeX' : 'scrollFadeY'),
+          scroll?.className,
           contentMotion.className,
           className,
       )}
       style={{
         ...(motionStyle ?? null),
+        ...scroll?.style,
         ...style,
         ...(contentMotion.style ?? null),
       }}
@@ -145,6 +151,7 @@ export function Flex({
       data-motion-scope={motionScope ? '' : undefined}
       {...stateProps(state, trackInteraction && active && 'interacting')}
       {...anchorProps}
+      data-scroll-axis={scroll?.axis ?? (anchorProps as { 'data-scroll-axis'?: string })['data-scroll-axis']}
       tabIndex={anchorProps.tabIndex ?? (selectable ? 0 : undefined)}
       aria-selected={anchorProps['aria-selected'] ?? selectable?.checked}
       {...stateLinkProps(linkState, {
@@ -183,12 +190,12 @@ export function Flex({
       content()
     );
 
-  if (collapse === undefined) {
+  if (collapseInput === undefined) {
     return scopedContent;
   }
 
   const collapseOptions: CollapseOptions =
-    typeof collapse === 'boolean' ? { open: collapse } : collapse;
+    typeof collapseInput === 'boolean' ? { open: collapseInput } : collapseInput;
 
   // По высоте рамку держит сам Flex: он сжимается с треком и клипает своё содержимое. minH
   // сжаться не даст — тогда клипает внутренний слой, как раньше.
