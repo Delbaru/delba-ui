@@ -50,3 +50,11 @@ test('single selection replaces the previous ID and toggle clears it', () => {
   assert.deepEqual([...next.retained.keys()], ['b']);
   assert.deepEqual(changeSelection(next, visible, ['b'], 'toggle', true, 'single').ids, []);
 });
+
+test('retention remembers the last loaded version without requiring another selection gesture', () => {
+  const selected = changeSelection(emptySelection<typeof a>(), visible, ['a'], 'select', true);
+  const updated = { ...a, label: 'refreshed' };
+  const refreshed = pruneSelection(selected, new Map([['a', updated]]), true);
+  assert.deepEqual(selectedItems(pruneSelection(refreshed, new Map(), true), new Map(), true), [updated]);
+  assert.equal(pruneSelection(refreshed, new Map([['a', updated]]), true), refreshed);
+});

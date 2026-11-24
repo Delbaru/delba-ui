@@ -164,6 +164,7 @@ export function Flex({
       aria-busy={anchorProps['aria-busy'] ?? asyncContent.busy}
       aria-haspopup={anchorProps['aria-haspopup'] ?? (popupOptions ? 'menu' : undefined)}
       aria-expanded={anchorProps['aria-expanded'] ?? (popupOptions ? popup.open : undefined)}
+      data-ui-selectable={selectable ? '' : undefined}
       aria-selected={anchorProps['aria-selected'] ?? selectable?.checked}
       {...stateLinkProps(linkState, {
         onMouseEnter: composeEventHandlers(

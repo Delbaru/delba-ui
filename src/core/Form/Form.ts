@@ -206,7 +206,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
 
   const values = entry.draft.values;
   const changes = Object.fromEntries((Object.keys(values) as FieldName<T>[])
-    .filter(name => !sameValue(values[name], entry.draft.baseline[name]))
+    .filter(name => !equal(name, values[name], entry.draft.baseline[name]))
     .map(name => [name, values[name]])) as Partial<T>;
   const dirty = (Object.keys(values) as FieldName<T>[]).some(name => !equal(name, values[name], entry.draft.baseline[name]));
   const replace = (next: DraftSnapshot<T>) => {
@@ -241,6 +241,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
       if (storage && isCurrent()) readStored(false);
       set(name, change(entry.draft.values[name]));
     },
+    hasField: name => Object.hasOwn(values, name),
     readField: name => Object.hasOwn(values, name) ? values[name as FieldName<T>] : undefined,
     writeField: (name, value) => {
       if (Object.hasOwn(values, name)) set(name as FieldName<T>, value as T[FieldName<T>]);

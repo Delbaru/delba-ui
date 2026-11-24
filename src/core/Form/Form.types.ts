@@ -36,6 +36,8 @@ export type FormOptions<T extends object, R> = {
 export interface FormScope {
   ready: boolean;
   disabled: boolean;
+  /** Optional for compatibility with custom scopes; distinguishes an undefined field from an unknown name. */
+  hasField?(name: string): boolean;
   readField(name: string): unknown;
   writeField(name: string, value: unknown): void;
   updateField(name: string, change: (previous: unknown) => unknown): void;

@@ -16,6 +16,7 @@ import {
   resolveFieldLayout,
   splitBoxLayout,
 } from '../../core';
+import { useFormField } from '../../core/Form';
 import { FieldFrame } from '../Field';
 import { useCollapseState } from '../../hooks/useCollapseState';
 import { Dropdown } from '../Dropdown';
@@ -54,7 +55,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
     search,
     name,
     form,
-    value: valueProp,
+    value: bound ? field.value : valueProp,
     defaultValue,
     onChange,
     multiple,
@@ -73,8 +74,8 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
     parallax,
     animate,
     color,
-    error: errorProp,
-    disabled,
+    error: errorProp ?? (bound ? field.error : undefined),
+    disabled: disabledProp,
     required,
     emptyMessage = DEFAULT_EMPTY_MESSAGE,
     visibleOptions = DEFAULT_VISIBLE_OPTIONS,
@@ -96,11 +97,19 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
     'data-point-events': dataPointEvents,
     ...restProps
   } = fieldProps;
+  const field = useFormField<T | null | T[]>(name);
+  const bound = field && valueProp === undefined &&
+    (multiple ? isValueArray(field.value) : field.value === null || typeof field.value === 'string');
+  const disabled = disabledProp || Boolean(bound && field.disabled);
   // Хук хранит общий `T | null | T[]`; наружу значение уходит типом своей ветки `multiple`.
   const emitChange = (next: T | null | T[]) => {
     if (multiple) {
-      if (isValueArray(next)) onChange?.(next);
+      if (isValueArray(next)) {
+        if (bound) field.change(next);
+        onChange?.(next);
+      }
     } else if (!isValueArray(next)) {
+      if (bound) field.change(next);
       onChange?.(next);
     }
   };

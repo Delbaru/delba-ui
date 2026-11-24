@@ -8,6 +8,7 @@ import { Icon } from '../Icon';
 import { Flex } from '../Flex';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import { composeInteractionHandlers, composeEventHandlers } from '../../core/composeEventHandlers';
+import { useFormField } from '../../core/Form';
 import { useFormReset } from '../../core/useFormReset';
 
 import checkIcon from '../../../assets/icons/ui/check/succsess_check_black.svg';
@@ -62,7 +63,14 @@ export function Checkbox({
     const { box, rest } = splitBoxLayout(props);
     const layout = boxLayout(c, box);
     const { rootProps, elementProps } = splitRootDomProps(rest as typeof rest & Record<string, unknown>);
-    const { 'data-error': dataError, ...inputProps } = elementProps;
+    const { 'data-error': explicitError, ...nativeProps } = elementProps;
+    const field = useFormField<boolean>(nativeProps.name);
+    const bound = field && nativeProps.checked === undefined && typeof field.value === 'boolean';
+    const dataError = explicitError ?? (bound ? field.error : undefined);
+    const inputProps = bound ? { ...nativeProps, checked: field.value,
+        disabled: nativeProps.disabled || field.disabled,
+        'aria-invalid': nativeProps['aria-invalid'] ?? Boolean(field.error),
+    } : nativeProps;
     const isDisabled = Boolean(inputProps.disabled);
     const [uncontrolledChecked, setUncontrolledChecked] = useState(Boolean(inputProps.defaultChecked));
     const isChecked = inputProps.checked ?? uncontrolledChecked;
@@ -111,7 +119,8 @@ export function Checkbox({
                     className={styles.Input}
                     {...inputProps}
                     onChange={composeEventHandlers(inputProps.onChange, (event) => {
-                        if (inputProps.checked === undefined) setUncontrolledChecked(event.currentTarget.checked);
+                        if (bound) field.change(event.currentTarget.checked);
+                        else if (inputProps.checked === undefined) setUncontrolledChecked(event.currentTarget.checked);
                     })}
                 />
 

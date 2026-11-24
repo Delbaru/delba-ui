@@ -25,7 +25,17 @@ export function selectedItems<T>(selection: Selection<T>, visible: ReadonlyMap<s
 
 /** Forget unloaded records when retention is not explicitly enabled. */
 export function pruneSelection<T>(selection: Selection<T>, visible: ReadonlyMap<string, T>, retainMissing: boolean): Selection<T> {
-  if (retainMissing) return selection;
+  if (retainMissing) {
+    let retained: Map<string, T> | undefined;
+    for (const id of selection.ids) {
+      if (!visible.has(id)) continue;
+      const item = visible.get(id)!;
+      if (Object.is(selection.retained.get(id), item)) continue;
+      retained ??= new Map(selection.retained);
+      retained.set(id, item);
+    }
+    return retained ? { ...selection, retained } : selection;
+  }
   const ids = selection.ids.filter(id => visible.has(id));
   const anchor = selection.anchor !== null && visible.has(selection.anchor) ? selection.anchor : null;
   if (ids.length === selection.ids.length && anchor === selection.anchor && !selection.retained.size) return selection;

@@ -42,7 +42,9 @@ function interactive(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>
   const target = event.target as Element | null;
   if (!target?.closest) return false;
   if (!event.currentTarget.contains(target)) return true;
-  const control = target.closest('a,button,input,textarea,select,[role="button"],[contenteditable="true"]');
+  const nested = target.closest('[data-ui-selectable]');
+  if (nested && nested !== event.currentTarget && event.currentTarget.contains(nested)) return true;
+  const control = target.closest('a,button,input,textarea,select,label,[role="button"],[role="link"],[contenteditable]:not([contenteditable="false"])');
   return !!control && control !== event.currentTarget;
 }
 
@@ -100,6 +102,7 @@ export function useCollection<T>(
       if (event.defaultPrevented || interactive(event) || hasTextSelection(event)) return;
       if (event.key !== ' ' && event.key !== 'Spacebar') return;
       event.preventDefault();
+      event.stopPropagation();
       if (mode === 'multiple' && event.shiftKey) change('range', rangeKeys(keys, selection.anchor, id));
       else toggle(id);
     },

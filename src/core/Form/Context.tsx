@@ -15,7 +15,7 @@ export function useFormField<T>(name?: string) {
   const form = useContext(Context);
   if (!form || !name) return undefined;
   const value = form.readField(name);
-  if (value === undefined) return undefined;
+  if (form.hasField ? !form.hasField(name) : value === undefined) return undefined;
   return {
     value: value as T,
     error: form.fieldError(name),
