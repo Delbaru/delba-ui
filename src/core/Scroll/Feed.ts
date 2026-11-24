@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from 'react';
-import { historyScrollTop } from './History';
+import { centeredScrollTop, historyScrollTop } from './History';
 
 /** Follow content growth without moving a reader who explicitly left the end. */
 export function useFeedScroll(input: {
@@ -41,8 +41,11 @@ export function useFeedScroll(input: {
         const viewport = input.viewport.current,
             content = input.content.current;
         following.current = !input.anchorId;
+        anchored.current = false;
         setShowBottom(false);
         if (!input.enabled || !viewport || !content) return;
+        const view = viewport.ownerDocument.defaultView;
+        if (!view) return;
         let active = true, gesture = 0, capture = 0;
         let initialized = false,
             frame = 0,
@@ -86,7 +89,11 @@ export function useFeedScroll(input: {
                     content.querySelectorAll<HTMLElement>(selector),
                 ).find((node) => node.getAttribute(itemAttribute) === input.anchorId);
                 if (!target) return;
-                target.scrollIntoView({ block: 'center' });
+                const bounds = viewport.getBoundingClientRect();
+                const rect = target.getBoundingClientRect();
+                viewport.scrollTop = centeredScrollTop(viewport.scrollTop,
+                    rect.top - bounds.top - viewport.clientTop, rect.height,
+                    viewport.scrollHeight, viewport.clientHeight);
                 initialized = true;
             } else if (!initialized || following.current) {
                 viewport.scrollTop = viewport.scrollHeight;
@@ -95,7 +102,7 @@ export function useFeedScroll(input: {
             setShowBottom(away());
         };
         const schedule = () => {
-            if (!frame) frame = requestAnimationFrame(reconcile);
+            if (!frame) frame = view.requestAnimationFrame(reconcile);
         };
         const scroll = () => {
             if (!initialized) return;
@@ -107,10 +114,16 @@ export function useFeedScroll(input: {
         const interact = () => {
             gesture++;
             anchored.current = false;
-            following.current = false;
             manual = true;
         };
+        const pointerdown = (event: PointerEvent) => {
+            // Clicking a reaction/button must not disable feed following. Touch
+            // scrolling or a native scrollbar drag is a possible scroll gesture.
+            if (event.pointerType === 'touch' || event.target === viewport) interact();
+        };
         const keydown = (event: KeyboardEvent) => {
+            if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+            if ((event.target as Element | null)?.closest?.('input,textarea,select,button,a,[contenteditable]:not([contenteditable="false"])')) return;
             if (
                 ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(
                     event.key,
@@ -120,7 +133,7 @@ export function useFeedScroll(input: {
         };
         viewport.addEventListener('scroll', scroll, { passive: true });
         viewport.addEventListener('wheel', interact, { passive: true });
-        viewport.addEventListener('pointerdown', interact, { passive: true });
+        viewport.addEventListener('pointerdown', pointerdown, { passive: true });
         viewport.addEventListener('keydown', keydown);
         // Content images and delayed loading placeholders can reposition a retained anchor.
         // A shorter viewport caused by adjacent controls is deliberately observation-only.
@@ -141,12 +154,12 @@ export function useFeedScroll(input: {
         return () => {
             active = false;
             history.current = null;
-            if (frame) cancelAnimationFrame(frame);
+            if (frame) view.cancelAnimationFrame(frame);
             resize.disconnect();
             mutation.disconnect();
             viewport.removeEventListener('scroll', scroll);
             viewport.removeEventListener('wheel', interact);
-            viewport.removeEventListener('pointerdown', interact);
+            viewport.removeEventListener('pointerdown', pointerdown);
             viewport.removeEventListener('keydown', keydown);
         };
     }, [input.scope, input.enabled, input.anchorId, input.viewport, input.content, itemAttribute, selector]);

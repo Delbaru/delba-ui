@@ -126,6 +126,16 @@ export function Flex({
   const setRefs = useMergedRefs(setMotionNode, contentMotion.ref, surfaceRef);
 
   const selectable = ui?.selectable;
+  const form = ui?.form;
+  const nestedEnter = form && (as !== 'form' || isLink) ? (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.defaultPrevented || event.key !== 'Enter' || event.nativeEvent.isComposing || event.repeat ||
+        event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target as HTMLElement;
+    if (!target.matches?.('input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"])') ||
+        target.closest('[data-ui-form-scope]') !== event.currentTarget || !target.closest('form')) return;
+    event.preventDefault(); event.stopPropagation();
+    if (!form.disabled && form.ready) void form.submit();
+  } : undefined;
   let scopedChildren = contentMotion.children;
   if (ui?.form) scopedChildren = <FormContext form={ui.form}>{scopedChildren}</FormContext>;
   if (ui?.collection) scopedChildren = <CollectionContext collection={ui.collection}>{scopedChildren}</CollectionContext>;
@@ -186,7 +196,9 @@ export function Flex({
         onBlur: composeEventHandlers(onBlur, popupOptions ? popup.onBlur : undefined),
       })}
       onContextMenu={composeEventHandlers(onContextMenu, popupOptions ? popup.onContextMenu : undefined, { cancelable: true })}
-      onKeyDown={composeEventHandlers(composeEventHandlers(onKeyDown, popupOptions ? popup.onKeyDown : undefined, { cancelable: true }), selectable?.onKeyDown, { cancelable: true })}
+      onKeyDown={composeEventHandlers(
+        composeEventHandlers(composeEventHandlers(onKeyDown, popupOptions ? popup.onKeyDown : undefined, { cancelable: true }), selectable?.onKeyDown, { cancelable: true }),
+        nestedEnter, { cancelable: true })}
       onAnimationEnd={contentMotion.onAnimationEnd}
       onSubmit={ui?.form && as === 'form' && !isLink ? (event: React.FormEvent<HTMLElement>) => {
         if (event.target !== event.currentTarget) return;

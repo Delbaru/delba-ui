@@ -66,10 +66,13 @@ export function usePopup(options?: PopupOptions) {
         return Boolean(view && target instanceof view.Node &&
             (anchor.current?.contains(target) || surface.current?.contains(target)));
     }
-    function leave(target: EventTarget | null) {
+    function leave(target: EventTarget | null, preserveFocus = false) {
         if (!hover || inRegion(target)) return;
         clearTimer();
-        timeout.current = setTimeout(close, 150);
+        timeout.current = setTimeout(() => {
+            if (preserveFocus && inRegion(anchor.current?.ownerDocument.activeElement ?? null)) return;
+            close();
+        }, 150);
     }
     function onMouseEnter(event: MouseEvent<HTMLElement>) {
         if (!inside(event) || nestedControl(event)) return;
@@ -79,7 +82,7 @@ export function usePopup(options?: PopupOptions) {
     function onMouseLeave(event: MouseEvent<HTMLElement>) {
         if (!inside(event)) return;
         if (tooltipOptions) tooltip.anchorHandlers.onMouseLeave();
-        leave(event.relatedTarget);
+        leave(event.relatedTarget, true);
     }
     function onFocus(event: FocusEvent<HTMLElement>) {
         if (event.target !== event.currentTarget) return;
@@ -141,7 +144,7 @@ export function usePopup(options?: PopupOptions) {
             returnFocus={hover && !keyboard ? false : anchor} closeOn={{ escape: true, blur: true }}
             panel={{ ...options.panel, portal: true, side: options.position === 'bottom-end' ? 'end' : options.position === 'bottom' ? 'center' : options.panel?.side ?? 'start',
                 onMouseEnter: event => { options.panel?.onMouseEnter?.(event); if (hover) clearTimer(); },
-                onMouseLeave: event => { options.panel?.onMouseLeave?.(event); leave(event.relatedTarget); },
+                onMouseLeave: event => { options.panel?.onMouseLeave?.(event); leave(event.relatedTarget, true); },
                 onFocus: event => { options.panel?.onFocus?.(event); if (hover) clearTimer(); },
                 onBlur: event => { options.panel?.onBlur?.(event); leave(event.relatedTarget); },
             }}>

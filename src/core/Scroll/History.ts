@@ -7,3 +7,8 @@ export function historyScrollTop(
     const max = Math.max(0, scrollHeight - clientHeight);
     return Math.min(max, Math.max(0, scrollTop + currentOffset - previousOffset));
 }
+
+/** Center an anchor in its own viewport, never an outer page or dialog. */
+export function centeredScrollTop(scrollTop: number, offset: number, itemHeight: number, scrollHeight: number, clientHeight: number): number {
+    return historyScrollTop(scrollTop, (clientHeight - itemHeight) / 2, offset, scrollHeight, clientHeight);
+}

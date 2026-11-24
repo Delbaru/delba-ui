@@ -41,14 +41,14 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
     };
   } else if (bound) {
     options = {
-    ...props,
-    value: field.value as string,
-    disabled: props.disabled || field.disabled,
-    error: props.error ?? field.error,
-    onValueChange: (value, details) => {
-      field.change(value);
-      props.onValueChange?.(value, details);
-    },
+      ...props,
+      value: field.value as string,
+      disabled: props.disabled || field.disabled,
+      error: props.error ?? field.error,
+      onValueChange: (value, details) => {
+        field.change(value);
+        props.onValueChange?.(value, details);
+      },
     };
   }
   const input = useInput(options);
