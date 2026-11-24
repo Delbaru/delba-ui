@@ -22,10 +22,13 @@ export function formatStep(name, { ok, output = '', warnings = '', diagnostics =
 /** Оформление общее; правила возвращают данные и ничего не печатают. */
 export function formatCheck(name, diagnostics, { cwd = process.cwd(), color = false } = {}) {
   if (!diagnostics.length) return `${paint(32, '✓', color)} ${name} — все проверки прошли`;
-  const lines = [`${paint(31, '✗', color)} ${name} — ошибок: ${diagnostics.length}`];
+  const warnings = diagnostics.filter(item => item.severity === 'warning').length;
+  const errors = diagnostics.length - warnings;
+  const summary = [errors ? `ошибок: ${errors}` : '', warnings ? `предупреждений: ${warnings}` : ''].filter(Boolean).join(', ');
+  const lines = [`${paint(errors ? 31 : 33, errors ? '✗' : '⚠', color)} ${name} — ${summary}`];
   for (const item of diagnostics) {
     lines.push('', `  ${path.relative(cwd, item.file).split(path.sep).join('/')}:${item.line}:${item.column}`);
-    lines.push(`  ${item.message}`, `  ${item.fix}`);
+    lines.push(`  ${item.severity === 'warning' ? '⚠ ' : ''}${item.message}`, `  ${item.fix}`);
     if (item.docs) lines.push(`  ${paint(2, `Правило: ${pathToFileURL(item.docs).href}`, color)}`);
   }
   return lines.join('\n');

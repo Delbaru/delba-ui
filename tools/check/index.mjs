@@ -17,7 +17,7 @@ const astStep = (name, ...args) => ({
     name,
     run: () => {
         const diagnostics = check(...args);
-        return { ok: diagnostics.length === 0, diagnostics };
+        return { ok: !diagnostics.some(item => item.severity !== 'warning'), diagnostics };
     },
 });
 
