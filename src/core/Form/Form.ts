@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { isAbortActionError } from '../../hooks/action-invocation.model';
 import { useActionInvocation } from '../../hooks/useActionInvocation';
 import {
   acknowledgeDraft, createDraft, receiveDraft, resetDraft, sameValue, setField, snapshotValue,
@@ -149,6 +150,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     // Switching rooms does not release the active ticket. The old request may still commit.
     identity: scope,
     admissionKey: storageKey,
+    onCancel: options.onCancel,
     action: async () => {
       if (!isCurrent() || disabled || !entry.ready) return;
       if (storageKey) readStored(false);
@@ -179,7 +181,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
         }
       } catch (error) {
         if (!isOwner()) throw new DOMException('Form scope changed', 'AbortError');
-        entry.error = error;
+        if (!isAbortActionError(error)) entry.error = error;
         if (!isCurrent()) throw new DOMException('Form scope changed', 'AbortError');
         throw error;
       } finally {
@@ -241,6 +243,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     clear: () => replace(resetDraft(entry.draft, initial)),
     receive: next => replace(receiveDraft(entry.draft, next, options.equal)),
     submit,
-    action: { preset: 'default', controller: { pending: invocation.pending, invoke: submit }, disabled: disabled || !entry.ready || !valid },
+    cancel: invocation.cancel,
+    action: { preset: 'default', controller: { pending: invocation.pending, invoke: submit, cancel: invocation.cancel }, disabled: disabled || !entry.ready || !valid },
   };
 }

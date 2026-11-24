@@ -25,6 +25,8 @@ export type FormOptions<T extends object, R> = {
   disabled?: boolean;
   validate?: (values: T) => FormErrors<T>;
   submit: (values: T) => R | Promise<R>;
+  /** Consumer-owned abort request; not a server rollback. */
+  onCancel?: () => void;
   saved?: (result: R, submitted: T) => T;
   /** Submitted array items removed by identity, even after later additions. */
   consume?: readonly FieldName<T>[];
@@ -46,7 +48,7 @@ export interface FormScope {
 }
 
 export type ActionOptions =
-  | { preset: 'default'; run: () => unknown; controller?: never; disabled?: boolean }
+  | { preset: 'default'; run: () => unknown; controller?: never; disabled?: boolean; identity?: string; admissionKey?: string; onSuccess?: () => void; onCancel?: () => void }
   | { preset: 'default'; controller: ActionInvocationController<[]>; run?: never; disabled?: boolean };
 
 export interface FormController<T extends object> extends FormScope {
@@ -64,5 +66,6 @@ export interface FormController<T extends object> extends FormScope {
   reset(): void;
   clear(): void;
   receive(initial: T): void;
+  cancel?: () => boolean;
   action: ActionOptions;
 }

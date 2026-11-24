@@ -77,6 +77,10 @@ export function Button({
     action: action?.controller ? undefined : action?.run ?? onClick,
     onSettled: onActionSettled,
     actionName,
+    identity: action?.run ? action.identity : undefined,
+    admissionKey: action?.run ? action.admissionKey : undefined,
+    onSuccess: action?.run ? action.onSuccess : undefined,
+    onCancel: action?.run ? action.onCancel : undefined,
   });
   const pending = action?.controller?.pending ?? local.pending;
   const effectiveDisabled = disabled || pending || !!action?.disabled;
@@ -91,7 +95,7 @@ export function Button({
   const setIdleNode = useAnimationVisibility(idle['data-button-idle'] === 'glow' && !effectiveDisabled);
   const tooltipId = useId();
   const popupTooltip = ui?.popup?.preset === 'tooltip' ? ui.popup : undefined;
-  const menuOptions = !effectiveDisabled && ui?.popup && ui.popup.preset !== 'tooltip' ? ui.popup : undefined;
+  const menuOptions = collapse?.open !== false && !effectiveDisabled && ui?.popup && ui.popup.preset !== 'tooltip' ? ui.popup : undefined;
   const popup = usePopup(menuOptions);
   const resolvedTooltip = popupTooltip ? { label: popupTooltip.text, direction: popupTooltip.position ?? 'top' } : tooltip;
   const isConfig = Boolean(resolvedTooltip && typeof resolvedTooltip === 'object' && !isValidElement(resolvedTooltip) && 'label' in resolvedTooltip);

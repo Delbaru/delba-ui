@@ -20,6 +20,7 @@ interface ActionInvocationServices {
   scopeKey?: string | number;
   alive: { current: boolean };
   currentScope: { current: string | number | undefined };
+  epoch: { current: number };
 }
 
 const InvocationContext = createContext<ActionInvocationServices | null>(null);
@@ -40,9 +41,11 @@ export function ActionInvocationProvider({
   const failureRef = useRef(onFailure);
   const cancelledRef = useRef(isCancelled);
   const currentScope = useRef(scopeKey);
+  const epoch = useRef(0);
   useLayoutEffect(() => {
     failureRef.current = onFailure;
     cancelledRef.current = isCancelled;
+    if (currentScope.current !== scopeKey) epoch.current++;
     currentScope.current = scopeKey;
   }, [onFailure, isCancelled, scopeKey]);
   useLayoutEffect(() => {
@@ -50,7 +53,7 @@ export function ActionInvocationProvider({
     return () => { alive.current = false; };
   }, []);
   return (
-    <InvocationContext.Provider value={{failureRef, cancelledRef, scopeKey, alive, currentScope}}>
+    <InvocationContext.Provider value={{failureRef, cancelledRef, scopeKey, alive, currentScope, epoch}}>
       {children}
     </InvocationContext.Provider>
   );
@@ -61,6 +64,9 @@ export interface ActionInvocationOptions<A extends readonly unknown[]> {
   action?: ActionFunction<A>;
   onSettled?: (result: ActionInvocationResult) => void;
   actionName?: string;
+  onSuccess?: () => void;
+  /** Requests cancellation; the admission remains held until settlement. */
+  onCancel?: () => void;
   /** Optional local identity (form/record) in addition to the provider scope. */
   identity?: string;
   /** Explicitly shared operation identity; remains held through unmount until settlement. */
@@ -68,6 +74,7 @@ export interface ActionInvocationOptions<A extends readonly unknown[]> {
 }
 export interface ActionInvocationController<A extends readonly unknown[]> {
   pending: boolean;
+  cancel?: () => boolean;
   /** Returns undefined for no action/reentry, otherwise a handled settlement. */
   invoke: (...args: A) => Promise<ActionInvocationResult> | undefined;
 }
@@ -79,10 +86,12 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
 
 /** One hook instance can be invoked from both keyboard and pointer triggers. */
 export function useActionInvocation<A extends readonly unknown[] = []>({
-  action, onSettled, actionName, identity, admissionKey,
+  action, onSettled, actionName, identity, admissionKey, onSuccess, onCancel,
 }: ActionInvocationOptions<A>): ActionInvocationController<A> {
   const services = useContext(InvocationContext);
   const onSettledRef = useRef(onSettled);
+  const committed = useRef({ action, onSuccess, onCancel, actionName, services });
+  const cancellation = useRef<(() => boolean) | null>(null);
   const mounted = useRef(false);
   const currentScope = useRef(services?.scopeKey);
   const currentIdentity = useRef(identity);
@@ -104,17 +113,20 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
 
   useLayoutEffect(() => {
     onSettledRef.current = onSettled;
+    committed.current = { action, onSuccess, onCancel, actionName, services };
     if (currentScope.current === services?.scopeKey && currentIdentity.current === identity) return;
     currentScope.current = services?.scopeKey;
     currentIdentity.current = identity;
     // Only a committed identity change releases local ownership, not StrictMode effect replay.
     generation.current++;
     activeTicket.current = null;
+    cancellation.current = null;
     setPending(false);
-  }, [services?.scopeKey, identity, onSettled]);
+  }, [services, identity, onSettled, action, onSuccess, onCancel, actionName]);
 
   const invoke = (...args: A): Promise<ActionInvocationResult> | undefined => {
-    if (!mounted.current || !action || activeTicket.current !== null ||
+    const invocation = committed.current;
+    if (!mounted.current || !invocation.action || activeTicket.current !== null ||
         currentScope.current !== services?.scopeKey || currentIdentity.current !== identity) return undefined;
     if (services && (!services.alive.current || services.currentScope.current !== services.scopeKey)) return undefined;
     const release = sharedKey === undefined ? undefined : admission.acquire(sharedKey);
@@ -126,19 +138,27 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     const startedScope = currentScope.current;
     const startedIdentity = currentIdentity.current;
     const startedGeneration = generation.current;
+    const startedEpoch = invocation.services?.epoch.current;
+    const currentSession = () => !invocation.services || (invocation.services.alive.current && invocation.services.epoch.current === startedEpoch && invocation.services.currentScope.current === startedScope);
+    cancellation.current = invocation.onCancel ? () => {
+      if (activeTicket.current !== ticket || !currentSession()) return false;
+      cancellation.current = null;
+      try { invocation.onCancel?.(); return true; }
+      catch (error) { console.error('UI action cancellation failed', error); return false; }
+    } : null;
     const report = (error: unknown) => {
       if (startedGeneration !== generation.current || startedIdentity !== currentIdentity.current) return;
       if (!services) {
         console.error('Unhandled UI action failure', error);
         return;
       }
-      if (!services.alive.current || services.currentScope.current !== startedScope) return;
+      if (!currentSession()) return;
       const handler = services.failureRef.current;
       if (!handler) {
         console.error('Unhandled UI action failure', error);
         return;
       }
-      try { handler(error, { actionName }); }
+      try { handler(error, { actionName: invocation.actionName }); }
       catch (reportError) { console.error('UI action error reporter failed', reportError); }
     };
     const classify = (error: unknown): ActionInvocationResult => {
@@ -153,12 +173,17 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     const settle = (result: ActionInvocationResult): ActionInvocationResult => {
       // Provider delivery intentionally survives child unmount, but NOT a session change.
       if (result.status === 'failed') report(result.error);
-      if (mounted.current && activeTicket.current === ticket && currentScope.current === startedScope && currentIdentity.current === startedIdentity) {
+      if (mounted.current && activeTicket.current === ticket && startedGeneration === generation.current && currentSession() && currentScope.current === startedScope && currentIdentity.current === startedIdentity) {
+        if (result.status === 'success') {
+          try { invocation.onSuccess?.(); }
+          catch (error) { console.error('UI action success callback failed', error); }
+        }
         try { onSettledRef.current?.(result); }
         catch (settlementError) { console.error('UI action settlement callback failed', settlementError); }
       }
       if (activeTicket.current === ticket) {
         activeTicket.current = null;
+        cancellation.current = null;
         if (mounted.current) setPending(false);
       }
       release?.();
@@ -167,7 +192,7 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
 
     let result: unknown;
     try {
-      result = action(...args);
+      result = invocation.action(...args);
       if (!isThenable(result)) return Promise.resolve(settle({ status: 'success' }));
     } catch (error) {
       return Promise.resolve(settle(classify(error)));
@@ -180,5 +205,5 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     );
   };
 
-  return { pending: pending || sharedPending, invoke };
+  return { pending: pending || sharedPending, invoke, cancel: () => cancellation.current?.() ?? false };
 }
