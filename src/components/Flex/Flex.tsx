@@ -25,6 +25,7 @@ import { resolveContentAnimate } from '../../hooks/contentMotion';
 import { useContentMotion } from '../../hooks/useContentMotion';
 import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
 import { InteractionScope } from '../../core/InteractionScope';
+import { FormContext } from '../../core/Form';
 
 import type { FlexProps } from './Flex.types';
 export type { FlexProps } from './Flex.types';
@@ -35,6 +36,8 @@ export function Flex({
   ref,
   as = 'div',
   children,
+  ui,
+  onSubmit,
   className = '',
   style,
   gap,
@@ -150,8 +153,14 @@ export function Flex({
         onBlur,
       })}
       onAnimationEnd={contentMotion.onAnimationEnd}
+      onSubmit={ui?.form && as === 'form' && !isLink ? (event: React.FormEvent<HTMLElement>) => {
+        onSubmit?.(event);
+        if (event.defaultPrevented) return;
+        event.preventDefault();
+        if (!ui.form?.disabled && ui.form?.ready) void ui.form.submit();
+      } : onSubmit}
     >
-      {contentMotion.children}
+      {ui?.form ? <FormContext form={ui.form}>{contentMotion.children}</FormContext> : contentMotion.children}
     </Comp>
   );
 

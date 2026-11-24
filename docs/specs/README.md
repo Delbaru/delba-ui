@@ -47,3 +47,5 @@
 Справочник описывает текущие API и способы разработки; спецификация фиксирует
 ожидаемый результат. Очередь предложений остаётся в [refactoring](../refactoring.md),
 подтверждённые причины ошибок — в [lessons](../Library.md). Общий вход — [Library](../Library.md).
+
+- [Form / Action — pilot](ui/form-action.md)

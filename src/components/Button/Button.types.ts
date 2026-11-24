@@ -8,6 +8,7 @@ import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 import type { ButtonHoverAnimate } from './hover/buttonHover';
 import type { ButtonIdleAnimate } from './idle/buttonIdle';
+import type { ActionOptions } from '../../core/Form';
 import type { ActionInvocationResult } from '../../hooks/useActionInvocation';
 
 /** Only an explicit object enables the new tooltip API. */
@@ -39,6 +40,8 @@ export interface ButtonProps
   /** Появление, hover/idle или их совместная настройка. */
   animate?: ButtonAnimate;
   children?: React.ReactNode;
+  /** Use the existing action lifecycle, or an externally owned controller (e.g. a form). */
+  ui?: { action?: ActionOptions };
   style?: CSSProperties;
   /** Сворачивает кнопку целиком; для ширины укажите `axis: 'column'`. */
   collapse?: CollapseOptions;

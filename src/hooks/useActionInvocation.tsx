@@ -56,6 +56,8 @@ export interface ActionInvocationOptions<A extends readonly unknown[]> {
   action?: ActionFunction<A>;
   onSettled?: (result: ActionInvocationResult) => void;
   actionName?: string;
+  /** Optional local identity (form/record) in addition to the provider scope. */
+  identity?: string;
 }
 export interface ActionInvocationController<A extends readonly unknown[]> {
   pending: boolean;
@@ -70,7 +72,7 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
 
 /** One hook instance can be invoked from both keyboard and pointer triggers. */
 export function useActionInvocation<A extends readonly unknown[] = []>({
-  action, onSettled, actionName,
+  action, onSettled, actionName, identity,
 }: ActionInvocationOptions<A>): ActionInvocationController<A> {
   const services = useContext(InvocationContext);
   const onSettledRef = useRef(onSettled);
@@ -78,6 +80,8 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
   const mounted = useRef(false);
   const currentScope = useRef(services?.scopeKey);
   currentScope.current = services?.scopeKey;
+  const currentIdentity = useRef(identity);
+  currentIdentity.current = identity;
   const sequence = useRef(0);
   const activeTicket = useRef<number | null>(null);
   const [pending, setPending] = useState(false);
@@ -92,7 +96,7 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     sequence.current += 1;
     activeTicket.current = null;
     setPending(false);
-  }, [services?.scopeKey]);
+  }, [services?.scopeKey, identity]);
 
   const invoke = (...args: A): Promise<ActionInvocationResult> | undefined => {
     if (!action || activeTicket.current !== null) return undefined;
@@ -101,7 +105,9 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     const ticket = ++sequence.current;
     activeTicket.current = ticket;
     const startedScope = currentScope.current;
+    const startedIdentity = currentIdentity.current;
     const report = (error: unknown) => {
+      if (startedIdentity !== currentIdentity.current) return;
       if (!services) {
         console.error('Unhandled UI action failure', error);
         return;
@@ -127,7 +133,7 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     const settle = (result: ActionInvocationResult): ActionInvocationResult => {
       // Provider delivery intentionally survives child unmount, but NOT a session change.
       if (result.status === 'failed') report(result.error);
-      if (mounted.current && activeTicket.current === ticket && currentScope.current === startedScope) {
+      if (mounted.current && activeTicket.current === ticket && currentScope.current === startedScope && currentIdentity.current === startedIdentity) {
         try { onSettledRef.current?.(result); }
         catch (settlementError) { console.error('UI action settlement callback failed', settlementError); }
       }

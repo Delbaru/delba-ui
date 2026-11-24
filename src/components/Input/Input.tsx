@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import type { WithRef } from '../../core';
+import { useFormField } from '../../core/Form';
 import { FieldFrame } from '../Field';
 import { InputControl } from './InputControl/InputControl';
 import { InputActions } from './InputActions/InputActions';
@@ -12,7 +13,18 @@ import type { InputProps } from './Input.types';
 export type { InputProps } from './Input.types';
 
 export function Input(props: WithRef<InputProps, HTMLInputElement>) {
-  const input = useInput(props);
+  const field = useFormField<string>(props.name);
+  const bound = field && props.value === undefined && typeof field.value === 'string';
+  const input = useInput(bound ? {
+    ...props,
+    value: field.value,
+    disabled: props.disabled || field.disabled,
+    error: props.error ?? field.error,
+    onValueChange: (value, details) => {
+      field.change(value);
+      props.onValueChange?.(value, details);
+    },
+  } : props);
 
   return (
     <FieldFrame layout={input.layout} label={input.label} feedback={input.feedback}>

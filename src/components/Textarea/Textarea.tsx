@@ -1,5 +1,6 @@
 'use client';
 import type { WithRef } from '../../core';
+import { useFormField } from '../../core/Form';
 import { Flex } from '../Flex';
 import { Text } from '../Text';
 import { TextareaControl } from './TextareaControl/TextareaControl';
@@ -7,7 +8,18 @@ import { useTextarea } from './Textarea.model';
 import type { TextareaProps } from './Textarea.types';
 export type { TextareaProps } from './Textarea.types';
 export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
-  const textarea = useTextarea(props);
+  const field = useFormField<string>(props.name);
+  const bound = field && props.value === undefined && typeof field.value === 'string';
+  const textarea = useTextarea(bound ? {
+    ...props,
+    value: field.value,
+    disabled: props.disabled || field.disabled,
+    error: props.error ?? field.error,
+    onValueChange: (value, details) => {
+      field.change(value);
+      props.onValueChange?.(value, details);
+    },
+  } : props);
   return (
     <Flex {...textarea.layout} dir={['column', 'column', 'column']} gap={[8, 4, 8]}>
       {textarea.label && (

@@ -54,6 +54,7 @@ export function Button({
   onMouseDown,
   onMouseUp,
   onClick,
+  ui,
   onFocus,
   onBlur,
   linkState,
@@ -68,7 +69,13 @@ export function Button({
 }: WithRef<ButtonProps, HTMLElement>) {
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, box);
-  const { pending, invoke } = useActionInvocation({ action: onClick, onSettled: onActionSettled, actionName });
+  const action = ui?.action;
+  const local = useActionInvocation({
+    action: action?.controller ? undefined : action?.run ?? onClick,
+    onSettled: onActionSettled,
+    actionName,
+  });
+  const pending = action?.controller?.pending ?? local.pending;
   const effectiveDisabled = disabled || pending;
   const isLink = Boolean(href);
   const useNextLink = isLink && shouldUseNextLink(href, target, download);
@@ -116,7 +123,13 @@ export function Button({
     }
 
     // Invokes the user callback once. Never prevents native submit/link navigation.
-    invoke(event as React.MouseEvent<HTMLButtonElement>);
+    if (action?.controller) {
+      event.preventDefault();
+      void action.controller.invoke();
+    } else {
+      if (action?.run) event.preventDefault();
+      void local.invoke(event as React.MouseEvent<HTMLButtonElement>);
+    }
   };
 
   const interactions = composeInteractionHandlers(

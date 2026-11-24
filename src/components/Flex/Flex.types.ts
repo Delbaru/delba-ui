@@ -1,5 +1,6 @@
 import type React from 'react';
 import type { CSSProperties } from 'react';
+import type { FormScope } from '../../core/Form';
 import type {
   BoxLayoutProps,
   ComponentStateValue,
@@ -43,6 +44,8 @@ export interface FlexProps
     RevealScopeProps,
     LinkPrefetchProps {
   children?: React.ReactNode;
+  /** Scope named descendants without adding a DOM node. */
+  ui?: { form?: FormScope };
   style?: CSSProperties;
   state?: ComponentStateValue;
   /** Добавляет state="interacting" при указателе, фокусе или открытом дочернем контроле.
@@ -56,6 +59,7 @@ export interface FlexProps
   /** Тег узла без `href`: `header`, `nav`, `footer`… */
   as?:
     | 'div'
+    | 'form'
     | 'header'
     | 'nav'
     | 'footer'
