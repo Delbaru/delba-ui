@@ -154,7 +154,7 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     const startedEpoch = invocation.services?.epoch.current;
     const currentSession = () => !invocation.services || (invocation.services.alive.current && invocation.services.epoch.current === startedEpoch && invocation.services.currentScope.current === startedScope);
     cancellation.current = invocation.onCancel ? () => {
-      if (activeTicket.current !== ticket || !currentSession()) return false;
+      if (activeTicket.current !== ticket || startedDelivery !== deliveryGeneration.current || !currentSession()) return false;
       cancellation.current = null;
       try { invocation.onCancel?.(); return true; }
       catch (error) { console.error('UI action cancellation failed', error); return false; }
@@ -177,7 +177,8 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     };
     const classify = (error: unknown): ActionInvocationResult => {
       let cancelled = isAbortActionError(error);
-      const predicate = services?.cancelledRef.current;
+      const predicate = currentSession() && startedGeneration === generation.current && startedDelivery === deliveryGeneration.current
+        ? services?.cancelledRef.current : undefined;
       if (predicate) {
         try { cancelled = predicate(error) || cancelled; }
         catch (predicateError) { console.error('UI action cancellation predicate failed', predicateError); }
