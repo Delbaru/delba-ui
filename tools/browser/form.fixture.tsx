@@ -208,6 +208,7 @@ export function FormFixture() {
       <MessageForm />
       <NamedFieldsFixture />
       <EditForm />
+      <ActionKeyFixture />
       <StrictMode><SharedForms /><SubscriptionForm /></StrictMode>
     </ActionInvocationProvider>
   );
@@ -246,5 +247,28 @@ function NamedFieldsFixture() {
       <Button onClick={() => retainedUpdate.current?.()}>Invoke captured named update</Button>
       <output data-testid="named-updates">{updates}</output>
     </Flex>
+  );
+}
+
+
+function ActionKeyFixture() {
+  const [key, setKey] = useState('a');
+  const [settled, setSettled] = useState(0);
+  const [success, setSuccess] = useState(0);
+  const finish = useRef<(() => void) | null>(null);
+  const action = ui.action.use({
+    identity: 'action-key-fixture', admissionKey: key,
+    action: () => new Promise<void>(resolve => { finish.current = resolve; }),
+    onSettled: () => setSettled(value => value + 1),
+    onSuccess: () => setSuccess(value => value + 1),
+  });
+  return (
+    <section aria-label="Action key fixture">
+      <Button ui={{ action: { preset: 'default', controller: action } }}>Start keyed action</Button>
+      <Button onClick={() => setKey(value => value === 'a' ? 'b' : 'a')}>Switch action key</Button>
+      <Button onClick={() => finish.current?.()}>Resolve keyed action</Button>
+      <output data-testid="keyed-action-settled">{settled}</output>
+      <output data-testid="keyed-action-success">{success}</output>
+    </section>
   );
 }

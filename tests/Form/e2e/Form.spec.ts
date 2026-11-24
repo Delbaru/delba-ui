@@ -175,3 +175,22 @@ test('captured field updates cannot run after the same form becomes disabled', a
   await expect(page.getByTestId('named-updates')).toHaveText('1');
   await expect(page.getByRole('checkbox', { name: 'Named checkbox' })).toBeChecked();
 });
+
+
+test('action key changes suppress local stale settlement without releasing admission early', async ({ page }) => {
+  await page.goto('/');
+  const start = page.getByRole('button', { name: 'Start keyed action' });
+  await start.click();
+  await page.getByRole('button', { name: 'Switch action key' }).click();
+  await expect(start).toBeDisabled();
+  await page.getByRole('button', { name: 'Switch action key' }).click();
+  await expect(start).toBeDisabled();
+  await page.getByRole('button', { name: 'Resolve keyed action' }).click();
+  await expect(start).toBeEnabled();
+  await expect(page.getByTestId('keyed-action-settled')).toHaveText('0');
+  await expect(page.getByTestId('keyed-action-success')).toHaveText('0');
+  await start.click();
+  await page.getByRole('button', { name: 'Resolve keyed action' }).click();
+  await expect(page.getByTestId('keyed-action-settled')).toHaveText('1');
+  await expect(page.getByTestId('keyed-action-success')).toHaveText('1');
+});

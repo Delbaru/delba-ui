@@ -94,8 +94,11 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
   const cancellation = useRef<(() => boolean) | null>(null);
   const mounted = useRef(false);
   const currentScope = useRef(services?.scopeKey);
+  const currentProvider = useRef(services?.alive);
   const currentIdentity = useRef(identity);
+  const currentAdmissionKey = useRef(admissionKey);
   const generation = useRef(0);
+  const deliveryGeneration = useRef(0);
   const sequence = useRef(0);
   const activeTicket = useRef<number | null>(null);
   const [pending, setPending] = useState(false);
@@ -114,8 +117,16 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
   useLayoutEffect(() => {
     onSettledRef.current = onSettled;
     committed.current = { action, onSuccess, onCancel, actionName, services, admissionKey };
-    if (currentScope.current === services?.scopeKey && currentIdentity.current === identity) return;
+    if (currentAdmissionKey.current !== admissionKey) {
+      currentAdmissionKey.current = admissionKey;
+      // Preserve the ticket through a form's room change, but never deliver its
+      // local UI callbacks into another resource (even after changing back).
+      deliveryGeneration.current++;
+    }
+    if (currentScope.current === services?.scopeKey && currentIdentity.current === identity &&
+        currentProvider.current === services?.alive) return;
     currentScope.current = services?.scopeKey;
+    currentProvider.current = services?.alive;
     currentIdentity.current = identity;
     // Only a committed identity change releases local ownership, not StrictMode effect replay.
     generation.current++;
@@ -127,7 +138,8 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
   const invoke = (...args: A): Promise<ActionInvocationResult> | undefined => {
     const invocation = committed.current;
     if (!mounted.current || !invocation.action || invocation.admissionKey !== admissionKey || activeTicket.current !== null ||
-        currentScope.current !== services?.scopeKey || currentIdentity.current !== identity) return undefined;
+        currentScope.current !== services?.scopeKey || currentIdentity.current !== identity ||
+        currentProvider.current !== services?.alive) return undefined;
     if (services && (!services.alive.current || services.currentScope.current !== services.scopeKey)) return undefined;
     const release = sharedKey === undefined ? undefined : admission.acquire(sharedKey);
     if (sharedKey !== undefined && !release) return undefined;
@@ -138,6 +150,7 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     const startedScope = currentScope.current;
     const startedIdentity = currentIdentity.current;
     const startedGeneration = generation.current;
+    const startedDelivery = deliveryGeneration.current;
     const startedEpoch = invocation.services?.epoch.current;
     const currentSession = () => !invocation.services || (invocation.services.alive.current && invocation.services.epoch.current === startedEpoch && invocation.services.currentScope.current === startedScope);
     cancellation.current = invocation.onCancel ? () => {
@@ -147,7 +160,8 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
       catch (error) { console.error('UI action cancellation failed', error); return false; }
     } : null;
     const report = (error: unknown) => {
-      if (startedGeneration !== generation.current || startedIdentity !== currentIdentity.current) return;
+      if (startedGeneration !== generation.current || startedIdentity !== currentIdentity.current ||
+          startedDelivery !== deliveryGeneration.current) return;
       if (!services) {
         console.error('Unhandled UI action failure', error);
         return;
@@ -173,7 +187,8 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     const settle = (result: ActionInvocationResult): ActionInvocationResult => {
       // Provider delivery intentionally survives child unmount, but NOT a session change.
       if (result.status === 'failed') report(result.error);
-      if (mounted.current && activeTicket.current === ticket && startedGeneration === generation.current && currentSession() && currentScope.current === startedScope && currentIdentity.current === startedIdentity) {
+      if (mounted.current && activeTicket.current === ticket && startedGeneration === generation.current &&
+          startedDelivery === deliveryGeneration.current && currentSession() && currentScope.current === startedScope && currentIdentity.current === startedIdentity) {
         if (result.status === 'success') {
           try { invocation.onSuccess?.(); }
           catch (error) { console.error('UI action success callback failed', error); }
@@ -205,5 +220,11 @@ export function useActionInvocation<A extends readonly unknown[] = []>({
     );
   };
 
-  return { pending: pending || sharedPending, invoke, cancel: () => cancellation.current?.() ?? false };
+  const cancel = () => {
+    if (!mounted.current || currentProvider.current !== services?.alive ||
+        currentScope.current !== services?.scopeKey || currentIdentity.current !== identity ||
+        currentAdmissionKey.current !== admissionKey) return false;
+    return cancellation.current?.() ?? false;
+  };
+  return { pending: pending || sharedPending, invoke, cancel };
 }
