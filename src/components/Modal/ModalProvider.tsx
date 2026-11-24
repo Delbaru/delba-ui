@@ -285,32 +285,37 @@ export function ModalProvider({ children }: { children: ReactNode }) {
       .map((item) => [item.id, { target: targets.get(item.id) ?? null, runtime: runtime(item) }]),
   );
 
-  const portalContent =
-    stack.length > 0 &&
-    (typeof document !== 'undefined'
-      ? createPortal(
-          <>
-            {stack.map((item) =>
-              item.declarative ? (
-                <DeclarationSlot key={item.id} id={item.id} attach={attach} />
-              ) : (
-                <ModalRuntimeContext.Provider key={item.id} value={runtime(item)}>
-                  {item.node}
-                </ModalRuntimeContext.Provider>
-              ),
-            )}
-          </>,
-          document.body,
-        )
-      : null);
 
   return (
     <ModalContext.Provider value={value}>
       <ModalDeclarationsContext.Provider value={declarations}>
         {children}
-        {portalContent}
+        <ModalStackPortal stack={stack} attach={attach} runtime={runtime} />
       </ModalDeclarationsContext.Provider>
     </ModalContext.Provider>
+  );
+}
+
+/** One portal owns stack slots; declarative content stays in its original context. */
+function ModalStackPortal({ stack, attach, runtime }: {
+  stack: StackItem[];
+  attach: (id: string, node: HTMLElement | null) => void;
+  runtime: (item: StackItem) => ModalRuntime;
+}) {
+  if (!stack.length || typeof document === 'undefined') return null;
+  return createPortal(
+    <>
+      {stack.map((item) =>
+        item.declarative ? (
+          <DeclarationSlot key={item.id} id={item.id} attach={attach} />
+        ) : (
+          <ModalRuntimeContext.Provider key={item.id} value={runtime(item)}>
+            {item.node}
+          </ModalRuntimeContext.Provider>
+        ),
+      )}
+    </>,
+    document.body,
   );
 }
 
