@@ -16,13 +16,26 @@ export function usePopup(options?: PopupOptions) {
     const anchor = useRef<HTMLElement | null>(null);
     const [point, setPoint] = useState<ContextPoint | null>(null);
     const [open, setOpen] = useState(false);
+    const [preset, setPreset] = useState(options?.preset);
+    if (preset !== options?.preset) {
+        setPreset(options?.preset);
+        setPoint(null);
+        setOpen(false);
+    }
     const close = () => { setPoint(null); setOpen(false); };
-    const content = typeof options?.children === 'function' ? options.children({ close }) : options?.children;
     const context = options?.preset === 'context';
     const menu = options?.preset === 'menu';
+    const visible = context ? Boolean(point) : menu && open;
+    let content: ReactNode = null;
+    if (visible) content = typeof options?.children === 'function' ? options.children({ close }) : options?.children;
+
+    function inside(event: MouseEvent<HTMLElement>) {
+        const view = event.currentTarget.ownerDocument.defaultView;
+        return Boolean(view && event.target instanceof view.Node && event.currentTarget.contains(event.target));
+    }
 
     function onContextMenu(event: MouseEvent<HTMLElement>) {
-        if (!context || event.defaultPrevented) return;
+        if (!context || event.defaultPrevented || !inside(event)) return;
         event.preventDefault();
         event.stopPropagation();
         setPoint({ x: event.clientX, y: event.clientY, opener: event.currentTarget });
@@ -32,14 +45,27 @@ export function usePopup(options?: PopupOptions) {
         if (context && (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) {
             const rect = event.currentTarget.getBoundingClientRect();
             event.preventDefault();
+            event.stopPropagation();
             setPoint({ x: rect.left + 8, y: rect.top + 8, opener: event.currentTarget });
-        } else if (menu && (event.key === 'Enter' || event.key === ' ')) {
+        } else if (menu && (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown')) {
             event.preventDefault();
-            setOpen(value => !value);
+            event.stopPropagation();
+            const expand = event.key === 'ArrowDown';
+            setOpen(value => expand || !value);
+        } else if (visible && event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            close();
         }
     }
     function onClick(event: MouseEvent<HTMLElement>) {
-        if (menu && !event.defaultPrevented) setOpen(value => !value);
+        if (!menu || event.defaultPrevented || !inside(event)) return;
+        const target = event.target as Element;
+        const control = target.closest?.('a,button,input,textarea,select,[role="button"],[contenteditable="true"]');
+        if (control && control !== event.currentTarget && event.currentTarget.contains(control)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setOpen(value => !value);
     }
 
     const popup = context && point ? (
@@ -53,5 +79,5 @@ export function usePopup(options?: PopupOptions) {
             {content}
         </Dropdown>
     ) : null;
-    return { anchor, popup, onContextMenu, onKeyDown, onClick, open: context ? Boolean(point) : open };
+    return { anchor, popup, onContextMenu, onKeyDown, onClick, open: visible };
 }

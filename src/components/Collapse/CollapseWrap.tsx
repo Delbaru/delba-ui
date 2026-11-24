@@ -109,8 +109,8 @@ export function CollapseWrap({
     const { mounted, visualOpen, settled, wrapRef, innerRef } = motion;
     const setWrapNode = useCallback((node: HTMLElement | null) => { wrapRef.current = node; }, [wrapRef]);
     const setInnerNode = useCallback((node: HTMLElement | null) => { innerRef.current = node; }, [innerRef]);
-    state.motion.current = motion;
     useLayoutEffect(() => {
+        state.motion.current = motion;
         state.complete(motion);
     });
     const untilFound = useSyncExternalStore(noSubscribe, supportsUntilFound, () => false);

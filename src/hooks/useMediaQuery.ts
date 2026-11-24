@@ -9,11 +9,11 @@ import { useEffect, useState } from 'react';
  * Строки запросов берутся из `MEDIA_QUERY`, а не пишутся на месте: ширина полосы должна
  * меняться в одном файле.
  */
-export function useMediaQuery(query: string): boolean {
+export function useMediaQuery(query: string, enabled = true): boolean {
   const [matches, setMatches] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    if (!enabled || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
 
     const list = window.matchMedia(query);
     const sync = () => setMatches(list.matches);
@@ -22,7 +22,7 @@ export function useMediaQuery(query: string): boolean {
     list.addEventListener('change', sync);
 
     return () => list.removeEventListener('change', sync);
-  }, [query]);
+  }, [query, enabled]);
 
-  return matches;
+  return enabled && matches;
 }

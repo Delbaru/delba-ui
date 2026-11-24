@@ -33,7 +33,9 @@ export function useCollapseControls(options: CollapseStateOptions) {
     const active = useRef(true);
     const motion = useRef<CollapseMotion<HTMLElement> | null>(null);
     const latest = useRef({ ...options, currentOpen: open, changeOpen: state.changeOpen });
-    latest.current = { ...options, currentOpen: open, changeOpen: state.changeOpen };
+    useLayoutEffect(() => {
+        latest.current = { ...options, currentOpen: open, changeOpen: state.changeOpen };
+    });
 
     function finish(status: TransitionResult['status']) {
         const request = pending.current;
@@ -65,7 +67,7 @@ export function useCollapseControls(options: CollapseStateOptions) {
     }
 
     const requestRef = useRef(request);
-    requestRef.current = request;
+    useLayoutEffect(() => { requestRef.current = request; });
     const controls = useMemo<CollapseControls>(
         () => ({
             get open() {

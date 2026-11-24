@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Dropdown } from '../../src/components/Dropdown';
 import { Select } from '../../src/components/Select';
+import { Flex } from '../../src/components/Flex';
+import { ui } from '../../src/ui';
 
 function SearchSelectFixture() {
   const [query, setQuery] = useState('');
@@ -64,6 +66,22 @@ function LongSearchSelectFixture() {
   </div>;
 }
 
+function PopupDoorFixture() {
+  const [enabled, setEnabled] = useState(true);
+  const collapse = ui.collapse.use({ defaultOpen: true });
+  return <section aria-label="Popup door fixture">
+    <button type="button" onClick={collapse.toggle}>Toggle popup surface</button>
+    <button type="button" onClick={() => setEnabled(v => !v)}>Toggle popup mechanism</button>
+    <Flex role="button" aria-label="Popup menu trigger" ui={{
+      collapse,
+      popup: enabled ? {
+        preset: 'menu', label: 'Popup door actions',
+        children: <button type="button" role="menuitem">Popup door action</button>,
+      } : undefined,
+    }}>Open menu</Flex>
+  </section>;
+}
+
 export function DropdownOpenFixture() {
   const anchor = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -72,6 +90,7 @@ export function DropdownOpenFixture() {
   const [point, setPoint] = useState<{ x: number; y: number; target: HTMLElement } | null>(null);
   if (location.hash === '#long-search') return <LongSearchSelectFixture />;
   return <section aria-label="Animated dropdown contracts" style={{ padding: 20 }}>
+    <PopupDoorFixture />
     <SearchSelectFixture />
     <button onClick={(event) => {
       const target = event.currentTarget;

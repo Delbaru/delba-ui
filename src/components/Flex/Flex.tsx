@@ -93,11 +93,14 @@ export function Flex({
   ...props
 }: WithRef<FlexProps, HTMLElement>) {
   const scroll = useScrollSurface(ui?.scroll);
-  const popup = usePopup(ui?.popup);
+  const collapseInput = ui?.collapse?.settings ?? collapse;
+  const collapsed = collapseInput === false ||
+    (typeof collapseInput === 'object' && collapseInput.open === false);
+  const popupOptions = collapsed ? undefined : ui?.popup;
+  const popup = usePopup(popupOptions);
   const asyncContent = useAsyncContent(ui?.async, children);
   const { box, rest } = splitBoxLayout(props);
   const layout = boxLayout(c, { ...scroll?.layout, ...box });
-  const collapseInput = ui?.collapse?.settings ?? collapse;
   const fade = scroll?.fade ?? scrollFade;
   const isLink = Boolean(href);
   const useNextLink = isLink && shouldUseNextLink(href, target, download);
@@ -157,10 +160,10 @@ export function Flex({
       {...stateProps(state, trackInteraction && active && 'interacting')}
       {...anchorProps}
       data-scroll-axis={scroll?.axis ?? (anchorProps as { 'data-scroll-axis'?: string })['data-scroll-axis']}
-      tabIndex={anchorProps.tabIndex ?? (selectable || ui?.popup ? 0 : undefined)}
+      tabIndex={anchorProps.tabIndex ?? (selectable || popupOptions ? 0 : undefined)}
       aria-busy={anchorProps['aria-busy'] ?? asyncContent.busy}
-      aria-haspopup={anchorProps['aria-haspopup'] ?? (ui?.popup ? 'menu' : undefined)}
-      aria-expanded={anchorProps['aria-expanded'] ?? (ui?.popup ? popup.open : undefined)}
+      aria-haspopup={anchorProps['aria-haspopup'] ?? (popupOptions ? 'menu' : undefined)}
+      aria-expanded={anchorProps['aria-expanded'] ?? (popupOptions ? popup.open : undefined)}
       aria-selected={anchorProps['aria-selected'] ?? selectable?.checked}
       {...stateLinkProps(linkState, {
         onMouseEnter: composeEventHandlers(
@@ -171,12 +174,12 @@ export function Flex({
         onMouseLeave: composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave),
         onMouseDown: composeEventHandlers(onMouseDown, selectable?.onMouseDown),
         onMouseUp,
-        onClick: composeEventHandlers(composeEventHandlers(onClick, selectable?.onClick), ui?.popup ? popup.onClick : undefined, { cancelable: true }),
+        onClick: composeEventHandlers(composeEventHandlers(onClick, selectable?.onClick), popupOptions ? popup.onClick : undefined, { cancelable: true }),
         onFocus: composeEventHandlers(onFocus, prepare.onIntent),
         onBlur,
       })}
-      onContextMenu={composeEventHandlers(onContextMenu, ui?.popup ? popup.onContextMenu : undefined, { cancelable: true })}
-      onKeyDown={composeEventHandlers(composeEventHandlers(onKeyDown, selectable?.onKeyDown), ui?.popup ? popup.onKeyDown : undefined, { cancelable: true })}
+      onContextMenu={composeEventHandlers(onContextMenu, popupOptions ? popup.onContextMenu : undefined, { cancelable: true })}
+      onKeyDown={composeEventHandlers(composeEventHandlers(onKeyDown, selectable?.onKeyDown), popupOptions ? popup.onKeyDown : undefined, { cancelable: true })}
       onAnimationEnd={contentMotion.onAnimationEnd}
       onSubmit={ui?.form && as === 'form' && !isLink ? (event: React.FormEvent<HTMLElement>) => {
         if (event.target !== event.currentTarget) return;
@@ -200,7 +203,7 @@ export function Flex({
     );
 
   if (collapseInput === undefined) {
-    return ui?.popup ? <>{scopedContent}{popup.popup}</> : scopedContent;
+    return popupOptions ? <>{scopedContent}{popup.popup}</> : scopedContent;
   }
 
   const collapseOptions: CollapseOptions =

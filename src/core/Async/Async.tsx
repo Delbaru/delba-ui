@@ -13,15 +13,19 @@ export interface AsyncOptions {
     timing?: { delay?: number; hide?: number };
 }
 
-export function useAsync<T>(from: AsyncSource<T>, timing?: AsyncOptions['timing']) {
+function useAsyncState<T>(from: AsyncSource<T>, timing: AsyncOptions['timing'], enabled: boolean) {
     const state = asyncSourceState(from);
-    const phase = useAsyncPresence(state.pending, timing);
+    const phase = useAsyncPresence(state.pending, timing, enabled);
     return { ...state, phase, error: from.error, retry: from.refetch };
+}
+
+export function useAsync<T>(from: AsyncSource<T>, timing?: AsyncOptions['timing']) {
+    return useAsyncState(from, timing, true);
 }
 
 /** Preserve the host element; only its children reflect the source state. */
 export function useAsyncContent(options: AsyncOptions | undefined, children: ReactNode) {
-    const state = useAsync(options?.from ?? { data: true }, options?.timing);
+    const state = useAsyncState(options?.from ?? { data: true }, options?.timing, Boolean(options));
     if (!options) return { children, busy: undefined };
     const failure = state.error ? (
         <span role="alert">{typeof options.error === 'function'

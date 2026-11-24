@@ -57,7 +57,7 @@ export function useCollapseMotion<T extends HTMLElement = HTMLElement>(options: 
   const handle = useRef<{ transition: Transition }>({ transition: Transition.done() });
   const latest = useRef(options);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     latest.current = options;
   });
 
