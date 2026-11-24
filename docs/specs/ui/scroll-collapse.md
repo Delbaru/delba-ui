@@ -6,7 +6,14 @@ RPX layout; explicit layout props win. Feed position is owned by
 `ui.scroll.feed.use({scope, enabled, anchorId, itemAttribute, viewport, content})`.
 This uses the migrated existing feed lifecycle (manual following, delayed DOM,
 content resize and anchor release); paging and read receipts remain outside UI.
-It does not yet implement prepend preservation across an independently loaded page.
+For an independently loaded page, capture immediately before prepending:
+`const restore = feed.captureHistoryAnchor()`. Call `restore?.()` once after the
+new DOM commits (e.g. in a layout effect). It returns false when a reader gesture,
+a newer capture, scope change, removed anchor, or unmount invalidates the capture.
+Following the end and explicit deep-link anchors take precedence. Stable unique
+item IDs are required. The correction uses measured relative geometry, so native
+scroll anchoring is not applied twice. Chat must wire this at its actual prepend
+commit; dynamic changes after restoration and browser behavior need integration QA.
 
 `ui.collapse.use({defaultOpen})` uses existing useCollapseState and CollapseWrap
 transition controls; `Flex ui={{collapse}}` supplies controlled options.

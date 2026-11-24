@@ -1,5 +1,6 @@
 'use client';
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { historyScrollTop } from './History';
 
 /** Follow content growth without moving a reader who explicitly left the end. */
 export function useFeedScroll(input: {
@@ -14,6 +15,8 @@ export function useFeedScroll(input: {
     const itemAttribute = input.itemAttribute;
     if (!/^data-[a-z0-9-]+$/.test(itemAttribute)) throw new Error('Invalid feed item attribute');
     const selector = `[${itemAttribute}]`;
+    const history = useRef<(() => (() => boolean) | null) | null>(null);
+    const captureHistoryAnchor = useCallback(() => history.current?.() ?? null, []);
     const following = useRef(true),
         anchored = useRef(false),
         [showBottom, setShowBottom] = useState(false);
@@ -34,18 +37,47 @@ export function useFeedScroll(input: {
         following.current = !away;
         setShowBottom(away);
     }, [input.viewport]);
-    useEffect(() => {
+    useLayoutEffect(() => {
         const viewport = input.viewport.current,
             content = input.content.current;
         following.current = !input.anchorId;
         setShowBottom(false);
         if (!input.enabled || !viewport || !content) return;
+        let active = true, gesture = 0, capture = 0;
         let initialized = false,
             frame = 0,
             manual = false;
         anchored.current = Boolean(input.anchorId);
         // This is the existing near-bottom affordance, not permission for a resize to scroll.
         const away = () => viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 100;
+        history.current = () => {
+            if (!initialized || following.current || anchored.current) return null;
+            const bounds = viewport.getBoundingClientRect();
+            const target = Array.from(content.querySelectorAll<HTMLElement>(selector)).find(node => {
+                const rect = node.getBoundingClientRect();
+                return rect.bottom > bounds.top && rect.top < bounds.bottom && node.hasAttribute(itemAttribute);
+            });
+            if (!target) return null;
+            const id = target.getAttribute(itemAttribute);
+            const offset = target.getBoundingClientRect().top - bounds.top;
+            const capturedGesture = gesture;
+            const captured = ++capture;
+            let used = false;
+            return () => {
+                if (used || !active || gesture !== capturedGesture || capture !== captured ||
+                    following.current || anchored.current || input.viewport.current !== viewport ||
+                    input.content.current !== content || !viewport.isConnected) return false;
+                used = true;
+                const current = Array.from(content.querySelectorAll<HTMLElement>(selector))
+                    .find(node => node.getAttribute(itemAttribute) === id);
+                if (!current) return false;
+                const currentOffset = current.getBoundingClientRect().top - viewport.getBoundingClientRect().top;
+                manual = false;
+                viewport.scrollTop = historyScrollTop(viewport.scrollTop, offset, currentOffset, viewport.scrollHeight, viewport.clientHeight);
+                setShowBottom(away());
+                return true;
+            };
+        };
         const reconcile = () => {
             frame = 0;
             if (!content.querySelector(selector)) return;
@@ -73,6 +105,7 @@ export function useFeedScroll(input: {
             setShowBottom(away());
         };
         const interact = () => {
+            gesture++;
             anchored.current = false;
             following.current = false;
             manual = true;
@@ -106,6 +139,8 @@ export function useFeedScroll(input: {
         mutation.observe(content, { childList: true, subtree: true, characterData: true });
         schedule();
         return () => {
+            active = false;
+            history.current = null;
             if (frame) cancelAnimationFrame(frame);
             resize.disconnect();
             mutation.disconnect();
@@ -115,5 +150,5 @@ export function useFeedScroll(input: {
             viewport.removeEventListener('keydown', keydown);
         };
     }, [input.scope, input.enabled, input.anchorId, input.viewport, input.content, itemAttribute, selector]);
-    return { showBottom, latest, releaseAnchor };
+    return { showBottom, latest, releaseAnchor, captureHistoryAnchor };
 }
