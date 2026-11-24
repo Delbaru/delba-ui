@@ -5,7 +5,9 @@ export type FormErrors<T extends object> = Partial<Record<FieldName<T>, string>>
 
 /** Optional consumer-owned persistence transport; it must be scoped and notify all readers. */
 export interface DraftStorage {
-  read(): { raw: string | null; persisted: boolean };
+  read(): { raw: string | null; persisted: boolean; revision?: number };
+  /** Optional owner-guarded compare-and-write after a confirmed message outlives its form. */
+  acknowledge?(expectedRevision: number, raw: string): boolean;
   write(raw: string): boolean;
   subscribe(listener: () => void): () => void;
 }

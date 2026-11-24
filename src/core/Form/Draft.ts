@@ -50,9 +50,9 @@ export function createDraft<T extends object>(initial: T): DraftSnapshot<T> {
 }
 
 export function setField<T extends object, K extends FieldName<T>>(
-  draft: DraftSnapshot<T>, name: K, value: T[K],
+  draft: DraftSnapshot<T>, name: K, value: T[K], changedExternally = false,
 ): DraftSnapshot<T> {
-  if (sameValue(draft.values[name], value)) return draft;
+  if (!changedExternally && sameValue(draft.values[name], value)) return draft;
   return {
     ...draft,
     values: { ...draft.values, [name]: snapshotValue(value) },

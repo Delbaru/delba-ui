@@ -17,6 +17,7 @@ type Entry<T extends object> = {
   storageKey?: string;
   persist: readonly FieldName<T>[];
   lastReceived?: T;
+  storageRevision?: number;
 };
 function hasErrors(errors: object): boolean {
   return Object.values(errors).some(Boolean);
@@ -50,7 +51,10 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     if (!storageKey) return;
     try {
       const raw = encodeDraft(entry.draft.values, persist);
-      if (storage) entry.persisted = storage.write(raw);
+      if (storage) {
+        entry.persisted = storage.write(raw);
+        entry.storageRevision = storage.read().revision;
+      }
       else {
         localStorage.setItem(storageKey, raw);
         entry.persisted = true;
@@ -61,19 +65,22 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   };
 
   const readStored = (restore: boolean) => {
-    if (!storageKey) return;
+    if (!storageKey || (!storage && !restore && !entry.persisted)) return;
     try {
       const stored = storage?.read() ?? { raw: localStorage.getItem(storageKey), persisted: true };
       const remote = decodeDraft(stored.raw, initial, persist);
+      const revision = 'revision' in stored ? stored.revision : undefined;
+      const changedExternally = entry.storageRevision !== undefined && revision !== undefined && revision !== entry.storageRevision;
       for (const name of persist) {
         // Shared message drafts intentionally reflect the same owner's other surface.
         // Edit forms preserve local dirty fields on external refresh.
         if (!restore && options.preset !== 'message' &&
           !sameValue(entry.draft.values[name], entry.draft.baseline[name])) continue;
         const value = Object.hasOwn(remote, name) ? remote[name] : initial[name];
-        entry.draft = setField(entry.draft, name, value as T[typeof name]);
+        entry.draft = setField(entry.draft, name, value as T[typeof name], changedExternally);
       }
       entry.persisted = stored.persisted;
+      entry.storageRevision = revision;
     } catch {
       entry.persisted = false;
     }
@@ -133,10 +140,19 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
       if (storageKey) readStored(false);
       if (hasErrors(options.validate?.(entry.draft.values) ?? {})) return;
       const submitted = snapshotValue(entry.draft);
+      const submittedRevision = entry.storageRevision;
       entry.error = undefined;
       try {
         const result = await options.submit(submitted.values);
-        if (!isOwner()) return;
+        if (!isOwner()) {
+          // Only an explicit, session-guarded adapter may acknowledge after unmount.
+          // Never restore a closed form or erase a later revision of shared text.
+          if (!mounted.current && options.preset === 'message' && submittedRevision !== undefined) {
+            try { storage?.acknowledge?.(submittedRevision, encodeDraft(initial, persist)); }
+            catch (error) { console.error('Draft acknowledgement failed', error); }
+          }
+          return;
+        }
         const saved = options.saved?.(result, submitted.values) ??
           (options.preset === 'message' ? initial : submitted.values);
         // A second surface may have changed persisted text while the request was in flight.

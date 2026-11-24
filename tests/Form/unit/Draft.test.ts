@@ -52,3 +52,10 @@ test('domain equality permits normalized numeric and title refresh without disca
     const refreshed = receiveDraft(edited, { title: 'Renamed', hours: '2', note: 'remote' }, equal);
     assert.deepEqual(refreshed.values, { title: 'Renamed', hours: '2', note: 'local' });
 });
+
+
+test('an externally changed revision with equal text survives acknowledgement', () => {
+  const submitted = setField(createDraft({ text: '' }), 'text', 'sent');
+  const changed = setField(submitted, 'text', 'sent', true);
+  assert.equal(acknowledgeDraft(changed, submitted, { text: '' }).values.text, 'sent');
+});
