@@ -23,7 +23,7 @@ import {
 import { isSharedMotionAnimate, useSharedMotion } from '../../hooks/useSharedMotion';
 import { resolveContentAnimate } from '../../hooks/contentMotion';
 import { useContentMotion } from '../../hooks/useContentMotion';
-import { CollapseWrap, type CollapseOptions } from '../Collapse/CollapseWrap';
+import { CollapseWrap, type CollapseOptions, type CollapseWrapProps } from '../Collapse/CollapseWrap';
 import { InteractionScope } from '../../core/InteractionScope';
 import { FormContext } from '../../core/Form';
 import { usePopup } from '../../core/Popup/Popup';
@@ -139,118 +139,127 @@ export function Flex({
   let scopedChildren = contentMotion.children;
   if (ui?.form) scopedChildren = <FormContext form={ui.form}>{scopedChildren}</FormContext>;
   if (ui?.collection) scopedChildren = <CollectionContext collection={ui.collection}>{scopedChildren}</CollectionContext>;
-  const content = (active = false) => (
-    <Comp
-      ref={setRefs}
-      className={cx(
-          styles.Flex,
-          'ui-flex',
-          containerClass(container),
-          ...layout,
-          ...c.value('gap', gap),
-          ...c.value('rowGap', rowGap),
-          ...c.value('columnGap', columnGap),
-          ...c.value('dir', dir),
-          ...c.value('justify', justify),
-          ...c.value('align', align),
-          ...c.value('wrap', wrap),
-          fade && (fade === 'x' ? 'scrollFadeX' : 'scrollFadeY'),
-          scroll?.className,
-          contentMotion.className,
-          className,
-      )}
-      style={{
-        ...(motionStyle ?? null),
-        ...scroll?.style,
-        ...style,
-        ...(contentMotion.style ?? null),
-      }}
-      {...revealAttrs}
-      data-motion-scope={motionScope ? '' : undefined}
-      {...stateProps(state, trackInteraction && active && 'interacting')}
-      {...anchorProps}
-      data-scroll-axis={scroll?.axis ?? (anchorProps as { 'data-scroll-axis'?: string })['data-scroll-axis']}
-      tabIndex={anchorProps.tabIndex ?? (selectable || popupOptions ? 0 : undefined)}
-      aria-busy={anchorProps['aria-busy'] ?? asyncContent.busy}
-      data-ui-popup-trigger={popupOptions ? '' : undefined}
-      aria-describedby={[anchorProps['aria-describedby'], popup.describedBy].filter(Boolean).join(' ') || undefined}
-      aria-controls={anchorProps['aria-controls'] ?? popup.controls}
-      aria-haspopup={anchorProps['aria-haspopup'] ?? (popupOptions && popupOptions.preset !== 'tooltip' ? 'menu' : undefined)}
-      aria-expanded={anchorProps['aria-expanded'] ?? (popupOptions && popupOptions.preset !== 'tooltip' ? popup.open : undefined)}
-      data-ui-collection={ui?.collection?.domId}
-      data-ui-collection-item={selectable?.collectionId}
-      data-ui-collection-key={selectable?.key}
-      data-ui-selectable={selectable ? '' : undefined}
-      data-ui-form-scope={ui?.form ? '' : undefined}
-      aria-selected={anchorProps['aria-selected'] ?? selectable?.checked}
-      {...stateLinkProps(linkState, {
-        onMouseEnter: composeEventHandlers(
-          composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter),
-          composeEventHandlers(prepare.onIntent, popupOptions ? popup.onMouseEnter : undefined),
-        ),
-        onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),
-        onMouseLeave: composeEventHandlers(composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave), popupOptions ? popup.onMouseLeave : undefined),
-        onMouseDown: composeEventHandlers(onMouseDown, selectable?.onMouseDown),
-        onMouseUp,
-        onClick: composeEventHandlers(composeEventHandlers(onClick, selectable?.onClick), popupOptions ? popup.onClick : undefined, { cancelable: true }),
-        onFocus: composeEventHandlers(composeEventHandlers(onFocus, prepare.onIntent), popupOptions ? popup.onFocus : undefined),
-        onBlur: composeEventHandlers(onBlur, popupOptions ? popup.onBlur : undefined),
-      })}
-      onContextMenu={composeEventHandlers(onContextMenu, popupOptions ? popup.onContextMenu : undefined, { cancelable: true })}
-      onKeyDown={composeEventHandlers(
-        composeEventHandlers(composeEventHandlers(onKeyDown, popupOptions ? popup.onKeyDown : undefined, { cancelable: true }), selectable?.onKeyDown, { cancelable: true }),
-        nestedEnter, { cancelable: true })}
-      onAnimationEnd={contentMotion.onAnimationEnd}
-      onSubmit={ui?.form && as === 'form' && !isLink ? (event: React.FormEvent<HTMLElement>) => {
-        if (event.target !== event.currentTarget) return;
-        onSubmit?.(event);
-        if (event.defaultPrevented) return;
-        event.preventDefault();
-        if (!ui.form?.disabled && ui.form?.ready) void ui.form.submit();
-      } : onSubmit}
-    >
-      {scopedChildren}
-    </Comp>
-  );
-
-  const scopedContent =
-    trackInteraction || onInteractionChange ? (
-      <InteractionScope target={interactionRef} onChange={onInteractionChange}>
-        {content}
-      </InteractionScope>
-    ) : (
-      content()
-    );
-
-  if (collapseInput === undefined) {
-    return popupOptions ? <>{scopedContent}{popup.popup}</> : scopedContent;
-  }
-
-  const collapseOptions: CollapseOptions =
+  const collapseOptions: CollapseOptions | undefined =
     typeof collapseInput === 'boolean' ? { open: collapseInput } : collapseInput;
 
-  // По высоте рамку держит сам Flex: он сжимается с треком и клипает своё содержимое. minH
-  // сжаться не даст — тогда клипает внутренний слой, как раньше.
+  // A minimum height requires clipping on the inner layer rather than Flex itself.
   return (
-    <CollapseWrap
-        open={collapseOptions.open}
-        defaultOpen={collapseOptions.defaultOpen}
-        onOpenChange={collapseOptions.onOpenChange}
-        clip={box.minH != null}
-        axis={collapseOptions.axis ?? collapseAxis}
-        gap={collapseOptions.gap ?? collapseGap}
-        gapSide={collapseOptions.gapSide}
-        fade={collapseOptions.fade ?? collapseFade}
-        overflowVisibleWhenOpen={collapseOptions.overflowVisibleWhenOpen ?? collapseOverflowVisible}
-        appear={collapseOptions.appear ?? collapseAppear}
-        keepMounted={collapseOptions.keepMounted ?? collapseKeepMounted}
-        onFound={collapseOptions.onFound ?? onCollapseFound}
-        onEnd={collapseOptions.onEnd ?? onCollapseEnd}
-        onTransition={collapseOptions.onTransition ?? onTransition}
-        handleRef={collapseOptions.ref ?? collapseRef}
+    <FlexFrame
+      target={interactionRef}
+      track={Boolean(trackInteraction || onInteractionChange)}
+      onChange={onInteractionChange}
+      hasPopup={Boolean(popupOptions)}
+      popup={popup.popup}
+      collapse={collapseOptions && {
+        open: collapseOptions.open,
+        defaultOpen: collapseOptions.defaultOpen,
+        onOpenChange: collapseOptions.onOpenChange,
+        clip: box.minH != null,
+        axis: collapseOptions.axis ?? collapseAxis,
+        gap: collapseOptions.gap ?? collapseGap,
+        gapSide: collapseOptions.gapSide,
+        fade: collapseOptions.fade ?? collapseFade,
+        overflowVisibleWhenOpen: collapseOptions.overflowVisibleWhenOpen ?? collapseOverflowVisible,
+        appear: collapseOptions.appear ?? collapseAppear,
+        keepMounted: collapseOptions.keepMounted ?? collapseKeepMounted,
+        onFound: collapseOptions.onFound ?? onCollapseFound,
+        onEnd: collapseOptions.onEnd ?? onCollapseEnd,
+        onTransition: collapseOptions.onTransition ?? onTransition,
+        handleRef: collapseOptions.ref ?? collapseRef,
+      }}
     >
-      {scopedContent}
-      {popup.popup}
-    </CollapseWrap>
+      {active => (
+        <Comp
+          ref={setRefs}
+          className={cx(
+              styles.Flex,
+              'ui-flex',
+              containerClass(container),
+              ...layout,
+              ...c.value('gap', gap),
+              ...c.value('rowGap', rowGap),
+              ...c.value('columnGap', columnGap),
+              ...c.value('dir', dir),
+              ...c.value('justify', justify),
+              ...c.value('align', align),
+              ...c.value('wrap', wrap),
+              fade && (fade === 'x' ? 'scrollFadeX' : 'scrollFadeY'),
+              scroll?.className,
+              contentMotion.className,
+              className,
+          )}
+          style={{
+            ...(motionStyle ?? null),
+            ...scroll?.style,
+            ...style,
+            ...(contentMotion.style ?? null),
+          }}
+          {...revealAttrs}
+          data-motion-scope={motionScope ? '' : undefined}
+          {...stateProps(state, trackInteraction && active && 'interacting')}
+          {...anchorProps}
+          data-scroll-axis={scroll?.axis ?? (anchorProps as { 'data-scroll-axis'?: string })['data-scroll-axis']}
+          tabIndex={anchorProps.tabIndex ?? (selectable || popupOptions ? 0 : undefined)}
+          aria-busy={anchorProps['aria-busy'] ?? asyncContent.busy}
+          data-ui-popup-trigger={popupOptions ? '' : undefined}
+          aria-describedby={[anchorProps['aria-describedby'], popup.describedBy].filter(Boolean).join(' ') || undefined}
+          aria-controls={anchorProps['aria-controls'] ?? popup.controls}
+          aria-haspopup={anchorProps['aria-haspopup'] ?? (popupOptions && popupOptions.preset !== 'tooltip' ? 'menu' : undefined)}
+          aria-expanded={anchorProps['aria-expanded'] ?? (popupOptions && popupOptions.preset !== 'tooltip' ? popup.open : undefined)}
+          data-ui-collection={ui?.collection?.domId}
+          data-ui-collection-item={selectable?.collectionId}
+          data-ui-collection-key={selectable?.key}
+          data-ui-selectable={selectable ? '' : undefined}
+          data-ui-form-scope={ui?.form ? '' : undefined}
+          aria-selected={anchorProps['aria-selected'] ?? selectable?.checked}
+          {...stateLinkProps(linkState, {
+            onMouseEnter: composeEventHandlers(
+              composeEventHandlers(motionHandlers?.onMouseEnter, onMouseEnter),
+              composeEventHandlers(prepare.onIntent, popupOptions ? popup.onMouseEnter : undefined),
+            ),
+            onMouseMove: composeEventHandlers(motionHandlers?.onMouseMove, onMouseMove),
+            onMouseLeave: composeEventHandlers(composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave), popupOptions ? popup.onMouseLeave : undefined),
+            onMouseDown: composeEventHandlers(onMouseDown, selectable?.onMouseDown),
+            onMouseUp,
+            onClick: composeEventHandlers(composeEventHandlers(onClick, selectable?.onClick), popupOptions ? popup.onClick : undefined, { cancelable: true }),
+            onFocus: composeEventHandlers(composeEventHandlers(onFocus, prepare.onIntent), popupOptions ? popup.onFocus : undefined),
+            onBlur: composeEventHandlers(onBlur, popupOptions ? popup.onBlur : undefined),
+          })}
+          onContextMenu={composeEventHandlers(onContextMenu, popupOptions ? popup.onContextMenu : undefined, { cancelable: true })}
+          onKeyDown={composeEventHandlers(
+            composeEventHandlers(composeEventHandlers(onKeyDown, popupOptions ? popup.onKeyDown : undefined, { cancelable: true }), selectable?.onKeyDown, { cancelable: true }),
+            nestedEnter, { cancelable: true })}
+          onAnimationEnd={contentMotion.onAnimationEnd}
+          onSubmit={ui?.form && as === 'form' && !isLink ? (event: React.FormEvent<HTMLElement>) => {
+            if (event.target !== event.currentTarget) return;
+            onSubmit?.(event);
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+            if (!ui.form?.disabled && ui.form?.ready) void ui.form.submit();
+          } : onSubmit}
+        >
+          {scopedChildren}
+        </Comp>
+      )}
+    </FlexFrame>
   );
+}
+
+/** Keep the interaction provider around only the host, not its sibling popup.
+ * Collapse retains ownership of the existing wrapper and motion lifecycle.
+ */
+function FlexFrame({ target, track, onChange, hasPopup, popup, collapse, children }: {
+  target: React.RefObject<HTMLElement | null>;
+  track: boolean;
+  onChange?: FlexProps['onInteractionChange'];
+  hasPopup: boolean;
+  popup: React.ReactNode;
+  collapse?: Omit<CollapseWrapProps, 'children'>;
+  children: (active: boolean) => React.ReactNode;
+}) {
+  const scoped = track ? (
+    <InteractionScope target={target} onChange={onChange}>{children}</InteractionScope>
+  ) : children(false);
+  if (!collapse) return hasPopup ? <>{scoped}{popup}</> : scoped;
+  return <CollapseWrap {...collapse}>{scoped}{popup}</CollapseWrap>;
 }
