@@ -28,7 +28,8 @@ export function formatCheck(name, diagnostics, { cwd = process.cwd(), color = fa
   const lines = [`${paint(errors ? 31 : 33, errors ? '✗' : '⚠', color)} ${name} — ${summary}`];
   for (const item of diagnostics) {
     lines.push('', `  ${path.relative(cwd, item.file).split(path.sep).join('/')}:${item.line}:${item.column}`);
-    lines.push(`  ${item.severity === 'warning' ? '⚠ ' : ''}${item.message}`, `  ${item.fix}`);
+    lines.push(`  ${item.severity === 'warning' ? '⚠ ' : ''}${item.message}`);
+    if (item.fix) lines.push(`  ${item.fix}`);
     if (item.docs) lines.push(`  ${paint(2, `Правило: ${pathToFileURL(item.docs).href}`, color)}`);
   }
   return lines.join('\n');

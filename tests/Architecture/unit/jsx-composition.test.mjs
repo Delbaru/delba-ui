@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import ts from 'typescript';
-import { jsxCompositionRule } from '../../../tools/check/rules/jsx-composition.mjs';
+import { jsxCompositionRule } from '@delba/eslint';
 
 const inspect = code => jsxCompositionRule.check(ts.createSourceFile('Fixture.tsx', code, ts.ScriptTarget.Latest, true));
 
@@ -18,7 +18,7 @@ test('complex local JSX declarations and assignments are review warnings', () =>
   assert.equal(jsxCompositionRule.fix, undefined);
 });
 
-test('short slots, direct returns, callbacks and configuration are legitimate composition', () => {
+test('short slots, render props, direct returns, callbacks and configuration remain legitimate', () => {
   assert.deepEqual(inspect(`
     const moduleSlot = <Box><Row><Text /></Row></Box>;
     function Panel() {

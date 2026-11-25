@@ -17,7 +17,14 @@ const astStep = (name, ...args) => ({
     name,
     run: () => {
         const diagnostics = check(...args);
-        return { ok: !diagnostics.some(item => item.severity !== 'warning'), diagnostics };
+        const blocking = diagnostics.filter(item => item.severity !== 'warning');
+        const warnings = diagnostics.filter(item => item.severity === 'warning');
+        return {
+            ok: blocking.length === 0,
+            diagnostics,
+            warnings: warnings.map(item => `${item.file}:${item.line}:${item.column} ${item.message}`).join('\n') || undefined,
+            output: blocking.map(item => `${item.file}:${item.line}:${item.column} ${item.message}`).join('\n') || undefined,
+        };
     },
 });
 
@@ -119,8 +126,19 @@ export function projectSteps(
         astStep('Архитектура проекта', root, {
             rules: projectRules,
             dirs: config.rules ?? ['src'],
+            includeBoundaries: true,
+            mode: 'consumer',
         }),
     ];
+}
+
+export function discoverTests(root, directories) {
+    return directories.flatMap(directory => {
+        const source = path.join(root, directory);
+        return existsSync(source) ? readdirSync(source, { recursive: true })
+            .filter(file => /\.test\.(?:[cm]?[jt]s|tsx|jsx)$/.test(file))
+            .map(file => path.join(directory, file)) : [];
+    }).sort();
 }
 
 export function uiCheckSteps({
@@ -232,7 +250,10 @@ export function uiCheckSteps({
             name: 'Тесты',
             run: ({ failedOnly = false } = {}) => runNodeTests({
               cwd: KIT,
-              files: ['tools/**/*.test.ts', 'tools/**/*.test.mjs', ...rootTests],
+              files: [
+                  'tools/**/*.test.ts', 'tools/**/*.test.tsx', 'tools/**/*.test.mjs',
+                  'tools/**/*.test.cjs', 'tools/**/*.test.js', 'tools/**/*.test.jsx', ...rootTests,
+              ],
               stateFile: `${reportFile}.library-tests`,
               failedOnly,
               nodeArgs: [

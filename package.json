@@ -42,7 +42,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --incremental false",
-    "test": "node --import tsx --import ./tools/check/unit-runtime.mjs --test \"tools/**/*.test.ts\" \"tools/**/*.test.mjs\" \"tests/**/*.test.ts\" \"tests/**/*.test.mjs\"",
+    "test": "node --import tsx --import ./tools/check/unit-runtime.mjs --test \"tools/**/*.test.ts\" \"tools/**/*.test.tsx\" \"tools/**/*.test.mjs\" \"tests/**/*.test.ts\" \"tests/**/*.test.tsx\" \"tests/**/*.test.mjs\"",
     "boundary": "node tools/check-boundary.mjs",
     "check": "node tools/check/index.mjs"
   },
@@ -73,6 +73,7 @@
     }
   },
   "devDependencies": {
+    "@delba/eslint": "workspace:*",
     "prettier": "~3.6.2",
     "@playwright/test": "1.64.0",
     "@types/node": "^25.6.0",

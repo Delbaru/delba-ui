@@ -7,7 +7,7 @@ import os from 'node:os';
 
 import { formatProgress, formatStep } from '../format.mjs';
 import { startProgress } from '../progress.mjs';
-import { projectSteps, uiCheckSteps } from '../index.mjs';
+import { discoverTests, projectSteps, uiCheckSteps } from '../index.mjs';
 import { runNode, runSteps } from '../run.mjs';
 
 test('the toolkit generates once and runs its library suite without duplicate consumer checks', () => {
@@ -271,5 +271,28 @@ test('consumer test conditions resolve server-only exports without changing libr
             fs.unlinkSync(path.join(fixture, file));
         }
         for (const directory of [probe, modules, source, fixture]) fs.rmdirSync(directory);
+    }
+});
+
+test('root discovery includes TS, TSX and MJS architecture tests but leaves type fixtures to tsc', () => {
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-test-discovery-'));
+    try {
+        for (const name of ['tests/Architecture/unit/rule.test.mjs', 'tests/Domain/unit/view.test.ts',
+            'tests/Domain/unit/view.test.tsx', 'tests/Domain/unit/types.type-test.ts',
+            'tests/Domain/unit/types.typecheck.tsx']) {
+            const file = path.join(fixture, name);
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, '');
+        }
+        assert.deepEqual(discoverTests(fixture, ['tests']), [
+            'tests/Architecture/unit/rule.test.mjs',
+            'tests/Domain/unit/view.test.ts',
+            'tests/Domain/unit/view.test.tsx',
+        ]);
+        const config = JSON.parse(fs.readFileSync(new URL('../../../tsconfig.json', import.meta.url), 'utf8'));
+        assert.ok(config.include.some((entry: string) => entry.includes('*.ts')));
+        assert.ok(config.include.some((entry: string) => entry.includes('*.tsx')));
+    } finally {
+        fs.rmSync(fixture, { recursive: true, force: true });
     }
 });
