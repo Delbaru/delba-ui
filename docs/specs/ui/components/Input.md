@@ -287,6 +287,10 @@ export function NameField() {
 ## Интеграция Calendar через Dropdown
 
 InputCalendar использует Dropdown с внешним anchorRef, surfaceRef и focusRegions.
+Панель совпадает с шириной строки поля; Calendar заполняет её доступную ширину.
+Высота панели ограничена `--floating-available` выбранной стороны;
+штатная прокрутка Box сохраняет доступ ко всем датам без перекрытия поля.
+Позиционирование и выбор стороны возле края окна остаются у Dropdown.
 Фиктивного trigger и дополнительной обёртки поля нет. keyboard='content' оставляет
 календарные клавиши Calendar; Dropdown владеет portal, position, dismiss и поверхностью.
 InputCalendar переводит ISO Calendar в формат поля, выбирает реакцию на Escape

@@ -181,6 +181,13 @@ export function InputCalendar({ calendar }: { calendar: CalendarModel }) {
       panel={{
         portal: true,
         keepMounted: false,
+        matchTriggerWidth: true,
+        maxH: [
+          'var(--floating-available)',
+          'var(--floating-available)',
+          'var(--floating-available)',
+        ],
+        scroll: 'y',
         viewportPadding: 8,
         strategy: 'fixed',
         className: styles.InputCalendar,
@@ -192,6 +199,7 @@ export function InputCalendar({ calendar }: { calendar: CalendarModel }) {
           id={`${calendar.id}-calendar`}
           dayIdPrefix={calendar.id}
           aria-label={UI_MESSAGES.input.openCalendar}
+          w={['100%', '100%', '100%']}
           value={calendar.value}
           minValue={calendar.minValue}
           maxValue={calendar.maxValue}

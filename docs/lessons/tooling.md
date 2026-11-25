@@ -575,6 +575,14 @@ SSR-проверки Icon были записаны в `render.test.tsx`, хот
 В `npm test` и library-шаг `npm run check` добавлен `tools/**/*.test.mjs`;
 проверка — два сценария composition для CommonJS и ESM в полном library-gate.
 
+При добавлении `calendar-layout.spec.ts` файл не попал в явный `testMatch`
+Playwright. Добавлен в список; `playwright test --config tools/browser/playwright.config.ts
+--list tools/browser/tests/calendar-layout.spec.ts` обнаруживает оба сценария
+320/390 без запуска сервера и браузера. SSR-fixture Calendar также пропустил
+обязательный `onValueChange`: transpilation-тест прошёл, общий typecheck нашёл
+неполный controlled-контракт. В fixture добавлен callback; `npm run typecheck`
+подтверждает его типы. Отдельный runtime PASS не заменяет типы и обнаружение теста.
+
 ### Свежий самостоятельный checkout требует runtime-генераты
 
 `npm run check` в новом worktree падал на отсутствующих `inline-icons.ts` и

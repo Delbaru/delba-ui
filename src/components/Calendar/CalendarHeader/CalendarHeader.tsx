@@ -52,7 +52,14 @@ export function CalendarHeader({
         <Icon src={assetUrl(arrowIcon)} w={[18, 18, 18]} h={[18, 18, 18]} aria-hidden="true" />
       </Button>
 
-      <Flex align={['center', 'center', 'center']} gap={[16, 16, 16]}>
+      <Flex
+          align={['center', 'center', 'center']}
+          justify={['center', 'center', 'center']}
+          wrap={['wrap', 'wrap', 'wrap']}
+          columnGap={[16, 16, 16]}
+          rowGap={[4, 4, 4]}
+          minW={[0, 0, 0]}
+      >
         <Button
             type="button"
             aria-label={labels.chooseMonth}
