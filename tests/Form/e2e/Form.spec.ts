@@ -309,8 +309,7 @@ test('optional named primitives bind to the nearest form and reset with the owne
 
   await page.getByRole('button', { name: 'Reset named fields' }).click();
   const reset = await values();
-  expect(reset).toMatchObject({ channel: null, priority: 'low' });
-  for (const name of ['optionalEnabled', 'notify', 'optionalText', 'optionalNote', 'optionalTags']) {
+  for (const name of ['optionalEnabled', 'notify', 'optionalText', 'optionalNote', 'optionalTags', 'channel', 'priority']) {
     expect(reset).not.toHaveProperty(name);
   }
 });
