@@ -99,7 +99,13 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
   } = fieldProps;
   const field = useFormField<T | null | T[]>(name);
   const bound = field && valueProp === undefined &&
-    (multiple ? isValueArray(field.value) : field.value === null || typeof field.value === 'string');
+    (multiple ? isValueArray(field.value) || field.value === undefined :
+      field.value === null || typeof field.value === 'string' || field.value === undefined);
+  const boundValue = bound
+    ? multiple
+      ? (isValueArray(field.value) ? field.value as T[] : [])
+      : (typeof field.value === 'string' ? field.value as T : null)
+    : valueProp;
   const disabled = disabledProp || Boolean(bound && field.disabled);
   // Хук хранит общий `T | null | T[]`; наружу значение уходит типом своей ветки `multiple`.
   const emitChange = (next: T | null | T[]) => {
@@ -125,7 +131,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
     options,
     search,
     form,
-    value: bound ? field.value : valueProp,
+    value: boundValue,
     defaultValue,
     onChange: emitChange,
     multiple: multiple === true,

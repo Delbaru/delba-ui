@@ -9,10 +9,11 @@ import type { TextareaProps } from './Textarea.types';
 export type { TextareaProps } from './Textarea.types';
 export function Textarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
   const field = useFormField<string>(props.name);
-  const bound = field && props.value === undefined && typeof field.value === 'string';
+  const bound = field && props.value === undefined &&
+    (typeof field.value === 'string' || field.value === undefined);
   const textarea = useTextarea(bound ? {
     ...props,
-    value: field.value,
+    value: typeof field.value === 'string' ? field.value : '',
     disabled: props.disabled || field.disabled,
     error: props.error ?? field.error,
     onValueChange: (value, details) => {

@@ -17,10 +17,12 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
   const field = useFormField<unknown>(props.name);
   const nativeFile = useRef<HTMLInputElement | null>(null);
   const fileRef = useMergedRefs(nativeFile, props.ref);
-  const files = props.type === 'file' && props.value === undefined && Array.isArray(field?.value)
-    ? field.value as File[] : undefined;
-  const fileBound = Boolean(field && files);
-  const bound = props.type !== 'file' && field && props.value === undefined && typeof field.value === 'string';
+  const files = props.type === 'file' && props.value === undefined && field &&
+    (Array.isArray(field.value) || field.value === undefined)
+    ? (field.value as File[] | undefined) ?? [] : undefined;
+  const fileBound = files !== undefined;
+  const bound = props.type !== 'file' && field && props.value === undefined &&
+    (typeof field.value === 'string' || field.value === undefined);
   // FileList cannot be assigned from a React value. Clear an obsolete native
   // selection after reset/acknowledge; the controller retains actual File objects.
   useLayoutEffect(() => {
@@ -42,7 +44,7 @@ export function Input(props: WithRef<InputProps, HTMLInputElement>) {
   } else if (bound) {
     options = {
       ...props,
-      value: field.value as string,
+      value: typeof field.value === 'string' ? field.value : '',
       disabled: props.disabled || field.disabled,
       error: props.error ?? field.error,
       onValueChange: (value, details) => {

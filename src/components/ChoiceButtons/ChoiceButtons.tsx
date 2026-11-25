@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from 'react';
 import { useFormReset } from '../../core/useFormReset';
 import { cx } from '../../core';
+import { useFormField } from '../../core/Form';
 import { Select } from '../Select';
 import { TabTrack } from '../TabTrack';
 import { ChoiceButton } from './ChoiceButton/ChoiceButton';
@@ -27,21 +28,25 @@ export function ChoiceButtons<T extends string = string>({
     infoClassName = '',
     tooltipClassName = '',
 }: ChoiceButtonsProps<T>) {
-    const isControlled = value !== undefined;
+    const field = useFormField<T | null>(name);
+    const bound = Boolean(field && value === undefined &&
+        (field.value === undefined || field.value === null || typeof field.value === 'string'));
+    const isControlled = value !== undefined || bound;
     const [internalValue, setInternalValue] = useState<T | null>(defaultValue);
+    const isDisabled = disabled || Boolean(bound && field?.disabled);
+    const fieldError = bound ? field?.error : undefined;
     const baseId = useId().replace(/:/g, '');
     const fieldRef = useRef<HTMLDivElement>(null);
     useFormReset(fieldRef, form, () => {
         if (!isControlled) setInternalValue(defaultValue);
     });
 
-    const selectedValue = isControlled ? value ?? null : internalValue;
+    const selectedValue = bound ? (field?.value as T | null | undefined) ?? null : isControlled ? value ?? null : internalValue;
 
     const selectItem = (item: ChoiceButtonsItem<T>) => {
-        if (disabled) return;
-        if (!isControlled) {
-            setInternalValue(item.value);
-        }
+        if (isDisabled) return;
+        if (bound) field?.change(item.value);
+        else if (!isControlled) setInternalValue(item.value);
 
         item.onSelect?.(item.value);
         onChange?.(item.value, item);
@@ -49,7 +54,8 @@ export function ChoiceButtons<T extends string = string>({
 
     const handleMobileTabletSelectChange = (nextValue: T | null) => {
         if (nextValue == null) {
-            if (!isControlled) setInternalValue(null);
+            if (bound) field?.change(null);
+            else if (!isControlled) setInternalValue(null);
             return;
         }
 
@@ -78,7 +84,7 @@ export function ChoiceButtons<T extends string = string>({
                       selected={item.value === selectedValue}
                       tooltipId={`${baseId}-tooltip-${index}`}
                       select={selectItem}
-                      disabled={disabled}
+                      disabled={isDisabled}
                       itemClassName={itemClassName}
                       buttonClassName={buttonClassName}
                       textClassName={textClassName}
@@ -97,8 +103,9 @@ export function ChoiceButtons<T extends string = string>({
                 value={selectedValue}
                 onChange={handleMobileTabletSelectChange}
                 visibleOptions={Math.min(items.length, 3)}
-                disabled={disabled}
+                disabled={isDisabled}
                 required={required}
+                error={fieldError}
                 className={styles.ChoiceButtons}
                 hide={[true, false, false]}
             />

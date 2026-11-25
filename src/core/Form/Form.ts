@@ -164,7 +164,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const clientErrors: FormErrors<T> = options.validate?.(entry.draft.values) ?? {};
   const serverErrors = entry.error === undefined ? undefined : options.errorsFrom?.(entry.error);
   const errors: FormErrors<T> = { ...serverErrors, ...clientErrors };
-  const valid = !hasErrors(clientErrors);
+  const valid = !hasErrors(errors);
   const invocation = useActionInvocation({
     // Switching rooms does not release the active ticket. The old request may still commit.
     identity: scope,
@@ -173,7 +173,8 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     action: async () => {
       if (!canEdit()) return;
       if (storageKey) readStored(false);
-      if (hasErrors(options.validate?.(entry.draft.values) ?? {})) return;
+      const serverValidation = entry.error === undefined ? {} : options.errorsFrom?.(entry.error) ?? {};
+      if (hasErrors(serverValidation) || hasErrors(options.validate?.(entry.draft.values) ?? {})) return;
       const submitted = snapshotValue(entry.draft);
       const submittedRevision = entry.storageRevision;
       const submittedBinding = entry.storageBinding;
@@ -241,7 +242,8 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const submit = () => {
     if (!canEdit()) return undefined;
     if (storageKey) readStored(false);
-    if (hasErrors(options.validate?.(entry.draft.values) ?? {})) { notify(); return undefined; }
+    const serverValidation = entry.error === undefined ? {} : options.errorsFrom?.(entry.error) ?? {};
+    if (hasErrors(serverValidation) || hasErrors(options.validate?.(entry.draft.values) ?? {})) { notify(); return undefined; }
     return invocation.invoke();
   };
   const unsaved = [...entries.values()].some(target =>

@@ -3,7 +3,8 @@
 import { useId, type CSSProperties } from 'react';
 import type React from 'react';
 import styles from './Radio.module.scss';
-import { cx, createLayoutClasses, stateProps, layoutSpaceClasses, radiusClasses, stateLinkProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type ResponsiveValue, type GrowProps, type WithRef } from '../../core';
+import { composeEventHandlers, cx, createLayoutClasses, stateProps, layoutSpaceClasses, radiusClasses, stateLinkProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type RadiusPropsShort, type ResponsiveValue, type GrowProps, type WithRef } from '../../core';
+import { useFormField } from '../../core/Form';
 import { Flex } from '../Flex';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 
@@ -67,7 +68,19 @@ export function Radio({
 }: WithRef<RadioProps, HTMLInputElement>) {
     const generatedId = useId();
     const id = idProp ?? generatedId;
-    const isDisabled = Boolean(props.disabled);
+    const field = useFormField<string | null>(props.name);
+    const bound = field && props.checked === undefined && typeof props.value === 'string' &&
+        (field.value === undefined || field.value === null || typeof field.value === 'string');
+    const inputProps = bound ? {
+        ...props,
+        checked: field.value === props.value,
+        disabled: props.disabled || field.disabled,
+        'aria-invalid': props['aria-invalid'] ?? Boolean(field.error),
+        onChange: composeEventHandlers(props.onChange, event => {
+            if (event.currentTarget.checked && !field.disabled) field.change(props.value as string);
+        }),
+    } : props;
+    const isDisabled = Boolean(inputProps.disabled);
     const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
 
     return (
@@ -86,10 +99,10 @@ export function Radio({
                 className,
             )}
             style={{ ...(motionStyle ?? null), ...(size != null ? { ['--radio-box']: size } : null), ...(dotSize != null ? { ['--radio-dot']: dotSize } : null), ...style }}
-            {...stateProps(state, Boolean(props.checked) && 'active', (props['aria-invalid'] && props['aria-invalid'] !== 'false') && 'error', isDisabled && 'disabled')}
+            {...stateProps(state, Boolean(inputProps.checked) && 'active', (inputProps['aria-invalid'] && inputProps['aria-invalid'] !== 'false') && 'error', isDisabled && 'disabled')}
         >
             <Flex gap={gap ?? [8, 8, 8]} align={['center', 'center', 'center']}>
-                <input ref={ref} id={id} type="radio" className={styles.Input} {...props} />
+                <input ref={ref} id={id} type="radio" className={styles.Input} {...inputProps} />
                 {indicator && <Flex className={styles.Box} aria-hidden>
                     <span className={styles.Dot} />
                 </Flex>}

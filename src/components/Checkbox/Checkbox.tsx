@@ -65,9 +65,10 @@ export function Checkbox({
     const { rootProps, elementProps } = splitRootDomProps(rest as typeof rest & Record<string, unknown>);
     const { 'data-error': explicitError, ...nativeProps } = elementProps;
     const field = useFormField<boolean>(nativeProps.name);
-    const bound = field && nativeProps.checked === undefined && typeof field.value === 'boolean';
+    const bound = field && nativeProps.checked === undefined &&
+        (typeof field.value === 'boolean' || field.value === undefined);
     const dataError = explicitError ?? (bound ? field.error : undefined);
-    const inputProps = bound ? { ...nativeProps, checked: field.value,
+    const inputProps = bound ? { ...nativeProps, checked: Boolean(field.value),
         disabled: nativeProps.disabled || field.disabled,
         'aria-invalid': nativeProps['aria-invalid'] ?? Boolean(field.error),
     } : nativeProps;
