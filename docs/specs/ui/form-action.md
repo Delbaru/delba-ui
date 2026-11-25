@@ -93,3 +93,9 @@ A browser fixture now exercises `onChange` observation against the real named fi
 Mapped server field errors returned by `errorsFrom` participate in `form.errors` and make `form.valid` false. The submit controller stays disabled and direct `form.submit()` does not bypass those errors. Editing a field, resetting, or receiving a new confirmed value clears the prior server error. Unmapped command failures remain action failures and may be retried.
 
 Named primitive controls may start with an explicitly present `undefined` value. Input/Textarea render an empty string, Checkbox/SwitchButton render unchecked, Radio/Select/ChoiceButtons render no selection, and each writes its native primitive value back into the same form owner.
+
+
+The nearest `ActionInvocationProvider` receives failed invocations through
+`onFailure`. `onSettled` runs for every terminal outcome, while
+`onSuccess` runs only after successful completion; cancellation remains a
+distinct terminal state and does not masquerade as failure.

@@ -8,6 +8,7 @@ import type {
   FormOptions,
   PopupOptions,
   ScrollOptions,
+  ScrollbarOptions,
 } from '../../../src';
 
 type Item = { id: string; label: string };
@@ -56,3 +57,5 @@ export type MechanismHookContracts = [
   typeof ui.action.use,
   typeof ui.form.use,
 ];
+
+export type ScrollbarContract = ScrollbarOptions;
