@@ -22,3 +22,12 @@ test('ui.async owns loading, current-data, empty, error and retry phases', async
   await page.getByRole('button', { name: 'Empty source' }).click();
   await expect(surface.getByTestId('async-empty')).toBeVisible();
 });
+
+
+test('a falsey non-null error still renders the error state', async ({ page }) => {
+  await page.goto('/?async');
+  const surface = page.getByTestId('async-surface');
+  await page.getByRole('button', { name: 'Falsy error' }).click();
+  await expect(surface.getByRole('alert')).toBeVisible();
+  await expect(surface.getByTestId('async-loading')).toHaveCount(0);
+});

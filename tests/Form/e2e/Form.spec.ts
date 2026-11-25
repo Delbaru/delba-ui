@@ -288,3 +288,57 @@ test('onChange receives a detached snapshot for local edits only', async ({ page
   await expect(input).toHaveValue('server');
   await expect(region.getByTestId('change-callback-count')).toHaveText('1');
 });
+
+
+test('optional named primitives bind to the nearest form and reset with the owner', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('checkbox', { name: 'Optional enabled' }).check();
+  await page.getByRole('checkbox', { name: 'Notifications' }).check();
+  await page.getByRole('radio', { name: 'SMS' }).check();
+  await page.getByRole('button', { name: 'High' }).click();
+  await page.getByRole('textbox', { name: 'Optional text' }).fill('text value');
+  await page.getByRole('textbox', { name: 'Optional note' }).fill('note value');
+  await page.getByRole('combobox', { name: 'Optional tags' }).click();
+  await page.getByRole('option', { name: 'Beta' }).click();
+
+  const values = () => page.getByTestId('named-values').textContent().then(text => JSON.parse(text ?? '{}'));
+  expect(await values()).toMatchObject({
+    optionalEnabled: true, notify: true, channel: 'sms', priority: 'high',
+    optionalText: 'text value', optionalNote: 'note value', optionalTags: ['b'],
+  });
+
+  await page.getByRole('button', { name: 'Reset named fields' }).click();
+  const reset = await values();
+  expect(reset).toMatchObject({ channel: null, priority: 'low' });
+  for (const name of ['optionalEnabled', 'notify', 'optionalText', 'optionalNote', 'optionalTags']) {
+    expect(reset).not.toHaveProperty(name);
+  }
+});
+
+test('mapped server field errors invalidate the form until the field changes', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: 'Server validation email' });
+  const submit = page.getByRole('button', { name: 'Submit server validation' });
+  await submit.click();
+
+  await expect(page.getByTestId('server-validation-error')).toHaveText('Use a valid email address');
+  await expect(page.getByTestId('server-validation-valid')).toHaveText('false');
+  await expect(submit).toBeDisabled();
+
+  await input.fill('person@example.com');
+  await expect(page.getByTestId('server-validation-error')).toHaveText('');
+  await expect(page.getByTestId('server-validation-valid')).toHaveText('true');
+  await expect(submit).toBeEnabled();
+});
+
+test('standalone action controllers report failures and settle without success', async ({ page }) => {
+  await page.goto('/');
+  const fixture = page.getByRole('region', { name: 'Action failure fixture' });
+  const button = fixture.getByRole('button', { name: 'Run failing action' });
+  await button.click();
+
+  await expect(fixture.getByTestId('action-failure-settled')).toHaveText('failed');
+  await expect(fixture.getByTestId('action-failure-success')).toHaveText('0');
+  await expect(page.getByTestId('action-provider-failures')).toHaveText('1');
+  await expect(button).toBeEnabled();
+});
