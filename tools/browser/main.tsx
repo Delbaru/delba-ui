@@ -10,6 +10,7 @@ import 'virtual:browser-utilities.css';
 import './styles.scss';
 import { CollectionFixture } from './collection.fixture';
 import { AsyncFixture } from './async.fixture';
+import { FeedScrollFixture } from './feed-scroll.fixture';
 import { ContentFixture } from './content.fixture';
 import { BrowserFixture } from './fixture';
 import { DropdownOpenFixture } from './dropdown-open.fixture';
@@ -36,6 +37,7 @@ createRoot(root).render(
     <StrictMode>
       <ModalProvider>{location.search === '?smooth'
         ? <main style={{ height: 2000 }}><h1>Delba UI browser regression fixture</h1></main>
+        : location.search === '?feed-scroll' ? <FeedScrollFixture />
         : location.search === '?async' ? <AsyncFixture />
         : location.search === '?collection' ? <CollectionFixture />
         : location.search === '?content' ? <ContentFixture />
