@@ -9,7 +9,9 @@ content resize and anchor release); paging and read receipts remain outside UI.
 For an independently loaded page, capture immediately before prepending:
 `const restore = feed.captureHistoryAnchor()`. Call `restore?.()` once after the
 new DOM commits (e.g. in a layout effect). It returns false when a reader gesture,
-a newer capture, scope change, removed anchor, or unmount invalidates the capture.
+a newer capture, scope change, or unmount invalidates the capture. If the first
+visible item was deleted, restoration uses the next surviving measured item,
+then a preceding item; it returns false if no captured item survives.
 Following the end and explicit deep-link anchors take precedence. Stable unique
 item IDs are required. The correction uses measured relative geometry, so native
 scroll anchoring is not applied twice. Chat must wire this at its actual prepend

@@ -56,13 +56,17 @@ export function useFeedScroll(input: {
         history.current = () => {
             if (!initialized || following.current || anchored.current) return null;
             const bounds = viewport.getBoundingClientRect();
-            const target = Array.from(content.querySelectorAll<HTMLElement>(selector)).find(node => {
+            const items = Array.from(content.querySelectorAll<HTMLElement>(selector));
+            const first = items.findIndex(node => {
                 const rect = node.getBoundingClientRect();
-                return rect.bottom > bounds.top && rect.top < bounds.bottom && node.hasAttribute(itemAttribute);
+                return rect.bottom > bounds.top && rect.top < bounds.bottom;
             });
-            if (!target) return null;
-            const id = target.getAttribute(itemAttribute);
-            const offset = target.getBoundingClientRect().top - bounds.top;
+            if (first < 0) return null;
+            // A refresh can delete the first visible item. Keep measured
+            // neighbours as fallbacks so the surviving content stays still.
+            const candidates = [...items.slice(first), ...items.slice(0, first).reverse()]
+                .map(node => ({ id: node.getAttribute(itemAttribute),
+                    offset: node.getBoundingClientRect().top - bounds.top }));
             const capturedGesture = gesture;
             const captured = ++capture;
             let used = false;
@@ -71,12 +75,14 @@ export function useFeedScroll(input: {
                     following.current || anchored.current || input.viewport.current !== viewport ||
                     input.content.current !== content || !viewport.isConnected) return false;
                 used = true;
-                const current = Array.from(content.querySelectorAll<HTMLElement>(selector))
-                    .find(node => node.getAttribute(itemAttribute) === id);
-                if (!current) return false;
+                const nodes = new Map(Array.from(content.querySelectorAll<HTMLElement>(selector))
+                    .map(node => [node.getAttribute(itemAttribute), node]));
+                const anchor = candidates.find(candidate => nodes.has(candidate.id));
+                if (!anchor) return false;
+                const current = nodes.get(anchor.id)!;
                 const currentOffset = current.getBoundingClientRect().top - viewport.getBoundingClientRect().top;
                 manual = false;
-                viewport.scrollTop = historyScrollTop(viewport.scrollTop, offset, currentOffset, viewport.scrollHeight, viewport.clientHeight);
+                viewport.scrollTop = historyScrollTop(viewport.scrollTop, anchor.offset, currentOffset, viewport.scrollHeight, viewport.clientHeight);
                 setShowBottom(away());
                 return true;
             };
