@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 test('feed follows growth until a reader gesture releases following', async ({ page }) => {
   await page.goto('/?feed-scroll');
   const viewport = page.getByRole('log', { name: 'Feed messages' });
+  await expect(viewport).toHaveAttribute('data-scroll-preset', 'feed');
   const scrollTop = () => viewport.evaluate(node => node.scrollTop);
   const bottom = page.getByTestId('feed-show-bottom');
   await expect.poll(scrollTop).toBeGreaterThan(0);
@@ -43,4 +44,25 @@ test('history prepend restores the first visible item after the content shifts',
   await expect.poll(() => viewport.locator(`[data-feed-item="${anchor.id}"]`).evaluate(node => {
     return node.getBoundingClientRect().top - node.closest('[data-testid="feed-viewport"]')!.getBoundingClientRect().top;
   })).toBeCloseTo(anchor.top, 0);
+});
+
+test('a reader gesture invalidates a captured history restoration', async ({ page }) => {
+  await page.goto('/?feed-scroll');
+  const viewport = page.getByRole('log', { name: 'Feed messages' });
+  await viewport.hover();
+  await page.mouse.wheel(0, -600);
+  await expect(page.getByTestId('feed-show-bottom')).toHaveText('true');
+
+  await page.getByRole('button', { name: 'Capture history anchor' }).click();
+  await expect(page.getByTestId('feed-history-result')).toHaveText('captured');
+  const beforeGesture = await viewport.evaluate(node => node.scrollTop);
+
+  await viewport.hover();
+  await page.mouse.wheel(0, 120);
+  await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeGreaterThan(beforeGesture);
+  const readerPosition = await viewport.evaluate(node => node.scrollTop);
+
+  await page.getByRole('button', { name: 'Restore captured anchor' }).click();
+  await expect(page.getByTestId('feed-history-result')).toHaveText('false');
+  await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBe(readerPosition);
 });
