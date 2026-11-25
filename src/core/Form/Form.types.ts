@@ -24,6 +24,8 @@ export type FormOptions<T extends object, R> = {
   /** An empty persist list keeps per-key drafts in memory without storage I/O. */
   draft?: { key: string; persist: readonly FieldName<T>[]; storage?: DraftStorage };
   disabled?: boolean;
+  /** Called for actual local field edits, not refresh, restore or acknowledgement. */
+  onChange?: (name: FieldName<T>, values: T) => void;
   validate?: (values: T) => FormErrors<T>;
   /** The captured acknowledgement may settle the exact submission after a confirmed explicit retry. */
   submit: (values: T, settlement: { acknowledge(result: R): void }) => R | Promise<R>;
