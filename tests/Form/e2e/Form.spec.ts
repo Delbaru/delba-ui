@@ -250,3 +250,24 @@ test('empty persistence keeps target drafts in memory and acknowledges only the 
   await change.click();
   await expect(text).toHaveValue('');
 });
+
+
+test('confirmed retry acknowledges only the original submission and is idempotent', async ({ page }) => {
+  await page.goto('/');
+  const scope = page.getByRole('region', { name: 'Retry draft fixture' });
+  const text = scope.getByRole('textbox', { name: 'Retry draft text' });
+  const files = scope.getByLabel('Retry attachments');
+  await text.fill('original');
+  await files.setInputFiles({ name: 'original.txt', mimeType: 'text/plain', buffer: Buffer.from('original') });
+  await scope.getByRole('button', { name: 'Submit retry draft' }).click();
+  await expect(scope.getByTestId('retry-draft-error')).toHaveText('Reply lost');
+  await text.fill('edited');
+  await files.setInputFiles({ name: 'later.txt', mimeType: 'text/plain', buffer: Buffer.from('later') });
+  await scope.getByRole('button', { name: 'Confirm retry draft' }).click();
+  await expect(text).toHaveValue('edited');
+  await expect(scope.getByTestId('retry-draft-files')).toHaveText('later.txt');
+  await text.fill('another edit');
+  await scope.getByRole('button', { name: 'Confirm retry draft' }).click();
+  await expect(text).toHaveValue('another edit');
+  await expect(scope.getByTestId('retry-draft-files')).toHaveText('later.txt');
+});

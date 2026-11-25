@@ -12,10 +12,10 @@ import { ActionInvocationProvider } from '../../src/hooks/useActionInvocation';
 const initialMessage = { text: '', files: [] as File[] };
 const initialEdit = { title: 'Original', note: 'Note' };
 
-function FilesField() {
+function FilesField({ label = 'Form attachments' }: { label?: string } = {}) {
   const field = ui.form.field.use<File[]>('files');
   return (
-    <input type="file" aria-label="Form attachments" multiple disabled={!field || field.disabled}
+    <input type="file" aria-label={label} multiple disabled={!field || field.disabled}
       onChange={event => {
         if (field) field.change([...field.value, ...Array.from(event.currentTarget.files ?? [])]);
         event.currentTarget.value = '';
@@ -202,6 +202,33 @@ function SubscriptionForm() {
   );
 }
 
+function RetryDraftForm() {
+  const retry = useRef<(() => void) | null>(null);
+  const form = ui.form.use({
+    scope: 'retry-owner',
+    preset: 'message',
+    initial: initialMessage,
+    draft: { key: 'retry-room', persist: [] },
+    consume: ['files'],
+    submit: (_values, settlement) => {
+      retry.current = () => settlement.acknowledge(undefined);
+      return Promise.reject(new Error('Reply lost'));
+    },
+  });
+  return (
+    <section aria-label="Retry draft fixture">
+      <Flex as="form" ui={{ form }}>
+        <Input name="text" aria-label="Retry draft text" />
+        <FilesField label="Retry attachments" />
+        <Button type="submit" ui={{ action: form.action }}>Submit retry draft</Button>
+        <output data-testid="retry-draft-files">{form.values.files.map(file => file.name).join(',')}</output>
+        <output data-testid="retry-draft-error">{form.error instanceof Error ? form.error.message : ''}</output>
+      </Flex>
+      <Button onClick={() => retry.current?.()}>Confirm retry draft</Button>
+    </section>
+  );
+}
+
 function MemoryDraftForm() {
   const [target, setTarget] = useState('a');
   const finish = useRef<(() => void) | null>(null);
@@ -230,6 +257,7 @@ export function FormFixture() {
     <ActionInvocationProvider onFailure={() => undefined}>
       <MessageForm />
       <MemoryDraftForm />
+      <RetryDraftForm />
       <NamedFieldsFixture />
       <EditForm />
       <ActionKeyFixture />

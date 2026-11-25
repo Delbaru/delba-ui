@@ -25,7 +25,8 @@ export type FormOptions<T extends object, R> = {
   draft?: { key: string; persist: readonly FieldName<T>[]; storage?: DraftStorage };
   disabled?: boolean;
   validate?: (values: T) => FormErrors<T>;
-  submit: (values: T) => R | Promise<R>;
+  /** The captured acknowledgement may settle the exact submission after a confirmed explicit retry. */
+  submit: (values: T, settlement: { acknowledge(result: R): void }) => R | Promise<R>;
   /** Consumer-owned abort request; not a server rollback. */
   onCancel?: () => void;
   saved?: (result: R, submitted: T) => T;

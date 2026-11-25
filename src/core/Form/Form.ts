@@ -176,8 +176,10 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
       const submittedBinding = entry.storageBinding;
       const submittedSelection = current.current.selection;
       entry.error = undefined;
-      try {
-        const result = await options.submit(submitted.values);
+      let acknowledged = false;
+      const acknowledge = (result: R) => {
+        if (acknowledged) return;
+        acknowledged = true;
         // A replacement adapter (including A → B → A) must not receive an old settlement.
         if (entry.storageBinding !== submittedBinding) return;
         if (!isOwner()) {
@@ -194,11 +196,17 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
         // A second surface may have changed persisted text while the request was in flight.
         if (storage) readStored(false);
         entry.draft = acknowledgeDraft(entry.draft, submitted, saved, options.consume);
+        entry.error = undefined;
         save();
+        notify();
         if (isCurrent() && current.current.selection === submittedSelection) {
           try { options.onSuccess?.(result, submitted.values, entry.draft.values); }
           catch (error) { console.error('Form acknowledgement callback failed', error); }
         }
+      };
+      try {
+        const result = await options.submit(submitted.values, { acknowledge });
+        acknowledge(result);
       } catch (error) {
         if (!isOwner() || entry.storageBinding !== submittedBinding) throw new DOMException('Form scope changed', 'AbortError');
         if (!isAbortActionError(error)) entry.error = error;
