@@ -2,6 +2,18 @@
 
 # Компоненты, типы и пропы
 
+## Feed: удаление первого видимого item не теряет позицию соседей
+
+Восстановление prepend хранило только ID первого видимого элемента. Удаление
+этого элемента при refresh делало restore невозможным, хотя соседние элементы
+оставались в DOM. Capture сохраняет измеренные смещения соседей; restore выбирает
+первый сохранившийся элемент и компенсирует его геометрию один раз. Gesture,
+новый scope и следующая capture продолжают отменять прежнее восстановление.
+Проверка потребителя: `pnpm test:target tests/Chat/unit/Feed.test.tsx` в DelbaOS —
+удаление anchor одновременно с prepend сохраняет offset следующего сообщения;
+повторный restore, gesture и смена scope отклоняются. Это DOM-проверка,
+реальная браузерная прокрутка проверяется отдельно.
+
 ### Skin factory сохраняет точный словарь шкал до resolver
 
 `scales?: ScaleDict` расширял известные имена до строковой индексной сигнатуры:
@@ -17,10 +29,10 @@ Generic DOM-элемента проходит через аргументы и �
 `Ref<HTMLElement>` нельзя вернуть в нативный input. Ref передаётся напрямую,
 сохраняя callback cleanup React 19 без собственной обёртки.
 
-Воспроизведение: [contracts.typecheck.tsx](../../src/skin/tests/contracts.typecheck.tsx)
+Воспроизведение: [contracts.typecheck.tsx](../../tests/Skin/unit/contracts.typecheck.tsx)
 проверяет точные имена/ступени, skin без шкал, отклонение лишних props и refs input/button.
 `pnpm --filter @delba/ui typecheck` из корня потребителя прошёл. Из кита команда
-`node --import tsx --import ./tools/check/unit-runtime.mjs --test "src/skin/tests/*.test.ts" "tools/utilities/tests/extract.test.ts"`
+`node --import tsx --import ./tools/check/unit-runtime.mjs --test "tests/Skin/unit/*.test.ts" "tools/utilities/tests/extract.test.ts"`
 прошла 26 тестов: 9 skin и 17 extractor, включая полные tuples, `null` и `0`.
 
 ### Scoped perspective не теряет ввод до первого ответа observer
@@ -547,8 +559,8 @@ unmount панели, владевшей фокусом. Managed-окно с rol
 CRM-selector остаётся у проектного DContextMenu. Точные регрессии также проходят
 transformed region, регион без transform и внешний закрывающий клик без активации
 страницы. Проверка потребителя: точные
-`src/shared/ui/DMenu/DContextMenu.test.tsx` и
-`src/shared/ui/DMenu/tests/DContextMenu.kit.test.tsx` в CRMV2 проверяют координаты,
+`tests/UI/unit/DMenu/DContextMenu.test.tsx` и
+`tests/UI/unit/DMenu/DContextMenu.kit.test.tsx` в CRMV2 проверяют координаты,
 queued/реальную прокрутку, клавиатуру, Escape и возврат фокуса. Адресный прогон
 обоих сценариев прошёл; визуальный браузерный сценарий проверяется отдельно.
 
@@ -983,7 +995,7 @@ capture по-прежнему корректно завершают перета
 а следующий вертикальный touch-жест прокручивает документ без смены слайда;
 `native-carousel.spec.ts` также проверяет mouse drag, отмену и unmount.
 Общий `beginPointerGesture` соблюдает ту же границу target владельца;
-`core/base/tests/pointer-gesture.test.ts` проверяет всплывший lostcapture
+`tests/Core/unit/base/pointer-gesture.test.ts` проверяет всплывший lostcapture
 потомка и последующее успешное завершение жеста родителя.
 
 ## Событие границ карусели не является событием смены слайда
@@ -1335,7 +1347,7 @@ tuple/responsive-входы, Icon/Img нормализовали строки, �
 и документацию вместе. Поддержка внутреннего CSS animation и normalized options
 не означает сохранение старого API.
 
-Проверка: src/hooks/tests/motion-api.types.ts компилирует отсутствие старых props и
+Проверка: tests/Hooks/unit/motion-api.types.ts компилирует отсутствие старых props и
 строк/tuple в animate восьми примитивов; focused motion tests проверяют отказ
 старым входам и прежние key/duration, очередь свопа, reduced motion и reveal CSS.
 Нативные SSR/browser fixtures используют объектные load/inView/change/open.

@@ -8,7 +8,7 @@ Pointer-helper unit использует Node EventTarget. При `addEventListe
 true)` и `removeEventListener(type, fn, true)` capture-listener в этом harness
 оставался активным: второй generated click также поглощался после one-shot cleanup.
 Обе операции используют `{capture:true}`; повторный click должен проходить.
-Воспроизведение: `node --import tsx --test src/core/base/tests/pointer-gesture.test.ts`,
+Воспроизведение: `node --import tsx --test tests/Core/unit/base/pointer-gesture.test.ts`,
 сценарий `successful drag blocks only matching pointer-generated click`.
 
 ### Числовой и строковый ноль длины должны давать одинаковую декларацию
@@ -18,7 +18,7 @@ true)` и `removeEventListener(type, fn, true)` capture-listener в этом har
 и `0`), поэтому production build останавливался на настоящей коллизии.
 Общий length-resolver нормализует строковый ноль к прежней числовой форме,
 сохраняя имена классов и CSS числовых потребителей. Проверка:
-`src/core/utilities/tests/classes.test.ts`, сценарий numeric and CSS zero lengths;
+`tests/Core/unit/utilities/classes.test.ts`, сценарий numeric and CSS zero lengths;
 в потребителе — `node --import tsx delba-ui/tools/cli.mjs build` и `next build`.
 
 ### Общий marker guard проверяет потребителей без автоматического baseline

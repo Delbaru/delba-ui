@@ -142,7 +142,7 @@ pointercancel и dispose не создают нового suppression. Повт�
 
 Критерии: subthreshold click/focus, успешный drag и scoped click, cancel/Escape,
 blur/hidden/lostcapture, cleanup/unmount и повторный жест. Unit-сценарии —
-`src/core/base/tests/pointer-gesture.test.ts`; настоящий capture/click/focus
+`tests/Core/unit/base/pointer-gesture.test.ts`; настоящий capture/click/focus
 проверяется на рабочем потребителе в браузере.
 
 ## Полосы и медиазапросы
@@ -897,7 +897,7 @@ Sass-движок экспортируется через `@delba/ui/skin/effect
 за потребителя. Генератор UI-пакета должен получить `seeds.p` для парных
 паддингов, вычисляемых в runtime helpers и отсутствующих литералом в JSX.
 
-Проверки контракта: `src/skin/tests/index.test.ts`,
-`src/skin/tests/runtime.test.ts`,
+Проверки контракта: `tests/Skin/unit/index.test.ts`,
+`tests/Skin/unit/runtime.test.ts`,
 `tools/utilities/tests/extract.test.ts`. Фактическое применение Sass и
 computed-геометрию подтверждают только сборка и браузер потребителя.

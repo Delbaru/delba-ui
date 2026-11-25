@@ -221,7 +221,7 @@ export function uiCheckSteps({
             name: 'Тесты',
             run: ({ failedOnly = false } = {}) => runNodeTests({
               cwd: KIT,
-              files: ['src/**/*.test.ts', 'tools/**/*.test.ts', 'tools/**/*.test.mjs', ...rootTests],
+              files: ['tools/**/*.test.ts', 'tools/**/*.test.mjs', ...rootTests],
               stateFile: `${reportFile}.library-tests`,
               failedOnly,
               nodeArgs: [

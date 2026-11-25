@@ -51,7 +51,7 @@ import { runNode, runNodeTests, runSteps } from '@delba/ui/verify';
 await runSteps([
   { id: 'generate', name: 'Генерация', run: () => runNode(['tools/generate.mjs'], process.cwd()) },
   { id: 'tests', name: 'Тесты', dependsOn: ['generate'], run: ({ failedOnly }) => runNodeTests({
-    cwd: process.cwd(), files: ['src/**/*.test.ts'], nodeArgs: ['--import', 'tsx'],
+    cwd: process.cwd(), files: ['tests/**/*.test.ts'], nodeArgs: ['--import', 'tsx'],
     stateFile: '.verification/tests.state', failedOnly,
   }) },
 ], { reportFile: '.verification/project.json', failedOnly: process.argv.includes('--failed'), profile: 'project' });

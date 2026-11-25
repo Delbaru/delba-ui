@@ -450,8 +450,10 @@ InputCalendar и InputOverflow. Чистые модели, политики и �
 
 ## Размещение тестов
 
-Unit-тесты и статические проверки типов находятся в `tests/` у владельца:
-`Name/tests/Name.model.test.ts`, `core/base/tests/focus.test.ts`.
+Unit-тесты и статические проверки типов находятся только в корневом `tests/`,
+сначала предметная область, затем тип: `tests/Field/unit/Field.model.test.ts`,
+`tests/Core/unit/base/focus.test.ts`. Integration-тесты — в `tests/<Domain>/integration/`,
+пользовательские сценарии — в `tests/<Domain>/e2e/` с настройкой своего harness.
 `*.type-test.ts` и `*.typecheck.tsx` также относятся к тестам и не лежат
 рядом с runtime-файлами. Общие проверки инструментов — в `tools/tests/`
 или `tools/<module>/tests/`. Браузерные `*.spec.ts` — в
