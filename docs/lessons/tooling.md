@@ -11,6 +11,16 @@ true)` и `removeEventListener(type, fn, true)` capture-listener в этом har
 Воспроизведение: `node --import tsx --test src/core/base/tests/pointer-gesture.test.ts`,
 сценарий `successful drag blocks only matching pointer-generated click`.
 
+### Числовой и строковый ноль длины должны давать одинаковую декларацию
+
+После подключения Scroll к скану генератор встретил `w={0}` и `w="0"`:
+оба значения получали `w_0`, но декларации различались (`calc(var(--rpx) * 0)`
+и `0`), поэтому production build останавливался на настоящей коллизии.
+Общий length-resolver нормализует строковый ноль к прежней числовой форме,
+сохраняя имена классов и CSS числовых потребителей. Проверка:
+`src/core/utilities/tests/classes.test.ts`, сценарий numeric and CSS zero lengths;
+в потребителе — `node --import tsx delba-ui/tools/cli.mjs build` и `next build`.
+
 ### Общий marker guard проверяет потребителей без автоматического baseline
 
 Anatomy-check ограничен src/components кита и не защищал CMS/project className.

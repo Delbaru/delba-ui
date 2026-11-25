@@ -63,6 +63,7 @@ const isCssLiteral = (value: string): boolean => /^[#A-Za-z0-9.-][A-Za-z0-9#().,
 const length = (value: UtilityScalar, words: ReadonlySet<string> = PLAIN_WORDS): string | null => {
   if (typeof value === 'number') return Number.isFinite(value) ? rpx(value) : null;
   const trimmed = value.trim();
+  if (trimmed === '0') return rpx(0);
   return isLength(trimmed, words) ? trimmed : null;
 };
 

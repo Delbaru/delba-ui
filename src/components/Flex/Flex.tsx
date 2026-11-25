@@ -230,7 +230,7 @@ export function Flex({
             composeEventHandlers(composeEventHandlers(onKeyDown, popupOptions ? popup.onKeyDown : undefined, { cancelable: true }), selectable?.onKeyDown, { cancelable: true }),
             nestedEnter, { cancelable: true })}
           onAnimationEnd={contentMotion.onAnimationEnd}
-          onSubmit={ui?.form && as === 'form' && !isLink ? (event: React.FormEvent<HTMLElement>) => {
+          onSubmit={ui?.form && as === 'form' && !isLink ? (event: React.SubmitEvent<HTMLElement>) => {
             if (event.target !== event.currentTarget) return;
             onSubmit?.(event);
             if (event.defaultPrevented) return;

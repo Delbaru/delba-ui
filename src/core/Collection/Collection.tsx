@@ -100,9 +100,14 @@ export function useCollection<T>(
         if (current.retained.has(id)) previews.set(id, current.retained.get(id)!);
       }
       const keys = [...current.visible.keys()];
-      const targets = operation === 'range'
-        ? rangeKeys(keys, previous.selection.anchor, requested[0], origin)
-        : operation === 'all' ? (current.mode === 'single' ? keys.slice(0, 1) : keys) : requested;
+      let targets = requested;
+      if (operation === 'range') {
+        const target = requested[0];
+        if (target === undefined) return previous;
+        targets = rangeKeys(keys, previous.selection.anchor, target, origin);
+      } else if (operation === 'all') {
+        targets = current.mode === 'single' ? keys.slice(0, 1) : keys;
+      }
       return { ...previous, selection: changeSelection(
         { ...previous.selection, retained: previews }, current.visible, targets,
         operation === 'all' ? 'select' : operation, current.retainMissing, current.mode, origin,

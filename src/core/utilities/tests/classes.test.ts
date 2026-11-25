@@ -12,6 +12,17 @@ const u = (name: string): Utility => {
   return utility;
 };
 
+test('numeric and CSS zero lengths share one class and declaration', () => {
+  for (const name of ['w', 'h', 'p', 'gap']) {
+    const utility = u(name);
+    assert.deepEqual(utilityClasses(utility, [0, 0, 0]), utilityClasses(utility, ['0', '0', '0']));
+    const numeric = looseRules(utility, 0);
+    const literal = looseRules(utility, '0');
+    assert.deepEqual(numeric.map(rule => rule.declaration), literal.map(rule => rule.declaration));
+    assert.doesNotThrow(() => renderRules([...numeric, ...literal]));
+  }
+});
+
 test('letter spacing accepts font-relative lengths and preserves numeric rpx values', () => {
   assert.equal(exactRules(u('letterSpacing'), ['-0.03em', '-0.03em', '-0.03em'])[0]?.declaration, 'letter-spacing: -0.03em');
   assert.equal(exactRules(u('letterSpacing'), [2, 2, 2])[0]?.declaration, 'letter-spacing: calc(var(--rpx) * 2)');

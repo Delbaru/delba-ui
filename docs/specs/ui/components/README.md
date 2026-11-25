@@ -51,6 +51,7 @@
 | [Accordion](Accordion.md) | Одно/несколько раскрытых разделов |
 | [AccordionItem](AccordionItem.md) | Раздел внутри Accordion |
 | [Dropdown](Dropdown.md) | Панель возле триггера с содержимым/действиями |
+| [ContextPopup](ContextPopup.md) | Контекстное меню в точке вызова с возвратом фокуса |
 | [MediaDropDown](MediaDropDown.md) | Выбор/добавление медиа по URL или файлом |
 | [Modal](Modal.md) | Модальный сценарий поверх страницы |
 | [ModalProvider](ModalProvider.md) | Стек, контекст и программное открытие Modal |
