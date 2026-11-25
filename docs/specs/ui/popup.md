@@ -15,3 +15,10 @@ Menu positions accept top/bottom/left/right, with optional -start/-end alignment
 Hover defaults to top, click to bottom-start. The existing portal geometry
 engine may flip at the viewport boundary. Native touch pointer outside dismissal
 and Dropdown logical ancestry are shared with other portalled surfaces.
+
+## Touch и клавиатурный контракт
+
+- Контекстная поверхность открывается правым кликом, `Shift+F10`/клавишей Context Menu и длительным касанием.
+- Touch long-press срабатывает после 500 мс неподвижного касания; движение более 8 px, `pointerup` до порога или `pointercancel` отменяют ожидание. Это не блокирует обычную прокрутку.
+- Hover-menu не забирает фокус при наведении; keyboard-open переводит фокус в меню и Escape возвращает его opener.
+

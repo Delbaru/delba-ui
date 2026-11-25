@@ -35,3 +35,10 @@ The `ui.collapse.use` public door now has a browser consumer fixture exercising 
 
 
 Feed follow and history-anchor browser coverage is authored in `tests/Scroll/e2e/FeedScroll.spec.ts` against the real `ui.scroll.feed.use` hook and Flex scroll surface. The fixture exercises bottom-follow, reader-gesture release, append without forced scroll, latest, and prepend anchor restoration. Browser execution remains unverified.
+
+## RPX и feed surface
+
+- `height`, `width` и стороны `p` принимают RPX `ResponsiveValue`; `height`/`width` также принимают `{ min, max }`, где каждая граница может быть responsive.
+- `preset: 'feed'` маркирует viewport атрибутом `data-scroll-preset="feed"`, но не подменяет владельца feed-состояния: history/following по-прежнему подключаются через `ui.scroll.feed.use`.
+- `CollapseOptions.gap` остаётся responsive RPX. `ScrollbarOptions` и `ScrollOptions` доступны через публичный вход.
+
