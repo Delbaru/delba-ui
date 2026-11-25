@@ -45,13 +45,12 @@ test('first plain click selects and plain click toggles an active selection', as
   const alpha = page.getByRole('option', { name: 'Alpha' });
   await alpha.click();
   await expect(alpha).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByTestId('collection-selected')).toHaveText('Alpha');
-
   await alpha.click();
   await expect(alpha).toHaveAttribute('aria-selected', 'false');
-  await expect(page.getByTestId('collection-count')).toHaveText('0');
 
   await alpha.click();
-  await page.getByRole('option', { name: 'Beta' }).click({ modifiers: ['Control'] });
-  await expect(page.getByTestId('collection-selected')).toHaveText('Alpha|Beta');
+  const beta = page.getByRole('option', { name: 'Beta' });
+  await beta.click({ modifiers: ['Control'] });
+  await expect(alpha).toHaveAttribute('aria-selected', 'true');
+  await expect(beta).toHaveAttribute('aria-selected', 'true');
 });

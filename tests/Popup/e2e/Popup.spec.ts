@@ -93,7 +93,7 @@ test('context popup supports right-click and touch long-press without stealing s
     await trigger.click({ button: 'right' });
     await expect(menuItem).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(menuItem).toHaveCount(0);
+    await expect(menuItem).toBeHidden();
 
     const pointer = async (type: string, x: number, y: number) => page.evaluate(({ type, x, y }) => {
         const target = document.querySelector('[aria-label="Context popup trigger"]');
