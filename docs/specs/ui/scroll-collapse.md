@@ -29,3 +29,6 @@ keepMounted, appear, overflowVisibleWhenOpen, onFound/onEnd/onTransition).
 `collapse.trigger` is a convenience for a button's aria-expanded/onClick;
 `collapse.controls` exposes the original mounted CollapseControls ref. An
 explicit feed anchor centers only its own viewport, not an ancestor page.
+
+
+The `ui.collapse.use` public door now has a browser consumer fixture exercising its shared trigger, controlled state and imperative show/hide commands. Source coverage is in `tests/Collapse/e2e/Collapse.spec.ts`; execution remains unverified.

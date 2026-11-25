@@ -30,3 +30,6 @@ selector; the existing explicit selector overload remains. Flex collections
 and selectable items carry a scoped DOM identity. Arrow keys/Home/End move
 focus within that collection, Shift extends the range, Ctrl/Cmd+A selects
 loaded items. Embedded controls keep their native keyboard behavior.
+
+
+Browser consumer coverage is now authored in `tests/Collection/e2e/Collection.spec.ts` with the real `Flex ui={{collection}}` and `ui.collection.item.use` path. It covers range selection, keyboard focus, nested interactive controls, owner reset and retained off-page previews. The browser suite has not been executed in this environment.

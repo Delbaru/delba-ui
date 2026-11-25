@@ -83,3 +83,6 @@ The optional onChange callback receives a detached snapshot of the complete
 current values after a local field edit. Mutating the observer's snapshot cannot
 mutate the form draft. Receive/reset/acknowledgement operations do not report as
 local field edits.
+
+
+A browser fixture now exercises `onChange` observation against the real named field: local edit only, detached snapshot mutation, external receive and reset. Source coverage is in `tests/Form/e2e/Form.spec.ts`; execution remains unverified.
