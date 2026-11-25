@@ -131,9 +131,10 @@ export { ui } from './ui';
 export { useFormField } from './core/Form';
 export type { DraftStorage, FormOptions, FormController, FormScope, FormErrors, ActionOptions } from './core/Form';
 
-export type { CollectionDefinition, CollectionController, CollectionScope, CollectionItem } from './core/Collection/Collection';
+export type { CollectionDefinition, CollectionController, CollectionScope, CollectionItem, CollectionOptions } from './core/Collection/Collection';
 
 export type { ScrollOptions } from './core/Scroll/Surface';
+export type { ScrollbarOptions } from './components/ScrollArea/scrollbar';
 export type { CollapseDoor, CollapseDoorOptions } from './core/Collapse/Collapse';
 
 export type { AsyncOptions } from './core/Async/Async';

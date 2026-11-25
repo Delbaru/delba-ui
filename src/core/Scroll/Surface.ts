@@ -31,6 +31,7 @@ export function useScrollSurface(options?: ScrollOptions) {
   const height = size(options.height);
   const width = size(options.width);
   return {
+    preset: options.preset,
     axis,
     fade: options.fade ? axis : false as const,
     className: 'ui-scroll-area ' + decoration.className,

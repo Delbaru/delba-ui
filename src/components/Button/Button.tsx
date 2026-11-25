@@ -55,6 +55,10 @@ export function Button({
   onMouseLeave,
   onMouseDown,
   onMouseUp,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
   onClick,
   onKeyDown,
   onContextMenu,
@@ -153,12 +157,18 @@ export function Button({
 
   const interactions = composeInteractionHandlers(
     composeInteractionHandlers(anchorHandlers, motionHandlers ?? {}),
-    { onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp, onClick: handleClick, onFocus, onBlur },
+    { onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp,
+      onPointerDown, onPointerMove, onPointerUp, onPointerCancel,
+      onClick: handleClick, onFocus, onBlur },
   );
   const interactionHandlers = stateLinkProps(effectiveDisabled ? undefined : linkState, {
     ...interactions,
     onMouseEnter: composeEventHandlers(composeEventHandlers(interactions.onMouseEnter, prepare.onIntent), menuOptions ? popup.onMouseEnter : undefined),
     onMouseLeave: composeEventHandlers(interactions.onMouseLeave, menuOptions ? popup.onMouseLeave : undefined),
+    onPointerDown: composeEventHandlers(interactions.onPointerDown, menuOptions ? popup.onPointerDown : undefined, { cancelable: true }),
+    onPointerMove: composeEventHandlers(interactions.onPointerMove, menuOptions ? popup.onPointerMove : undefined, { cancelable: true }),
+    onPointerUp: composeEventHandlers(interactions.onPointerUp, menuOptions ? popup.onPointerUp : undefined, { cancelable: true }),
+    onPointerCancel: composeEventHandlers(interactions.onPointerCancel, menuOptions ? popup.onPointerCancel : undefined, { cancelable: true }),
     onClick: composeEventHandlers(interactions.onClick, menuOptions ? popup.onClick : undefined, { cancelable: true }),
     onFocus: composeEventHandlers(composeEventHandlers(interactions.onFocus, prepare.onIntent), menuOptions ? popup.onFocus : undefined),
     onBlur: composeEventHandlers(interactions.onBlur, menuOptions ? popup.onBlur : undefined),

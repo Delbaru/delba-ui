@@ -78,6 +78,10 @@ export function Flex({
   onMouseLeave,
   onMouseDown,
   onMouseUp,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
   onClick,
   onFocus,
   onBlur,
@@ -199,6 +203,7 @@ export function Flex({
           {...stateProps(state, trackInteraction && active && 'interacting')}
           {...anchorProps}
           data-scroll-axis={scroll?.axis ?? (anchorProps as { 'data-scroll-axis'?: string })['data-scroll-axis']}
+          data-scroll-preset={scroll?.preset ?? (anchorProps as { 'data-scroll-preset'?: string })['data-scroll-preset']}
           tabIndex={anchorProps.tabIndex ?? (selectable || popupOptions ? 0 : undefined)}
           aria-busy={anchorProps['aria-busy'] ?? asyncContent.busy}
           data-ui-popup-trigger={popupOptions ? '' : undefined}
@@ -221,6 +226,10 @@ export function Flex({
             onMouseLeave: composeEventHandlers(composeEventHandlers(motionHandlers?.onMouseLeave, onMouseLeave), popupOptions ? popup.onMouseLeave : undefined),
             onMouseDown: composeEventHandlers(onMouseDown, selectable?.onMouseDown),
             onMouseUp,
+            onPointerDown: composeEventHandlers(onPointerDown, popupOptions ? popup.onPointerDown : undefined, { cancelable: true }),
+            onPointerMove: composeEventHandlers(onPointerMove, popupOptions ? popup.onPointerMove : undefined, { cancelable: true }),
+            onPointerUp: composeEventHandlers(onPointerUp, popupOptions ? popup.onPointerUp : undefined, { cancelable: true }),
+            onPointerCancel: composeEventHandlers(onPointerCancel, popupOptions ? popup.onPointerCancel : undefined, { cancelable: true }),
             onClick: composeEventHandlers(composeEventHandlers(onClick, selectable?.onClick), popupOptions ? popup.onClick : undefined, { cancelable: true }),
             onFocus: composeEventHandlers(composeEventHandlers(onFocus, prepare.onIntent), popupOptions ? popup.onFocus : undefined),
             onBlur: composeEventHandlers(onBlur, popupOptions ? popup.onBlur : undefined),
