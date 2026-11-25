@@ -8,6 +8,7 @@ import { Dropdown } from '../../src/components/Dropdown/Dropdown';
 import { Button } from '../../src/components/Button/Button';
 import { Select } from '../../src/components/Select/Select';
 import { Accordion, AccordionItem } from '../../src/components/Accordion';
+import { ui } from '../../src/ui';
 import type { CollapseControls } from '../../src/hooks/useCollapseControls';
 
 declare global {
@@ -38,6 +39,7 @@ export function CollapseControlsFixture() {
   const text = useRef<CollapseControls>(null);
   const dropdown = useRef<CollapseControls>(null);
   const select = useRef<CollapseControls>(null);
+  const uiDoor = ui.collapse.use({ defaultOpen: false, fade: true, keepMounted: true });
   const [textContent, setTextContent] = useState('Retained command text');
   const [visible, setVisible] = useState(true);
   const [open, setOpen] = useState(false);
@@ -81,6 +83,17 @@ export function CollapseControlsFixture() {
 
   return (
     <section aria-label="Collapse commands" className="fixture" style={{ '--t-d-fast': '0.35s' } as CSSProperties}>
+      <section aria-label="UI collapse door">
+        <Button data-testid="ui-collapse-trigger" aria-expanded={uiDoor.open} onClick={uiDoor.trigger.onClick}>
+          Toggle UI collapse
+        </Button>
+        <Button data-testid="ui-collapse-show" onClick={uiDoor.show}>Show UI collapse</Button>
+        <Button data-testid="ui-collapse-hide" onClick={uiDoor.hide}>Hide UI collapse</Button>
+        <output data-testid="ui-collapse-state">{String(uiDoor.open)}</output>
+        <Flex data-testid="ui-collapse-surface" ui={{ collapse: uiDoor }}>
+          <Text>UI collapse content</Text>
+        </Flex>
+      </section>
       <button data-testid="collapse-grid-toggle" onClick={() => setGridOpen(value => !value)}>Swap skeleton and grid</button>
       <Flex data-testid="collapse-grid-swap" dir={['column', 'column', 'column']}>
         <Flex collapse={{ open: !gridOpen, gap: [32, 32, 32], fade: true }}>
