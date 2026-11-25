@@ -62,3 +62,24 @@ test('context menu exposes the actual controlled surface and restores focus', as
     await expect(menu).not.toBeVisible();
     await expect(trigger).toBeFocused();
 });
+
+
+test('nested portal escape dismisses only the top popup in the logical menu stack', async ({ page }) => {
+    await page.goto('/?dropdown-open');
+    const outerTrigger = page.getByRole('button', { name: 'Wide dropdown anchor' });
+    const outer = page.getByTestId('narrow-dropdown-surface');
+    const nestedTrigger = page.getByRole('button', { name: 'Nested narrow dropdown' });
+    const nested = page.getByTestId('nested-narrow-surface');
+
+    await outerTrigger.click();
+    await expect(outer).toBeVisible();
+    await nestedTrigger.click();
+    await expect(nested).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(nested).not.toBeVisible();
+    await expect(outer).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(outer).not.toBeVisible();
+});
