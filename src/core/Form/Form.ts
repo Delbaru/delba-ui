@@ -16,6 +16,7 @@ type Entry<T extends object> = {
   ready: boolean;
   persisted: boolean;
   error: unknown;
+  submission?: symbol;
   storageKey?: string;
   persist: readonly FieldName<T>[];
   lastReceived?: T;
@@ -175,6 +176,8 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
       const submittedRevision = entry.storageRevision;
       const submittedBinding = entry.storageBinding;
       const submittedSelection = current.current.selection;
+      const submission = Symbol();
+      entry.submission = submission;
       entry.error = undefined;
       let acknowledged = false;
       const acknowledge = (result: R) => {
@@ -196,10 +199,10 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
         // A second surface may have changed persisted text while the request was in flight.
         if (storage) readStored(false);
         entry.draft = acknowledgeDraft(entry.draft, submitted, saved, options.consume);
-        entry.error = undefined;
+        if (entry.submission === submission) entry.error = undefined;
         save();
         notify();
-        if (isCurrent() && current.current.selection === submittedSelection) {
+        if (entry.submission === submission && isCurrent() && current.current.selection === submittedSelection) {
           try { options.onSuccess?.(result, submitted.values, entry.draft.values); }
           catch (error) { console.error('Form acknowledgement callback failed', error); }
         }

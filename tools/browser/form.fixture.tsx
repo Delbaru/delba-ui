@@ -204,7 +204,7 @@ function SubscriptionForm() {
 
 function RetryDraftForm() {
   const retry = useRef<(() => void) | null>(null);
-  const form = ui.form.use({
+  const form = ui.form.use<typeof initialMessage, void>({
     scope: 'retry-owner',
     preset: 'message',
     initial: initialMessage,
