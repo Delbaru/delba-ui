@@ -157,7 +157,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     entry.draft = setField(before, name, change(before.values[name]));
     entry.error = undefined;
     save();
-    if (entry.draft !== before) options.onChange?.(name, entry.draft.values);
+    if (entry.draft !== before) options.onChange?.(name, snapshotValue(entry.draft.values));
     notify();
   };
   const set = <K extends FieldName<T>>(name: K, value: T[K]) => update(name, () => value);
