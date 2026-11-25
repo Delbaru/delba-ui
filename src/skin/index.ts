@@ -1,4 +1,3 @@
-import type { LayoutSpaceProps, RadiusPropsShort } from '../core/base/shared-props';
 import type { ResponsiveValue } from '../core/base/responsive';
 
 // Движок шкур компонентов проекта: `defineSkin` описывает оси, умолчания и пресеты, `resolveSkin`
@@ -123,21 +122,29 @@ export function axisAt<T extends string>(axis: ResponsiveAxis<T> | undefined, in
   return axis[index] ?? undefined;
 }
 
-const tuple = <T extends string, V>(axis: ResponsiveAxis<T> | undefined, resolve: (name: T) => V) => {
+type GeometryTuple<T> = [T | null, T | null, T | null];
+
+const tuple = <T extends string, V>(axis: ResponsiveAxis<T> | undefined, resolve: (name: T) => V): GeometryTuple<V> | undefined => {
   if (axis === undefined) return undefined;
   const at = (i: number) => {
     const name = axisAt(axis, i);
     return name === undefined ? null : resolve(name);
   };
-  return [at(0), at(1), at(2)] as [V | null, V | null, V | null];
+  return [at(0), at(1), at(2)];
 };
 
-const toSpace = (pad: SkinPad) => (typeof pad === 'number' ? pad : [...pad]) as number | [number, number];
+type SpacePad = number | [number, number] | [number, number, number, number];
+
+const toSpace = (pad: SkinPad): SpacePad => {
+  if (typeof pad === 'number') return pad;
+  if (pad.length === 2) return [pad[0], pad[1]];
+  return [pad[0], pad[1], pad[2], pad[3]];
+};
 
 /** Паддинг: сырой `pad` инстанса > именованный `size` из словаря проекта. */
-export const skinPad = <S extends string>(sizes: Readonly<Record<S, SkinPad>>, size?: ResponsiveAxis<S>, pad?: SkinPad): LayoutSpaceProps['p'] =>
+export const skinPad = <S extends string>(sizes: Readonly<Record<S, SkinPad>>, size?: ResponsiveAxis<S>, pad?: SkinPad): GeometryTuple<SpacePad> | undefined =>
   pad !== undefined ? [toSpace(pad), toSpace(pad), toSpace(pad)] : tuple(size, (name) => toSpace(sizes[name]));
 
 /** Радиус из словаря проекта. */
-export const skinRadius = <R extends string>(radii: Readonly<Record<R, number>>, radius?: ResponsiveAxis<R>): RadiusPropsShort['r'] =>
+export const skinRadius = <R extends string>(radii: Readonly<Record<R, number>>, radius?: ResponsiveAxis<R>): GeometryTuple<number> | undefined =>
   tuple(radius, (name) => radii[name]);

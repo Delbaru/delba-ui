@@ -36,7 +36,11 @@ function legacyFiles(componentName) {
  * Check public consumer D-components without imposing the anatomy on kit internals.
  * Missing scan roots and empty directories are ignored so optional app layers remain optional.
  */
-export function validateDComponentAnatomy(projectRoot, roots = DEFAULT_ROOTS, { singleConfig = false } = {}) {
+export function validateDComponentAnatomy(
+  projectRoot,
+  roots = DEFAULT_ROOTS,
+  { singleConfig = false } = {},
+) {
   const diagnostics = [];
 
   for (const relativeRoot of roots) {

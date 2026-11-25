@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { resolveResponsive } from '../../../../src/core/base/responsive';
 import { utilityClasses } from '../../../../src/core/utilities/classes';
 import { entryKey, hashKey } from '../../../../src/core/utilities/keys';
 import { resolveUtility, type Utility } from '../../../../src/core/utilities/registry';
@@ -121,4 +122,19 @@ test('таблица: полное свойство после шортката,
   assert.ok(css.indexOf('.p_8 ') < css.indexOf('.pt_4 '));
   assert.ok(css.lastIndexOf('.t_p_8 ') < css.indexOf('.pt_4 '));
   assert.match(renderRules(exactRules(u('w'), '100%')), /\.w_100\\% \{ width: 100%; \}/);
+});
+
+test('explicit responsive triples preserve utility classes and CSS declarations', () => {
+  const sides: [number, number, number, number] = [4, 8, 12, 16];
+  const padding = u('p');
+  const shorthand = [sides, sides, sides];
+  assert.deepEqual(utilityClasses(padding, sides), utilityClasses(padding, shorthand));
+  assert.deepEqual(exactRules(padding, sides), exactRules(padding, shorthand));
+
+  const inputs: Array<number | [number, number?] | [number, null, number]> = [0, 24, [24, 12], [8, null, 0]];
+  for (const input of inputs) {
+    const explicit = resolveResponsive(input);
+    assert.deepEqual(utilityClasses(padding, input), utilityClasses(padding, explicit));
+    assert.deepEqual(exactRules(padding, input), exactRules(padding, explicit));
+  }
 });

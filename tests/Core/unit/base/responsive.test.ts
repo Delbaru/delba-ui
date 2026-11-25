@@ -36,3 +36,9 @@ test('desktop не наследует от мобильного и планше�
     assert.deepEqual(resolveResponsive([null, 16, 16]), [null, 16, 16]);
     assert.deepEqual(resolveResponsive([]), [null, null, null]);
 });
+
+test('normalizing a dynamic tuple retains zero, explicit skips and nested padding', () => {
+    assert.deepEqual(resolveResponsive([0, undefined, null]), [0, 0, null]);
+    const sides: [number, number, number, number] = [4, 8, 12, 16];
+    assert.deepEqual(resolveResponsive<number | typeof sides>([sides, null]), [sides, null, sides]);
+});

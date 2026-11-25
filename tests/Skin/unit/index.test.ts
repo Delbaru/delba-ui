@@ -41,3 +41,11 @@ test('геометрия: скаляр на всех ширинах, null в к�
     assert.deepEqual(skinRadius({ md: 16 }, 'md'), [16, 16, 16]);
     assert.equal(skinRadius({ md: 16 }), undefined);
 });
+
+test('skin padding preserves four sides in each breakpoint and distinguishes zero from absence', () => {
+    const sizes = { inset: [4, 8, 12, 16], none: 0 } as const;
+    const padding = skinPad(sizes, ['inset', null, 'none']);
+    assert.deepEqual(padding, [[4, 8, 12, 16], null, 0]);
+    assert.deepEqual(skinPad(sizes, 'none', [1, 2, 3, 4]), [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]]);
+    assert.equal(skinPad(sizes), undefined);
+});

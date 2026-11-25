@@ -104,10 +104,18 @@ export function projectSteps(
             [script('check-migration.mjs'), ...(config.rules ?? ['src']), ...configs],
             root,
         ),
-        ...(config.componentAnatomy === false ? [] : [nodeStep('Анатомия D-компонентов', [
-            script('check-d-component-anatomy.mjs'),
-            ...(config.componentAnatomy === 'single-config' ? ['--single-config'] : []),
-        ], root)]),
+        ...(config.componentAnatomy === false
+            ? []
+            : [
+                  nodeStep(
+                      'Анатомия D-компонентов',
+                      [
+                          script('check-d-component-anatomy.mjs'),
+                          ...(config.componentAnatomy === 'single-config' ? ['--single-config'] : []),
+                      ],
+                      root,
+                  ),
+              ]),
         astStep('Архитектура проекта', root, {
             rules: projectRules,
             dirs: config.rules ?? ['src'],
