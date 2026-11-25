@@ -77,3 +77,9 @@ not release admission or claim that a server command rolled back. AbortError
 is cancellation, not a form validation failure. A nested non-native form
 scope inside a native form handles text input Enter locally; custom editors
 retain their own key handling. Native submit remains opt-in.
+
+
+The optional onChange callback receives a detached snapshot of the complete
+current values after a local field edit. Mutating the observer's snapshot cannot
+mutate the form draft. Receive/reset/acknowledgement operations do not report as
+local field edits.

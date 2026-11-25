@@ -252,6 +252,35 @@ function MemoryDraftForm() {
   );
 }
 
+
+function ChangeCallbackForm() {
+  const [changes, setChanges] = useState(0);
+  const [last, setLast] = useState('');
+  const form = ui.form.use({
+    scope: 'form-change-callback',
+    preset: 'default',
+    initial: { value: 'initial' },
+    submit: async values => values,
+    onChange: (name, values) => {
+      setChanges(count => count + 1);
+      setLast(`${name}:${values.value}`);
+      (values as { value: string }).value = 'mutated';
+    },
+  });
+  return (
+    <section aria-label="Form change callback">
+      <Flex ui={{ form }}>
+        <Input name="value" aria-label="Change callback value" />
+      </Flex>
+      <Button onClick={() => form.receive({ value: 'server' })}>Receive change callback</Button>
+      <Button onClick={form.reset}>Reset change callback</Button>
+      <output data-testid="change-callback-count">{changes}</output>
+      <output data-testid="change-callback-last">{last}</output>
+      <output data-testid="change-callback-value">{form.values.value}</output>
+    </section>
+  );
+}
+
 export function FormFixture() {
   return (
     <ActionInvocationProvider onFailure={() => undefined}>
@@ -262,6 +291,7 @@ export function FormFixture() {
       <EditForm />
       <ActionKeyFixture />
       <StorageBindingFixture />
+      <ChangeCallbackForm />
       <StrictMode><SharedForms /><SubscriptionForm /></StrictMode>
     </ActionInvocationProvider>
   );

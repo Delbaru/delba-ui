@@ -271,3 +271,20 @@ test('confirmed retry acknowledges only the original submission and is idempoten
   await expect(text).toHaveValue('another edit');
   await expect(scope.getByTestId('retry-draft-files')).toHaveText('later.txt');
 });
+
+
+test('onChange receives a detached snapshot for local edits only', async ({ page }) => {
+  await page.goto('/');
+  const region = page.getByRole('region', { name: 'Form change callback' });
+  const input = region.getByRole('textbox', { name: 'Change callback value' });
+  await region.getByRole('button', { name: 'Receive change callback' }).click();
+  await expect(input).toHaveValue('server');
+  await expect(region.getByTestId('change-callback-count')).toHaveText('0');
+  await input.fill('local');
+  await expect(region.getByTestId('change-callback-count')).toHaveText('1');
+  await expect(region.getByTestId('change-callback-last')).toHaveText('value:local');
+  await expect(region.getByTestId('change-callback-value')).toHaveText('local');
+  await region.getByRole('button', { name: 'Reset change callback' }).click();
+  await expect(input).toHaveValue('server');
+  await expect(region.getByTestId('change-callback-count')).toHaveText('1');
+});
