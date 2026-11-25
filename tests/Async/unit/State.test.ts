@@ -41,3 +41,13 @@ test('explicit empty is a completed result, but never falls back to stale data',
     assert.equal(empty.empty, true);
     assert.equal(asyncSourceState({ currentData: undefined, empty: true, loading: true }).pending, true);
 });
+
+
+test('falsey non-null errors are completed failures rather than perpetual loading', () => {
+    for (const error of ['', 0, false]) {
+        const state = asyncSourceState({ error });
+        assert.equal(state.error, error);
+        assert.equal(state.pending, false);
+        assert.equal(state.empty, true);
+    }
+});

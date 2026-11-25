@@ -33,3 +33,10 @@ loaded items. Embedded controls keep their native keyboard behavior.
 
 
 Browser consumer coverage is now authored in `tests/Collection/e2e/Collection.spec.ts` with the real `Flex ui={{collection}}` and `ui.collection.item.use` path. It covers range selection, keyboard focus, nested interactive controls, owner reset and retained off-page previews. The browser suite has not been executed in this environment.
+
+## Контракт завершения
+
+- `scope` необязателен для стабильного списка с одним владельцем; при смене пользователя, комнаты или запроса владелец передаёт меняющийся `scope`, чтобы сбросить выбор.
+- Первый обычный клик по элементу без активного выбора устанавливает выбор. Пока выбор активен, обычный клик переключает элемент; Ctrl/Cmd всегда переключает, Shift выбирает диапазон от anchor.
+- `CollectionOptions` экспортируется из публичного входа вместе с `CollectionDefinition`, `CollectionController` и `CollectionItem`.
+

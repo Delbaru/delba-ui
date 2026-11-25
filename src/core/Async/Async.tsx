@@ -27,7 +27,7 @@ export function useAsync<T>(from: AsyncSource<T>, timing?: AsyncOptions['timing'
 export function useAsyncContent(options: AsyncOptions | undefined, children: ReactNode) {
     const state = useAsyncState(options?.from ?? { data: true }, options?.timing, Boolean(options));
     if (!options) return { children, busy: undefined };
-    const failure = state.error ? (
+    const failure = state.error !== undefined && state.error !== null ? (
         <span role="alert">{typeof options.error === 'function'
             ? options.error(state.error, state.retry) : options.error ?? 'Не удалось загрузить.'}</span>
     ) : null;

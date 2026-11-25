@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type ReactNode, type MouseEvent, type KeyboardEvent, type FocusEvent } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type MouseEvent, type KeyboardEvent, type FocusEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { Dropdown, type DropdownProps } from '../../components/Dropdown';
 import { Tooltip } from '../../components/Tooltip';
 import { useTooltip } from '../../hooks/useTooltip';
@@ -17,14 +17,15 @@ export type PopupOptions =
     | { preset: 'context'; on?: 'rightClick'; label?: string; children: MenuContent; panel?: Panel; boundary?: (opener: HTMLElement) => HTMLElement | null }
     | { preset: 'menu'; on?: 'click' | 'hover'; label?: string; children: MenuContent; panel?: Panel; position?: MenuPosition; consume?: boolean };
 
-function inside(event: MouseEvent<HTMLElement> | FocusEvent<HTMLElement>) {
-    const view = event.currentTarget.ownerDocument.defaultView;
-    return Boolean(view && event.target instanceof view.Node && event.currentTarget.contains(event.target));
+function inside(currentTarget: HTMLElement, target: EventTarget | null) {
+    const view = currentTarget.ownerDocument.defaultView;
+    return Boolean(view && target instanceof view.Node && currentTarget.contains(target));
 }
-function nestedControl(event: MouseEvent<HTMLElement>) {
-    const target = event.target as Element;
-    const control = target.closest?.('a,button,input,textarea,select,label,[role="button"],[role="link"],[contenteditable]:not([contenteditable="false"]),[data-ui-popup-trigger]');
-    return Boolean(control && control !== event.currentTarget && event.currentTarget.contains(control));
+function nestedControl(currentTarget: HTMLElement, target: EventTarget | null) {
+    const view = currentTarget.ownerDocument.defaultView;
+    if (!view || !(target instanceof view.Element)) return false;
+    const control = target.closest('a,button,input,textarea,select,label,[role="button"],[role="link"],[contenteditable]:not([contenteditable="false"]),[data-ui-popup-trigger]');
+    return Boolean(control && control !== currentTarget && currentTarget.contains(control));
 }
 
 /** Touch-only browsers synthesize mouse enter before click; do not toggle twice. */
@@ -36,6 +37,8 @@ export function usePopup(options?: PopupOptions) {
     const anchor = useRef<HTMLElement | null>(null);
     const surface = useRef<HTMLElement | null>(null);
     const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const contextTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const contextPress = useRef<{ pointerId: number; x: number; y: number; opener: HTMLElement } | null>(null);
     const [point, setPoint] = useState<ContextPoint | null>(null);
     const [open, setOpen] = useState(false);
     const [keyboard, setKeyboard] = useState(false);
@@ -57,8 +60,13 @@ export function usePopup(options?: PopupOptions) {
         if (timeout.current !== null) clearTimeout(timeout.current);
         timeout.current = null;
     };
-    useEffect(() => () => clearTimer(), [kind]);
-    const close = () => { clearTimer(); setPoint(null); setOpen(false); setKeyboard(false); };
+    const clearContextPress = () => {
+        if (contextTimer.current !== null) clearTimeout(contextTimer.current);
+        contextTimer.current = null;
+        contextPress.current = null;
+    };
+    useEffect(() => () => { clearTimer(); clearContextPress(); }, [kind]);
+    const close = () => { clearTimer(); clearContextPress(); setPoint(null); setOpen(false); setKeyboard(false); };
     const context = options?.preset === 'context';
     const menu = options?.preset === 'menu';
     const hover = menu && options.on === 'hover';
@@ -89,12 +97,12 @@ export function usePopup(options?: PopupOptions) {
         }, 150);
     }
     function onMouseEnter(event: MouseEvent<HTMLElement>) {
-        if (!inside(event) || nestedControl(event)) return;
+        if (!inside(event.currentTarget, event.target) || nestedControl(event.currentTarget, event.target)) return;
         if (tooltipOptions) tooltip.anchorHandlers.onMouseEnter();
         if (hover && !coarsePointer(event.currentTarget)) { clearTimer(); setOpen(true); }
     }
     function onMouseLeave(event: MouseEvent<HTMLElement>) {
-        if (!inside(event)) return;
+        if (!inside(event.currentTarget, event.target)) return;
         if (tooltipOptions) tooltip.anchorHandlers.onMouseLeave();
         if (!coarsePointer(event.currentTarget)) leave(event.relatedTarget, true);
     }
@@ -108,10 +116,38 @@ export function usePopup(options?: PopupOptions) {
         leave(event.relatedTarget);
     }
     function onContextMenu(event: MouseEvent<HTMLElement>) {
-        if (!context || event.defaultPrevented || !inside(event) || nestedControl(event)) return;
+        if (!context || event.defaultPrevented || !inside(event.currentTarget, event.target) || nestedControl(event.currentTarget, event.target)) return;
         event.preventDefault();
         event.stopPropagation();
-        setPoint({ x: event.clientX, y: event.clientY, opener: event.currentTarget });
+        clearContextPress();
+        setPoint(current => current && current.opener === event.currentTarget &&
+            current.x === event.clientX && current.y === event.clientY
+            ? current : { x: event.clientX, y: event.clientY, opener: event.currentTarget });
+    }
+    function onPointerDown(event: ReactPointerEvent<HTMLElement>) {
+        if (!context || event.defaultPrevented || event.pointerType !== 'touch' || !event.isPrimary ||
+            event.button !== 0 || !inside(event.currentTarget, event.target) ||
+            nestedControl(event.currentTarget, event.target)) return;
+        clearContextPress();
+        const press = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, opener: event.currentTarget };
+        contextPress.current = press;
+        // A stationary touch opens the same context surface as right-click/Shift+F10.
+        contextTimer.current = setTimeout(() => {
+            if (contextPress.current !== press || anchor.current !== press.opener) return;
+            setPoint(current => current && current.opener === press.opener
+                ? current : { x: press.x, y: press.y, opener: press.opener });
+        }, 500);
+    }
+    function onPointerMove(event: ReactPointerEvent<HTMLElement>) {
+        const press = contextPress.current;
+        if (!press || press.pointerId !== event.pointerId) return;
+        if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 8) clearContextPress();
+    }
+    function onPointerUp(event: ReactPointerEvent<HTMLElement>) {
+        if (contextPress.current?.pointerId === event.pointerId) clearContextPress();
+    }
+    function onPointerCancel(event: ReactPointerEvent<HTMLElement>) {
+        if (contextPress.current?.pointerId === event.pointerId) clearContextPress();
     }
     function onKeyDown(event: KeyboardEvent<HTMLElement>) {
         if (event.defaultPrevented || event.target !== event.currentTarget) return;
@@ -136,7 +172,7 @@ export function usePopup(options?: PopupOptions) {
         }
     }
     function onClick(event: MouseEvent<HTMLElement>) {
-        if (!menu || event.defaultPrevented || !inside(event) || nestedControl(event)) return;
+        if (!menu || event.defaultPrevented || !inside(event.currentTarget, event.target) || nestedControl(event.currentTarget, event.target)) return;
         // Hover has a tap/keyboard fallback; desktop pointer clicks do not close its panel.
         if (hover && event.detail !== 0 && !coarsePointer(event.currentTarget)) return;
         const nativeNavigation = event.currentTarget.matches('a[href],button[type="submit"],button[type="reset"]');
@@ -169,6 +205,7 @@ export function usePopup(options?: PopupOptions) {
     ) : null;
     return {
         anchor: tooltipOptions ? tooltip.anchorRef : anchor, popup, onContextMenu, onKeyDown, onClick,
+        onPointerDown, onPointerMove, onPointerUp, onPointerCancel,
         onMouseEnter, onMouseLeave, onFocus, onBlur, open: visible,
         describedBy: tooltipOptions && tooltip.isActive ? tooltipId : undefined,
         controls: visible && (menu || context) ? menuId : undefined,

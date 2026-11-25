@@ -18,3 +18,6 @@ export type CollapseContracts = [
   Assert<RefObject<HTMLInputElement | null> extends WithRef<InputProps, HTMLInputElement>['ref'] ? true : false>,
   Assert<RefObject<CollapseControls | null> extends WithRef<InputProps, HTMLInputElement>['ref'] ? false : true>,
 ];
+
+const responsiveGap: CollapseOptions = { defaultOpen: false, gap: [4, 8, 12] };
+export const collapseResponsiveGapContract = responsiveGap;

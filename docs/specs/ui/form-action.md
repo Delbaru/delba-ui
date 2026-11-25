@@ -1,6 +1,6 @@
 # Form and action
 
-Pilot API. Runtime acceptance in consuming applications is still required.
+Implemented public API. Runtime acceptance in consuming applications is still required.
 
 ```tsx
 const form = ui.form.use({
@@ -22,7 +22,7 @@ The owner supplies a trusted scope and optional draft key; no global form data.
 `form.action` references the same action controller as `form.submit`. A button may
 also use `ui={{ action: { preset: 'default', run: command } }}` for a standalone
 operation. Do not provide both onClick and ui.action for the same command.
-Named Input/Textarea (string), Select (string/null or string array) and Checkbox (boolean) use the nearest compatible form field unless explicitly controlled. The caller's change callback still runs. Custom scopes may expose `hasField` to distinguish an explicitly undefined optional field from an unknown name. Named `Input type="file"` binds a File[] field (native selection replaces the array; FileList is never assigned as a value). Custom append/drop/preview controls can use `ui.form.field.use<File[]>(name)` and its update method. Files never enter browser storage.
+Named Input/Textarea (string), Select (string/null or string array), Checkbox/SwitchButton (boolean), Radio (string/null) and ChoiceButtons (string/null) use the nearest compatible form field unless explicitly controlled. Optional fields initialized as `undefined` bind to the empty primitive value and write back on interaction. The caller's change callback still runs. Custom scopes may expose `hasField` to distinguish an explicitly undefined optional field from an unknown name. Named `Input type="file"` binds a File[] field (native selection replaces the array; FileList is never assigned as a value). Custom append/drop/preview controls can use `ui.form.field.use<File[]>(name)` and its update method. Files never enter browser storage.
 Custom fields use `ui.form.field.use<T>(name)`; native submit is opt-in with
 Flex as="form", and editors with their own Enter semantics call form.submit.
 
@@ -86,3 +86,16 @@ local field edits.
 
 
 A browser fixture now exercises `onChange` observation against the real named field: local edit only, detached snapshot mutation, external receive and reset. Source coverage is in `tests/Form/e2e/Form.spec.ts`; execution remains unverified.
+
+
+## Server validation and optional fields
+
+Mapped server field errors returned by `errorsFrom` participate in `form.errors` and make `form.valid` false. The submit controller stays disabled and direct `form.submit()` does not bypass those errors. Editing a field, resetting, or receiving a new confirmed value clears the prior server error. Unmapped command failures remain action failures and may be retried.
+
+Named primitive controls may start with an explicitly present `undefined` value. Input/Textarea render an empty string, Checkbox/SwitchButton render unchecked, Radio/Select/ChoiceButtons render no selection, and each writes its native primitive value back into the same form owner.
+
+
+The nearest `ActionInvocationProvider` receives failed invocations through
+`onFailure`. `onSettled` runs for every terminal outcome, while
+`onSuccess` runs only after successful completion; cancellation remains a
+distinct terminal state and does not masquerade as failure.

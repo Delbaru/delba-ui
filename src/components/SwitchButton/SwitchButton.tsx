@@ -3,7 +3,8 @@
 import { useId, type CSSProperties } from 'react';
 import type React from 'react';
 import styles from './SwitchButton.module.scss';
-import { cx, createLayoutClasses, stateProps, layoutSpaceClasses, stateLinkProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type ResponsiveValue, type GrowProps, type WithRef } from '../../core';
+import { composeEventHandlers, cx, createLayoutClasses, stateProps, layoutSpaceClasses, stateLinkProps, type ComponentStateValue, type StateLinkInput, type LayoutSpaceProps, type ResponsiveValue, type GrowProps, type WithRef } from '../../core';
+import { useFormField } from '../../core/Form';
 import { Flex } from '../Flex';
 import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 
@@ -46,7 +47,19 @@ export function SwitchButton({
 }: WithRef<SwitchButtonProps, HTMLInputElement>) {
   const generatedId = useId();
   const id = idProp ?? generatedId;
-  const isDisabled = Boolean(props.disabled);
+  const field = useFormField<boolean>(props.name);
+  const bound = field && props.checked === undefined &&
+    (typeof field.value === 'boolean' || field.value === undefined);
+  const inputProps = bound ? {
+    ...props,
+    checked: Boolean(field.value),
+    disabled: props.disabled || field.disabled,
+    'aria-invalid': props['aria-invalid'] ?? Boolean(field.error),
+    onChange: composeEventHandlers(props.onChange, event => {
+      if (!props.readOnly && !field.disabled) field.change(event.currentTarget.checked);
+    }),
+  } : props;
+  const isDisabled = Boolean(inputProps.disabled);
   const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({ perspective3d, parallax, animate });
 
   return (
@@ -63,10 +76,10 @@ export function SwitchButton({
           className,
       )}
       style={{ ...(motionStyle ?? null), ...style }}
-      {...stateProps(state, isDisabled && 'disabled')}
+      {...stateProps(state, Boolean(inputProps.checked) && 'active', (inputProps['aria-invalid'] && inputProps['aria-invalid'] !== 'false') && 'error', isDisabled && 'disabled')}
     >
       <Flex gap={gap ?? [8, 8, 8]} align={["center", "center", "center"]}>
-        <input ref={ref} id={id} type="checkbox" className={styles.Input} {...props} />
+        <input ref={ref} id={id} type="checkbox" className={styles.Input} {...inputProps} />
         <Flex align={["center", "center", "center"]} className={styles.Track} aria-hidden>
           <span className={styles.Thumb} />
         </Flex>

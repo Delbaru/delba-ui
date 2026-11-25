@@ -9,7 +9,7 @@ type Source = {
   isLoading?: boolean;
   isFetching?: boolean;
   empty?: boolean;
-  error?: { status: number; message: string };
+  error?: unknown;
   refetch?: () => void;
 };
 
@@ -43,6 +43,7 @@ export function AsyncFixture() {
       <Button onClick={() => setSource({ data: { value: 'current' }, error: { status: 0, message: 'Offline' } })}>Network error</Button>
       <Button onClick={() => setSource({ data: { value: 'stale' }, error: { status: 500, message: 'Server error' } })}>Server error</Button>
       <Button onClick={() => setSource({ data: [], empty: true })}>Empty source</Button>
+      <Button onClick={() => setSource({ error: '' })}>Falsy error</Button>
     </main>
   );
 }

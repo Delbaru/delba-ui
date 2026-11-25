@@ -39,3 +39,18 @@ test('collection scope resets selection and retained records resolve current pre
   await page.getByRole('button', { name: 'Forget Alpha' }).click();
   await expect(page.getByTestId('collection-count')).toHaveText('0');
 });
+
+test('first plain click selects and plain click toggles an active selection', async ({ page }) => {
+  await page.goto('/?collection');
+  const alpha = page.getByRole('option', { name: 'Alpha' });
+  await alpha.click();
+  await expect(alpha).toHaveAttribute('aria-selected', 'true');
+  await alpha.click();
+  await expect(alpha).toHaveAttribute('aria-selected', 'false');
+
+  await alpha.click();
+  const beta = page.getByRole('option', { name: 'Beta' });
+  await beta.click({ modifiers: ['Control'] });
+  await expect(alpha).toHaveAttribute('aria-selected', 'true');
+  await expect(beta).toHaveAttribute('aria-selected', 'true');
+});

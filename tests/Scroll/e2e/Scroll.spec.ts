@@ -4,6 +4,7 @@ test('ui.scroll decorates one Flex viewport and owns native scrolling', async ({
   await page.goto('/');
   const viewport = page.getByRole('region', { name: 'UI scroll surface' });
   await expect(viewport).toBeVisible();
+  await expect(viewport).toHaveAttribute('data-scroll-preset', 'default');
   const geometry = await viewport.evaluate(node => ({
     clientHeight: node.clientHeight,
     scrollHeight: node.scrollHeight,

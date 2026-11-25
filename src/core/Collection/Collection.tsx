@@ -25,6 +25,13 @@ export interface CollectionScope {
   item(id: string): CollectionItem;
 }
 
+export interface CollectionOptions {
+  /** Optional for a stable single-owner list; pass a changing owner/query key to reset selection. */
+  scope?: string;
+  retainMissing?: boolean;
+  mode?: 'single' | 'multiple';
+}
+
 export interface CollectionController<T> extends CollectionScope {
   items: readonly T[];
   selected: readonly T[];
@@ -60,9 +67,9 @@ function hasTextSelection(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLEle
 /** Selection is owned by the local instance; the definition never holds user data. */
 export function useCollection<T>(
   definition: CollectionDefinition<T>, items: readonly T[],
-  options: { scope: string; retainMissing?: boolean; mode?: 'single' | 'multiple' },
+  options: CollectionOptions = {},
 ): CollectionController<T> {
-  const { scope, retainMissing = false, mode = 'multiple' } = options;
+  const { scope = '', retainMissing = false, mode = 'multiple' } = options;
   const domId = useId();
   type State = { scope: string; token: symbol; mode: typeof mode; owner: symbol; selection: Selection<T> };
   const createState = (): State => ({
@@ -134,6 +141,11 @@ export function useCollection<T>(
       } else if (event.ctrlKey || event.metaKey || ids.length) {
         event.preventDefault();
         toggle(id);
+      } else {
+        // The first plain click establishes a selection; subsequent plain
+        // clicks toggle while a selection is active.
+        event.preventDefault();
+        change('select', [id]);
       }
     },
     onKeyDown(event) {

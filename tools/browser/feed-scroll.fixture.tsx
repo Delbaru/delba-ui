@@ -12,6 +12,8 @@ export function FeedScrollFixture() {
     Array.from({ length: 40 }, (_, index) => ({ id: `item-${index + 1}`, text: `Message ${index + 1}` })),
   );
   const [restore, setRestore] = useState<(() => boolean) | null>(null);
+  const historyRestore = useRef<(() => boolean) | null>(null);
+  const [historyResult, setHistoryResult] = useState('none');
   const feed = ui.scroll.feed.use({
     scope: 'feed-scroll-fixture',
     enabled: true,
@@ -39,7 +41,7 @@ export function FeedScrollFixture() {
         aria-label="Feed messages"
         tabIndex={0}
         dir="column"
-        ui={{ scroll: { preset: 'default', axis: 'y', fade: true, height: 200 } }}
+        ui={{ scroll: { preset: 'feed', axis: 'y', fade: true, height: 200 } }}
       >
         <Flex ref={content} dir="column" gap={[0, 0, 0]}>
           {items.map(item => (
@@ -54,6 +56,16 @@ export function FeedScrollFixture() {
       <Button onClick={() => setItems(current => [...current, { id: `new-${current.length}`, text: 'New message' }])}>Append message</Button>
       <Button onClick={prepend}>Prepend with anchor</Button>
       <Button onClick={feed.latest}>Follow latest</Button>
+      <Button onClick={() => {
+        historyRestore.current = feed.captureHistoryAnchor();
+        setHistoryResult(historyRestore.current ? 'captured' : 'unavailable');
+      }}>Capture history anchor</Button>
+      <Button onClick={() => {
+        const restored = historyRestore.current?.() ?? false;
+        historyRestore.current = null;
+        setHistoryResult(String(restored));
+      }}>Restore captured anchor</Button>
+      <output data-testid="feed-history-result">{historyResult}</output>
     </main>
   );
 }

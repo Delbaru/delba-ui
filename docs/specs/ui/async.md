@@ -9,3 +9,10 @@ An explicit `source.empty: true` marks successful empty/undefined data (unless
 initial loading is still active). Undefined `currentData` without that flag
 still never falls back to a different argument. Errors without retainable
 current data take precedence over the loading phase.
+
+## Завершённая семантика ошибки
+
+- Ошибкой считается любое значение, отличное от `null` и `undefined`; `''`, `0` и `false` не должны маскироваться под бесконечную загрузку.
+- `currentData` остаётся единственным источником текущего query result; fallback на устаревший `data` не выполняется.
+- Background network failure может оставить текущие данные на экране; остальные ошибки заменяют content error-state.
+

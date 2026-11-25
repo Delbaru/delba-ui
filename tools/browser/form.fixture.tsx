@@ -7,6 +7,9 @@ import { Input } from '../../src/components/Input/Input';
 import { Checkbox } from '../../src/components/Checkbox/Checkbox';
 import { Select } from '../../src/components/Select/Select';
 import { Textarea } from '../../src/components/Textarea/Textarea';
+import { Radio } from '../../src/components/Radio/Radio';
+import { SwitchButton } from '../../src/components/SwitchButton/SwitchButton';
+import { ChoiceButtons } from '../../src/components/ChoiceButtons/ChoiceButtons';
 import { ActionInvocationProvider } from '../../src/hooks/useActionInvocation';
 
 const initialMessage = { text: '', files: [] as File[] };
@@ -282,17 +285,21 @@ function ChangeCallbackForm() {
 }
 
 export function FormFixture() {
+  const [actionFailures, setActionFailures] = useState(0);
   return (
-    <ActionInvocationProvider onFailure={() => undefined}>
+    <ActionInvocationProvider onFailure={() => setActionFailures(value => value + 1)}>
       <MessageForm />
       <MemoryDraftForm />
       <RetryDraftForm />
       <NamedFieldsFixture />
       <EditForm />
       <ActionKeyFixture />
+      <ActionFailureFixture />
+      <ServerValidationFixture />
       <StorageBindingFixture />
       <ChangeCallbackForm />
       <StrictMode><SharedForms /><SubscriptionForm /></StrictMode>
+      <output data-testid="action-provider-failures">{actionFailures}</output>
     </ActionInvocationProvider>
   );
 }
@@ -306,16 +313,36 @@ function NamedFieldsFixture() {
     scope: 'named-fields-fixture',
     preset: 'default',
     disabled,
-    initial: { enabled: false, category: null as string | null, tags: [] as string[], files: [] as File[] },
+    initial: {
+      enabled: false,
+      optionalEnabled: undefined as boolean | undefined,
+      category: null as string | null,
+      tags: [] as string[],
+      optionalTags: undefined as string[] | undefined,
+      files: [] as File[],
+      channel: undefined as string | undefined,
+      priority: undefined as string | undefined,
+      optionalText: undefined as string | undefined,
+      optionalNote: undefined as string | undefined,
+      notify: undefined as boolean | undefined,
+    },
     submit: values => values,
   });
   const options = [{ value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }];
   return (
     <Flex ui={{ form }} dir={['column', 'column', 'column']}>
       <Checkbox name="enabled" aria-label="Named checkbox" />
+      <Checkbox name="optionalEnabled" aria-label="Optional enabled" />
       <Select name="category" aria-label="Named category" options={options} />
       <Select multiple name="tags" aria-label="Named tags" options={options} />
+      <Select multiple name="optionalTags" aria-label="Optional tags" options={options} />
       <Input type="file" name="files" multiple aria-label="Named files" />
+      <Radio name="channel" value="email">Email</Radio>
+      <Radio name="channel" value="sms">SMS</Radio>
+      <ChoiceButtons name="priority" items={[{ value: 'low', label: 'Low' }, { value: 'high', label: 'High' }]} />
+      <Input name="optionalText" aria-label="Optional text" />
+      <Textarea name="optionalNote" aria-label="Optional note" />
+      <SwitchButton name="notify" aria-label="Notifications">Notifications</SwitchButton>
       <output data-testid="named-values">{JSON.stringify({
         ...form.values, files: form.values.files.map(file => file.name),
       })}</output>
@@ -333,6 +360,51 @@ function NamedFieldsFixture() {
   );
 }
 
+
+function ActionFailureFixture() {
+  const [settled, setSettled] = useState('');
+  const [success, setSuccess] = useState(0);
+  const action = ui.action.use({
+    identity: 'action-failure-fixture',
+    actionName: 'Standalone action',
+    action: async () => { throw new Error('Standalone action failed'); },
+    onSettled: result => setSettled(result.status),
+    onSuccess: () => setSuccess(value => value + 1),
+  });
+  return (
+    <section aria-label="Action failure fixture">
+      <Button ui={{ action: { preset: 'default', controller: action } }}>Run failing action</Button>
+      <output data-testid="action-failure-settled">{settled}</output>
+      <output data-testid="action-failure-success">{success}</output>
+    </section>
+  );
+}
+
+function ServerValidationFixture() {
+  const [attempts, setAttempts] = useState(0);
+  const form = ui.form.use({
+    scope: 'server-validation-fixture',
+    preset: 'default',
+    initial: { email: 'invalid' },
+    submit: async () => {
+      setAttempts(value => value + 1);
+      throw new Error('Server rejected the email');
+    },
+    errorsFrom: () => ({ email: 'Use a valid email address' }),
+  });
+  return (
+    <section aria-label="Server validation fixture">
+      <Flex as="form" ui={{ form }}>
+        <Input name="email" aria-label="Server validation email" />
+        <Button type="submit" ui={{ action: form.action }}>Submit server validation</Button>
+        <output data-testid="server-validation-valid">{String(form.valid)}</output>
+        <output data-testid="server-validation-error">{form.errors.email ?? ''}</output>
+      </Flex>
+      <Button onClick={() => { void form.submit(); }}>Force direct submit</Button>
+      <output data-testid="server-submit-attempts">{attempts}</output>
+    </section>
+  );
+}
 
 function ActionKeyFixture() {
   const [key, setKey] = useState('a');

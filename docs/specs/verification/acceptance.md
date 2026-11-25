@@ -87,3 +87,27 @@ props/defaults с исходником: успешный простой прим
 Node 24.7+ использует native rerun state для case, Node 22 повторяет упавшие файлы;
 если runner не сообщил файл, явно повторяется упавший test-шаг. Playwright использует
 `--last-failed` только с сохранённым совпадающим состоянием.
+
+
+## UI mechanism acceptance matrix
+
+The Playwright configuration includes all `tests/**/e2e/**/*.spec.ts` files, not only Form and Popup. The seven mechanism suites are:
+
+| Mechanism | Contract and runtime coverage |
+| --- | --- |
+| Collection | `tests/Collection/unit/Selection.test.ts`, `tests/Collection/e2e/Collection.spec.ts` |
+| Popup | `tests/Popup/e2e/Popup.spec.ts`, `tools/browser/tests/dropdown-open.spec.ts` |
+| Collapse | `tests/Collapse/unit/options.type-test.ts`, `tests/Collapse/e2e/Collapse.spec.ts`, `tools/browser/tests/collapse-controls.spec.ts` |
+| Scroll | `tests/Scroll/unit/History.test.ts`, `tests/Scroll/e2e/*.spec.ts`, `tools/browser/tests/scrollbar.spec.ts` |
+| Async | `tests/Async/unit/State.test.ts`, `tests/Async/e2e/Async.spec.ts` |
+| Action | `tests/Action/unit/*.test.ts`, action lifecycle cases in `tests/Form/e2e/Form.spec.ts` |
+| Form | `tests/Form/unit/Draft.test.ts`, `tests/Form/e2e/Form.spec.ts` |
+
+Run repository checks with `npm run check` and the complete browser gate with
+`npx playwright test -c tools/browser/playwright.config.ts`. A branch is not
+accepted until both commands and relevant consuming-application integration
+are actually executed; this document records the required gate, not a PASS claim.
+
+Cross-mechanism public type coverage: `tests/Mechanisms/unit/contracts.type-test.ts`
+asserts the exported Collection, Popup, Collapse, Scroll, Async, Action and Form
+contracts, including `ScrollbarOptions`.
