@@ -56,6 +56,7 @@ export {
   prefersReducedMotion,
   registerScrollProvider,
   resolveSeedField,
+  resolveResponsive,
   scrollTo,
   unregisterScrollProvider,
   type EntityHandle,

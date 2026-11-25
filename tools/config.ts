@@ -94,8 +94,8 @@ export interface UiConfig {
     readonly rules?: readonly string[];
     /** Планка красных линий. По умолчанию `.rules-baseline.json`. */
     readonly baseline?: string;
-    /** Validate the five-file anatomy of consumer D-components. Enabled by default. */
-    readonly componentAnatomy?: boolean;
+    /** Validate consumer D-components. 'single-config' forbids a separate skin file; true retains the five-file contract. */
+    readonly componentAnatomy?: boolean | 'single-config';
     /** Node export conditions for consumer tests only, e.g. react-server for server-only imports. */
     readonly testConditions?: readonly string[];
     /** Maximum parallel consumer test files. CI defaults to two; accepts integers from 1 to 16. */

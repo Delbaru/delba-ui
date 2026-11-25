@@ -4,11 +4,11 @@ import path from 'node:path';
 const PUBLIC_COMPONENT = /^D[A-Z][A-Za-z0-9]*$/;
 const DEFAULT_ROOTS = ['src/shared/ui', 'src/cms/ui'];
 
-function expectedFiles(componentName) {
+function expectedFiles(componentName, singleConfig) {
   return [
     `${componentName}.tsx`,
     `${componentName}.config.ts`,
-    `${componentName}.skin.ts`,
+    ...(singleConfig ? [] : [`${componentName}.skin.ts`]),
     `${componentName}.module.scss`,
     'index.ts',
   ];
@@ -36,7 +36,7 @@ function legacyFiles(componentName) {
  * Check public consumer D-components without imposing the anatomy on kit internals.
  * Missing scan roots and empty directories are ignored so optional app layers remain optional.
  */
-export function validateDComponentAnatomy(projectRoot, roots = DEFAULT_ROOTS) {
+export function validateDComponentAnatomy(projectRoot, roots = DEFAULT_ROOTS, { singleConfig = false } = {}) {
   const diagnostics = [];
 
   for (const relativeRoot of roots) {
@@ -58,19 +58,22 @@ export function validateDComponentAnatomy(projectRoot, roots = DEFAULT_ROOTS) {
       const entries = fs.readdirSync(componentDirectory, { withFileTypes: true });
       const files = new Set(entries.filter((entry) => entry.isFile()).map((entry) => entry.name));
       const sourceMarkers = new Set([
-        ...expectedFiles(componentName),
+        ...expectedFiles(componentName, false),
         ...legacyFiles(componentName),
       ]);
       const isPublicImplementation = [...files].some((file) => sourceMarkers.has(file));
       if (!isPublicImplementation) continue;
 
-      for (const expectedFile of expectedFiles(componentName)) {
+      for (const expectedFile of expectedFiles(componentName, singleConfig)) {
         if (!files.has(expectedFile)) {
           diagnostics.push(`${diagnosticPath}: expected ${expectedFile}`);
         }
       }
 
-      for (const legacyFile of legacyFiles(componentName)) {
+      for (const legacyFile of [
+        ...legacyFiles(componentName),
+        ...(singleConfig ? [`${componentName}.skin.ts`] : []),
+      ]) {
         if (files.has(legacyFile)) {
           diagnostics.push(
             `${diagnosticPath}: legacy duplicate ${legacyFile}; use the canonical anatomy`,

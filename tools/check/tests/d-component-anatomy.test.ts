@@ -36,6 +36,19 @@ test('public D-component directory requires the exact five-file anatomy', () => 
   });
 });
 
+test('single-config anatomy requires the four canonical files and rejects split skins', () => {
+  withProject((root) => {
+    createComponent(root, 'DInput', anatomy('DInput').filter((file) => !file.endsWith('.skin.ts')));
+    const options = { singleConfig: true };
+    assert.deepEqual(validateDComponentAnatomy(root, undefined, options), []);
+    assert.ok(validateDComponentAnatomy(root).some((message) => message.endsWith('expected DInput.skin.ts')));
+    fs.writeFileSync(path.join(root, 'src/shared/ui/DInput/DInput.skin.ts'), '');
+    assert.ok(validateDComponentAnatomy(root, undefined, options).some((message) => message.includes('legacy duplicate DInput.skin.ts')));
+    fs.unlinkSync(path.join(root, 'src/shared/ui/DInput/DInput.config.ts'));
+    assert.ok(validateDComponentAnatomy(root, undefined, options).some((message) => message.endsWith('expected DInput.config.ts')));
+  });
+});
+
 test('empty directories and absent optional consumer roots are ignored', () => {
   withProject((root) => {
     fs.mkdirSync(path.join(root, 'src/shared/ui/DEmpty'), { recursive: true });

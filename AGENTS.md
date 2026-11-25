@@ -51,6 +51,9 @@ API, изменение общей механики выполняется по 
   папку `DName/` с `DName.tsx`, `DName.config.ts`, `DName.skin.ts`,
   `DName.module.scss` и `index.ts`. Это форма проектных компонентов; она не
   применяется к примитивам DelbaUI, ядру, внутренним частям или helper-папкам.
+  Потребитель с `componentAnatomy: 'single-config'` объединяет sizes/skins/presets/
+  states в `DName.config.ts` и не имеет `DName.skin.ts`; проверка строго требует
+  остальные четыре файла и запрещает split skin. Существующий resolver остаётся один.
 
 - Импортов наружу репозитория нет; потребителю доступны только exports пакета.
 - Общие layout/motion/refs и SCSS-миксины берутся из ядра. Цвета и времена — токены.

@@ -1,7 +1,9 @@
 import { validateDComponentAnatomy } from './check/d-component-anatomy.mjs';
 
 const projectRoot = process.cwd();
-const diagnostics = validateDComponentAnatomy(projectRoot);
+const diagnostics = validateDComponentAnatomy(projectRoot, undefined, {
+  singleConfig: process.argv.includes('--single-config'),
+});
 
 if (diagnostics.length) {
   console.error(`[ui:d-anatomy] ✗ ${diagnostics.join('\n[ui:d-anatomy] ✗ ')}`);
