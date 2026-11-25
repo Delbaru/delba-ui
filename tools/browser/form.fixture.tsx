@@ -381,11 +381,15 @@ function ActionFailureFixture() {
 }
 
 function ServerValidationFixture() {
+  const [attempts, setAttempts] = useState(0);
   const form = ui.form.use({
     scope: 'server-validation-fixture',
     preset: 'default',
     initial: { email: 'invalid' },
-    submit: async () => { throw new Error('Server rejected the email'); },
+    submit: async () => {
+      setAttempts(value => value + 1);
+      throw new Error('Server rejected the email');
+    },
     errorsFrom: () => ({ email: 'Use a valid email address' }),
   });
   return (
@@ -396,6 +400,8 @@ function ServerValidationFixture() {
         <output data-testid="server-validation-valid">{String(form.valid)}</output>
         <output data-testid="server-validation-error">{form.errors.email ?? ''}</output>
       </Flex>
+      <Button onClick={() => { void form.submit(); }}>Force direct submit</Button>
+      <output data-testid="server-submit-attempts">{attempts}</output>
     </section>
   );
 }

@@ -323,7 +323,11 @@ test('mapped server field errors invalidate the form until the field changes', a
 
   await expect(page.getByTestId('server-validation-error')).toHaveText('Use a valid email address');
   await expect(page.getByTestId('server-validation-valid')).toHaveText('false');
+  await expect(page.getByTestId('server-submit-attempts')).toHaveText('1');
   await expect(submit).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Force direct submit' }).click();
+  await expect(page.getByTestId('server-submit-attempts')).toHaveText('1');
 
   await input.fill('person@example.com');
   await expect(page.getByTestId('server-validation-error')).toHaveText('');
