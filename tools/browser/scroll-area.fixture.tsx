@@ -7,6 +7,19 @@ export function ScrollAreaFixture() {
     const [events, setEvents] = useState(0);
     return (
         <section>
+            <h2>UI-owned Flex scroll surface</h2>
+            <Flex
+                ui={{ scroll: { preset: 'default', axis: 'y', fade: true, height: 160, scrollbar: { width: 4, gutter: 'stable' } } }}
+                data-testid="ui-scroll-surface"
+                role="region"
+                aria-label="UI scroll surface"
+                tabIndex={0}
+                dir="column"
+            >
+                {Array.from({ length: 30 }, (_, index) => (
+                    <div key={index} style={{ flexShrink: 0, height: 32 }}>UI choice {index + 1}</div>
+                ))}
+            </Flex>
             <h2>Native scroll area</h2>
             <Flex dir="column" h={[200, 200, 200]} w={[320, 320, 320]}>
                 <input aria-label="Pinned scroll search" defaultValue="Search" />
