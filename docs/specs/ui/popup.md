@@ -22,3 +22,5 @@ and Dropdown logical ancestry are shared with other portalled surfaces.
 - Touch long-press срабатывает после 500 мс неподвижного касания; движение более 8 px, `pointerup` до порога или `pointercancel` отменяют ожидание. Это не блокирует обычную прокрутку.
 - Hover-menu не забирает фокус при наведении; keyboard-open переводит фокус в меню и Escape возвращает его opener.
 
+
+- Контекстный trigger может быть как `Flex`, так и `Button`; оба компонента передают pointer/context/keyboard handlers в общий popup controller, сохраняя пользовательский handler и уважая `defaultPrevented`.

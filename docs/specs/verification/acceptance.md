@@ -107,3 +107,7 @@ Run repository checks with `npm run check` and the complete browser gate with
 `npx playwright test -c tools/browser/playwright.config.ts`. A branch is not
 accepted until both commands and relevant consuming-application integration
 are actually executed; this document records the required gate, not a PASS claim.
+
+Cross-mechanism public type coverage: `tests/Mechanisms/unit/contracts.type-test.ts`
+asserts the exported Collection, Popup, Collapse, Scroll, Async, Action and Form
+contracts, including `ScrollbarOptions`.
