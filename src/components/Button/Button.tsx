@@ -158,11 +158,14 @@ export function Button({
   const interactions = composeInteractionHandlers(
     composeInteractionHandlers(anchorHandlers, motionHandlers ?? {}),
     { onMouseEnter, onMouseMove, onMouseLeave, onMouseDown, onMouseUp,
-      onPointerDown, onPointerMove, onPointerUp, onPointerCancel,
       onClick: handleClick, onFocus, onBlur },
   );
   const interactionHandlers = stateLinkProps(effectiveDisabled ? undefined : linkState, {
     ...interactions,
+    onPointerDown: composeEventHandlers(onPointerDown, menuOptions ? popup.onPointerDown : undefined, { cancelable: true }),
+    onPointerMove: composeEventHandlers(onPointerMove, menuOptions ? popup.onPointerMove : undefined, { cancelable: true }),
+    onPointerUp: composeEventHandlers(onPointerUp, menuOptions ? popup.onPointerUp : undefined, { cancelable: true }),
+    onPointerCancel: composeEventHandlers(onPointerCancel, menuOptions ? popup.onPointerCancel : undefined, { cancelable: true }),
     onMouseEnter: composeEventHandlers(composeEventHandlers(interactions.onMouseEnter, prepare.onIntent), menuOptions ? popup.onMouseEnter : undefined),
     onMouseLeave: composeEventHandlers(interactions.onMouseLeave, menuOptions ? popup.onMouseLeave : undefined),
     onPointerDown: composeEventHandlers(interactions.onPointerDown, menuOptions ? popup.onPointerDown : undefined, { cancelable: true }),
