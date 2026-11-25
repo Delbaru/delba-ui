@@ -225,3 +225,28 @@ test('replacing the storage adapter does not acknowledge an old submission into 
   await expect(text).toHaveValue('');
   await expect(page.getByTestId('storage-binding-success')).toHaveText('1');
 });
+
+
+test('empty persistence keeps target drafts in memory and acknowledges only the submitted target', async ({ page }) => {
+  await page.goto('/');
+  const text = page.getByRole('textbox', { name: 'Memory draft' });
+  const change = page.getByRole('button', { name: 'Switch memory target' });
+  await text.fill('original A');
+  await change.click();
+  await text.fill('draft B');
+  await change.click();
+  await expect(text).toHaveValue('original A');
+  await expect(page.getByTestId('memory-unsaved')).toHaveText('true');
+  await page.getByRole('button', { name: 'Submit memory draft' }).click();
+  await change.click();
+  await page.getByRole('button', { name: 'Confirm memory draft' }).click();
+  await expect(text).toHaveValue('draft B');
+  await change.click();
+  await expect(text).toHaveValue('');
+  await change.click();
+  await expect(text).toHaveValue('draft B');
+  expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.includes('memory-owner')))).toEqual([]);
+  await page.reload();
+  await change.click();
+  await expect(text).toHaveValue('');
+});

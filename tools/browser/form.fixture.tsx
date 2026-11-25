@@ -202,10 +202,34 @@ function SubscriptionForm() {
   );
 }
 
+function MemoryDraftForm() {
+  const [target, setTarget] = useState('a');
+  const finish = useRef<(() => void) | null>(null);
+  const form = ui.form.use({
+    scope: 'memory-owner',
+    preset: 'message',
+    initial: { text: '' },
+    draft: { key: target, persist: [] },
+    submit: () => new Promise<void>(resolve => { finish.current = resolve; }),
+  });
+  return (
+    <Flex>
+      <Flex as="form" ui={{ form }}>
+        <Input name="text" aria-label="Memory draft" />
+        <Button type="submit" ui={{ action: form.action }}>Submit memory draft</Button>
+      </Flex>
+      <Button onClick={() => setTarget(value => value === 'a' ? 'b' : 'a')}>Switch memory target</Button>
+      <Button onClick={() => finish.current?.()}>Confirm memory draft</Button>
+      <output data-testid="memory-unsaved">{String(form.unsaved)}</output>
+    </Flex>
+  );
+}
+
 export function FormFixture() {
   return (
     <ActionInvocationProvider onFailure={() => undefined}>
       <MessageForm />
+      <MemoryDraftForm />
       <NamedFieldsFixture />
       <EditForm />
       <ActionKeyFixture />

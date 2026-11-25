@@ -21,6 +21,7 @@ export type FormOptions<T extends object, R> = {
   refresh?: T;
   /** Domain-specific equivalence (e.g. normalized decimal input). */
   equal?: FieldEquality<T>;
+  /** An empty persist list keeps per-key drafts in memory without storage I/O. */
   draft?: { key: string; persist: readonly FieldName<T>[]; storage?: DraftStorage };
   disabled?: boolean;
   validate?: (values: T) => FormErrors<T>;

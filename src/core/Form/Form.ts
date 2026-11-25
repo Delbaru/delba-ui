@@ -38,14 +38,15 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const owner = storedOwner.scope === scope ? storedOwner : createOwner();
   const [, render] = useState(0);
   const notify = () => render(value => value + 1);
-  const storageKey = draft && scope ? draftStorageKey(scope, key) : undefined;
+  const admissionKey = draft && scope ? draftStorageKey(scope, key) : undefined;
   const persist = (draft?.persist ?? []).filter(name => typeof initial[name] === 'string');
+  const storageKey = persist.length ? admissionKey : undefined;
   const existing = owner.entries.get(key);
   const entry: Entry<T> = existing ?? {
-    draft: createDraft(initial), ready: !draft, persisted: !draft, error: undefined, storageKey, persist,
+    draft: createDraft(initial), ready: !draft || !persist.length, persisted: !draft, error: undefined, storageKey, persist,
     browserStorage: storageKey ? createBrowserDraftStorage(storageKey) : undefined,
   };
-  const storage = draft?.storage ?? entry.browserStorage;
+  const storage = storageKey ? draft?.storage ?? entry.browserStorage : undefined;
   const browserStorage = storage === entry.browserStorage;
   // A render may be interrupted. Do not mutate the previously committed owner map.
   const entries = existing ? owner.entries : new Map(owner.entries).set(key, entry);
@@ -164,7 +165,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   const invocation = useActionInvocation({
     // Switching rooms does not release the active ticket. The old request may still commit.
     identity: scope,
-    admissionKey: storageKey,
+    admissionKey,
     onCancel: options.onCancel,
     action: async () => {
       if (!canEdit()) return;
