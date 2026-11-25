@@ -48,12 +48,18 @@
 ожидаемый результат. Очередь предложений остаётся в [refactoring](../refactoring.md),
 подтверждённые причины ошибок — в [lessons](../Library.md). Общий вход — [Library](../Library.md).
 
-- [Form / Action — pilot](ui/form-action.md)
+- [Form / Action — implementation contract](ui/form-action.md)
 
-- [Collection — pilot](ui/collection.md)
+- [Collection — implementation contract](ui/collection.md)
 
-- [Scroll / Collapse — pilot](ui/scroll-collapse.md)
+- [Scroll / Collapse — implementation contract](ui/scroll-collapse.md)
 
-- [Async — pilot](ui/async.md)
+- [Async — implementation contract](ui/async.md)
 
-- [Popup — pilot](ui/popup.md)
+- [Popup — implementation contract](ui/popup.md)
+
+
+Implementation work for the seven mechanisms is tracked in the isolated
+`work/architecture-ui-mechanisms` delivery branch. The browser gate discovers
+every `tests/**/e2e/**/*.spec.ts` suite. Authored coverage is not a substitute
+for an executed full acceptance run.
