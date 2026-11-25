@@ -83,3 +83,34 @@ test('nested portal escape dismisses only the top popup in the logical menu stac
     await page.keyboard.press('Escape');
     await expect(outer).not.toBeVisible();
 });
+
+
+test('context popup supports right-click and touch long-press without stealing scroll gestures', async ({ page }) => {
+    await page.goto('/?dropdown-open');
+    const trigger = page.getByLabel('Context popup trigger');
+    const menuItem = page.getByRole('menuitem', { name: 'Context popup action' });
+
+    await trigger.click({ button: 'right' });
+    await expect(menuItem).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menuItem).toHaveCount(0);
+
+    const pointer = async (type: string, x: number, y: number) => page.evaluate(({ type, x, y }) => {
+        const target = document.querySelector('[aria-label="Context popup trigger"]');
+        target?.dispatchEvent(new PointerEvent(type, {
+            bubbles: true, pointerId: 17, pointerType: 'touch', isPrimary: true,
+            button: 0, clientX: x, clientY: y,
+        }));
+    }, { type, x, y });
+
+    await pointer('pointerdown', 80, 90);
+    await pointer('pointermove', 100, 90);
+    await pointer('pointerup', 100, 90);
+    await page.waitForTimeout(550);
+    await expect(menuItem).toHaveCount(0);
+
+    await pointer('pointerdown', 80, 90);
+    await page.waitForTimeout(550);
+    await pointer('pointerup', 80, 90);
+    await expect(menuItem).toBeVisible();
+});
