@@ -20,6 +20,7 @@ test('collection selection, range, keyboard focus and nested controls share one 
 
   await page.getByRole('button', { name: 'Clear selection' }).click();
   await page.getByRole('button', { name: 'Nested action' }).click();
+  await expect(page.getByTestId('collection-nested-actions')).toHaveText('1');
   await expect(page.getByTestId('collection-count')).toHaveText('0');
 });
 
