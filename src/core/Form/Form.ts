@@ -188,6 +188,8 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
         acknowledged = true;
         // A replacement adapter (including A → B → A) must not receive an old settlement.
         if (entry.storageBinding !== submittedBinding) return;
+        // An explicit later message submit owns its own fields, including reused files.
+        if (options.preset === 'message' && entry.submission !== submission) return;
         if (!isOwner()) {
           // Only an explicit, session-guarded adapter may acknowledge after unmount.
           // Never restore a closed form or erase a later revision of shared text.
@@ -214,7 +216,9 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
         const result = await options.submit(submitted.values, { acknowledge });
         acknowledge(result);
       } catch (error) {
-        if (!isOwner() || entry.storageBinding !== submittedBinding) throw new DOMException('Form scope changed', 'AbortError');
+        // A verified receipt may already have acknowledged this form before a transport abort.
+        if (acknowledged) return;
+        if (!isOwner() || entry.storageBinding !== submittedBinding || entry.submission !== submission) throw new DOMException('Form scope changed', 'AbortError');
         if (!isAbortActionError(error)) entry.error = error;
         if (!isCurrent() || current.current.selection !== submittedSelection) throw new DOMException('Form scope changed', 'AbortError');
         throw error;

@@ -71,3 +71,22 @@ test('versioned browser drafts remain readable by the old text decoder', () => {
   });
   assert.deepEqual(decodeDraft(b, initial, ['text']), { text: 'same' });
 });
+
+test('removing and reattaching the same File object is a new occurrence', () => {
+  const file = new File(['same bytes'], 'same.txt');
+  const initial = { text: '', files: [] as File[] };
+  const submitted = setField(createDraft(initial), 'files', [file]);
+  const removed = setField(submitted, 'files', []);
+  const current = setField(removed, 'files', [file]);
+  assert.deepEqual(acknowledgeDraft(current, submitted, initial, ['files']).values.files, [file]);
+});
+
+test('adding the same File twice consumes only the original occurrence', () => {
+  const file = new File(['same bytes'], 'same.txt');
+  const initial = { text: '', files: [] as File[] };
+  const submitted = setField(createDraft(initial), 'files', [file]);
+  const current = setField(submitted, 'files', [file, file]);
+  const settled = acknowledgeDraft(current, submitted, initial, ['files']);
+  assert.deepEqual(settled.values.files, [file]);
+  assert.deepEqual(acknowledgeDraft(settled, submitted, initial, ['files']).values.files, [file]);
+});

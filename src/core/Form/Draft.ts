@@ -43,18 +43,33 @@ export type DraftSnapshot<T extends object> = {
   values: T;
   baseline: T;
   revisions: Readonly<Record<string, number | undefined>>;
+  /** In-memory identity of each array occurrence; never persisted or exposed as a field. */
+  occurrences?: Readonly<Record<string, readonly symbol[] | undefined>>;
 };
 
 export function createDraft<T extends object>(initial: T): DraftSnapshot<T> {
-  return { values: snapshotValue(initial), baseline: snapshotValue(initial), revisions: {} };
+  return {
+    values: snapshotValue(initial), baseline: snapshotValue(initial), revisions: {},
+    occurrences: Object.fromEntries(Object.entries(initial).flatMap(([name, value]) =>
+      Array.isArray(value) ? [[name, value.map(() => Symbol())]] : [])),
+  };
 }
 
 export function setField<T extends object, K extends FieldName<T>>(
   draft: DraftSnapshot<T>, name: K, value: T[K], changedExternally = false,
 ): DraftSnapshot<T> {
   if (!changedExternally && sameValue(draft.values[name], value)) return draft;
+  const before = draft.values[name];
+  const previous = Array.isArray(before) ? before.map((item, index) => ({
+    item, token: draft.occurrences?.[name]?.[index] ?? Symbol(),
+  })) : [];
+  const occurrences = Array.isArray(value) ? value.map(item => {
+    const index = previous.findIndex(candidate => Object.is(candidate.item, item));
+    return index < 0 ? Symbol() : previous.splice(index, 1)[0].token;
+  }) : undefined;
   return {
     ...draft,
+    occurrences: { ...draft.occurrences, [name]: occurrences },
     values: { ...draft.values, [name]: snapshotValue(value) },
     revisions: { ...draft.revisions, [name]: (draft.revisions[name] ?? 0) + 1 },
   };
@@ -86,7 +101,17 @@ export function acknowledgeDraft<T extends object>(
       const now = current.values[name];
       const sent = submitted.values[name];
       if (Array.isArray(now) && Array.isArray(sent)) {
-        next = setField(next, name, removeSubmitted(now, sent) as T[typeof name]);
+        const currentTokens = current.occurrences?.[name];
+        const submittedTokens = submitted.occurrences?.[name];
+        if (currentTokens && submittedTokens) {
+          const consumed = new Set(submittedTokens);
+          const remaining = now.filter((_, index) => !consumed.has(currentTokens[index]));
+          const remainingTokens = currentTokens.filter(token => !consumed.has(token));
+          next = setField(next, name, remaining as T[typeof name]);
+          next = { ...next, occurrences: { ...next.occurrences, [name]: remainingTokens } };
+        } else {
+          next = setField(next, name, removeSubmitted(now, sent) as T[typeof name]);
+        }
       }
     }
   }
