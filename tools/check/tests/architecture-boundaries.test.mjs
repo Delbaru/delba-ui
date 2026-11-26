@@ -22,6 +22,9 @@ const required = require(moduleName);
 const alsoRequired = module.require(moduleName);
 const explicit = module.require('../../../crm/server/router');
 fetch('/api/messages');
+const directFetch = window.fetch;
+const computedFetch = globalThis['fetch'];
+const loader = createRequire(import.meta.url);
 export { value } from '../../../crm/gateway';
 `);
         const issues = checkImportBoundaries(root, { dirs: ['src'], mode: 'consumer' });
@@ -30,8 +33,8 @@ export { value } from '../../../crm/gateway';
         assert.ok(issues.some(issue => /tests|fixtures/.test(issue.message)));
         assert.ok(issues.some(issue => /Dynamic import/.test(issue.message)));
         assert.ok(issues.some(issue => /require\(\)/.test(issue.message)));
-        assert.ok(issues.some(issue => /network requests/.test(issue.message)));
-        assert.ok(issues.length >= 9);
+        assert.equal(issues.filter(issue => /network requests/.test(issue.message)).length, 3);
+        assert.ok(issues.length >= 12);
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }

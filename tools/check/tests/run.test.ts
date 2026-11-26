@@ -288,7 +288,7 @@ test('root discovery includes TS, TSX and MJS architecture tests but leaves type
             'tests/Architecture/unit/rule.test.mjs',
             'tests/Domain/unit/view.test.ts',
             'tests/Domain/unit/view.test.tsx',
-        ]);
+        ].map(file => path.normalize(file)));
         const config = JSON.parse(fs.readFileSync(new URL('../../../tsconfig.json', import.meta.url), 'utf8'));
         assert.ok(config.include.some((entry: string) => entry.includes('*.ts')));
         assert.ok(config.include.some((entry: string) => entry.includes('*.tsx')));

@@ -83,7 +83,7 @@ export function resolveProjectPath(filename, specifier, root) {
     return path.relative(projectRoot, absolute).split(path.sep).join('/');
 }
 export function isTestSource(filename) {
-    const normalized = slash(filename);
+    const normalized = sourcePath(filename) ?? slash(filename);
     return normalized.split('/').includes('tests') || testFilePattern.test(normalized);
 }
 export function isTestTarget(target) {
@@ -149,6 +149,12 @@ export const importBoundariesRule = {
     create(context) {
         const filename = context.filename ?? context.getFilename();
         let client = false;
+        const frontend = /^src\/(?:views|widgets|features|entities)(?:\/|$)/.test(sourcePath(filename) ?? '');
+        const reportNetwork = node => {
+            if (frontend) context.report({ node, messageId: 'violation', data: {
+                reason: 'UI consumers do not perform network requests; use the public SDK door.',
+            } });
+        };
         function check(node, source, typeOnly = false) {
             if (typeof source?.value !== 'string') return;
             const reason = importBoundaryViolation(filename, source.value, typeOnly, { client });
@@ -197,16 +203,9 @@ export const importBoundariesRule = {
                 const isModuleRequire = callee?.type === 'MemberExpression' &&
                     callee.object?.type === 'Identifier' && callee.object.name === 'module' &&
                     callee.property?.name === 'require';
-                const isFetch = callee?.type === 'Identifier' && callee.name === 'fetch' ||
-                    callee?.type === 'MemberExpression' && ['window', 'globalThis', 'self'].includes(callee.object?.name) &&
-                    callee.property?.name === 'fetch';
-                if (isFetch) {
-                    const source = sourcePath(filename);
-                    if (/^src\/(?:views|widgets|features|entities)(?:\/|$)/.test(source ?? '')) {
-                        context.report({ node, messageId: 'violation', data: { reason: 'UI consumers do not perform network requests; use the public SDK door.' } });
-                    }
-                }
-                if (!isRequire && !isModuleRequire) return;
+                const isCreateRequire = callee?.type === 'Identifier' && callee.name === 'createRequire';
+                if (callee?.type === 'Identifier' && callee.name === 'fetch') reportNetwork(node);
+                if (!isRequire && !isModuleRequire && !isCreateRequire) return;
                 const specifier = literalSpecifier(node.arguments[0]);
                 if (specifier === null) {
                     const source = sourcePath(filename);
@@ -217,13 +216,13 @@ export const importBoundariesRule = {
                     }
                 } else check(node, { value: specifier });
             },
+            MemberExpression(node) {
+                const property = node.computed ? literalSpecifier(node.property) : node.property?.name;
+                if (node.object?.type === 'Identifier' && ['window', 'globalThis', 'self'].includes(node.object.name) &&
+                    property === 'fetch') reportNetwork(node);
+            },
             NewExpression(node) {
-                if (node.callee?.type === 'Identifier' && node.callee.name === 'XMLHttpRequest') {
-                    const source = sourcePath(filename);
-                    if (/^src\/(?:views|widgets|features|entities)(?:\/|$)/.test(source ?? '')) {
-                        context.report({ node, messageId: 'violation', data: { reason: 'UI consumers do not perform network requests; use the public SDK door.' } });
-                    }
-                }
+                if (node.callee?.type === 'Identifier' && node.callee.name === 'XMLHttpRequest') reportNetwork(node);
             },
         };
     },

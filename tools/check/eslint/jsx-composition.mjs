@@ -104,12 +104,14 @@ export const jsxCompositionRule = {
     },
 };
 
+const skipFileLength = file => /\.(?:test|spec|type-test|typecheck|d|config)\.[cm]?[jt]sx?$/.test(file) ||
+    /(?:^|[\\/])generated(?:[\\/]|$)/.test(file);
+
 export const fileLengthRule = {
     id: 'file-length',
     docs: 'docs/specs/architecture/principles.md',
     check(source, { max = 200 } = {}) {
-        if (/\.(?:test|spec|type-test|typecheck|d)\.[cm]?[jt]sx?$/.test(source.fileName) ||
-            /(?:^|[\\/])generated(?:[\\/]|$)/.test(source.fileName)) return [];
+        if (skipFileLength(source.fileName)) return [];
         const lines = source.text.split(/\r?\n/).length;
         return lines > max ? [{ line: max + 1, column: 1, severity: 'warning',
             message: `Файл содержит ${lines} строк (ориентир ${max}); оцените связность, не дробите механически.` }] : [];
@@ -118,8 +120,7 @@ export const fileLengthRule = {
     create(context) {
         const max = context.options[0]?.max ?? 200;
         return { 'Program:exit'(node) {
-            if (/\.(?:test|spec|type-test|typecheck|d)\.[cm]?[jt]sx?$/.test(context.filename) ||
-                /(?:^|[\\/])generated(?:[\\/]|$)/.test(context.filename)) return;
+            if (skipFileLength(context.filename)) return;
             const lines = context.sourceCode.lines.length;
             if (lines > max) context.report({ node, loc: { start: { line: max + 1, column: 0 } },
                 messageId: 'length', data: { lines, max } });

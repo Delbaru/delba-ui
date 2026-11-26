@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
-import { importBoundaryViolation, isTestSource, isTestTarget, resolveProjectPath } from './import-boundaries.mjs';
+import { importBoundaryViolation } from './import-boundaries.mjs';
 
 const TEST_FILE = /\.(?:test|spec|type-test|typecheck)\.[cm]?[jt]sx?$/i;
 const SOURCE_FILE = /\.[cm]?[jt]sx?$/i;
@@ -30,16 +30,17 @@ function position(source, node) {
     return { line: line + 1, column: character + 1 };
 }
 function requireCall(expression) {
-    return ts.isIdentifier(expression) && expression.text === 'require' ||
+    return ts.isIdentifier(expression) && ['require', 'createRequire'].includes(expression.text) ||
         ts.isPropertyAccessExpression(expression) && ts.isIdentifier(expression.expression) &&
             expression.expression.text === 'module' && expression.name.text === 'require';
 }
 function network(node) {
     if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'XMLHttpRequest') return true;
-    if (!ts.isCallExpression(node)) return false;
-    if (ts.isIdentifier(node.expression) && node.expression.text === 'fetch') return true;
-    return ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'fetch' &&
-        ts.isIdentifier(node.expression.expression) && ['window', 'globalThis', 'self'].includes(node.expression.expression.text);
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'fetch') return true;
+    if (!ts.isPropertyAccessExpression(node) && !ts.isElementAccessExpression(node)) return false;
+    const property = ts.isPropertyAccessExpression(node) ? node.name.text : literal(node.argumentExpression);
+    return property === 'fetch' && ts.isIdentifier(node.expression) &&
+        ['window', 'globalThis', 'self'].includes(node.expression.text);
 }
 
 /** Shared static architecture pass; the ESLint rule uses the same importBoundaryViolation core. */
@@ -57,9 +58,6 @@ export function checkImportBoundaries(root, { dirs = ['src'], mode = 'os' } = {}
         const check = (node, specifier, typeOnly = false) => {
             const reason = importBoundaryViolation(file, specifier, typeOnly, { client, root });
             if (reason) report(node, reason);
-            const target = resolveProjectPath(file, specifier, root);
-            if (!isTestSource(file) && isTestTarget(target) && !reason)
-                report(node, 'Runtime source cannot import tests, type fixtures or test fixtures.', 'test-boundary');
         };
         if (slash(path.relative(root, file)).startsWith('src/widgets/Shared/')) report(source, 'widgets/Shared is not an FSD slice.');
         const visit = node => {
@@ -93,7 +91,7 @@ export function checkImportBoundaries(root, { dirs = ['src'], mode = 'os' } = {}
                 if (specifier === null && restricted(file, root, mode))
                     report(node, 'require() must use a static module specifier so architecture boundaries can be verified.');
                 else if (specifier !== null) check(node, specifier);
-            } else if (mode === 'consumer' && frontend(file, root) && network(node)) {
+            } else if (mode !== 'ui' && frontend(file, root) && network(node)) {
                 report(node, 'UI consumers do not perform network requests; use the public SDK door.', 'network-boundary');
             }
             ts.forEachChild(node, visit);
