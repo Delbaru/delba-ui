@@ -65,7 +65,7 @@ export function setField<T extends object, K extends FieldName<T>>(
   })) : [];
   const occurrences = Array.isArray(value) ? value.map(item => {
     const index = previous.findIndex(candidate => Object.is(candidate.item, item));
-    return index < 0 ? Symbol() : previous.splice(index, 1)[0].token;
+    return index < 0 ? Symbol() : previous.splice(index, 1)[0]!.token;
   }) : undefined;
   return {
     ...draft,
@@ -105,7 +105,7 @@ export function acknowledgeDraft<T extends object>(
         const submittedTokens = submitted.occurrences?.[name];
         if (currentTokens && submittedTokens) {
           const consumed = new Set(submittedTokens);
-          const remaining = now.filter((_, index) => !consumed.has(currentTokens[index]));
+          const remaining = now.filter((_, index) => !consumed.has(currentTokens[index]!));
           const remainingTokens = currentTokens.filter(token => !consumed.has(token));
           next = setField(next, name, remaining as T[typeof name]);
           next = { ...next, occurrences: { ...next.occurrences, [name]: remainingTokens } };
