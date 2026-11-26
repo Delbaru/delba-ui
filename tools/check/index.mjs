@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { check, projectRules } from './architecture.mjs';
 import { runNode, runSteps } from './run.mjs';
 import { runNodeTests } from './verify.mjs';
+import { discoverTests } from './discovery.mjs';
 
 const TOOLS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const KIT = path.dirname(TOOLS);
@@ -132,14 +133,7 @@ export function projectSteps(
     ];
 }
 
-export function discoverTests(root, directories) {
-    return directories.flatMap(directory => {
-        const source = path.join(root, directory);
-        return existsSync(source) ? readdirSync(source, { recursive: true })
-            .filter(file => /\.test\.(?:[cm]?[jt]s|tsx|jsx)$/.test(file))
-            .map(file => path.join(directory, file)) : [];
-    }).sort();
-}
+export { discoverTests } from './discovery.mjs';
 
 export function uiCheckSteps({
     project: requestedProject,
@@ -177,14 +171,8 @@ export function uiCheckSteps({
             throw new Error('--shard requires --suite browser and a valid index/total');
         }
     }
-    const discoverTests = (root, directories) => directories.flatMap(directory => {
-        const source = path.join(root, directory);
-        return existsSync(source) ? readdirSync(source, { recursive: true })
-            .filter(file => /\.test\.(?:[cm]?[jt]s|tsx|jsx)$/.test(file))
-            .map(file => path.join(directory, file)) : [];
-    }).sort();
     const projectTests = project ? discoverTests(project, ['src', 'tests']) : [];
-    const rootTests = discoverTests(KIT, ['tests']);
+    const libraryTests = discoverTests(KIT, ['tools', 'tests']);
     const projectChecks = project
         ? projectSteps(project, config, {
               strict: true,
@@ -250,10 +238,7 @@ export function uiCheckSteps({
             name: 'Тесты',
             run: ({ failedOnly = false } = {}) => runNodeTests({
               cwd: KIT,
-              files: [
-                  'tools/**/*.test.ts', 'tools/**/*.test.tsx', 'tools/**/*.test.mjs',
-                  'tools/**/*.test.cjs', 'tools/**/*.test.js', 'tools/**/*.test.jsx', ...rootTests,
-              ],
+              files: libraryTests,
               stateFile: `${reportFile}.library-tests`,
               failedOnly,
               nodeArgs: [

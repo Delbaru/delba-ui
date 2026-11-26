@@ -296,3 +296,17 @@ test('root discovery includes TS, TSX and MJS architecture tests but leaves type
         fs.rmSync(fixture, { recursive: true, force: true });
     }
 });
+
+test('library discovery includes nested tool harnesses and all Node test extensions', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-tool-discovery-'));
+    try {
+        const files = ['tools/check/tests/a.test.mts', 'tools/tests/b.test.cts', 'tests/Domain/unit/c.test.jsx',
+            'tests/Domain/unit/d.test.cjs', 'tests/Domain/unit/e.test.js'];
+        for (const file of [...files, 'tools/check/tests/fixture.type-test.ts', 'tests/Domain/e2e/browser.spec.ts',
+            'tools/node_modules/ignored.test.ts']) {
+            fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+            fs.writeFileSync(path.join(root, file), '');
+        }
+        assert.deepEqual(discoverTests(root, ['tools', 'tests']), files.map(file => path.normalize(file)).sort());
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

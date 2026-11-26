@@ -1,6 +1,6 @@
 import ts from 'typescript';
 
-const wrappers = [ts.isParenthesizedExpression, ts.isAsExpression, ts.isSatisfiesExpression, ts.isNonNullExpression];
+const wrappers = [ts.isParenthesizedExpression, ts.isAsExpression, ts.isTypeAssertionExpression, ts.isSatisfiesExpression, ts.isNonNullExpression];
 function unwrap(node) {
     let value = node;
     while (value && wrappers.some(isWrapper => isWrapper(value))) value = value.expression;
@@ -29,6 +29,12 @@ function roots(expression) {
     if (ts.isBinaryExpression(node) && [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(node.operatorToken.kind))
         return [...roots(node.left), ...roots(node.right)];
     if (ts.isArrayLiteralExpression(node)) return node.elements.flatMap(roots);
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
+        ['map', 'flatMap'].includes(node.expression.name.text)) {
+        const callback = unwrap(node.arguments[0]);
+        if (callback && (ts.isArrowFunction(callback) || ts.isFunctionExpression(callback)))
+            return returnedRoots(callback.body);
+    }
     return [];
 }
 function complexity(root) {
@@ -53,14 +59,21 @@ function inFunction(node) {
 export function checkJsxComposition(source) {
     const issues = [];
     const visit = node => {
-        let name, expression;
+        let name, expression, candidates;
         if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
             name = node.name; expression = node.initializer;
         } else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
             ts.isIdentifier(node.left)) {
             name = node.left; expression = node.right;
         }
-        if (name && expression && inFunction(node) && roots(expression).some(complexity)) {
+        if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
+            const helper = node.name ?? (ts.isVariableDeclaration(node.parent) ? node.parent.name : undefined);
+            if (helper && ts.isIdentifier(helper) && /^render[A-Z]/.test(helper.text)) {
+                name = helper;
+                candidates = returnedRoots(node.body);
+            }
+        }
+        if (name && inFunction(node) && (candidates ?? roots(expression)).some(complexity)) {
             const { line, character } = source.getLineAndCharacterOfPosition(name.getStart(source));
             issues.push({ line: line + 1, column: character + 1, node: name, severity: 'warning',
                 message: `Сложное локальное JSX-дерево ${name.text} скрывает композицию.`,

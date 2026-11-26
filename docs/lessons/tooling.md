@@ -770,3 +770,7 @@ controls (`raw-button`, `raw-input`, `raw-anchor`); форматирование
 его. Сохранены проверки отсутствия неявной записи и результата opt-in исправления.
 Воспроизведение: library suite; адресный повтор —
 `node --import tsx --import ./tools/check/unit-runtime.mjs --test tools/check/tests/check.test.ts`.
+
+### Shared checker and test discovery
+
+Keep the ESLint adapter and the TypeScript AST checker on the same composition implementation. Complex local map/flatMap and named render helpers are review warnings, not a ban on ordinary slots or callbacks. Use the public `@delba/eslint` entry with the workspace package present. The standalone Node test command and library gate discover the same root and tools tests; browser specs and type fixtures stay with their own runners. Reproduce with the library gate and the composition/discovery regression sources in `tools/check/tests` after dependency resolution.

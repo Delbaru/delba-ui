@@ -1,17 +1,18 @@
 import type ts from 'typescript';
+import type { Rule } from 'eslint';
 
-export declare const plugin: { meta: { name: string; version: string }; rules: Record<string, unknown> };
-export declare const rules: Record<string, unknown>;
-export declare const importBoundariesRule: unknown;
-export declare const namespacedHooksRule: unknown;
-export declare const rpxJsxRule: unknown;
-export declare const jsxGroupingRule: unknown;
-export declare const jsxCompositionRule: {
+export declare const plugin: { meta: { name: string; version: string }; rules: Record<string, Rule.RuleModule> };
+export declare const rules: Record<string, Rule.RuleModule>;
+export declare const importBoundariesRule: Rule.RuleModule;
+export declare const namespacedHooksRule: Rule.RuleModule;
+export declare const rpxJsxRule: Rule.RuleModule;
+export declare const jsxGroupingRule: Rule.RuleModule;
+export declare const jsxCompositionRule: Rule.RuleModule & {
   id: string;
   docs: string;
   check(source: ts.SourceFile): Array<{ line: number; column: number; severity: 'warning'; message: string; fix: string }>;
 };
-export declare const fileLengthRule: {
+export declare const fileLengthRule: Rule.RuleModule & {
   id: string;
   docs: string;
   check(source: ts.SourceFile, options?: { max?: number }): Array<{ line: number; column: number; severity: 'warning'; message: string }>;

@@ -10,9 +10,19 @@
       "import": "./index.mjs",
       "default": "./index.mjs"
     },
-    "./plugin": "./plugin.mjs"
+    "./plugin": {
+      "types": "./plugin.d.mts",
+      "import": "./plugin.mjs",
+      "default": "./plugin.mjs"
+    }
   },
   "peerDependencies": {
-    "typescript": ">=5"
+    "typescript": ">=5",
+    "eslint": "^9.0.0"
+  },
+  "peerDependenciesMeta": {
+    "eslint": {
+      "optional": true
+    }
   }
 }
