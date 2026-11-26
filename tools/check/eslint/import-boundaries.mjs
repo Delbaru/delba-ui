@@ -172,6 +172,14 @@ export const importBoundariesRule = {
                     (node.specifiers.length > 0 && node.specifiers.every(item => item.exportKind === 'type')));
             },
             ExportAllDeclaration(node) { check(node, node.source, node.exportKind === 'type'); },
+            TSImportEqualsDeclaration(node) {
+                if (node.moduleReference?.type === 'TSExternalModuleReference')
+                    check(node, node.moduleReference.expression, node.importKind === 'type');
+            },
+            TSImportType(node) {
+                const argument = node.argument ?? node.source;
+                check(node, argument?.literal ?? argument, true);
+            },
             ImportExpression(node) {
                 const specifier = literalSpecifier(node.source);
                 if (specifier === null) {
@@ -189,7 +197,6 @@ export const importBoundariesRule = {
                 const isModuleRequire = callee?.type === 'MemberExpression' &&
                     callee.object?.type === 'Identifier' && callee.object.name === 'module' &&
                     callee.property?.name === 'require';
-                const isCreateRequire = callee?.type === 'Identifier' && callee.name === 'createRequire';
                 const isFetch = callee?.type === 'Identifier' && callee.name === 'fetch' ||
                     callee?.type === 'MemberExpression' && ['window', 'globalThis', 'self'].includes(callee.object?.name) &&
                     callee.property?.name === 'fetch';
@@ -199,7 +206,7 @@ export const importBoundariesRule = {
                         context.report({ node, messageId: 'violation', data: { reason: 'UI consumers do not perform network requests; use the public SDK door.' } });
                     }
                 }
-                if (!isRequire && !isModuleRequire && !isCreateRequire) return;
+                if (!isRequire && !isModuleRequire) return;
                 const specifier = literalSpecifier(node.arguments[0]);
                 if (specifier === null) {
                     const source = sourcePath(filename);

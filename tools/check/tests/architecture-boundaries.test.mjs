@@ -19,6 +19,8 @@ import server from '../../../crm/server/router';
 import fixture from '../../../../tests/Domain/unit/view.test';
 const lazy = import(moduleName);
 const required = require(moduleName);
+const alsoRequired = module.require(moduleName);
+const explicit = module.require('../../../crm/server/router');
 fetch('/api/messages');
 export { value } from '../../../crm/gateway';
 `);
@@ -29,7 +31,7 @@ export { value } from '../../../crm/gateway';
         assert.ok(issues.some(issue => /Dynamic import/.test(issue.message)));
         assert.ok(issues.some(issue => /require\(\)/.test(issue.message)));
         assert.ok(issues.some(issue => /network requests/.test(issue.message)));
-        assert.ok(issues.length >= 7);
+        assert.ok(issues.length >= 9);
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }

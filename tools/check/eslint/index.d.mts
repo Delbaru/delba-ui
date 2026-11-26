@@ -29,6 +29,7 @@ export declare function resolveProjectPath(filename: string, specifier: string, 
 export declare function sourcePath(filename: string): string | null;
 export declare function isTestSource(filename: string): boolean;
 export declare function isTestTarget(target: string | null): boolean;
+export declare function isResponsiveDeclaration(checker: ts.TypeChecker, node: ts.Node, seen?: Set<ts.Node>): boolean;
 export declare function responsiveJsxProperty(checker: ts.TypeChecker, attribute: ts.JsxAttribute): boolean;
 export declare function hasExplicitResponsiveTuple(expression: unknown): boolean;
 export declare function hasExplicitResponsiveTupleTs(expression: ts.Expression | undefined): boolean;

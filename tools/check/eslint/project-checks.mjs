@@ -29,6 +29,11 @@ function position(source, node) {
     const { line, character } = source.getLineAndCharacterOfPosition(node.getStart(source));
     return { line: line + 1, column: character + 1 };
 }
+function requireCall(expression) {
+    return ts.isIdentifier(expression) && expression.text === 'require' ||
+        ts.isPropertyAccessExpression(expression) && ts.isIdentifier(expression.expression) &&
+            expression.expression.text === 'module' && expression.name.text === 'require';
+}
 function network(node) {
     if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'XMLHttpRequest') return true;
     if (!ts.isCallExpression(node)) return false;
@@ -56,22 +61,25 @@ export function checkImportBoundaries(root, { dirs = ['src'], mode = 'os' } = {}
             if (!isTestSource(file) && isTestTarget(target) && !reason)
                 report(node, 'Runtime source cannot import tests, type fixtures or test fixtures.', 'test-boundary');
         };
+        if (slash(path.relative(root, file)).startsWith('src/widgets/Shared/')) report(source, 'widgets/Shared is not an FSD slice.');
         const visit = node => {
             if (ts.isImportDeclaration(node)) {
                 const specifier = literal(node.moduleSpecifier);
                 if (specifier !== null) {
                     const clause = node.importClause;
-                    const typeOnly = Boolean(clause?.isTypeOnly || clause?.namedBindings &&
+                    const typeOnly = Boolean(clause?.isTypeOnly || !clause?.name && clause?.namedBindings &&
                         (ts.isNamedImports(clause.namedBindings) && clause.namedBindings.elements.length > 0 &&
                             clause.namedBindings.elements.every(item => item.isTypeOnly)));
                     check(node, specifier, typeOnly);
                 }
             } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
                 const specifier = literal(node.moduleSpecifier);
-                if (specifier !== null) check(node, specifier, Boolean(node.isTypeOnly));
+                if (specifier !== null) check(node, specifier, Boolean(node.isTypeOnly ||
+                    node.exportClause && ts.isNamedExports(node.exportClause) && node.exportClause.elements.length > 0 &&
+                    node.exportClause.elements.every(item => item.isTypeOnly)));
             } else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)) {
                 const specifier = literal(node.moduleReference.expression);
-                if (specifier !== null) check(node, specifier);
+                if (specifier !== null) check(node, specifier, node.isTypeOnly);
             } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
                 const specifier = literal(node.argument.literal);
                 if (specifier !== null) check(node, specifier, true);
@@ -80,7 +88,7 @@ export function checkImportBoundaries(root, { dirs = ['src'], mode = 'os' } = {}
                 if (specifier === null && restricted(file, root, mode))
                     report(node, 'Dynamic import must use a static module specifier so architecture boundaries can be verified.');
                 else if (specifier !== null) check(node, specifier);
-            } else if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'require') {
+            } else if (ts.isCallExpression(node) && requireCall(node.expression)) {
                 const specifier = literal(node.arguments[0]);
                 if (specifier === null && restricted(file, root, mode))
                     report(node, 'require() must use a static module specifier so architecture boundaries can be verified.');
