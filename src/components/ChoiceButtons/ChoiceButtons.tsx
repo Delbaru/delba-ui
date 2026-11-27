@@ -66,6 +66,7 @@ export function ChoiceButtons<T extends string = string>({
     return (
         <>
             <TabTrack
+                data-ui-form-field={bound ? name : undefined}
                 value={selectedValue}
                 thumb='primary'
                 dir={['row', null, null]}

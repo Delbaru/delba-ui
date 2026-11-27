@@ -54,6 +54,8 @@ function MessageForm() {
         <output data-testid="form-error">{form.error instanceof Error ? form.error.message : ''}</output>
       </Flex>
       <output data-testid="form-calls">{calls}</output>
+      <output data-testid="form-persisted">{String(form.persisted)}</output>
+      <output data-testid="form-unsaved">{String(form.unsaved)}</output>
       <Button onClick={() => finish.current?.resolve()}>Confirm message</Button>
       <Button onClick={() => finish.current?.reject(new Error('Send rejected'))}>Reject message</Button>
       <Button onClick={() => setRoom(value => value === 'room-a' ? 'room-b' : 'room-a')}>Switch room</Button>
@@ -304,9 +306,44 @@ export function FormFixture() {
       <ServerValidationFixture />
       <StorageBindingFixture />
       <ChangeCallbackForm />
+      <InvalidFocusFixture />
       <StrictMode><SharedForms /><SubscriptionForm /></StrictMode>
       <output data-testid="action-provider-failures">{actionFailures}</output>
     </ActionInvocationProvider>
+  );
+}
+
+function InvalidFocusFixture() {
+  const [submits, setSubmits] = useState(0);
+  const [required, setRequired] = useState(false);
+  const form = ui.form.use({
+    scope: 'invalid-focus-owner', preset: 'default', initial: { title: '', note: '', category: null as string | null, priority: null as string | null },
+    validate: values => ({
+      ...(values.title ? {} : { title: 'Title required' }),
+      ...(values.note ? {} : { note: 'Note required' }),
+      ...(values.category ? {} : { category: 'Category required' }),
+      ...(values.priority ? {} : { priority: 'Priority required' }),
+    }),
+    submit: () => { setSubmits(value => value + 1); },
+  });
+  const nested = ui.form.use({ scope: 'invalid-focus-nested', preset: 'default', initial: { title: '' }, submit: () => undefined });
+  return (
+    <section aria-label="Invalid form focus">
+      <Flex as="form" ui={{ form }}>
+        <Flex ui={{ form: nested }}><Input name="title" aria-label="Nested focus title" /></Flex>
+        <Input name="title" aria-label="Disabled focus title" disabled />
+        <Input name="title" aria-label="Readonly focus title" readOnly />
+        <input type="hidden" name="title" value="hidden" readOnly />
+        <Input name="title" aria-label="Invalid focus title" />
+        <input name="nativeConstraint" aria-label="Native required title" required={required} />
+        <Textarea name="note" aria-label="Invalid focus note" />
+        <Select name="category" aria-label="Invalid focus category" options={[{ value: 'one', label: 'Focus category one' }]} />
+        <ChoiceButtons name="priority" items={[{ value: 'low', label: 'Focus Low' }, { value: 'high', label: 'Focus High' }]} />
+        <button type="submit">Validate custom fields</button>
+      </Flex>
+      <output data-testid="invalid-focus-submits">{submits}</output>
+      <Button onClick={() => setRequired(true)}>Require focus title</Button>
+    </section>
   );
 }
 

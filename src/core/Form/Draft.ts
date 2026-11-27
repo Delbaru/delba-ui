@@ -91,8 +91,11 @@ export function receiveDraft<T extends object>(draft: DraftSnapshot<T>, initial:
   equal: FieldEquality<T> = (_field, left, right) => sameValue(left, right),
 ): DraftSnapshot<T> {
   let next = draft;
+  const baseline = snapshotValue(draft.baseline);
   const conflicts: DraftConflicts<T> = { ...draft.conflicts };
-  for (const name of Object.keys(initial) as FieldName<T>[]) {
+  for (const name of Object.keys(draft.values) as FieldName<T>[]) {
+    if (!Object.hasOwn(initial, name)) continue;
+    baseline[name] = snapshotValue(initial[name]);
     if (equal(name, draft.values[name], draft.baseline[name]) || equal(name, draft.values[name], initial[name])) {
       next = setField(next, name, initial[name]);
       delete conflicts[name];
@@ -100,7 +103,7 @@ export function receiveDraft<T extends object>(draft: DraftSnapshot<T>, initial:
       conflicts[name] = { previous: snapshotValue(draft.baseline[name]), incoming: snapshotValue(initial[name]) };
     }
   }
-  return { ...next, baseline: snapshotValue(initial), conflicts };
+  return { ...next, baseline, conflicts };
 }
 
 /** Acknowledge the submitted version, not a later edit (including change-away-and-back). */
@@ -109,7 +112,10 @@ export function acknowledgeDraft<T extends object>(
   consume: readonly FieldName<T>[] = [],
 ): DraftSnapshot<T> {
   let next = current;
-  for (const name of Object.keys(saved) as FieldName<T>[]) {
+  const baseline = snapshotValue(current.baseline);
+  for (const name of Object.keys(current.values) as FieldName<T>[]) {
+    if (!Object.hasOwn(saved, name)) continue;
+    baseline[name] = snapshotValue(saved[name]);
     if ((current.revisions[name] ?? 0) === (submitted.revisions[name] ?? 0)) {
       next = setField(next, name, saved[name]);
     } else if (consume.includes(name)) {
@@ -130,7 +136,7 @@ export function acknowledgeDraft<T extends object>(
       }
     }
   }
-  return { ...next, baseline: snapshotValue(saved) };
+  return { ...next, baseline };
 }
 
 export function resetDraft<T extends object>(draft: DraftSnapshot<T>, values: T): DraftSnapshot<T> {

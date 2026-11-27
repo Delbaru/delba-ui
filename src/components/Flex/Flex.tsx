@@ -26,6 +26,7 @@ import { useContentMotion } from '../../hooks/useContentMotion';
 import { type CollapseOptions } from '../Collapse/CollapseWrap';
 import { FlexFrame } from './FlexFrame/FlexFrame';
 import { FormContext } from '../../core/Form';
+import { focusFormError } from '../../core/Form/Context';
 import { usePopup } from '../../core/Popup/Popup';
 import { useAsyncContent } from '../../core/Async/Async';
 import { useScrollSurface } from '../../core/Scroll/Surface';
@@ -138,7 +139,10 @@ export function Flex({
     if (!target.matches?.('input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"])') ||
         target.closest('[data-ui-form-scope]') !== event.currentTarget || !target.closest('form')) return;
     event.preventDefault(); event.stopPropagation();
-    if (!form.disabled && form.ready) void form.submit();
+    if (!form.disabled && form.ready) {
+      void form.submit();
+      focusFormError(event.currentTarget, form);
+    }
   } : undefined;
   let scopedChildren = contentMotion.children;
   if (ui?.form) scopedChildren = <FormContext form={ui.form}>{scopedChildren}</FormContext>;
@@ -244,7 +248,10 @@ export function Flex({
             onSubmit?.(event);
             if (event.defaultPrevented) return;
             event.preventDefault();
-            if (!ui.form?.disabled && ui.form?.ready) void ui.form.submit();
+            if (!ui.form?.disabled && ui.form?.ready) {
+              void ui.form.submit();
+              focusFormError(event.currentTarget, ui.form);
+            }
           } : onSubmit}
         >
           {scopedChildren}

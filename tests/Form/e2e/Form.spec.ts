@@ -302,7 +302,7 @@ test('optional named primitives bind to the nearest form and reset with the owne
   await expect(notifications).toBeChecked();
   await sms.locator('xpath=ancestor::label').click();
   await expect(sms).toBeChecked();
-  await page.getByRole('button', { name: 'High' }).click();
+  await page.getByRole('button', { name: 'High', exact: true }).click();
   await page.getByRole('textbox', { name: 'Optional text' }).fill('text value');
   await page.getByRole('textbox', { name: 'Optional note' }).fill('note value');
   await page.getByRole('button', { name: 'Optional tags', exact: true }).click();
@@ -387,4 +387,121 @@ test('refresh conflicts stay visible until the field owner resolves them', async
   await fixture.getByRole('button', { name: 'Keep local edit title' }).click();
   await expect(title).toHaveValue('Kept title');
   await expect(conflict).toBeEmpty();
+});
+
+test('custom validation focuses the first editable field in its own scope', async ({ page }) => {
+  await page.goto('/');
+  const scope = page.getByRole('region', { name: 'Invalid form focus' });
+  const title = scope.getByRole('textbox', { name: 'Invalid focus title', exact: true });
+  const note = scope.getByRole('textbox', { name: 'Invalid focus note', exact: true });
+  const submit = scope.getByRole('button', { name: 'Validate custom fields' });
+  await submit.click();
+  await expect(title).toBeFocused();
+  await expect(title).toHaveAttribute('aria-invalid', 'true');
+  await expect(scope.getByTestId('invalid-focus-submits')).toHaveText('0');
+  await title.fill('Valid title');
+  await submit.click();
+  await expect(note).toBeFocused();
+  await note.fill('Valid note');
+  await submit.click();
+  const category = scope.getByRole('button', { name: 'Invalid focus category' });
+  await expect(category).toBeFocused();
+  await category.click();
+  await page.getByRole('option', { name: 'Focus category one' }).click();
+  await submit.click();
+  await expect(scope.getByRole('button', { name: 'Focus Low' })).toBeFocused();
+  await scope.getByRole('button', { name: 'Focus High' }).click();
+  await submit.click();
+  await expect(scope.getByTestId('invalid-focus-submits')).toHaveText('1');
+});
+
+test('native constraint validation keeps browser focus and does not submit an invalid form', async ({ page }) => {
+  await page.goto('/');
+  const scope = page.getByRole('region', { name: 'Invalid form focus' });
+  const title = scope.getByRole('textbox', { name: 'Native required title', exact: true });
+  await scope.getByRole('button', { name: 'Require focus title' }).click();
+  await scope.getByRole('button', { name: 'Validate custom fields' }).click();
+  await expect(title).toBeFocused();
+  expect(await title.evaluate((node: HTMLInputElement) => node.validity.valueMissing)).toBe(true);
+  await expect(scope.getByTestId('invalid-focus-submits')).toHaveText('0');
+});
+
+test('native cross-tab storage events preserve a newer draft through an older acknowledgement', async ({ page, context }) => {
+  await page.goto('/');
+  const other = await context.newPage();
+  try {
+    await other.goto('/');
+    const first = page.getByRole('textbox', { name: 'Form message', exact: true });
+    const second = other.getByRole('textbox', { name: 'Form message', exact: true });
+    await expect(first).toBeEnabled();
+    await expect(second).toBeEnabled();
+    await first.fill('submitted in first tab');
+    await expect(second).toHaveValue('submitted in first tab');
+    await first.press('Enter');
+    await expect(page.getByTestId('form-calls')).toHaveText('1');
+    await second.fill('later revision in another tab');
+    await expect(first).toHaveValue('later revision in another tab');
+    await second.fill('submitted in first tab');
+    await expect(first).toHaveValue('submitted in first tab');
+    await page.getByRole('button', { name: 'Confirm message' }).click();
+    await expect(first).toHaveValue('submitted in first tab');
+    await expect(second).toHaveValue('submitted in first tab');
+    await expect(page.getByTestId('form-persisted')).toHaveText('true');
+  } finally {
+    await other.close();
+  }
+});
+
+test('real localStorage quota failure retains unsaved text through submit and rejection', async ({ page }) => {
+  await page.goto('/');
+  const text = page.getByRole('textbox', { name: 'Form message', exact: true });
+  await expect(text).toBeEnabled();
+  await text.fill('last persisted version');
+  await expect(page.getByTestId('form-persisted')).toHaveText('true');
+  const quota = await page.evaluate(() => {
+    let index = 0;
+    let failure = '';
+    for (const size of [256 * 1024, 1024]) {
+      try {
+        for (;;) localStorage.setItem(`quota-fixture-${index++}`, 'q'.repeat(size));
+      } catch (error) {
+        failure = error instanceof DOMException ? error.name : String(error);
+      }
+    }
+    return failure;
+  });
+  expect(quota).toBe('QuotaExceededError');
+  const unsaved = 'local'.repeat(500);
+  await text.fill(unsaved);
+  await expect(page.getByTestId('form-persisted')).toHaveText('false');
+  await expect(page.getByTestId('form-unsaved')).toHaveText('true');
+  await page.getByRole('button', { name: 'Submit message' }).click();
+  await expect(text).toHaveValue(unsaved);
+  await expect(page.getByTestId('form-calls')).toHaveText('1');
+  await page.getByRole('button', { name: 'Reject message' }).click();
+  await expect(text).toHaveValue(unsaved);
+  await expect(page.getByTestId('form-error')).toHaveText('Send rejected');
+});
+
+test('corrupt persisted JSON does not prevent editing and the next successful write repairs it', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  const text = page.getByRole('textbox', { name: 'Form message', exact: true });
+  await expect(text).toBeEnabled();
+  await text.fill('persist before corruption');
+  const key = await page.evaluate(() => {
+    const key = Object.keys(localStorage).find(key => key.includes('owner-a') && key.includes('form-browser:room-a'));
+    if (!key) throw new Error('The public form did not persist its draft');
+    localStorage.setItem(key, '{broken');
+    return key;
+  });
+  await page.reload();
+  await expect(text).toBeEnabled();
+  await expect(text).toHaveValue('');
+  await expect(page.getByTestId('form-persisted')).toHaveText('false');
+  await text.fill('repaired draft');
+  await expect(page.getByTestId('form-persisted')).toHaveText('true');
+  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!).text, key)).toBe('repaired draft');
+  expect(errors).toEqual([]);
 });

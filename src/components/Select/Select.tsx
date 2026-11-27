@@ -216,6 +216,7 @@ export function Select<T extends string = string>(props: WithRef<SelectProps<T>,
         }}
         trigger={
           <SelectTrigger
+              data-ui-form-field={bound ? name : undefined}
               {...(!search ? select.trigger.accessibility : {})}
               id={search ? undefined : select.id}
               select={select}

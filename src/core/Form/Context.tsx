@@ -5,6 +5,25 @@ import type { FormScope } from './Form.types';
 
 const Context = createContext<FormScope | null>(null);
 
+/** Native constraints keep their browser focus; custom errors use the first
+ * actual named control in this scope, never a nested form's matching name.
+ */
+export function focusFormError(root: HTMLElement, form: FormScope) {
+  const focusable = 'input, textarea, select, button, [tabindex]:not([tabindex="-1"])';
+  for (const field of root.querySelectorAll<HTMLElement>('[name], [data-ui-form-field]')) {
+    const name = field.getAttribute('data-ui-form-field') ?? field.getAttribute('name');
+    if (!name || !form.fieldError(name) || field.closest('[data-ui-form-scope]') !== root ||
+        field.matches(':disabled, [readonly], [type="hidden"]') || field.closest('[inert], [hidden]')) continue;
+    const controls = field.matches(focusable) ? [field] : field.querySelectorAll<HTMLElement>(focusable);
+    for (const control of controls) {
+      if (control.matches(':disabled, [readonly], [type="hidden"], [aria-disabled="true"]') ||
+          control.closest('[inert], [hidden]') || control.closest('[data-ui-form-scope]') !== root) continue;
+      control.focus();
+      if (control.ownerDocument.activeElement === control) return;
+    }
+  }
+}
+
 /** React context only: does not add a DOM wrapper. */
 export function FormContext({ form, children }: { form: FormScope; children: ReactNode }) {
   return <Context.Provider value={form}>{children}</Context.Provider>;

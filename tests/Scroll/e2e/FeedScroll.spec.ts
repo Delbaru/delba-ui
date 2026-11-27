@@ -29,9 +29,11 @@ test('history prepend restores the first visible item after the content shifts',
   await page.goto('/?feed-scroll');
   const viewport = page.getByRole('log', { name: 'Feed messages' });
   await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  const followedPosition = await viewport.evaluate(node => node.scrollTop);
   await viewport.hover();
   await page.mouse.wheel(0, -600);
-  await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeCloseTo(followedPosition - 600, 0);
+  await expect(page.getByTestId('feed-show-bottom')).toHaveText('true');
 
   const anchor = await viewport.evaluate(node => {
     const bounds = node.getBoundingClientRect();
@@ -66,4 +68,35 @@ test('a reader gesture invalidates a captured history restoration', async ({ pag
   await page.getByRole('button', { name: 'Restore captured anchor' }).click();
   await expect(page.getByTestId('feed-history-result')).toHaveText('false');
   await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBe(readerPosition);
+});
+
+test('a deleted history anchor falls back to its surviving neighbour and viewport resize preserves reading', async ({ page }) => {
+  await page.goto('/?feed-scroll');
+  const viewport = page.getByRole('log', { name: 'Feed messages' });
+  await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeGreaterThan(600);
+  const initialTop = await viewport.evaluate(node => node.scrollTop);
+  await viewport.hover();
+  await page.mouse.wheel(0, -600);
+  await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeCloseTo(initialTop - 600, 0);
+  await expect(page.getByTestId('feed-show-bottom')).toHaveText('true');
+  const anchors = await viewport.evaluate(node => {
+    const bounds = node.getBoundingClientRect();
+    const nodes = [...node.querySelectorAll<HTMLElement>('[data-feed-item]')];
+    const first = nodes.findIndex(item => item.getBoundingClientRect().bottom > bounds.top);
+    const removed = nodes[first];
+    const next = nodes[first + 1];
+    if (!removed || !next) throw new Error('Two measured history anchors are required');
+    return { removed: removed.dataset.feedItem!, next: next.dataset.feedItem!, offset: next.getBoundingClientRect().top - bounds.top };
+  });
+  await page.getByRole('textbox', { name: 'Remove feed item' }).fill(anchors.removed);
+  await page.getByRole('button', { name: 'Replace removed feed anchor' }).click();
+  await expect(viewport.locator(`[data-feed-item="${anchors.removed}"]`)).toHaveCount(0);
+  await expect.poll(() => viewport.locator(`[data-feed-item="${anchors.next}"]`).evaluate(node =>
+    node.getBoundingClientRect().top - node.closest('[data-testid="feed-viewport"]')!.getBoundingClientRect().top,
+  )).toBeCloseTo(anchors.offset, 0);
+  const before = await viewport.evaluate(node => ({ top: node.scrollTop, height: node.clientHeight }));
+  await page.getByRole('button', { name: 'Resize feed viewport' }).click();
+  await expect.poll(() => viewport.evaluate(node => node.clientHeight)).toBeGreaterThan(before.height);
+  await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBe(before.top);
+  await expect(page.getByTestId('feed-show-bottom')).toHaveText('true');
 });

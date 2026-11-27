@@ -109,3 +109,37 @@ test('unchanged server values do not conflict and acknowledgement resolves submi
   const refreshed = receiveDraft(local, { title: 'remote' });
   assert.deepEqual(acknowledgeDraft(refreshed, refreshed, { title: 'saved' }).conflicts, {});
 });
+
+test('refresh and acknowledgement project wider server records onto the declared editable fields', () => {
+  const initial = createDraft({ title: 'old', note: undefined as string | undefined });
+  const server = { id: 'server-id', version: 7, title: 'remote', note: 'server note' };
+  const refreshed = receiveDraft<typeof initial.values>(initial, server);
+  assert.deepEqual(refreshed.values, { title: 'remote', note: 'server note' });
+  assert.deepEqual(refreshed.baseline, { title: 'remote', note: 'server note' });
+  const submitted = setField(refreshed, 'title', 'edited');
+  const savedRecord = { ...server, title: 'EDITED', version: 8 };
+  const saved = acknowledgeDraft<typeof submitted.values>(submitted, submitted, savedRecord);
+  assert.deepEqual(saved.values, { title: 'EDITED', note: 'server note' });
+  assert.deepEqual(saved.baseline, saved.values);
+  assert.deepEqual(Object.keys(saved.values).sort(), ['note', 'title']);
+});
+
+test('the first confirmed refresh advances untouched revisions before an older submission settles', () => {
+  const submitted = createDraft({ title: 'initial', note: 'initial note' });
+  const refreshed = receiveDraft(submitted, { title: 'revision two', note: 'confirmed note' });
+  assert.deepEqual(refreshed.values, { title: 'revision two', note: 'confirmed note' });
+  const edited = setField(refreshed, 'title', 'local after refresh');
+  const settled = acknowledgeDraft(edited, submitted, { title: 'initial', note: 'initial note' });
+  assert.deepEqual(settled.values, { title: 'local after refresh', note: 'confirmed note' });
+  assert.deepEqual(resetDraft(refreshed, refreshed.baseline).values, { title: 'revision two', note: 'confirmed note' });
+});
+
+test('projection retains fields explicitly introduced by a typed dictionary update', () => {
+  const declared = createDraft<Record<string, string>>({ title: 'old' });
+  const dynamic = setField(declared, 'extra', 'local extra');
+  const refreshed = receiveDraft(dynamic, { title: 'remote', extra: 'remote extra', unrelated: 'ignored' });
+  assert.deepEqual(refreshed.values, { title: 'remote', extra: 'local extra' });
+  assert.deepEqual(refreshed.baseline, { title: 'remote', extra: 'remote extra' });
+  const saved = acknowledgeDraft(refreshed, refreshed, { title: 'saved', extra: 'saved extra', unrelated: 'ignored' });
+  assert.deepEqual(saved.values, { title: 'saved', extra: 'saved extra' });
+});

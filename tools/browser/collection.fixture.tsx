@@ -6,14 +6,37 @@ import { Button } from '../../src/components/Button/Button';
 type Item = { id: string; label: string };
 const definition = ui.collection.define<Item>('collection-browser-fixture');
 
-function CollectionRow({ item, onNestedAction }: { item: Item; onNestedAction: () => void }) {
+function NestedCollectionsFixture() {
+  const [scope, setScope] = useState('inner-a');
+  const outer = ui.collection.use(definition, [{ id: 'a', label: 'Parent record' }], { scope: 'outer' });
+  const inner = ui.collection.use(definition, [
+    { id: 'a', label: 'Inner first' }, { id: 'b', label: 'Inner second' },
+  ], { scope });
+  return (
+    <section aria-label="Nested collection isolation">
+      <Flex ui={{ collection: outer }} role="listbox" aria-label="Outer items">
+        <Flex ui={{ selectable: outer.item('a') }} role="option" aria-label="Parent record" tabIndex={0}>
+          <span>Outer selection surface</span>
+          <Flex ui={{ collection: inner }} role="listbox" aria-label="Inner items">
+            {inner.items.map(item => <CollectionRow key={item.id} item={item} showNestedAction={false} onNestedAction={() => {}} />)}
+          </Flex>
+        </Flex>
+      </Flex>
+      <output data-testid="nested-outer-selected">{outer.ids.join('|')}</output>
+      <output data-testid="nested-inner-selected">{inner.ids.join('|')}</output>
+      <Button onClick={() => setScope(value => value === 'inner-a' ? 'inner-b' : 'inner-a')}>Reset inner collection owner</Button>
+    </section>
+  );
+}
+
+function CollectionRow({ item, onNestedAction, showNestedAction = true }: { item: Item; onNestedAction: () => void; showNestedAction?: boolean }) {
   const selectable = ui.collection.item.use(definition, item.id);
   if (!selectable) return null;
   return (
     <Flex ui={{ selectable }} role="option" tabIndex={0}
       aria-label={item.label} data-testid={`item-${item.id}`}>
       <span>{item.label}</span>
-      {item.id === 'a' && <Button onClick={onNestedAction}>Nested action</Button>}
+      {showNestedAction && item.id === 'a' && <Button onClick={onNestedAction}>Nested action</Button>}
     </Flex>
   );
 }
@@ -49,6 +72,7 @@ export function CollectionFixture() {
       <Button onClick={removeAlpha}>Remove Alpha</Button>
       <Button onClick={refreshAlpha}>Refresh Alpha</Button>
       <Button onClick={() => collection.unselect('a')}>Forget Alpha</Button>
+      <NestedCollectionsFixture />
     </main>
   );
 }

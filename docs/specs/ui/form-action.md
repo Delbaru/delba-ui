@@ -27,6 +27,10 @@ Custom fields use `ui.form.field.use<T>(name)`; native submit is opt-in with
 Flex as="form", and editors with their own Enter semantics call form.submit.
 
 `reset` restores the acknowledged baseline; `clear` restores initial values.
+The keys already present in draft values define its editable schema (including
+explicitly present undefined optional fields and fields explicitly introduced by
+a typed dictionary update). Wider server records passed to refresh or
+acknowledgement do not add fields; omitted keys retain their baseline.
 `receive` refreshes untouched fields. The message preset clears acknowledged
 values to initial; explicit consume fields remove submitted array items by identity.
 Only explicitly selected strings enter localStorage; other values remain in
@@ -85,6 +89,11 @@ not release admission or claim that a server command rolled back. AbortError
 is cancellation, not a form validation failure. A nested non-native form
 scope inside a native form handles text input Enter locally; custom editors
 retain their own key handling. Native submit remains opt-in.
+
+Flex native submit and nested text-input Enter keep the browser's native
+constraint validation. Custom field errors focus the first editable named
+control in that exact form scope, skipping nested scopes, hidden, disabled,
+readonly and inert controls. This does not replace native validity handling.
 
 
 The optional onChange callback receives a detached snapshot of the complete

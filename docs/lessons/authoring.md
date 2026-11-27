@@ -1635,3 +1635,28 @@ Fix: capture opener/x/y synchronously; preserve the same-host/same-coordinate no
 Verification: tests/Popup/e2e/Popup.spec.ts, complete Popup profile 6/6 PASS.
 The regression repeats readers-like state/close/right-click three times, asserts
 host identity before closest, Escape/focus return and absence of page errors.
+
+## Form projects server records and focuses its own invalid controls
+
+Source causes: receive/acknowledgement iterated server payload keys and could add
+undeclared fields to a typed draft. Custom validation blocked submission without
+focusing an editable field. Draft reconciliation now iterates declared draft keys,
+retains omitted baseline fields and ignores unrelated server properties. Native
+submit/nested Enter delegates custom-error focus to the exact form scope; named
+native controls and the existing Select/ChoiceButtons surfaces keep one focus owner.
+Nested scopes, hidden/disabled/readonly/inert controls are skipped; browser native
+constraint validation remains before submit.
+
+Reproducible checks: tests/Form/unit/Draft.test.ts (wider server projection and
+first refresh revisions), tests/Form/e2e/Form.spec.ts (custom/native focus, real
+two-tab storage events, actual quota exhaustion and corrupted stored JSON),
+tests/Collection/e2e/Collection.spec.ts (nested controllers with overlapping IDs),
+tests/Scroll/e2e/FeedScroll.spec.ts (deleted anchor fallback and viewport resize).
+Library/types: 628 unit tests passed without failures or skips. The owning
+Collection/Form/FeedScroll browser profiles passed 31/31 after fixture corrections:
+exact accessible names avoid High/Focus High ambiguity; prepend measures its
+anchor after the real wheel completes; the resize fixture uses an explicit native
+height rather than a dynamic utility absent from generated CSS. Native composition
+is checked with an actual HTML required input; Input's existing preventDefault
+custom-invalid presentation is a separate unchanged contract. Custom focus covers
+Input, Textarea, Select and ChoiceButtons. No Field behavior was changed.

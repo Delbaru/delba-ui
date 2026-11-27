@@ -54,3 +54,20 @@ test('first plain click selects and plain click toggles an active selection', as
   await expect(alpha).toHaveAttribute('aria-selected', 'true');
   await expect(beta).toHaveAttribute('aria-selected', 'true');
 });
+
+test('nested collections with overlapping IDs select and reset independently', async ({ page }) => {
+  await page.goto('/?collection');
+  const scope = page.getByRole('region', { name: 'Nested collection isolation' });
+  await scope.getByText('Outer selection surface', { exact: true }).click();
+  await expect(scope.getByTestId('nested-outer-selected')).toHaveText('a');
+  const innerAlpha = scope.getByRole('option', { name: 'Inner first', exact: true });
+  await innerAlpha.click();
+  await expect(scope.getByTestId('nested-inner-selected')).toHaveText('a');
+  await expect(scope.getByTestId('nested-outer-selected')).toHaveText('a');
+  await innerAlpha.press('ControlOrMeta+a');
+  await expect(scope.getByTestId('nested-inner-selected')).toHaveText('a|b');
+  await expect(scope.getByTestId('nested-outer-selected')).toHaveText('a');
+  await scope.getByRole('button', { name: 'Reset inner collection owner' }).click();
+  await expect(scope.getByTestId('nested-inner-selected')).toBeEmpty();
+  await expect(scope.getByTestId('nested-outer-selected')).toHaveText('a');
+});

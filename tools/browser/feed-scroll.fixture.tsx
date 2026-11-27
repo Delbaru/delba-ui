@@ -14,6 +14,8 @@ export function FeedScrollFixture() {
   const [restore, setRestore] = useState<(() => boolean) | null>(null);
   const historyRestore = useRef<(() => boolean) | null>(null);
   const [historyResult, setHistoryResult] = useState('none');
+  const [height, setHeight] = useState(200);
+  const [removeId, setRemoveId] = useState('');
   const feed = ui.scroll.feed.use({
     scope: 'feed-scroll-fixture',
     enabled: true,
@@ -41,6 +43,7 @@ export function FeedScrollFixture() {
         aria-label="Feed messages"
         tabIndex={0}
         dir="column"
+        style={{ height }}
         ui={{ scroll: { preset: 'feed', axis: 'y', fade: true, height: 200 } }}
       >
         <Flex ref={content} dir="column" gap={[0, 0, 0]}>
@@ -55,6 +58,17 @@ export function FeedScrollFixture() {
       <output data-testid="feed-show-bottom">{String(feed.showBottom)}</output>
       <Button onClick={() => setItems(current => [...current, { id: `new-${current.length}`, text: 'New message' }])}>Append message</Button>
       <Button onClick={prepend}>Prepend with anchor</Button>
+      <input aria-label="Remove feed item" value={removeId} onChange={event => setRemoveId(event.currentTarget.value)} />
+      <Button onClick={() => {
+        const restoreAnchor = feed.captureHistoryAnchor();
+        setRestore(() => restoreAnchor);
+        setItems(current => [
+          { id: 'older-replacement-one', text: 'Older replacement one' },
+          { id: 'older-replacement-two', text: 'Older replacement two' },
+          ...current.filter(item => item.id !== removeId),
+        ]);
+      }}>Replace removed feed anchor</Button>
+      <Button onClick={() => setHeight(value => value === 200 ? 280 : 200)}>Resize feed viewport</Button>
       <Button onClick={feed.latest}>Follow latest</Button>
       <Button onClick={() => {
         historyRestore.current = feed.captureHistoryAnchor();
