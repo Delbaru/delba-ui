@@ -8,9 +8,9 @@ import { formatStep } from './format.mjs';
 import { startProgress } from './progress.mjs';
 
 /** Node запускается без shell: одинаковые аргументы на Windows и Unix. */
-export function runNode(args, cwd, { showOutput = false } = {}) {
+export function runNode(args, cwd, { showOutput = false, environment } = {}) {
   return new Promise((resolve) => {
-    const env = { ...process.env, FORCE_COLOR: '0' };
+    const env = { ...process.env, ...environment, FORCE_COLOR: '0' };
     // Playwright assigns FORCE_COLOR to its workers; an inherited NO_COLOR makes Node warn.
     delete env.NO_COLOR;
     // Иначе Node пропускает отдельный test runner, запущенный из теста самого инструмента.

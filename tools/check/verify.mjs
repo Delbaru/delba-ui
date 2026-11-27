@@ -10,12 +10,12 @@ const reporter = new URL('./reporter.mjs', import.meta.url).href;
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 
 /** Node test invocation with native failed-case reruns, or failed-file reruns on Node 22. */
-export async function runNodeTests({ cwd = process.cwd(), files, nodeArgs = [], stateFile, failedOnly = false }) {
+export async function runNodeTests({ cwd = process.cwd(), files, nodeArgs = [], stateFile, failedOnly = false, environment }) {
   const root = path.resolve(cwd);
   const file = stateFile ? path.resolve(root, stateFile) : null;
   const metadata = file && `${file}.json`;
   const native = process.allowedNodeEnvironmentFlags.has('--test-rerun-failures');
-  const identity = hash(JSON.stringify({ cwd: root, files, nodeArgs, node: process.versions.node }));
+  const identity = hash(JSON.stringify({ cwd: root, files, nodeArgs, node: process.versions.node, environment }));
   const fail = (output) => ({ ok: false, output });
   if (!Array.isArray(files) || files.length === 0) return fail('Node tests require an explicit nonempty files list.');
   if (nodeArgs.some((arg) => /^--test(?:=|$|-reporter|-rerun-failures)/.test(arg))) {
@@ -45,13 +45,15 @@ export async function runNodeTests({ cwd = process.cwd(), files, nodeArgs = [], 
     if (!failedOnly || repeatStep) for (const target of [file, metadata, eventsFile]) fs.rmSync(target, { force: true });
   }
   const selectedFiles = failedOnly && !native && !repeatStep ? previous.failedFiles : files;
+  // A crash before a reporter runs must never reuse events from a previous invocation.
+  fs.rmSync(eventsFile, { force: true });
   const reporting = new URL(reporter);
   if (eventsFile) reporting.searchParams.set('state', eventsFile);
   const result = await runNode([
     ...nodeArgs, '--test', ...(native && file ? [`--test-rerun-failures=${file}`] : []),
     '--test-reporter', reporting.href,
     ...selectedFiles,
-  ], root, { showOutput: true });
+  ], root, { showOutput: true, environment });
   let events;
   try {
     events = JSON.parse(fs.readFileSync(eventsFile, 'utf8'));

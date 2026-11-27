@@ -135,6 +135,41 @@ export function projectSteps(
 
 export { discoverTests } from './discovery.mjs';
 
+function projectTestOwner(project) {
+    if (!project) return undefined;
+    const manifest = path.join(project, 'package.json');
+    if (!existsSync(manifest)) return undefined;
+    const pkg = JSON.parse(readFileSync(manifest, 'utf8'));
+    // The CRM owns the root selection and native guard. Use its existing CLI,
+    // not a copy of the guard or a second discovery pass over its sources.
+    return pkg.name === 'delba-os' ? 'crm' : undefined;
+}
+
+function crmTestEnvironment() {
+    if (process.env.CRM_QA_DB_TESTS !== '1') return { CRM_QA_DB_TESTS: '0' };
+    return {
+        CRM_QA_DB_TESTS: '1',
+        CRM_QA_DATABASE: process.env.CRM_QA_DATABASE?.trim() ?? '',
+        DATABASE_URL: process.env.DATABASE_URL ?? '',
+    };
+}
+
+async function crmTestPlan(project, environment) {
+    const result = await runNode(['tools/verification/run.mjs', 'root', '--list-files'],
+        project, { showOutput: true, environment });
+    if (!result.ok) return result;
+    try {
+        const files = JSON.parse(result.output);
+        if (!Array.isArray(files) || !files.length ||
+            files.some(file => typeof file !== 'string' || !file)) {
+            throw new Error('Expected a nonempty CRM root test plan.');
+        }
+        return { ok: true, files };
+    } catch {
+        return { ok: false, output: 'Invalid CRM root test plan.' };
+    }
+}
+
 export function uiCheckSteps({
     project: requestedProject,
     config = {},
@@ -148,11 +183,14 @@ export function uiCheckSteps({
     if (config.testConcurrency !== undefined && (!Number.isInteger(config.testConcurrency) || config.testConcurrency < 1 || config.testConcurrency > 16)) {
         throw new Error('testConcurrency must be an integer from 1 to 16');
     }
-    const testConcurrency = config.testConcurrency ?? (process.env.CI ? 2 : undefined);
     const project =
         requestedProject && path.relative(KIT, path.resolve(requestedProject)) !== ''
             ? requestedProject
             : undefined;
+    const crm = projectTestOwner(project) === 'crm';
+    const environment = crm ? crmTestEnvironment() : undefined;
+    const testConcurrency = environment?.CRM_QA_DB_TESTS === '1' ? 1 :
+        config.testConcurrency ?? (process.env.CI ? 2 : undefined);
     if (!['standard', 'all', 'library', 'project', 'browser'].includes(suite))
         throw new Error(`Unknown UI suite: ${suite}`);
     if (typecheckCache !== undefined && (!project || suite !== 'project' || !typecheckCache)) {
@@ -171,7 +209,14 @@ export function uiCheckSteps({
             throw new Error('--shard requires --suite browser and a valid index/total');
         }
     }
-    const projectTests = project ? discoverTests(project, ['src', 'tests']) : [];
+    const projectTests = project && !crm ? discoverTests(project, ['src', 'tests']) : [];
+    const expectsProjectTests = project && (crm || projectTests.length > 0 ||
+        config.testConcurrency !== undefined || config.testConditions !== undefined);
+    let crmPlan;
+    const planCrm = async () => {
+        crmPlan = await crmTestPlan(project, environment);
+        return crmPlan;
+    };
     const libraryTests = discoverTests(KIT, ['tools', 'tests']);
     const projectChecks = project
         ? projectSteps(project, config, {
@@ -181,6 +226,9 @@ export function uiCheckSteps({
           })
         : [];
     const steps = [
+        ...(crm && ['standard', 'all', 'project'].includes(suite)
+            ? [{ name: 'План тестов CRM', required: true, suite: 'project', run: planCrm }]
+            : []),
         ...(requestedProject
             ? [
                   {
@@ -251,24 +299,31 @@ export function uiCheckSteps({
             }),
             suite: 'library',
         },
-        ...(projectTests.length
+        ...(expectsProjectTests
             ? [
                   {
                       name: 'Тесты проекта',
-                      run: ({ failedOnly = false } = {}) => runNodeTests({
-                          cwd: project,
-                          files: projectTests,
-                          stateFile: `${reportFile}.project-tests`,
-                          failedOnly,
-                          nodeArgs: [
-                              ...(testConcurrency ? [`--test-concurrency=${testConcurrency}`] : []),
-                              ...(config.testConditions ?? []).map(
-                                  (condition) => `--conditions=${condition}`,
-                              ),
-                              '--import',
-                              pathToFileURL(require.resolve('tsx')).href,
-                          ],
-                      }),
+                      run: async ({ failedOnly = false } = {}) => {
+                          const plan = crm ? (crmPlan ?? await planCrm()) :
+                              { ok: true, files: projectTests };
+                          crmPlan = undefined;
+                          if (!plan.ok) return plan;
+                          return runNodeTests({
+                              cwd: project,
+                              files: plan.files,
+                              stateFile: `${reportFile}.project-tests`,
+                              failedOnly,
+                              environment,
+                              nodeArgs: [
+                                  ...(testConcurrency ? [`--test-concurrency=${testConcurrency}`] : []),
+                                  ...(config.testConditions ?? []).map(
+                                      (condition) => `--conditions=${condition}`,
+                                  ),
+                                  '--import',
+                                  pathToFileURL(require.resolve('tsx')).href,
+                              ],
+                          });
+                      },
                       suite: 'project',
                   },
               ]
@@ -300,7 +355,10 @@ export function runUiChecks(options = {}) {
         failedOnly: options.failedOnly,
         concurrency: options.config?.checkConcurrency ?? 1,
         profile: { project: options.project, configArg: options.configArg, suite,
-            shard: options.shard, fix: Boolean(options.fix), typecheckCache: options.typecheckCache },
+            shard: options.shard, fix: Boolean(options.fix), typecheckCache: options.typecheckCache,
+            testConcurrency: options.config?.testConcurrency, testConditions: options.config?.testConditions,
+            crmEnvironment: projectTestOwner(options.project) === 'crm'
+                ? createHash('sha256').update(JSON.stringify(crmTestEnvironment())).digest('hex') : undefined },
     });
 }
 
