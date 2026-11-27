@@ -101,7 +101,7 @@ export function checkImportBoundaries(root, { dirs = ['src'], mode = 'os' } = {}
     return issues;
 }
 
-/** Tests belong to root tests/ or a named tools/*/tests harness, never beside runtime modules. */
+/** Tests belong to root tests/ or a named tool's tests harness, never beside runtime modules. */
 export function checkTestPlacement(root) {
     const visit = directory => !fs.existsSync(directory) ? [] : fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
         const file = path.join(directory, entry.name);
