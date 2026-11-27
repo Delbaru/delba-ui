@@ -773,6 +773,8 @@ controls (`raw-button`, `raw-input`, `raw-anchor`); форматирование
 
 ### Shared checker and test discovery
 
+Exact browser projection paths must follow reviewed owner path casing. The structural migration left lowercase entries in the checker while the same OS projections moved to PascalCase; this produced false boundary diagnostics. Update the same explicit entries, without adding new exceptions or case-insensitive matching. Reproduce with OS Imports/OwnerPaths regressions and the real source scan, plus the UI architecture-boundaries harness.
+
 An illustrative wildcard path inside a block comment can contain the comment terminator and prevent the entire public checker package from loading. Use prose for such paths. Reproduce with `node --check tools/check/eslint/project-checks.mjs` and import both public entries from the consumer and library roots; keep architecture assertions enabled.
 
 Keep the ESLint adapter and the TypeScript AST checker on the same composition implementation. Complex local map/flatMap and named render helpers are review warnings, not a ban on ordinary slots or callbacks. Use the public `@delba/eslint` entry with the workspace package present. The standalone Node test command and library gate discover the same root and tools tests; browser specs and type fixtures stay with their own runners. Reproduce with the library gate and the composition/discovery regression sources in `tools/check/tests` after dependency resolution.
