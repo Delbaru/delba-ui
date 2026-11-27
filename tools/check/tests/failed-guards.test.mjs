@@ -156,6 +156,14 @@ test('CRM project delegates the root plan and native guard before starting any w
   assert.match(accepted.output, /1 passed, 0 failed, 1 skipped/);
   assert.equal(fs.readFileSync(path.join(project, 'ran'), 'utf8'), 'yes');
   assert.equal(fs.readFileSync(path.join(project, 'planned'), 'utf8'), '1\n1\n');
+  // A faulty owner may report an empty plan despite the existing test file.
+  // The test step must reject it, not silently mark the project as passed.
+  fs.rmSync(path.join(project, 'ran'));
+  fs.writeFileSync(path.join(project, 'tools', 'verification', 'run.mjs'), 'console.log("[]");');
+  const empty = await step().run();
+  assert.equal(empty.ok, false);
+  assert.match(empty.output, /empty|nonempty/i);
+  assert.equal(fs.existsSync(path.join(project, 'ran')), false);
 });
 
 test('missing preload and mismatched failed state cannot report a successful retry', async (t) => {
