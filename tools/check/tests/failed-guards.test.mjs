@@ -162,7 +162,7 @@ test('CRM project delegates the root plan and native guard before starting any w
   fs.writeFileSync(path.join(project, 'tools', 'verification', 'run.mjs'), 'console.log("[]");');
   const empty = await step().run();
   assert.equal(empty.ok, false);
-  assert.match(empty.output, /empty|nonempty/i);
+  assert.match(empty.output, /Invalid CRM root test plan/);
   assert.equal(fs.existsSync(path.join(project, 'ran')), false);
 });
 
