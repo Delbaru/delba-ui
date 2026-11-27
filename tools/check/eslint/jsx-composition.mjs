@@ -9,35 +9,35 @@ function unwrap(node) {
 function isJsx(node) { return ts.isJsxElement(node) || ts.isJsxFragment(node) || ts.isJsxSelfClosingElement(node); }
 const functionLike = node => ts.isFunctionLike(node) || ts.isClassDeclaration(node) || ts.isClassExpression(node);
 
-function returnedRoots(body) {
+function returnedRoots(body, mapped = false) {
     if (!body) return [];
-    if (!ts.isBlock(body)) return roots(body);
+    if (!ts.isBlock(body)) return roots(body, mapped);
     const found = [];
     const visit = node => {
         if (node !== body && functionLike(node)) return;
-        if (ts.isReturnStatement(node)) { found.push(...roots(node.expression)); return; }
+        if (ts.isReturnStatement(node)) { found.push(...roots(node.expression, mapped)); return; }
         ts.forEachChild(node, visit);
     };
     visit(body);
     return found;
 }
-function roots(expression) {
+function roots(expression, mapped = false) {
     const node = unwrap(expression);
     if (!node) return [];
-    if (isJsx(node)) return [node];
-    if (ts.isConditionalExpression(node)) return [...roots(node.whenTrue), ...roots(node.whenFalse)];
+    if (isJsx(node)) return [{ root: node, mapped }];
+    if (ts.isConditionalExpression(node)) return [...roots(node.whenTrue, mapped), ...roots(node.whenFalse, mapped)];
     if (ts.isBinaryExpression(node) && [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(node.operatorToken.kind))
-        return [...roots(node.left), ...roots(node.right)];
-    if (ts.isArrayLiteralExpression(node)) return node.elements.flatMap(roots);
+        return [...roots(node.left, mapped), ...roots(node.right, mapped)];
+    if (ts.isArrayLiteralExpression(node)) return node.elements.flatMap(element => roots(element, mapped));
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
         ['map', 'flatMap'].includes(node.expression.name.text)) {
         const callback = unwrap(node.arguments[0]);
         if (callback && (ts.isArrowFunction(callback) || ts.isFunctionExpression(callback)))
-            return returnedRoots(callback.body);
+            return returnedRoots(callback.body, true);
     }
     return [];
 }
-function complexity(root) {
+function complexity(root, mapped) {
     let count = 0, depth = 0, branching = false;
     const visit = (node, level) => {
         if (ts.isFunctionLike(node) || ts.isJsxAttributes(node) || ts.isObjectLiteralExpression(node)) return;
@@ -45,10 +45,18 @@ function complexity(root) {
         if (level > 0 && (ts.isConditionalExpression(node) ||
             ts.isBinaryExpression(node) && [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken].includes(node.operatorToken.kind)))
             branching = true;
+        // A nested collection callback contributes to the mapped tree, unlike an attribute slot.
+        if (mapped && ts.isCallExpression(node)) {
+            const nested = roots(node);
+            if (nested.length) {
+                for (const candidate of nested) visit(candidate.root, level);
+                return;
+            }
+        }
         ts.forEachChild(node, child => visit(child, level));
     };
     visit(root, 0);
-    return count >= 5 || depth >= 3 || (count >= 3 && branching);
+    return count >= 5 || depth >= (mapped ? 4 : 3) || (count >= 3 && branching);
 }
 function inFunction(node) {
     for (let parent = node.parent; parent; parent = parent.parent) if (ts.isFunctionLike(parent)) return true;
@@ -73,7 +81,7 @@ export function checkJsxComposition(source) {
                 candidates = returnedRoots(node.body);
             }
         }
-        if (name && inFunction(node) && (candidates ?? roots(expression)).some(complexity)) {
+        if (name && inFunction(node) && (candidates ?? roots(expression)).some(({ root, mapped }) => complexity(root, mapped && !candidates))) {
             const { line, character } = source.getLineAndCharacterOfPosition(name.getStart(source));
             issues.push({ line: line + 1, column: character + 1, node: name, severity: 'warning',
                 message: `Сложное локальное JSX-дерево ${name.text} скрывает композицию.`,

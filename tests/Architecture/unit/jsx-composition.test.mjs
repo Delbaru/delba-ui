@@ -47,3 +47,12 @@ test('a heading with conditional label is a review candidate, not a mechanical b
   assert.equal(found.length, 1);
   assert.equal(found[0].severity, 'warning');
 });
+
+test('mapped layouts exceeding the short composition threshold remain review warnings', () => {
+  const found = inspect(`function Panel() {
+    const rows = items.map(item => <Box><Row><Text><Icon /></Text></Row></Box>);
+    const cells = items.flatMap(item => { return <Box><A /><B /><C /><D /></Box>; });
+    return <>{rows}{cells}</>;
+  }`);
+  assert.deepEqual(found.map(item => item.severity), ['warning', 'warning']);
+});
