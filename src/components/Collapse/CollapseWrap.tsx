@@ -17,6 +17,8 @@ export interface CollapseWrapProps {
     ref?: React.Ref<CollapseControls> | React.Ref<CollapseHandle>;
     as?: 'div' | 'span';
     inline?: boolean;
+    /** Class of the existing motion wrapper; does not add another DOM node. */
+    className?: string;
     axis?: 'row' | 'column';
     gap?: ResponsiveValue<number>;
     gapSide?: 'start' | 'end';
@@ -77,6 +79,7 @@ export function CollapseWrap({
     ref,
     as = 'div',
     inline,
+    className,
     axis = 'row',
     gap,
     gapSide = 'start',
@@ -176,7 +179,7 @@ export function CollapseWrap({
     return (
         <Tag
             ref={setWrapNode}
-            className={cx(styles.CollapseWrap, 'ui-collapse', inline && 'ui-collapse-inline', fade && 'ui-collapse-fade')}
+            className={cx(styles.CollapseWrap, 'ui-collapse', inline && 'ui-collapse-inline', fade && 'ui-collapse-fade', className)}
             data-axis={axis}
             data-gap-side={gapSide}
             data-open={visualOpen || undefined}

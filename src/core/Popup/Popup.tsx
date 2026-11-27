@@ -185,8 +185,14 @@ export function usePopup(options?: PopupOptions) {
     }
 
     const popup = context && point ? (
-        <ContextPopup id={menuId} point={point} onClose={close} label={options.label}
-            boundary={options.boundary?.(point.opener)} panel={options.panel}>{content}</ContextPopup>
+        <ContextPopup
+            id={menuId}
+            point={point}
+            onClose={close}
+            label={options.label}
+            boundary={options.boundary?.(point.opener)}
+            panel={options.panel}
+        >{content}</ContextPopup>
     ) : menu && open ? (
         <Dropdown anchorRef={anchor} surfaceRef={surface} open onOpenChange={next => { if (!next) close(); }}
             id={menuId} role="menu" aria-label={options.label} keyboard="menu" initialFocus={!hover || keyboard ? 'first' : undefined}

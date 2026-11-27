@@ -14,7 +14,7 @@ import { useTooltip } from '../../hooks/useTooltip';
 import { useActionInvocation } from '../../hooks/useActionInvocation';
 import { useAnimationVisibility } from '../../hooks/useAnimationVisibility';
 import { useSharedMotion } from '../../hooks/useSharedMotion';
-import { CollapseWrap } from '../Collapse/CollapseWrap';
+import { ButtonFrame } from './ButtonFrame/ButtonFrame';
 import { buttonHoverProps } from './hover/buttonHover';
 import { buttonIdleProps } from './idle/buttonIdle';
 
@@ -224,10 +224,4 @@ export function Button({
       {popup.popup}
     </ButtonFrame>
   );
-}
-
-// Keep the host at a stable position when a tooltip or popup changes.
-function ButtonFrame({ collapse, children }: { collapse: ButtonProps['collapse']; children: React.ReactNode }) {
-  if (!collapse) return <>{children}</>;
-  return <CollapseWrap {...collapse} as="span" inline>{children}</CollapseWrap>;
 }

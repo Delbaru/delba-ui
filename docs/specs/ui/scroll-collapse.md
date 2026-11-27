@@ -26,6 +26,9 @@ Both `height` and `width` accept an RPX numeric value or `{ min, max }` (either 
 
 Collapse accepts the existing animation options (axis, gap, gapSide, fade,
 keepMounted, appear, overflowVisibleWhenOpen, onFound/onEnd/onTransition).
+Internal `CollapseWrap.className` applies to its existing motion root; it does
+not create another element. Frame owners combine their own module class with
+the supplied class. This internal detail does not add a root package export.
 `collapse.trigger` is a convenience for a button's aria-expanded/onClick;
 `collapse.controls` exposes the original mounted CollapseControls ref. An
 explicit feed anchor centers only its own viewport, not an ancestor page.

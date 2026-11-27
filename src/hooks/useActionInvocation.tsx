@@ -53,7 +53,9 @@ export function ActionInvocationProvider({
     return () => { alive.current = false; };
   }, []);
   return (
-    <InvocationContext.Provider value={{failureRef, cancelledRef, scopeKey, alive, currentScope, epoch}}>
+    <InvocationContext.Provider
+        value={{failureRef, cancelledRef, scopeKey, alive, currentScope, epoch}}
+    >
       {children}
     </InvocationContext.Provider>
   );

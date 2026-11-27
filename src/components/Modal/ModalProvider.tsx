@@ -13,6 +13,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { DeclarationSlot } from './DeclarationSlot/DeclarationSlot';
+import styles from './ModalProvider.module.scss';
 import { acquireScrollLock } from './scroll-lock';
 import { MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../core';
 import { readMotionTimeMs } from '../../core/base/timing';
@@ -290,24 +291,30 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     <ModalContext.Provider value={value}>
       <ModalDeclarationsContext.Provider value={declarations}>
         {children}
-        <ModalStackPortal stack={stack} attach={attach} runtime={runtime} />
+        <ModalStackPortal
+            stack={stack}
+            attach={attach}
+            runtime={runtime}
+            className={styles.ModalProvider}
+        />
       </ModalDeclarationsContext.Provider>
     </ModalContext.Provider>
   );
 }
 
 /** One portal owns stack slots; declarative content stays in its original context. */
-function ModalStackPortal({ stack, attach, runtime }: {
+function ModalStackPortal({ stack, attach, runtime, className }: {
   stack: StackItem[];
   attach: (id: string, node: HTMLElement | null) => void;
   runtime: (item: StackItem) => ModalRuntime;
+  className?: string;
 }) {
   if (!stack.length || typeof document === 'undefined') return null;
   return createPortal(
     <>
       {stack.map((item) =>
         item.declarative ? (
-          <DeclarationSlot key={item.id} id={item.id} attach={attach} />
+          <DeclarationSlot key={item.id} id={item.id} attach={attach} className={className} />
         ) : (
           <ModalRuntimeContext.Provider key={item.id} value={runtime(item)}>
             {item.node}

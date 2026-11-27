@@ -23,8 +23,8 @@ import {
 import { isSharedMotionAnimate, useSharedMotion } from '../../hooks/useSharedMotion';
 import { resolveContentAnimate } from '../../hooks/contentMotion';
 import { useContentMotion } from '../../hooks/useContentMotion';
-import { CollapseWrap, type CollapseOptions, type CollapseWrapProps } from '../Collapse/CollapseWrap';
-import { InteractionScope } from '../../core/InteractionScope';
+import { type CollapseOptions } from '../Collapse/CollapseWrap';
+import { FlexFrame } from './FlexFrame/FlexFrame';
 import { FormContext } from '../../core/Form';
 import { usePopup } from '../../core/Popup/Popup';
 import { useAsyncContent } from '../../core/Async/Async';
@@ -252,23 +252,4 @@ export function Flex({
       )}
     </FlexFrame>
   );
-}
-
-/** Keep the interaction provider around only the host, not its sibling popup.
- * Collapse retains ownership of the existing wrapper and motion lifecycle.
- */
-function FlexFrame({ target, track, onChange, hasPopup, popup, collapse, children }: {
-  target: React.RefObject<HTMLElement | null>;
-  track: boolean;
-  onChange?: FlexProps['onInteractionChange'];
-  hasPopup: boolean;
-  popup: React.ReactNode;
-  collapse?: Omit<CollapseWrapProps, 'children'>;
-  children: (active: boolean) => React.ReactNode;
-}) {
-  const scoped = track ? (
-    <InteractionScope target={target} onChange={onChange}>{children}</InteractionScope>
-  ) : children(false);
-  if (!collapse) return hasPopup ? <>{scoped}{popup}</> : scoped;
-  return <CollapseWrap {...collapse}>{scoped}{popup}</CollapseWrap>;
 }

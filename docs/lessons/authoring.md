@@ -1611,6 +1611,17 @@ Draft теперь сохраняет типизированные conflicts; п
 Автоматический confirmed refresh также очищает прежнюю серверную ошибку, как
 публичный `receive`. Сценарии: `tests/Form/unit/Draft.test.ts` и
 `confirmed refresh clears stale server validation` в `tests/Form/e2e/Form.spec.ts`.
-Эти проверки написаны, но их запуск отложен владельцем до общего финала;
-данная запись подтверждает source-причины и исправления, а не runtime PASS.
+Запуск был отложен до общего финала. Полный library suite 27.11.2026 подтвердил
+625/625 unit-тестов без пропусков; browser-приёмка ведётся отдельно.
+
+## Владелец frame использует существующий DOM-корень
+
+Library architecture выявила отсутствие собственных module.scss у ButtonFrame,
+FlexFrame и ModalProvider. Первые два выделены в именованные папки; module-класс
+передаётся через необязательный CollapseWrap.className существующему motion-корню.
+ModalProvider передаёт свой класс существующему DeclarationSlot через портал.
+Дополнительных DOM-обёрток, фиктивных CSS-деклараций и исключений checker нет.
+Пустой именованный селектор может исчезнуть при сборке; искусственно сохранять
+его не нужно. Воспроизведение: check() из tools/check/architecture.mjs на исходниках
+библиотеки. После исправления — 0 errors; browser-результат подтверждается отдельно.
 
