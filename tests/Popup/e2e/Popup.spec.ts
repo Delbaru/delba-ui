@@ -114,3 +114,25 @@ test('context popup supports right-click and touch long-press without stealing s
     await pointer('pointerup', 80, 90);
     await expect(menuItem).toBeVisible();
 });
+
+test('repeated context menus keep the actual boundary host after readers state changes', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto('/?dropdown-open');
+    const trigger = page.getByLabel('Context popup trigger');
+    const menu = page.getByRole('menu', { name: 'Context popup actions' });
+    for (const readers of ['true', 'false', 'true']) {
+        await trigger.click({ button: 'right', position: { x: 12, y: 8 } });
+        await expect(menu).toBeVisible();
+        await menu.getByRole('menuitem', { name: 'Toggle context readers' }).click();
+        await expect(menu).toBeHidden();
+        await expect(trigger).toHaveAttribute('data-readers', readers);
+    }
+    await trigger.click({ button: 'right', position: { x: 20, y: 10 } });
+    await expect(menu).toBeVisible();
+    await expect(trigger).toHaveAttribute('aria-controls', (await menu.getAttribute('id'))!);
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(trigger).toBeFocused();
+    expect(errors).toEqual([]);
+});

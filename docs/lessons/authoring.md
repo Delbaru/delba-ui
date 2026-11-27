@@ -1625,3 +1625,13 @@ ModalProvider передаёт свой класс существующему De
 его не нужно. Воспроизведение: check() из tools/check/architecture.mjs на исходниках
 библиотеки. После исправления — 0 errors; browser-результат подтверждается отдельно.
 
+
+## Context menu snapshots its synthetic event before deferred updates
+
+Cause: onContextMenu read event.currentTarget inside a functional state updater.
+React cleared that property before a later updater ran, storing a null opener;
+reopening Message actions after its readers state changed crashed boundary.closest.
+Fix: capture opener/x/y synchronously; preserve the same-host/same-coordinate no-op.
+Verification: tests/Popup/e2e/Popup.spec.ts, complete Popup profile 6/6 PASS.
+The regression repeats readers-like state/close/right-click three times, asserts
+host identity before closest, Escape/focus return and absence of page errors.

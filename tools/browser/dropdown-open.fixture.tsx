@@ -68,8 +68,10 @@ function LongSearchSelectFixture() {
 
 function PopupDoorFixture() {
   const [enabled, setEnabled] = useState(true);
+  const [readers, setReaders] = useState(false);
+  const contextAnchor = useRef<HTMLElement>(null);
   const collapse = ui.collapse.use({ defaultOpen: true });
-  return <section aria-label="Popup door fixture">
+  return <section aria-label="Popup door fixture" data-context-boundary>
     <button type="button" onClick={collapse.toggle}>Toggle popup surface</button>
     <button type="button" onClick={() => setEnabled(v => !v)}>Toggle popup mechanism</button>
     <Flex role="button" aria-label="Popup menu trigger" ui={{
@@ -83,9 +85,19 @@ function PopupDoorFixture() {
       preset: 'menu', on: 'hover', label: 'Hover popup actions',
       children: <button type="button" role="menuitem">Hover popup action</button>,
     } }}>Hover or tap</Flex>
-    <Flex aria-label="Context popup trigger" ui={{ popup: {
+    <Flex ref={contextAnchor} aria-label="Context popup trigger" data-readers={String(readers)} ui={{ popup: {
       preset: 'context', label: 'Context popup actions',
-      children: <button type="button" role="menuitem">Context popup action</button>,
+      boundary: opener => {
+        if (opener !== contextAnchor.current) throw new Error('Context boundary received a different host');
+        return opener.closest<HTMLElement>('[data-context-boundary]');
+      },
+      children: popup => <>
+        <button type="button" role="menuitem">Context popup action</button>
+        <button type="button" role="menuitem" onClick={() => {
+          setReaders(value => !value);
+          popup.close();
+        }}>Toggle context readers</button>
+      </>,
     } }}>Right click or keyboard</Flex>
   </section>;
 }

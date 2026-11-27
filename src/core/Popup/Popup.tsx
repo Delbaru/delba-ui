@@ -120,9 +120,12 @@ export function usePopup(options?: PopupOptions) {
         event.preventDefault();
         event.stopPropagation();
         clearContextPress();
-        setPoint(current => current && current.opener === event.currentTarget &&
-            current.x === event.clientX && current.y === event.clientY
-            ? current : { x: event.clientX, y: event.clientY, opener: event.currentTarget });
+        // React clears currentTarget after dispatch; an updater may run later.
+        const opener = event.currentTarget;
+        const x = event.clientX;
+        const y = event.clientY;
+        setPoint(current => current && current.opener === opener && current.x === x && current.y === y
+            ? current : { x, y, opener });
     }
     function onPointerDown(event: ReactPointerEvent<HTMLElement>) {
         if (!context || event.defaultPrevented || event.pointerType !== 'touch' || !event.isPrimary ||
