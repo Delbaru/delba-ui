@@ -7,7 +7,7 @@ Next App Router запускает React transitions штатно; React без 
 
 ```tsx
 import type { ReactNode } from 'react';
-import { PageTransition } from '@delba/ui';
+import { PageTransition } from '@delba/frontend';
 
 export function Pages({ pathname, children }: { pathname: string; children: ReactNode }) {
   return (

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// CLI кита (`delba-ui` из bin пакета), запуск из папки проекта: build | watch | check | test [--config ui.config.ts].
+// CLI кита (`delba-frontend` из bin пакета), запуск из папки проекта: build | watch | check | test [--config delba.config.ts].
 //   build — шкуры и утилиты; watch — то же и следит за правками;
 //   check — красные линии (с планкой проекта), договор темы и старые пути к киту.
 //   test — полная проверка кита и его подключения к проекту.
@@ -24,8 +24,22 @@ if (argv.includes('--report') && (!argv[argv.indexOf('--report') + 1] || argv[ar
     console.error('[ui] --report requires a file path');
     process.exit(1);
 }
+function optionValues(flag) {
+    return argv.flatMap((value, index) => {
+        if (value !== flag) return [];
+        const argument = argv[index + 1];
+        if (!argument || argument.startsWith('--')) throw new Error(`${flag} requires a value`);
+        return [argument];
+    });
+}
+
+function optionNumber(flag) {
+    const values = optionValues(flag);
+    return values.length ? Number(values.at(-1)) : undefined;
+}
+
 const configArg = argv.includes('--config')
-    ? argv[argv.indexOf('--config') + 1]
+    ? optionValues('--config').at(-1)
     : path.resolve(cwd) === KIT
       ? null
       : undefined;
@@ -40,7 +54,7 @@ const track = (file) => file.includes(`${path.sep}node_modules${path.sep}`) || g
 
 async function loadConfig() {
     // .ts проекта без "type": "module" грузится как CommonJS — нужны оба хука tsx.
-    const loaded = await loadProjectConfig({ cwd, config: configArg, profile: 'ui' });
+    const loaded = await loadProjectConfig({ cwd, config: configArg });
     if (loaded) {
         config = loaded.value;
         root = loaded.root;
@@ -82,13 +96,13 @@ async function load() {
     const { createUtilities } = await import('./utilities/generate.ts');
     const { generateSkins } = await import('./skin.ts');
     const utilities = createUtilities(root, {
-        scan: [...(config.scan ?? ['src']), path.relative(root, KIT)],
-        seeds: config.seeds,
+        scan: ['src', path.relative(root, KIT)],
+        seeds: { p: Object.values(config.theme?.padding ?? {}) },
         typography: config.typography,
         scale: config.scale,
     });
 
-    for (const { level, message } of iconSourceNotices(root, Object.hasOwn(config, 'public'))) {
+    for (const { level, message } of iconSourceNotices(root)) {
         console[level](message);
     }
 
@@ -202,6 +216,9 @@ async function test() {
         project: root,
         config,
         configArg: configFile ?? undefined,
+        testConcurrency: optionNumber('--test-concurrency'),
+        checkConcurrency: optionNumber('--check-concurrency'),
+        testConditions: argv.includes('--test-condition') ? optionValues('--test-condition') : undefined,
         fix: argv.includes('--fix'),
         suite: argv.includes('--suite') ? argv[argv.indexOf('--suite') + 1] : undefined,
         shard: argv.includes('--shard') ? argv[argv.indexOf('--shard') + 1] : undefined,
@@ -223,7 +240,7 @@ const commands = {
 
 if (!commands[command]) {
     console.error(
-        'Usage: delba-ui <build|watch|check|test> [--update] [--fix] [--config ui.config.ts] [--suite standard|all|library|project|browser] [--shard index/total] [--typecheck-cache file] [--failed] [--report file]\n       delba-ui startup --url <running production URL> [--font "selector=family"] [--max-cls 0.001]',
+        'Usage: delba-frontend <build|watch|check|test> [--update] [--fix] [--config delba.config.ts] [--suite standard|all|library|project|browser] [--shard index/total] [--typecheck-cache file] [--test-concurrency 1..16] [--test-condition name] [--check-concurrency 1|2] [--failed] [--report file]\n       delba-frontend startup --url <running production URL> [--font "selector=family"] [--max-cls 0.001]',
     );
     process.exit(1);
 }

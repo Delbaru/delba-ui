@@ -8,7 +8,7 @@ const classesOf = (sources: Source[], options: Parameters<typeof extractUtilityR
   new Set(extractUtilityRules(sources, options).map((rule) => rule.className));
 
 test('actual GradientBorder forwarding survives import and barrel aliases', () => {
-  for (const declaration of ["import { GradientBorder as Frame } from './border';", "import { Border as Frame } from './barrel';", "import { GradientBorder as Frame } from '@delba/ui';"]) {
+  for (const declaration of ["import { GradientBorder as Frame } from './border';", "import { Border as Frame } from './barrel';", "import { GradientBorder as Frame } from '@delba/frontend';"]) {
     const classes = classesOf([
       { file: 'border.tsx', text: readFileSync(new URL('../../../src/components/GradientBorder/GradientBorder.tsx', import.meta.url), 'utf8') },
       { file: 'barrel.ts', text: "export { GradientBorder as Border } from './border';" },

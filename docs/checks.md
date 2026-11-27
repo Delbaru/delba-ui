@@ -1,6 +1,6 @@
 # Приёмка
 
-Своей сборки у библиотеки нет: она пакет воркспейса проекта (`@delba/ui`), команды — из его корня.
+Своей сборки у библиотеки нет: она пакет воркспейса проекта (`@delba/frontend`), команды — из его корня.
 
 ---
 
@@ -8,7 +8,7 @@
 
 ```bash
 npm run ui:test --silent            # из корня serdcaBezGranic, без заголовка npm
-# В другом проекте: delba-ui test из папки приложения, рядом с ui.config.ts.
+# В другом проекте: delba-frontend test из папки приложения с delba.config.ts.
 ```
 
 Команда последовательно запускает генерацию, типы кита, архитектурные правила, границы,
@@ -16,17 +16,16 @@ npm run ui:test --silent            # из корня serdcaBezGranic, без з
 правила проекта, тему проекта, импорты и форму публичных D-компонентов в
 `src/shared/ui` и `src/cms/ui`. D-анатомия проверяется только в этих проектных корнях;
 пустые и внутренние helper-папки пропускаются. Настройки берёт из
-`ui.config.ts`; другой файл можно указать через `--config`.
-`componentAnatomy: 'single-config'` требует `DName.tsx`, `DName.config.ts`,
+секции `delbaFrontend` файла `delba.config.ts`; путь к нему можно указать через `--config`.
+Внутренняя политика single-config требует `DName.tsx`, `DName.config.ts`,
 `DName.module.scss` и `index.ts` и запрещает отдельный `DName.skin.ts`.
 Единый config объединяет размеры, оформление, пресеты и состояния, используя
-действующий resolver. Умолчание/`true` сохраняет пятифайловый договор для
-немигрированных потребителей. `false` отключает только эту проверку формы файлов;
-типы, проверки поведения и остальные gates сохраняются.
+действующий resolver. Авторский конфиг не переключает и не отключает эту проверку.
+Корень и остальные настройки описаны в [конфигурации](configuration.md).
 
-`pnpm --filter @delba/ui check` запускает только проверки самого кита: типы, архитектуру,
+`pnpm --filter @delba/frontend check` запускает только проверки самого кита: типы, архитектуру,
 границы, стартовую тему и юнит-тесты. Тема и правила приложения требуют запуска из проекта.
-`delba-ui check` остаётся быстрой проверкой приложения, включая `--update` для его планки.
+`delba-frontend check` остаётся быстрой проверкой приложения, включая `--update` для его планки.
 Отдельные `typecheck`, `test` и `boundary` сохранены для диагностики конкретного шага.
 
 После полного прогона исправляй все найденные независимые ошибки пакетом,
@@ -35,8 +34,8 @@ npm run ui:test --silent            # из корня serdcaBezGranic, без з
 ```sh
 npm run check
 npm run check -- --failed
-delba-ui test --suite project --report .verification/ui-project.json
-delba-ui test --suite project --report .verification/ui-project.json --failed
+delba-frontend test --suite project --report .verification/ui-project.json
+delba-frontend test --suite project --report .verification/ui-project.json --failed
 ```
 
 По умолчанию отчёт лежит в `.verification/ui-<suite>.json` корня приложения/кита.
@@ -48,10 +47,10 @@ delba-ui test --suite project --report .verification/ui-project.json --failed
 шагами; остальные успешные проверки пропускаются. Подготовка, не прошедшая проверку,
 явно блокирует зависимые шаги, не скрывая ошибки независимых проверок.
 
-Экспорт `@delba/ui/verify` — тонкий вход для адаптеров потребителей:
+Экспорт `@delba/frontend/verify` — тонкий вход для адаптеров потребителей:
 
 ```js
-import { runNode, runNodeTests, runSteps } from '@delba/ui/verify';
+import { runNode, runNodeTests, runSteps } from '@delba/frontend/verify';
 await runSteps([
   { id: 'generate', name: 'Генерация', run: () => runNode(['tools/generate.mjs'], process.cwd()) },
   { id: 'tests', name: 'Тесты', dependsOn: ['generate'], run: ({ failedOnly }) => runNodeTests({
@@ -81,10 +80,10 @@ report/stateFile между параллельными запусками.
 
 В свежем самостоятельном checkout перед `npm run check` выполни
 `node tools/cli.mjs build`: игнорируемые runtime-генераты нужны типам и unit-тестам.
-Потребительский `delba-ui test` выполняет генерацию первым шагом самостоятельно.
+Потребительский `delba-frontend test` выполняет генерацию первым шагом самостоятельно.
 
 Сборка приложения и визуальная приёмка остаются в проверке самого проекта: у UI-кита своей
-production-сборки нет. `delba-ui build` пишет генераты: утилиты, масштаб, шкуры.
+production-сборки нет. `delba-frontend build` пишет генераты: утилиты, масштаб, шкуры.
 
 ⚠️ **После правки глобального типа** (например `UiRules`) инкрементальный кеш врёт: `tsgo` показывал
 0 ошибок при 229 настоящих. Запускай с `--incremental false`.
@@ -122,10 +121,14 @@ production-сборки нет. `delba-ui build` пишет генераты: у
 локально Windows сохраняет один worker, остальные системы — два. Четыре worker
 в замере CI 16 октября не дали выигрыша (167 с против прежних 166 с), поэтому
 эксперимент отменён. Для Node unit-тестов библиотеки CI явно задаёт `--test-concurrency=2`.
-Тесты потребителя получают `testConcurrency` из ui.config.ts (целое 1–16);
+Тесты потребителя получают concurrency через `--test-concurrency 1..16`,
+option runner `testConcurrency` или `DELBA_TEST_CONCURRENCY`;
 без настройки в CI используются два файла одновременно. Число workers выбирается
 по реальной квоте CPU/RAM, а не по числу видимых ядер хоста.
-`checkConcurrency: 2` позволяет выполнять два независимых проверочных шага
+DelbaOS получает файлы и Node arguments из собственного `root --plan`; библиотека
+не переопределяет его concurrency и preload (см. [договор](configuration.md)).
+`--check-concurrency 2`, option runner `checkConcurrency: 2` или
+`DELBA_CHECK_CONCURRENCY=2` позволяют выполнять два независимых проверочных шага
 одновременно; по умолчанию шаги последовательны. Генерация всегда завершается
 до следующих шагов; её ошибка останавливает gate. Ошибки остальных шагов
 собираются вместе и сохраняют неуспешный общий exit code. При параллельных
@@ -133,7 +136,7 @@ production-сборки нет. `delba-ui build` пишет генераты: у
 Unit-репортёр показывает количество passed/failed/skipped и пять медленных
 тестов дольше секунды; успешные тесты по одному по-прежнему не печатаются.
 
-`delba-ui test --suite project|library|browser` разделяет тот же список шагов для CI;
+`delba-frontend test --suite project|library|browser` разделяет тот же список шагов для CI;
 без параметра выполняется `standard`: library и project без браузера.
 `--suite all` явно добавляет полный browser/SSR-набор; `--suite browser` запускает его отдельно.
 Каждая часть сначала генерирует CSS. Project содержит
@@ -207,6 +210,10 @@ Unit-репортёр показывает количество passed/failed/sk
 Отчитываюсь фактами. Проверка не запускалась — говорю. Упала — показываю вывод. Часть объёма не
 сделана — называю, что именно и почему.
 
-Для server-only тестов потребителя укажи `testConditions: ['react-server']` в ui.config.ts. Условия применяются только к тестам проекта; библиотека и браузер сохраняют обычный React runtime.
+Для server-only тестов потребителя используй `delba-frontend test --test-condition react-server`
+или option runner `testConditions: ['react-server']`. Условия применяются только
+к тестам проекта; библиотека и браузер сохраняют обычный React runtime.
 
-Если глобальные стили уже импортируют `@delba/ui/theme`, укажи `themeDefaults: true`: проверка учитывает действительные стартовые токены вместе с переопределениями проекта. Для самостоятельной темы без этого импорта оставь значение выключенным.
+Пути проверяемой темы задаются в `delbaFrontend.theme.sources`. Если тема использует
+стартовые токены `@delba/frontend/theme`, включи исходники стартовой темы в этот
+список вместе с переопределениями проекта. Переключателя `themeDefaults` нет.

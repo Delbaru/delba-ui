@@ -1,5 +1,5 @@
 {
-  "name": "@delba/ui",
+  "name": "@delba/frontend",
   "version": "2.0.0",
   "type": "module",
   "private": true,
@@ -38,7 +38,7 @@
     "./skin/effects": "./src/skin/_effects.scss"
   },
   "bin": {
-    "delba-ui": "./tools/cli.mjs"
+    "delba-frontend": "./tools/cli.mjs"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --incremental false",

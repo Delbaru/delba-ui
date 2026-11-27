@@ -1,6 +1,6 @@
-﻿# NativeCarousel
+# NativeCarousel
 
-Статус: действующий публичный API отдельного входа `@delba/ui/carousel`.
+Статус: действующий публичный API отдельного входа `@delba/frontend/carousel`.
 Браузерная приёмка выполняется после общего рефакторинга DelbaUI.
 
 ## Назначение
@@ -14,7 +14,7 @@ rewind, loop, инерция и autoplay используют один конт�
 ```tsx
 'use client';
 
-import { NativeCarousel, CarouselNav, CarouselDots, useCarouselController } from '@delba/ui/carousel';
+import { NativeCarousel, CarouselNav, CarouselDots, useCarouselController } from '@delba/frontend/carousel';
 
 export function Gallery() {
   const controller = useCarouselController();
@@ -48,7 +48,7 @@ export function Gallery() {
 - `loop` перемещает оригинальные слайды, требует больше слайдов, чем округлённое вверх
   slidesPerView. `rewind` означает видимый переход между краями, а не бесконечную петлю.
 - `speed`, `autoplayDelay` — секунды или имя timing. Общие defaults берутся из
-  `ui.config.motion.carousel` и `motion.defaults.carousel`.
+  `delbaFrontend.motion.carousel` и `motion.defaults.carousel`.
 - Drag не забирает поперечный touch-scroll; интерактивные дочерние элементы сохраняют ввод.
 - Autoplay удерживается hover, фокусом, drag, невидимостью, скрытым документом и reduced motion.
 - `pauseInactiveMedia` останавливает нативное медиа вне видимого диапазона, без автозапуска назад.

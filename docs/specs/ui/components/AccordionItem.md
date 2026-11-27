@@ -23,7 +23,7 @@
 ## Пример
 
 ```tsx
-import { Accordion, AccordionItem } from '@delba/ui';
+import { Accordion, AccordionItem } from '@delba/frontend';
 
 export function Details() {
   return <Accordion defaultValue="material">

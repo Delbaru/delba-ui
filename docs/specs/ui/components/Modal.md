@@ -14,7 +14,7 @@
 | `children`                       | Узлы или функция `(close) => ReactNode`                                                                                          |
 | `layout`                         | Responsive `default                                                                                                              | fullWidth`; default во всех диапазонах |
 | `closeOn`                        | overlay/escape по умолчанию true; breakpoint закрывает при совпадении                                                            |
-| `scroll`                         | Padding единственного внутреннего scroll-контейнера; `scroll.scrollbar` настраивает scrollbar и по умолчанию следует `ui.config` |
+| `scroll`                         | Padding единственного внутреннего scroll-контейнера; `scroll.scrollbar` настраивает scrollbar и по умолчанию следует `delbaFrontend` |
 | `controls`                       | Элементы управления вне внутренней прокрутки, внутри focus boundary диалога; например, внешний крестик |
 | `overflowVisible`                | false; true снимает клип и требует прокрутки со стороны потребителя                                                              |
 | `aria-label` / `aria-labelledby` | Доступное имя диалога                                                                                                            |
@@ -27,7 +27,7 @@ legacy closeOnOverlayClick. Объектный `animate` задаёт motion о�
 
 ```tsx
 'use client';
-import { Button, Modal, ModalProvider } from '@delba/ui';
+import { Button, Modal, ModalProvider } from '@delba/frontend';
 
 export function Example() {
   return (

@@ -20,7 +20,7 @@ tuple-значения удалены; [миграция](../../../motion-migrat
 ## Пример
 
 ```tsx
-import { Icon } from '@delba/ui';
+import { Icon } from '@delba/frontend';
 
 export function IconExample() {
   return <Icon src="/icons/arrow.svg" w={[24, 20, 24]} h={[24, 20, 24]}

@@ -17,7 +17,7 @@
 ## Пример
 
 ```tsx
-import { ScrollArea } from '@delba/ui';
+import { ScrollArea } from '@delba/frontend';
 
 export function ScrollAreaExample() {
   return <ScrollArea h={[240, 180, 240]} fade aria-label="История заказа"

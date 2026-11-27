@@ -1,12 +1,12 @@
-﻿# CarouselTimer
+# CarouselTimer
 
-Действующий публичный вход — `@delba/ui/carousel`.
+Действующий публичный вход — `@delba/frontend/carousel`.
 Текстовое представление playback snapshot того же контроллера, что у NativeCarousel.
 
 ```tsx
 'use client';
 
-import { NativeCarousel, CarouselTimer, useCarouselController } from '@delba/ui/carousel';
+import { NativeCarousel, CarouselTimer, useCarouselController } from '@delba/frontend/carousel';
 
 export function TimedGallery() {
   const controller = useCarouselController();

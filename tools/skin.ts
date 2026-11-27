@@ -11,7 +11,7 @@ import type { UiSkins } from './config';
 const SKIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'skin');
 const BANNER = '// Автогенерат шкур кита (tools/skin.ts) — не править руками.\n\n';
 const EFFECTS = ['opacity', 'filter', 'cursor', 'pointerEvents', 'borderColor'];
-const STATES_MODULE = '@delba/ui/skin-states';
+const STATES_MODULE = '@delba/frontend/skin-states';
 const SKIP_SKIN_DIRS = new Set(['node_modules', 'tests', '__tests__', 'generated', 'dist', 'build', 'coverage']);
 
 /** One skin definition per named owner, including nested visual components. */

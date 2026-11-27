@@ -1,7 +1,7 @@
 # Calendar
 
 Статус: самостоятельный компонент реализован по согласованию владельца, 2026-11-02.
-Публичный вход — `@delba/ui`. Приёмка реализации проверяется отдельно.
+Публичный вход — `@delba/frontend`. Приёмка реализации проверяется отдельно.
 
 ## Назначение
 
@@ -31,7 +31,7 @@ InputCalendar использует внешний якорь Dropdown; тот в
 'use client';
 
 import { useState } from 'react';
-import { Calendar } from '@delba/ui';
+import { Calendar } from '@delba/frontend';
 
 export function AppointmentCalendar() {
   const [date, setDate] = useState('2025-01-15');

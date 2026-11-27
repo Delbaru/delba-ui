@@ -76,7 +76,7 @@ export function projectSteps(
 ) {
     const configs = [
         ...new Set([
-            ...readdirSync(root).filter((file) => /^(next|ui|delba)\.config\./.test(file)),
+            ...readdirSync(root).filter((file) => /^(next|delba)\.config\./.test(file)),
             ...configFiles,
         ]),
     ];
@@ -86,10 +86,10 @@ export function projectSteps(
             [
                 script('check-rules.mjs'),
                 '--baseline',
-                config.baseline ?? '.rules-baseline.json',
+                '.rules-baseline.json',
                 ...(update ? ['--update'] : []),
                 ...(fix ? ['--fix'] : []),
-                ...(config.rules ?? ['src']),
+                'src',
             ],
             root,
         ),
@@ -98,8 +98,7 @@ export function projectSteps(
             [
                 script('check-tokens.mjs'),
                 ...(strict ? ['--strict'] : []),
-                ...(config.themeDefaults ? ['--with-defaults'] : []),
-                ...[config.theme ?? 'theme'].flat(),
+                ...(config.theme?.sources ?? ['theme']),
                 ...(config.motion
                     ? ['--generated-motion', path.join(KIT, 'src/core/_motion.scss')]
                     : []),
@@ -109,24 +108,17 @@ export function projectSteps(
         ),
         nodeStep(
             'Импорты',
-            [script('check-migration.mjs'), ...(config.rules ?? ['src']), ...configs],
+            [script('check-migration.mjs'), 'src', ...configs],
             root,
         ),
-        ...(config.componentAnatomy === false
-            ? []
-            : [
-                  nodeStep(
-                      'Анатомия D-компонентов',
-                      [
-                          script('check-d-component-anatomy.mjs'),
-                          ...(config.componentAnatomy === 'single-config' ? ['--single-config'] : []),
-                      ],
-                      root,
-                  ),
-              ]),
+        nodeStep(
+            'Анатомия D-компонентов',
+            [script('check-d-component-anatomy.mjs'), '--single-config'],
+            root,
+        ),
         astStep('Архитектура проекта', root, {
             rules: projectRules,
-            dirs: config.rules ?? ['src'],
+            dirs: ['src'],
             includeBoundaries: true,
             mode: 'consumer',
         }),
@@ -155,42 +147,56 @@ function crmTestEnvironment() {
 }
 
 async function crmTestPlan(project, environment) {
-    const result = await runNode(['tools/verification/run.mjs', 'root', '--list-files'],
+    const result = await runNode(['tools/verification/run.mjs', 'root', '--plan'],
         project, { showOutput: true, environment });
     if (!result.ok) return result;
     try {
-        const files = JSON.parse(result.output);
-        if (!Array.isArray(files) || !files.length ||
-            files.some(file => typeof file !== 'string' || !file)) {
-            throw new Error('Expected a nonempty CRM root test plan.');
+        const plan = JSON.parse(result.output);
+        if (!plan || typeof plan !== 'object' || Array.isArray(plan) ||
+            !Array.isArray(plan.files) || !plan.files.length ||
+            plan.files.some(file => typeof file !== 'string' || !file.trim()) ||
+            !Array.isArray(plan.nodeArgs) ||
+            plan.nodeArgs.some(argument => typeof argument !== 'string' || !argument.trim())) {
+            throw new Error('Expected CRM root files and Node arguments.');
         }
-        return { ok: true, files };
+        return { ok: true, files: plan.files, nodeArgs: plan.nodeArgs };
     } catch {
         return { ok: false, output: 'Invalid CRM root test plan.' };
     }
+}
+
+function concurrencyOption(value, environment, fallback, maximum, name) {
+    const selected = value ?? (process.env[environment] === undefined ? fallback : Number(process.env[environment]));
+    if (selected !== undefined && (!Number.isInteger(selected) || selected < 1 || selected > maximum))
+        throw new Error(`${name} must be an integer from 1 to ${maximum}`);
+    return selected;
 }
 
 export function uiCheckSteps({
     project: requestedProject,
     config = {},
     configArg,
+    testConcurrency: requestedTestConcurrency,
+    testConditions,
+    checkConcurrency,
     fix = false,
     suite = 'standard',
     shard,
     typecheckCache,
     reportFile = path.join(requestedProject ?? KIT, '.verification', `ui-${suite}.json`),
 } = {}) {
-    if (config.testConcurrency !== undefined && (!Number.isInteger(config.testConcurrency) || config.testConcurrency < 1 || config.testConcurrency > 16)) {
-        throw new Error('testConcurrency must be an integer from 1 to 16');
-    }
+    const testConcurrency = concurrencyOption(requestedTestConcurrency, 'DELBA_TEST_CONCURRENCY',
+        process.env.CI ? 2 : undefined, 16, 'testConcurrency');
+    concurrencyOption(checkConcurrency, 'DELBA_CHECK_CONCURRENCY', 1, 2, 'checkConcurrency');
+    if (testConditions !== undefined && (!Array.isArray(testConditions) ||
+        testConditions.some(condition => typeof condition !== 'string' || !condition.trim())))
+        throw new Error('testConditions must be an array of nonempty strings');
     const project =
         requestedProject && path.relative(KIT, path.resolve(requestedProject)) !== ''
             ? requestedProject
             : undefined;
     const crm = projectTestOwner(project) === 'crm';
     const environment = crm ? crmTestEnvironment() : undefined;
-    const testConcurrency = environment?.CRM_QA_DB_TESTS === '1' ? 1 :
-        config.testConcurrency ?? (process.env.CI ? 2 : undefined);
     if (!['standard', 'all', 'library', 'project', 'browser'].includes(suite))
         throw new Error(`Unknown UI suite: ${suite}`);
     if (typecheckCache !== undefined && (!project || suite !== 'project' || !typecheckCache)) {
@@ -211,7 +217,7 @@ export function uiCheckSteps({
     }
     const projectTests = project && !crm ? discoverTests(project, ['src', 'tests']) : [];
     const expectsProjectTests = project && (crm || projectTests.length > 0 ||
-        config.testConcurrency !== undefined || config.testConditions !== undefined);
+        requestedTestConcurrency !== undefined || process.env.DELBA_TEST_CONCURRENCY !== undefined || testConditions !== undefined);
     let crmPlan;
     const planCrm = async () => {
         crmPlan = await crmTestPlan(project, environment);
@@ -305,7 +311,15 @@ export function uiCheckSteps({
                       name: 'Тесты проекта',
                       run: async ({ failedOnly = false } = {}) => {
                           const plan = crm ? (crmPlan ?? await planCrm()) :
-                              { ok: true, files: projectTests };
+                              {
+                                  ok: true,
+                                  files: projectTests,
+                                  nodeArgs: [
+                                      ...(testConcurrency ? [`--test-concurrency=${testConcurrency}`] : []),
+                                      '--import',
+                                      pathToFileURL(require.resolve('tsx')).href,
+                                  ],
+                              };
                           crmPlan = undefined;
                           if (!plan.ok) return plan;
                           return runNodeTests({
@@ -315,12 +329,10 @@ export function uiCheckSteps({
                               failedOnly,
                               environment,
                               nodeArgs: [
-                                  ...(testConcurrency ? [`--test-concurrency=${testConcurrency}`] : []),
-                                  ...(config.testConditions ?? []).map(
+                                  ...plan.nodeArgs,
+                                  ...(testConditions ?? []).map(
                                       (condition) => `--conditions=${condition}`,
                                   ),
-                                  '--import',
-                                  pathToFileURL(require.resolve('tsx')).href,
                               ],
                           });
                       },
@@ -353,10 +365,12 @@ export function runUiChecks(options = {}) {
         label: suite === 'all' ? 'UI' : `UI (${suite})`,
         reportFile,
         failedOnly: options.failedOnly,
-        concurrency: options.config?.checkConcurrency ?? 1,
+        concurrency: concurrencyOption(options.checkConcurrency, 'DELBA_CHECK_CONCURRENCY', 1, 2, 'checkConcurrency'),
         profile: { project: options.project, configArg: options.configArg, suite,
             shard: options.shard, fix: Boolean(options.fix), typecheckCache: options.typecheckCache,
-            testConcurrency: options.config?.testConcurrency, testConditions: options.config?.testConditions,
+            testConcurrency: concurrencyOption(options.testConcurrency, 'DELBA_TEST_CONCURRENCY', process.env.CI ? 2 : undefined, 16, 'testConcurrency'),
+            testConditions: options.testConditions,
+            checkConcurrency: concurrencyOption(options.checkConcurrency, 'DELBA_CHECK_CONCURRENCY', 1, 2, 'checkConcurrency'),
             crmEnvironment: projectTestOwner(options.project) === 'crm'
                 ? createHash('sha256').update(JSON.stringify(crmTestEnvironment())).digest('hex') : undefined },
     });

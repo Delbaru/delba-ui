@@ -1,6 +1,6 @@
 ---
 name: ui-motion
-description: 'Общая механика анимаций @delba/ui: appearance, content swap, collapse, hover, parallax, perspective и lifecycle. Применять при изменении motion API, хуков и переходов кита.'
+description: 'Общая механика анимаций @delba/frontend: appearance, content swap, collapse, hover, parallax, perspective и lifecycle. Применять при изменении motion API, хуков и переходов кита.'
 ---
 
 # Motion UI-кита

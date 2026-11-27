@@ -1,4 +1,4 @@
-# Генераты: каждый проект собирает их под себя (delba-ui build)
+# Генераты: каждый проект собирает их под себя (delba-frontend build)
 src/core/_utilities.scss
 src/core/_field-sizes.scss
 src/skin/_tokens.scss

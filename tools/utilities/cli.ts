@@ -1,38 +1,50 @@
 #!/usr/bin/env node
-/**
- * Генератор утилит отдельно от CLI кита — для проектов со своим скриптом сборки:
- *
- *   node --import tsx <UI>/tools/utilities/cli.ts build --config tools/ui/utilities.config.ts
- *   node --import tsx <UI>/tools/utilities/cli.ts watch --config tools/ui/utilities.config.ts
- *
- * Конфиг проекта (default export): `{ scan: ['apps', 'libs'], seeds? }`, пути — от cwd.
- * Проще — CLI `delba-ui` (bin пакета): он же собирает шкуры и гоняет проверки.
- */
-
+/** Standalone utility generation uses delba.config.ts -> delbaFrontend, like the main CLI. */
+import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
-import { createUtilities, type UtilitiesConfig } from './generate';
+import { loadProjectConfig } from '../config-loader.mjs';
+import type { FrontendConfig } from '../config';
+import { createUtilities, LIB } from './generate';
 
 const args = process.argv.slice(2);
 const command = args[0] ?? 'build';
-const configArg = args.includes('--config') ? args[args.indexOf('--config') + 1] : undefined;
 
 async function main(): Promise<void> {
-  if (!configArg) {
-    console.error('[ui:utilities] нужен --config <файл конфига проекта>');
-    process.exit(1);
-  }
-  const root = process.cwd();
-  const config = ((await import(pathToFileURL(path.resolve(root, configArg)).href)) as { default: UtilitiesConfig }).default;
-  const utilities = createUtilities(root, config);
-  // Правка генератора — выход: скрипт проекта поднимает watch заново уже с новым кодом.
-  if (command === 'watch')
-    utilities.watch(() => {
-      console.log('[ui:utilities] генератор изменился — перезапуск');
-      process.exit(0);
-    });
-  else process.exit(utilities.build() ? 0 : 1);
+  if (!['build', 'watch'].includes(command)) throw new Error('Expected build or watch');
+  const configIndex = args.indexOf('--config');
+  const configArg = configIndex < 0 ? undefined : args[configIndex + 1];
+  if (configIndex >= 0 && (!configArg || configArg.startsWith('--')))
+    throw new Error('--config requires a delba.config.ts path');
+  const cwd = process.cwd();
+  const loaded = await loadProjectConfig<FrontendConfig>({
+    cwd,
+    config: configArg ?? (path.resolve(cwd) === LIB ? null : undefined),
+  });
+  const root = loaded?.root ?? cwd;
+  const config = loaded?.value ?? {};
+  const configFiles = loaded ? [...loaded.files] : [];
+  await loaded?.close();
+  const utilities = createUtilities(root, {
+    scan: ['src', path.relative(root, LIB)],
+    seeds: { p: Object.values(config.theme?.padding ?? {}) },
+    typography: config.typography,
+    scale: config.scale,
+  });
+  const restart = () => process.exit(0);
+  if (command === 'watch') {
+    // Config fragments have executable imports: restart instead of reusing module caches.
+    const watched = new Set(configFiles);
+    for (const directory of new Set(configFiles.map(file => path.dirname(file)))) {
+      fs.watch(directory, (_event, file) => {
+        if (file && watched.has(path.join(directory, String(file)))) restart();
+      });
+    }
+    utilities.watch(restart);
+  } else process.exitCode = utilities.build() ? 0 : 1;
 }
 
-void main();
+void main().catch(error => {
+  console.error(`[frontend:utilities] ${error instanceof Error ? error.message : error}`);
+  process.exitCode = 1;
+});

@@ -16,7 +16,7 @@
 ## Пример
 
 ```tsx
-import { Section, Text } from '@delba/ui';
+import { Section, Text } from '@delba/frontend';
 
 export function SectionExample() {
   return <Section aria-labelledby="delivery-title" pt={[32, 16, 24]}>

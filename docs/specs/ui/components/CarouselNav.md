@@ -24,7 +24,7 @@
 
 ```tsx
 'use client';
-import { Carousel, CarouselNav } from '@delba/ui';
+import { Carousel, CarouselNav } from '@delba/frontend';
 
 export function Gallery() {
   return <section>
@@ -60,4 +60,4 @@ export function Gallery() {
 CarouselNav использует общий controls registry для Carousel и NativeCarousel.
 Disabled и команды принадлежат карусели; у пары стрелок нет второго индекса.
 Свои CarouselNav.module.scss и класс CarouselNav, без импорта стилей родителя.
-Тексты направлений задаются ui.config.messages.carousel.previous/next.
+Тексты направлений задаются delbaFrontend.messages.carousel.previous/next.

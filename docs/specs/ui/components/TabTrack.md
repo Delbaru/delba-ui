@@ -28,7 +28,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { Button, TabTrack } from '@delba/ui';
+import { Button, TabTrack } from '@delba/frontend';
 
 export function Mode() {
   const [value, setValue] = useState('list');

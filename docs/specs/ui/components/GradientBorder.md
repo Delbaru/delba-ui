@@ -17,7 +17,7 @@
 ## Пример
 
 ```tsx
-import { Box, GradientBorder } from '@delba/ui';
+import { Box, GradientBorder } from '@delba/frontend';
 
 export function GradientBorderExample() {
   return <Box position={['relative', 'relative', 'relative']} r={[12, 8, 12]}>

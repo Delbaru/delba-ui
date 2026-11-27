@@ -33,7 +33,7 @@
 
 ```tsx
 'use client';
-import { Button, useActionInvocation } from '@delba/ui';
+import { Button, useActionInvocation } from '@delba/frontend';
 
 export function Composer({ send }: { send: () => Promise<void> }) {
   const { invoke, pending } = useActionInvocation({ action: send });

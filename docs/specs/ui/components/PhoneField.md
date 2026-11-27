@@ -27,7 +27,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { PhoneField } from '@delba/ui';
+import { PhoneField } from '@delba/frontend';
 
 export function ContactPhone() {
   const [phone, setPhone] = useState('');
@@ -42,7 +42,7 @@ export function ContactPhone() {
 Частичный номер ещё не подтверждает валидность; проверка принадлежит общей
 механике номера и приложению перед отправкой. Выбор страны даёт `reason='country'`
 и `event=null`. Disabled/readOnly блокируют country picker.
-Подключён также отдельный публичный вход `@delba/ui/phone-field` для загрузки по необходимости.
+Подключён также отдельный публичный вход `@delba/frontend/phone-field` для загрузки по необходимости.
 
 ## Приёмка изменения
 

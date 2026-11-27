@@ -22,7 +22,7 @@
 ```tsx
 'use client';
 import { useRef } from 'react';
-import { Box, Button, Dropdown, InteractionScope } from '@delba/ui';
+import { Box, Button, Dropdown, InteractionScope } from '@delba/frontend';
 
 export function Toolbar() {
   const target = useRef<HTMLDivElement>(null);

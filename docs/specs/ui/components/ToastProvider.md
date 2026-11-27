@@ -33,7 +33,7 @@ ToastProvider располагается снаружи ModalProvider, чтоб�
 
 ```tsx
 'use client';
-import { Button, ModalProvider, ToastProvider, useToast } from '@delba/ui';
+import { Button, ModalProvider, ToastProvider, useToast } from '@delba/frontend';
 
 function CopyLink() {
   const toast = useToast();

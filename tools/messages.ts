@@ -62,7 +62,7 @@ export function validateMessages(messages?: unknown): void {
 /** A complete serializable dictionary is identical for server and client imports. */
 export function messagesTs(messages?: UiMessageOverrides): string {
     validateMessages(messages);
-    return `// AUTO-GENERATED: tools/messages.ts (ui.config.ts). Do not edit.\nexport const MESSAGES_CONFIG = ${JSON.stringify(resolveUiMessages(messages))} as const;\n`;
+    return `// AUTO-GENERATED: tools/messages.ts (delba.config.ts → delbaFrontend). Do not edit.\nexport const MESSAGES_CONFIG = ${JSON.stringify(resolveUiMessages(messages))} as const;\n`;
 }
 
 export function generateMessages(messages?: UiMessageOverrides, output = OUTPUT): boolean {

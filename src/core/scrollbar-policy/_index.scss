@@ -1,4 +1,4 @@
-// Progressive fallback for a fresh source checkout before `delba-ui build`.
+// Progressive fallback for a fresh source checkout before `delba-frontend build`.
 // Generated _scrollbar-policy.scss takes precedence and supplies the project's config.
 :root {
   --ui-scrollbar-width: calc(6 * var(--rpx));

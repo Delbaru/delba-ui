@@ -25,7 +25,7 @@
 ## Пример
 
 ```tsx
-import { Img } from '@delba/ui';
+import { Img } from '@delba/frontend';
 
 export function ImgExample() {
   return <Img src="/images/printed-part.jpg" alt="Напечатанная деталь"

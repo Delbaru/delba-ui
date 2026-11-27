@@ -30,7 +30,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { Flex, LexicalTextarea, Text, type LexicalTextareaChangePayload } from '@delba/ui';
+import { Flex, LexicalTextarea, Text, type LexicalTextareaChangePayload } from '@delba/frontend';
 
 export function DescriptionEditor() {
   const [draft, setDraft] = useState<LexicalTextareaChangePayload | null>(null);
@@ -43,7 +43,7 @@ export function DescriptionEditor() {
 
 ## Настройки текстов
 
-Общий ui.config messages.richTextarea задаёт required, minLength с {min}, maxLength
+Общий delbaFrontend messages.richTextarea задаёт required, minLength с {min}, maxLength
 с {max}, названия форматирования, подсказку переменных, prompt/error ссылок.
 SSR и клиент читают один generated словарь. emptyMessage экземпляра остаётся
 явным переопределением required; полноценных runtime-языковых провайдеров это не добавляет.

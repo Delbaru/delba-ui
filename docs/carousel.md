@@ -1,7 +1,7 @@
-﻿# Карусель
+# Карусель
 
-`@delba/ui/carousel` — отдельный вход собственной карусели без runtime-импортов
-Swiper. Прежний `Carousel` из `@delba/ui` остаётся совместимым адаптером Swiper;
+`@delba/frontend/carousel` — отдельный вход собственной карусели без runtime-импортов
+Swiper. Прежний `Carousel` из `@delba/frontend` остаётся совместимым адаптером Swiper;
 зависимость сохранена для остальных потребителей. Diamonds4You использует новый
 компонент в `widgets/product-purchase/ui/ProductGallery.tsx`.
 
@@ -9,7 +9,7 @@ Swiper. Прежний `Carousel` из `@delba/ui` остаётся совмес
 import {
     NativeCarousel, CarouselDots, CarouselProgress, CarouselTimer,
     useCarouselController, synchronizeCarousels,
-} from '@delba/ui/carousel';
+} from '@delba/frontend/carousel';
 
 const carousel = useCarouselController();
 
@@ -141,9 +141,10 @@ controller. Возвращённый idempotent cleanup снимает подп�
 У прежнего Swiper-адаптера для этого есть `onActiveIndexChange`: событие границ
 `onNavigationStateChange` не заменяет смену слайда.
 
-## Общие настройки в ui.config.ts
+## Общие настройки в delbaFrontend
 
-Один конфиг проекта задаёт общие defaults; проп конкретной карусели имеет приоритет.
+Секция `delbaFrontend` файла `delba.config.ts` задаёт общие defaults;
+проп конкретной карусели имеет приоритет.
 `motion.carousel` содержит `drag`, `rewind`, `loop`, `orientation`, `mousewheel`,
 `autoplay`, `inertia` и `pauseInactiveMedia`. Начальные значения сохраняют прежнее
 поведение: горизонтальная лента с drag, без autoplay/loop/rewind/inertia/wheel,

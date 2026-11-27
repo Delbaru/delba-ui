@@ -21,7 +21,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { Box, Button } from '@delba/ui';
+import { Box, Button } from '@delba/frontend';
 
 export function BoxExample() {
   const [open, setOpen] = useState(false);

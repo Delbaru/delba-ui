@@ -62,46 +62,35 @@ export interface UiSkins {
     readonly texts: Readonly<Record<string, string>>;
     /**
      * Свои словари проекта рядом с осями кита: имя карты → значения. Попадают в `_tokens.scss`
-     * как `$<имя>` и доступны через `@use '@delba/ui/skin-states'` — ими проект красит СВОИ
+     * как `$<имя>` и доступны через `@use '@delba/frontend/skin-states'` — ими проект красит СВОИ
      * глаголы (глиф, тень), которых в движке кита нет и быть не должно.
      */
     readonly maps?: Readonly<Record<string, Readonly<Record<string, string>>>>;
-    /** Модуль движка состояний в шапке `_states.scss`. По умолчанию `@delba/ui/skin-states`. */
+    /** Модуль движка состояний в шапке `_states.scss`. По умолчанию `@delba/frontend/skin-states`. */
     readonly states?: string;
     /** Ключи пресета, которые генератор печатает как эффекты покоя. По умолчанию глаголы кита. */
     readonly effects?: readonly string[];
 }
 
-/** Конфиг проекта для CLI `delba-ui` и плагина `withUi` (default export `ui.config.ts`). Пути — от папки проекта. */
-export interface UiConfig {
-    /** Application directory relative to the loaded configuration file. Defaults to the invoking cwd. */
-    readonly root?: string;
-    /** Исходники для генератора утилит; сам кит сканируется всегда. По умолчанию `['src']`. */
-    readonly scan?: readonly string[];
-    /** Значения, которые на вызовах пишут именем (`size='lg'`), а скан видит только литералы. */
-    readonly seeds?: ExtractOptions['seeds'];
+/** Project theme sources and named padding values, relative to delba.config.ts. */
+export interface FrontendTheme {
+    /** Theme directories/files used by token checks, relative to delba.config.ts. */
+    readonly sources: readonly string[];
+    /** Named rpx padding: scalar, vertical/horizontal pair, or top/right/bottom/left. */
+    readonly padding?: Readonly<Record<string,
+        number | readonly [number, number] | readonly [number, number, number, number]
+    >>;
+}
+
+/** Author settings in delba.config.ts → delbaFrontend. Paths are relative to that file. */
+export interface FrontendConfig {
     /**
      * Варианты типографики проекта: `['h1', 'p1']` → классы `text_h1`, `text_p1` на токенах
      * `--font-h1`, `--tt-h1`, `--ls-h1`. Не задан — прежний набор кита. `UiTypography` проекта
      * выводится из этого же списка (README, «Типографика»), второго нет.
      */
     readonly typography?: ExtractOptions['typography'];
-    /** Стили темы для договора токенов. По умолчанию `theme`. */
-    readonly theme?: string | readonly string[];
-    /** Include the starter theme in token checks when global SCSS imports @delba/ui/theme. */
-    readonly themeDefaults?: boolean;
-    /** Папки под счётчик красных линий. По умолчанию `['src']`. */
-    readonly rules?: readonly string[];
-    /** Планка красных линий. По умолчанию `.rules-baseline.json`. */
-    readonly baseline?: string;
-    /** Validate consumer D-components. 'single-config' forbids a separate skin file; true retains the five-file contract. */
-    readonly componentAnatomy?: boolean | 'single-config';
-    /** Node export conditions for consumer tests only, e.g. react-server for server-only imports. */
-    readonly testConditions?: readonly string[];
-    /** Maximum parallel consumer test files. CI defaults to two; accepts integers from 1 to 16. */
-    readonly testConcurrency?: number;
-    /** Independent validation steps after generation: one by default, at most two. */
-    readonly checkConcurrency?: number;
+    readonly theme?: FrontendTheme;
     readonly skins?: UiSkins;
     /**
      * Базовые ширины макета, px: `1rpx = окно / база` на своей полосе, десктоп шире `max` не растёт.

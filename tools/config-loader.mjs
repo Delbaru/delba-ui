@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 let registered = false;
 let sequence = 0;
+const KIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function commonJsConfig(file) {
     if (/\.[cm]ts$/.test(file)) return file.endsWith('.cts');
@@ -16,15 +17,19 @@ function commonJsConfig(file) {
     }
 }
 
-/** Locate an explicit config, a local UI config, or the nearest project composition. */
+/** Locate delba.config.ts without crossing a checkout boundary. */
 export function resolveConfigFile({ cwd = process.cwd(), config } = {}) {
     if (config === null) return null;
-    if (config) return path.resolve(cwd, config);
-    const local = path.join(cwd, 'ui.config.ts');
-    if (existsSync(local)) return local;
+    if (config !== undefined) {
+        const file = path.resolve(cwd, config);
+        if (path.basename(file) !== 'delba.config.ts')
+            throw new Error('Configuration must be named delba.config.ts');
+        return file;
+    }
     for (let directory = path.resolve(cwd); ; directory = path.dirname(directory)) {
         const file = path.join(directory, 'delba.config.ts');
         if (existsSync(file)) return file;
+        if (path.relative(KIT, directory) === '' || existsSync(path.join(directory, '.git'))) return null;
         if (path.dirname(directory) === directory) return null;
     }
 }
@@ -96,15 +101,34 @@ export async function loadProjectConfig(options = {}) {
         const project = loaded.default?.default ?? loaded.default ?? loaded;
         if (!project || typeof project !== 'object' || Array.isArray(project))
             throw new Error(`${file}: configuration must be an object`);
-        const value =
-            options.profile && Object.hasOwn(project, options.profile)
-                ? project[options.profile]
-                : project;
+        if (options.profile !== undefined)
+            throw new Error(`${file}: profile selection is unsupported; use delbaFrontend`);
+        const value = Object.hasOwn(project, 'delbaFrontend') ? project.delbaFrontend : undefined;
         if (!value || typeof value !== 'object' || Array.isArray(value))
-            throw new Error(`${file}: selected configuration must be an object`);
-        if (value.root !== undefined && (typeof value.root !== 'string' || !value.root.trim()))
-            throw new Error(`${file}: root must be a nonempty directory path`);
-        const root = value.root === undefined ? cwd : path.resolve(path.dirname(file), value.root);
+            throw new Error(`${file}: delbaFrontend must be an object`);
+        const settings = new Set(['theme', 'typography', 'skins', 'scale', 'motion', 'images', 'scrollbar', 'messages']);
+        for (const key of Object.keys(value)) {
+            if (!settings.has(key))
+                throw new Error(`${file}: delbaFrontend.${key} is unsupported`);
+        }
+        if (value.theme !== undefined) {
+            const theme = value.theme;
+            if (!theme || typeof theme !== 'object' || Array.isArray(theme) ||
+                !Array.isArray(theme.sources) || !theme.sources.length ||
+                theme.sources.some(source => typeof source !== 'string' || !source.trim()))
+                throw new Error(`${file}: delbaFrontend.theme.sources must be nonempty paths`);
+            if (theme.padding !== undefined) {
+                if (!theme.padding || typeof theme.padding !== 'object' || Array.isArray(theme.padding))
+                    throw new Error(`${file}: delbaFrontend.theme.padding must be a dictionary`);
+                for (const padding of Object.values(theme.padding)) {
+                    const values = Array.isArray(padding) ? padding : [padding];
+                    if ((Array.isArray(padding) && ![2, 4].includes(values.length)) ||
+                        values.some(value => typeof value !== 'number' || !Number.isFinite(value)))
+                        throw new Error(`${file}: theme.padding values must be numbers or two/four-number tuples`);
+                }
+            }
+        }
+        const root = path.dirname(file);
         collectRequired();
         return { file, project, value, root, files, importModule, close };
     } catch (error) {

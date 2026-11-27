@@ -17,7 +17,7 @@
 ## Пример
 
 ```tsx
-import { Grid, GridItem } from '@delba/ui';
+import { Grid, GridItem } from '@delba/frontend';
 
 export function GridItemExample() {
   return <Grid columns={[3, 1, 2]} gap={[16, 12, 16]}>

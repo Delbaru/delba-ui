@@ -26,7 +26,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { Checkbox } from '@delba/ui';
+import { Checkbox } from '@delba/frontend';
 
 export function ExtraOption() {
   const [checked, setChecked] = useState(false);

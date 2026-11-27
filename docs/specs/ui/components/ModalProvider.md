@@ -21,7 +21,7 @@ useModal вне провайдера и useModalAction вне модальног
 
 ```tsx
 'use client';
-import { Button, Modal, ModalProvider, useModal } from '@delba/ui';
+import { Button, Modal, ModalProvider, useModal } from '@delba/frontend';
 
 function OpenDetails() {
   const { present } = useModal();

@@ -13,7 +13,7 @@ export type SmoothScrollProps = {
   wheelMultiplier?: number;
   /** Длительность перелёта `scrollTo` и якорей, секунды. По умолчанию — от расстояния, 0.4–1.2 с. */
   duration?: number;
-  /** Кривая из motionEasing/scrollEasing (@delba/ui/motion) либо функция. По умолчанию motion.scroll.easing (база easeOutExpo). */
+  /** Кривая из motionEasing/scrollEasing (@delba/frontend/motion) либо функция. По умолчанию motion.scroll.easing (база easeOutExpo). */
   easing?: SmoothScrollEasing;
   /**
    * Отступ под фиксированную шапку для якорей и `scrollTo(элемент)`: px, CSS-длина или имя

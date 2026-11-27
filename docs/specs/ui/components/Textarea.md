@@ -28,7 +28,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { Textarea } from '@delba/ui';
+import { Textarea } from '@delba/frontend';
 
 export function CommentField() {
   const [comment, setComment] = useState('');
@@ -80,7 +80,7 @@ Readonly не изменяет модель; custom/length-проверка пр
 aria-describedby и length limits сохраняются. Loading использует единый
 animate с when='change', effect='fade'; старых animation/transitionKey нет.
 
-Тексты length-проверок задаются ui.config.messages.textarea.minLength/maxLength
+Тексты length-проверок задаются delbaFrontend.messages.textarea.minLength/maxLength
 с параметром {count}. emptyMessage и validate остаются точечными переопределениями.
 Счётчик без max сохраняет прежний знаменатель 1000, явно закреплённый в конфиге;
 он не ограничивает количество вводимых символов.

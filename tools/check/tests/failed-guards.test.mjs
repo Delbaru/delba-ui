@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import { uiCheckSteps } from '../index.mjs';
 import { runNodeTests, runSteps } from '../verify.mjs';
 
@@ -88,8 +90,14 @@ test('a failure before test discovery explicitly repeats only its failed test st
 });
 
 test('configured project with empty discovery fails, unconfigured project keeps no test step', async (t) => {
+  const previous = process.env.DELBA_TEST_CONCURRENCY;
+  delete process.env.DELBA_TEST_CONCURRENCY;
+  t.after(() => {
+    if (previous === undefined) delete process.env.DELBA_TEST_CONCURRENCY;
+    else process.env.DELBA_TEST_CONCURRENCY = previous;
+  });
   const project = fixture(t);
-  const getStep = config => uiCheckSteps({ project, suite: 'project', config })
+  const getStep = options => uiCheckSteps({ project, suite: 'project', ...options })
     .find(step => step.name === 'Тесты проекта');
   assert.equal(getStep({}), undefined);
   const step = getStep({ testConcurrency: 1 });
@@ -105,15 +113,21 @@ test('CRM project delegates the root plan and native guard before starting any w
     scripts: { 'test:root': 'node tools/verification/run.mjs root' } }));
   fs.mkdirSync(path.join(project, 'tools', 'verification'), { recursive: true });
   fs.mkdirSync(path.join(project, 'tests'));
+  fs.writeFileSync(path.join(project, 'owner-preload.mjs'), 'globalThis.ownerPreloaded = true;');
+  const ownerNodeArgs = [
+    '--test-concurrency=1',
+    '--import', pathToFileURL(createRequire(import.meta.url).resolve('tsx')).href,
+    '--import', pathToFileURL(path.join(project, 'owner-preload.mjs')).href,
+  ];
   // Mock the owning CLI; OS profiles.test.mjs exercises the real guard separately.
   fs.writeFileSync(path.join(project, 'tools', 'verification', 'run.mjs'), `
     import assert from 'node:assert/strict';
     import fs from 'node:fs';
-    assert.deepEqual(process.argv.slice(2), ['root', '--list-files']);
+    assert.deepEqual(process.argv.slice(2), ['root', '--plan']);
     fs.appendFileSync('planned', process.env.CRM_QA_DB_TESTS + '\\n');
     if (process.env.CRM_QA_DB_TESTS === '1' && process.env.DATABASE_URL !== 'postgresql://localhost/crm_qa') {
       console.error('DATABASE_URL rejected by owner'); process.exitCode = 1;
-    } else console.log(JSON.stringify(['tests/probe.test.ts']));
+    } else console.log(JSON.stringify({ files: ['tests/probe.test.ts'], nodeArgs: ${JSON.stringify(ownerNodeArgs)} }));
   `);
   fs.writeFileSync(path.join(project, 'tests', 'probe.test.ts'), `
     import test from 'node:test';
@@ -124,6 +138,8 @@ test('CRM project delegates the root plan and native guard before starting any w
       assert.equal(process.env.CRM_QA_DB_TESTS, NativeFlag.Enabled);
       assert.ok(process.execArgv.includes('--conditions=crm-probe'));
       assert.ok(process.execArgv.includes('--test-concurrency=1'));
+      assert.equal(process.execArgv.includes('--test-concurrency=4'), false);
+      assert.equal(globalThis.ownerPreloaded, true);
       fs.appendFileSync('ran', 'yes');
     });
     test.skip('native scenario not exercised by mock', () => { throw Error('must not run'); });
@@ -138,7 +154,7 @@ test('CRM project delegates the root plan and native guard before starting any w
     }
   });
   const step = () => uiCheckSteps({ project, suite: 'project',
-    config: { testConcurrency: 4, testConditions: ['crm-probe'] } })
+    testConcurrency: 4, testConditions: ['crm-probe'] })
     .find(item => item.name === 'Тесты проекта');
   process.env.CRM_QA_DB_TESTS = '1';
   process.env.CRM_QA_DATABASE = 'crm_qa';
@@ -159,11 +175,34 @@ test('CRM project delegates the root plan and native guard before starting any w
   // A faulty owner may report an empty plan despite the existing test file.
   // The test step must reject it, not silently mark the project as passed.
   fs.rmSync(path.join(project, 'ran'));
-  fs.writeFileSync(path.join(project, 'tools', 'verification', 'run.mjs'), 'console.log("[]");');
+  fs.writeFileSync(path.join(project, 'tools', 'verification', 'run.mjs'),
+    'console.log(JSON.stringify({ files: [], nodeArgs: [] }));');
   const empty = await step().run();
   assert.equal(empty.ok, false);
   assert.match(empty.output, /Invalid CRM root test plan/);
   assert.equal(fs.existsSync(path.join(project, 'ran')), false);
+});
+
+test('CRM owner plan rejects legacy arrays and malformed files or Node arguments', async t => {
+  const project = fixture(t);
+  fs.writeFileSync(path.join(project, 'package.json'), JSON.stringify({ name: 'delba-os' }));
+  const verification = path.join(project, 'tools', 'verification');
+  fs.mkdirSync(verification, { recursive: true });
+  for (const plan of [
+    ['tests/probe.test.ts'],
+    { files: ['tests/probe.test.ts'] },
+    { files: ['tests/probe.test.ts'], nodeArgs: null },
+    { files: ['tests/probe.test.ts'], nodeArgs: [1] },
+    { files: ['tests/probe.test.ts'], nodeArgs: [''] },
+    { files: [' '], nodeArgs: [] },
+    { files: [], nodeArgs: [] },
+  ]) {
+    fs.writeFileSync(path.join(verification, 'run.mjs'), `console.log(${JSON.stringify(JSON.stringify(plan))});`);
+    const step = uiCheckSteps({ project, suite: 'project' })[0];
+    const rejected = await step.run();
+    assert.equal(rejected.ok, false);
+    assert.match(rejected.output, /Invalid CRM root test plan/);
+  }
 });
 
 test('missing preload and mismatched failed state cannot report a successful retry', async (t) => {

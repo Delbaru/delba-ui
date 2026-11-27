@@ -16,7 +16,7 @@
 ## Пример
 
 ```tsx
-import { Skeleton } from '@delba/ui';
+import { Skeleton } from '@delba/frontend';
 
 export function SkeletonExample() {
   return (

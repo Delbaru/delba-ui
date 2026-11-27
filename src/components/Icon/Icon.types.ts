@@ -43,7 +43,7 @@ export interface IconProps extends Omit<IconBaseSvgProps, keyof BoxLayoutProps>,
   src?: string | IconComponent;
 
   // Имя иконки проекта (загружается из его public/icons/{name}.svg). Иконки кита — импортом:
-  // import arrow from '@delba/ui/icons/arrows/arrow_bold.svg' → src={assetUrl(arrow)}
+  // import arrow from '@delba/frontend/icons/arrows/arrow_bold.svg' → src={assetUrl(arrow)}
   // Пример: name="ui/arrows/arrow_bold" -> загружает /icons/ui/arrows/arrow_bold.svg
   name?: string;
 

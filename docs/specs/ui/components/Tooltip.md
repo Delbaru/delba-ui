@@ -26,7 +26,7 @@ hoverDelayMs=0 (у Button — 400). Scroll и уход указателя отм
 ```tsx
 'use client';
 import { useId } from 'react';
-import { Button, Tooltip, useTooltip } from '@delba/ui';
+import { Button, Tooltip, useTooltip } from '@delba/frontend';
 
 export function Help() {
   const id = useId();

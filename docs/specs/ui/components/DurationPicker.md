@@ -21,7 +21,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { DurationPicker } from '@delba/ui';
+import { DurationPicker } from '@delba/frontend';
 
 export function DurationExample() {
   const [minutes, setMinutes] = useState(90);

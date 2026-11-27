@@ -28,7 +28,7 @@ runtime и визуальная проверка этим документом �
 
 ```tsx
 'use client';
-import { Carousel, CarouselDots } from '@delba/ui';
+import { Carousel, CarouselDots } from '@delba/frontend';
 
 export function Gallery() {
   return <section>
@@ -69,9 +69,9 @@ useCarousel остаётся единственным владельцем эк�
 и viewport берутся из ownerDocument корня.
 
 Собственные Carousel.module.scss и корневой класс Carousel; CarouselNav/Dots имеют
-свои модули. Доступные имена направлений задаются в ui.config.messages.carousel.
+свои модули. Доступные имена направлений задаются в delbaFrontend.messages.carousel.
 Для карусели без копирования интерактивных детей доступен отдельный
-[NativeCarousel](NativeCarousel.md) из @delba/ui/carousel.
+[NativeCarousel](NativeCarousel.md) из @delba/frontend/carousel.
 
 ### Раскладка и адаптер движка
 

@@ -21,7 +21,7 @@
 
 Для прежнего `fadeInDown` выбери `down`, для `fadeInScale` — `scale`.
 В Flex/Box смена содержимого требует `key`; появление `load/inView` ключа не требует.
-`duration` и `delay` — секунды либо имя `ui.config.motion.timing`. У Icon duration
+`duration` и `delay` — секунды либо имя `delbaFrontend.motion.timing`. У Icon duration
 относится к каждой из двух фаз. В Text counter `onView` становится `inView`,
 `onLoad` — `load`; смена текста и hover выбираются отдельными событиями.
 

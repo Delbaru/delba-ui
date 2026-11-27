@@ -13,7 +13,7 @@
 
 ```tsx
 'use client';
-import { ScrollbarActivity } from '@delba/ui';
+import { ScrollbarActivity } from '@delba/frontend';
 
 export function ScrollbarEffects() {
   return <ScrollbarActivity />;

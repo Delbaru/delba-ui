@@ -38,7 +38,7 @@ export async function runNodeTests({ cwd = process.cwd(), files, nodeArgs = [], 
       return fail('--failed requires matching previous Node test state.');
     }
   }
-  const temporary = file ? null : fs.mkdtempSync(path.join(os.tmpdir(), 'delba-ui-tests-'));
+  const temporary = file ? null : fs.mkdtempSync(path.join(os.tmpdir(), 'delba-frontend-tests-'));
   const eventsFile = file ? `${file}.events.json` : path.join(temporary, 'events.json');
   if (file) {
     fs.mkdirSync(path.dirname(file), { recursive: true });

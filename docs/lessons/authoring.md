@@ -1,5 +1,12 @@
 > Уроки библиотеки: компоненты, типы, пропы. Навигатор — [`../Library.md`](../Library.md).
 
+> Historical configuration examples below describe earlier versions. `ui.config.ts`,
+> the `ui` section and direct `{ scan, seeds }` configs are no longer supported.
+> Use [the current configuration contract](../configuration.md):
+> `delba.config.ts -> delbaFrontend`, with `theme.sources` / `theme.padding`;
+> the application root is the directory of `delba.config.ts`, and test/check
+> concurrency belongs to runner options, CLI or environment.
+
 # Компоненты, типы и пропы
 
 ## Feed: удаление первого видимого item не теряет позицию соседей
@@ -31,7 +38,7 @@ Generic DOM-элемента проходит через аргументы и �
 
 Воспроизведение: [contracts.typecheck.tsx](../../tests/Skin/unit/contracts.typecheck.tsx)
 проверяет точные имена/ступени, skin без шкал, отклонение лишних props и refs input/button.
-`pnpm --filter @delba/ui typecheck` из корня потребителя прошёл. Из кита команда
+`pnpm --filter @delba/frontend typecheck` из корня потребителя прошёл. Из кита команда
 `node --import tsx --import ./tools/check/unit-runtime.mjs --test "tests/Skin/unit/*.test.ts" "tools/utilities/tests/extract.test.ts"`
 прошла 26 тестов: 9 skin и 17 extractor, включая полные tuples, `null` и `0`.
 

@@ -91,7 +91,7 @@ test('opt-in incremental consumer types still reject changed source and global d
 
 test('consumer test concurrency is bounded and successful tests report counts', async context => {
     for (const value of [0, -1, 1.5, 17, NaN]) {
-        assert.throws(() => uiCheckSteps({ config: { testConcurrency: value } }), /testConcurrency/);
+        assert.throws(() => uiCheckSteps({ testConcurrency: value }), /testConcurrency/);
     }
     const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-test-workers-'));
     context.after(() => fs.rmSync(fixture, { recursive: true, force: true }));
@@ -107,13 +107,32 @@ test('consumer test concurrency is bounded and successful tests report counts', 
             });
         `);
     }
-    const step = uiCheckSteps({ project: fixture, suite: 'project', config: { testConcurrency: 1 } })
+    const step = uiCheckSteps({ project: fixture, suite: 'project', testConcurrency: 1 })
         .find((item: {name: string}) => item.name === 'Тесты проекта');
     assert.ok(step);
     const result = await step.run();
     assert.equal(result.ok, true, result.output);
     assert.match(result.output, /Tests: 2 passed, 0 failed, 0 skipped/);
     assert.deepEqual(fs.readFileSync(path.join(fixture, 'order.txt'), 'utf8').trim().split('\n'), ['one:start', 'one:end', 'two:start', 'two:end']);
+});
+
+test('runner concurrency uses explicit options before environment and rejects invalid environment', context => {
+    const previous = { tests: process.env.DELBA_TEST_CONCURRENCY, checks: process.env.DELBA_CHECK_CONCURRENCY };
+    context.after(() => {
+        for (const [key, value] of [['DELBA_TEST_CONCURRENCY', previous.tests], ['DELBA_CHECK_CONCURRENCY', previous.checks]]) {
+            if (value === undefined) delete process.env[key!];
+            else process.env[key!] = value;
+        }
+    });
+    process.env.DELBA_TEST_CONCURRENCY = '17';
+    process.env.DELBA_CHECK_CONCURRENCY = '3';
+    assert.throws(() => uiCheckSteps(), /testConcurrency/);
+    assert.throws(() => uiCheckSteps({ testConcurrency: 1 }), /checkConcurrency/);
+    assert.doesNotThrow(() => uiCheckSteps({ testConcurrency: 1, checkConcurrency: 2 }));
+    process.env.DELBA_TEST_CONCURRENCY = '1';
+    process.env.DELBA_CHECK_CONCURRENCY = '2';
+    assert.doesNotThrow(() => uiCheckSteps());
+    assert.throws(() => uiCheckSteps({ testConditions: [''] }), /testConditions/);
 });
 
 test('ошибка и исключение не скрывают остальные результаты и делают общий итог красным', async () => {
@@ -209,7 +228,7 @@ test('индикатор очищается перед результатом п
 
 test('полная проверка темы возвращает ошибку при недостающих токенах; быстрая сохраняет предупреждение', async () => {
     const kit = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-    const config = { theme: '__missing_check_theme__' };
+    const config = { theme: { sources: ['__missing_check_theme__'] } };
     const strict = projectSteps(kit, config, { strict: true })[1];
     const quick = projectSteps(kit, config)[1];
     assert.ok(strict);
@@ -261,7 +280,7 @@ test('consumer test conditions resolve server-only exports without changing libr
     fs.writeFileSync(path.join(probe, 'client.js'), 'throw new Error("server-only export requires react-server");');
     fs.writeFileSync(path.join(source, 'server.test.ts'), 'import assert from "node:assert/strict"; import {value} from "server-probe"; assert.equal(value, 42);');
     try {
-        const step = (config = {}) => uiCheckSteps({ project: fixture, config, suite: 'project' })
+        const step = (options = {}) => uiCheckSteps({ project: fixture, ...options, suite: 'project' })
             .find((item: { name: string }) => item.name === 'Тесты проекта');
         assert.equal((await step()?.run())?.ok, false);
         assert.equal((await step({ testConditions: ['react-server'] })?.run())?.ok, true);

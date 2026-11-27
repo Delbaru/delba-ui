@@ -12,8 +12,8 @@
 - `onOpen` вызывается при открытии и смене точки вызова.
 
 ```tsx
-import { ContextPopup } from '@delba/ui';
-import type { ContextPoint } from '@delba/ui';
+import { ContextPopup } from '@delba/frontend';
+import type { ContextPoint } from '@delba/frontend';
 
 export function Actions({ point, close }: { point: ContextPoint; close(): void }) {
     return (

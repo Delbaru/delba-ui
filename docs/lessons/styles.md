@@ -1,11 +1,18 @@
 > Уроки библиотеки: SCSS, слои, классы. Навигатор — [`../Library.md`](../Library.md).
 
+> Historical configuration examples below describe earlier versions. `ui.config.ts`,
+> the `ui` section and direct `{ scan, seeds }` configs are no longer supported.
+> Use [the current configuration contract](../configuration.md):
+> `delba.config.ts -> delbaFrontend`, with `theme.sources` / `theme.padding`;
+> the application root is the directory of `delba.config.ts`, and test/check
+> concurrency belongs to runner options, CLI or environment.
+
 # SCSS, слои и классы
 
 ## Серверная проверка формы не должна загружать компоненты
 
 Node-тест модели падает на SCSS после импорта валидатора из корня кита → корневой вход
-реэкспортирует компоненты и клиентские хуки. Используй `@delba/ui/validation`: регулярка
+реэкспортирует компоненты и клиентские хуки. Используй `@delba/frontend/validation`: регулярка
 email и маска телефона не зависят от React/стилей. Клиентское поле использует тот же
 источник. Не превращай `phoneMask.validate` в boolean напрямую: успех там undefined.
 

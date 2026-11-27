@@ -30,7 +30,7 @@
 
 ```tsx
 'use client';
-import { VideoPlayer, useVideoPlayer } from '@delba/ui';
+import { VideoPlayer, useVideoPlayer } from '@delba/frontend';
 
 export function Clip() {
   const controller = useVideoPlayer({ initialMuted: true });
@@ -82,13 +82,13 @@ Pointer-drag допускает одного инициирующего pointer;
 потомка его не завершают. Собственная потеря capture/cancel завершает drag, пустой track
 не создаёт NaN. Таймлайн и громкость сохраняют клавиатурный договор.
 
-Тексты управления задаются в ui.config.messages.video; временные подписи используют
+Тексты управления задаются в delbaFrontend.messages.video; временные подписи используют
 параметры current/duration/rate. Это настройка словаря, не готовая система локалей.
 Корень VideoPlayer — Flex, его layout и радиусы выражаются существующими props.
 
 ## Настройка поведения один раз
 
-`ui.config.motion.defaults.videoPlayer` задаёт autoHideDuration=2,
+`delbaFrontend.motion.defaults.videoPlayer` задаёт autoHideDuration=2,
 doubleClickDuration=0.22, controlsPollDuration=0.3, volumeStep=0.05,
 timelineStep=5, timelinePageRatio=0.1 и driftTolerance=0.3.
 Поля Duration принимают секунды или timing name. Общий генератор создаёт CSS и runtime
@@ -98,14 +98,17 @@ timelineStep=5, timelinePageRatio=0.1 и driftTolerance=0.3.
 Явный driftToleranceSec у useSyncedPlayers перекрывает общий driftTolerance.
 
 ```ts
-export default {
+// configs/delbaFrontend.ts
+import type { FrontendConfig } from '@delba/frontend/config';
+export const delbaFrontend = {
   motion: {
     timing: { normal: 0.5 },
     defaults: {
       videoPlayer: { autoHideDuration: 3, doubleClickDuration: 0.22, volumeStep: 0.1 },
     },
   },
-};
+} as const satisfies FrontendConfig;
+// delba.config.ts подключает этот объект как export default { delbaFrontend }.
 ```
 
 Playback clock публикует кадры только при наличии subscribeTime-потребителей.

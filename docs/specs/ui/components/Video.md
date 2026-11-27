@@ -25,7 +25,7 @@ HTML-видео в оболочке layout/motion кита: постер, раз
 ## Минимальный пример
 
 ```tsx
-import { Video } from '@delba/ui';
+import { Video } from '@delba/frontend';
 
 export function Clip() {
   return (
@@ -68,4 +68,4 @@ media.events. Нативные play/pause/ended остаются источни�
 Scalar src доступен при SSR; tuple ждёт hydration, чтобы телефон не скачивал desktop-ролик.
 На mobile пропущенный кадр берётся из tablet, затем desktop; эта политика одинакова для poster.
 Собственный Video.module.scss и класс Video принадлежат wrapper, VideoElement — реальному video.
-Доступное имя кнопки задаёт ui.config.messages.video.open.
+Доступное имя кнопки задаёт delbaFrontend.messages.video.open.

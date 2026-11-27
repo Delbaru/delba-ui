@@ -34,7 +34,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { Select } from '@delba/ui';
+import { Select } from '@delba/frontend';
 
 export function FormatField() {
   const [format, setFormat] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export function FormatField() {
 
 ```tsx
 import { useState } from 'react';
-import { Select, type SelectBaseProps } from '@delba/ui';
+import { Select, type SelectBaseProps } from '@delba/frontend';
 
 export function CitySelect({ options, loading, search }: Pick<SelectBaseProps, 'options' | 'loading' | 'search'>) {
   const [city, setCity] = useState<string | null>(null);
@@ -101,7 +101,7 @@ trigger, а не только внутри функции-компонента. 
 клавиатура компонуются; ни один обработчик не теряется при клонировании.
 Значение → loading использует объект animate с when='change', effect='fade'.
 
-ui.config.messages.select задаёт placeholder, required и selectedCount с {count}.
+delbaFrontend.messages.select задаёт placeholder, required и selectedCount с {count}.
 Явные placeholder/emptyMessage/renderValue сохраняют приоритет. Нативная
 отправка hidden input, multiple, form/reset и отказ выбора disabled/loading сохранены.
 

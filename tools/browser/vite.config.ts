@@ -61,7 +61,7 @@ export default defineConfig({
   plugins: [fixtureUtilities, ssrPlugin],
   resolve: {
     alias: {
-      '@delba/ui': kitRoot,
+      '@delba/frontend': kitRoot,
       'next/image': fileURLToPath(new URL('./next-image.tsx', import.meta.url)),
     },
     dedupe: ['react', 'react-dom'],

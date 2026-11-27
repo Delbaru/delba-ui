@@ -26,7 +26,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { ChoiceButtons } from '@delba/ui';
+import { ChoiceButtons } from '@delba/frontend';
 
 const items = [{ value: 'small', label: 'Малый' },
   { value: 'large', label: 'Большой' }] as const;

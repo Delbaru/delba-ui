@@ -25,7 +25,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { SwitchButton } from '@delba/ui';
+import { SwitchButton } from '@delba/frontend';
 
 export function PreviewSetting() {
   const [enabled, setEnabled] = useState(false);

@@ -25,7 +25,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { Marquee } from '@delba/ui';
+import { Marquee } from '@delba/frontend';
 
 export function Brands() {
   const [paused, setPaused] = useState(false);

@@ -1,5 +1,12 @@
 > Уроки библиотеки: генератор, сабмодуль, скрипты. Навигатор — [`../Library.md`](../Library.md).
 
+> Historical configuration examples below describe earlier versions. `ui.config.ts`,
+> the `ui` section and direct `{ scan, seeds }` configs are no longer supported.
+> Use [the current configuration contract](../configuration.md):
+> `delba.config.ts -> delbaFrontend`, with `theme.sources` / `theme.padding`;
+> the application root is the directory of `delba.config.ts`, and test/check
+> concurrency belongs to runner options, CLI or environment.
+
 # Оснастка: генератор, сабмодуль, скрипты
 
 ### Capture listeners в Node EventTarget снимаются с явными options
@@ -19,7 +26,7 @@ true)` и `removeEventListener(type, fn, true)` capture-listener в этом har
 Общий length-resolver нормализует строковый ноль к прежней числовой форме,
 сохраняя имена классов и CSS числовых потребителей. Проверка:
 `tests/Core/unit/utilities/classes.test.ts`, сценарий numeric and CSS zero lengths;
-в потребителе — `node --import tsx delba-ui/tools/cli.mjs build` и `next build`.
+в потребителе — `node --import tsx delba-frontend/tools/cli.mjs build` и `next build`.
 
 ### Общий marker guard проверяет потребителей без автоматического baseline
 
@@ -52,11 +59,11 @@ mouseMoved сохраняются button:left и buttons:1, иначе брау�
 
 **Причина.** Обёртка запуска одного потребителя была описана как общий договор библиотеки.
 
-**Исправление.** Навык указывает прямой `pnpm exec delba-ui test` из каталога приложения
+**Исправление.** Навык указывает прямой `pnpm exec delba-frontend test` из каталога приложения
 с ui.config; корневые aliases и включение gate в `verify` проверяются по конкретному проекту.
 
 **Повторная проверка.** Прочитать scripts корня и приложения, подтвердить наличие ui.config
-и CLI-зависимости. В GrigorevPrint подтверждены `apps/site/ui.config.ts` и `@delba/ui`
+и CLI-зависимости. В GrigorevPrint подтверждены `apps/site/ui.config.ts` и `@delba/frontend`
 в dependencies приложения; `verify` корня включает check/build, а не отдельный `ui:test`.
 Это проверка корректности инструкции, не выполненный продуктовый gate.
 
@@ -172,12 +179,12 @@ watcher не держал dev живым. От повторного запуск
 
 ### SCSS кита через `exports` пакета — потерянные относительные `@use`
 
-Симптом: `@use '@delba/ui/styles'` с `exports["./styles"]` → `Can't find stylesheet to import`
-на `meta.load-css('./scale')` внутри `tokens.global.scss`; `@use '@delba/ui/skin'` при JS-входе `./skin`
+Симптом: `@use '@delba/frontend/styles'` с `exports["./styles"]` → `Can't find stylesheet to import`
+на `meta.load-css('./scale')` внутри `tokens.global.scss`; `@use '@delba/frontend/skin'` при JS-входе `./skin`
 отдавал sass файл `index.ts` («expected "{"»). Причина: bare-имя резолвит импортёр sass-loader в
-Turbopack — по `exports`, через симлинк `node_modules/@delba/ui`, без учёта `restrictions` на `.scss`; от
+Turbopack — по `exports`, через симлинк `node_modules/@delba/frontend`, без учёта `restrictions` на `.scss`; от
 файла, который он отдал, относительные `@use`/`load-css` уже не находятся. Лечение: SCSS-входы — файлы
-в `tools/sass/@delba/ui/*` (`@forward` в ядро), папка — в `sassOptions.loadPaths` плагина; в `exports`
+в `tools/sass/@delba/frontend/*` (`@forward` в ядро), папка — в `sassOptions.loadPaths` плагина; в `exports`
 только JS; SCSS-имя не совпадает с JS-входом (`skin-states`). Проверено: вернуть `./styles` в
 `exports` — сборка снова падает на `load-css`.
 
@@ -195,12 +202,12 @@ Turbopack — по `exports`, через симлинк `node_modules/@delba/ui`
 
 ### Кит в `node_modules` — генератор не видит ни одного его литерала
 
-Симптом: кит поставлен git-зависимостью (Delba CMS), `delba-ui build` проходит, а классов литералов
+Симптом: кит поставлен git-зависимостью (Delba CMS), `delba-frontend build` проходит, а классов литералов
 самого кита (`gap 8`, `r 8`, `w={[24, 24, 24]}` в его компонентах) в `_utilities.scss` нет — узлы кита
 без стилей. Причина: обход генератора (`walk` в `tools/utilities/generate.ts`) проверял `SKIP`
-(`node_modules`, `.next`, `dist`…) по АБСОЛЮТНОМУ пути, а кит лежал в `<проект>/node_modules/@delba/ui` —
+(`node_modules`, `.next`, `dist`…) по АБСОЛЮТНОМУ пути, а кит лежал в `<проект>/node_modules/@delba/frontend` —
 каждый его файл отбрасывался. У сайта этого не было: pnpm-воркспейс даёт симлинк, и кит сканируется
-по realpath `../delba-ui`. Лечение: `SKIP` — по пути от корня скана (`path.relative(root, file)`), так
+по realpath `../delba-frontend`. Лечение: `SKIP` — по пути от корня скана (`path.relative(root, file)`), так
 же в watch. Тест — `tools/utilities/tests/generate.test.ts`: кит под `node_modules` сканируется, `node_modules`
 внутри скана пропускается.
 
@@ -237,14 +244,14 @@ Turbopack — по `exports`, через симлинк `node_modules/@delba/ui`
 
 ### Проверка перехода на 2.0 ловила СВОЙ неймспейс проекта, а не кит
 
-**Симптом.** `delba-ui check` в socrat печатал 45 ложных «`<Container/>` удалён» — на файлы, которые
+**Симптом.** `delba-frontend check` в socrat печатал 45 ложных «`<Container/>` удалён» — на файлы, которые
 импортируют его из `@socrat/shared/ui/components`, то есть из проекта, а не из кита.
 
 **Причина.** `KIT_MODULE` в `tools/check-migration.mjs` стоял с флагом `i`, чтобы поймать строчный
-`…/ui/container`. Но под тот же флаг попадала ветка `(^|/)(UI|delba-ui)(/|$)`, и сегмент `ui` в
+`…/ui/container`. Но под тот же флаг попадала ветка `(^|/)(UI|delba-frontend)(/|$)`, и сегмент `ui` в
 ЛЮБОМ пути проекта (`@socrat/shared/ui/components`, `…/ui/hooks`) читался как папка кита.
 
-**Лечение.** Регистр значим: папка кита — `UI` или `delba-ui`, а `/ui/container` и так записан
+**Лечение.** Регистр значим: папка кита — `UI` или `delba-frontend`, а `/ui/container` и так записан
 строчными, поэтому флаг не нужен. Соседний `DEEP` был регистрозависимым с самого начала — теперь
 оба правила смотрят на путь одинаково.
 
@@ -253,18 +260,18 @@ Turbopack — по `exports`, через симлинк `node_modules/@delba/ui`
 
 ### `build` зелёный — про `watch` это не говорит НИЧЕГО: у них разный код
 
-**Симптом.** У потребителя (socrat, 29.09.2026) `delba-ui watch` умирал в первую секунду:
+**Симптом.** У потребителя (socrat, 29.09.2026) `delba-frontend watch` умирал в первую секунду:
 `The "paths[1]" argument must be of type string. Received undefined`, надзор поднимал его заново, и
-так по кругу. `delba-ui build` на том же конфиге проходил зелёным.
+так по кругу. `delba-frontend build` на том же конфиге проходил зелёным.
 
 **Причина.** `skins.dir` объявлен НЕОБЯЗАТЕЛЬНЫМ (`UiSkins.dir?`) — проект, который печатает
 состояния сам, берёт у кита только словари. Генератор шкур это честно проверяет
 (`if (skins.dir === undefined) return changed`), а ветка `watch` в `cli.mjs` — нет:
 `path.resolve(root, config.skins.dir)` роняло процесс. `build` до этой строки просто не доходит.
 
-**Лечение.** Проверка в `work()`. Правило шире: **каждое необязательное поле `UiConfig` обязано
+**Лечение.** Проверка в `work()`. Правило шире: **каждое необязательное поле `FrontendConfig` обязано
 быть проверено во ВСЕХ трёх командах**, а не только там, где его читает генератор. `build`
-свидетелем живости `watch` не является — гонять надо обе (`timeout 20 delba-ui watch`, в логе ноль
+свидетелем живости `watch` не является — гонять надо обе (`timeout 20 delba-frontend watch`, в логе ноль
 `✗`).
 
 ---
@@ -442,7 +449,7 @@ utility artifact содержал 960 классов вместо полного
 **Причина.** scan/rules/theme разрешаются от рабочего каталога команды. Путь ui.config
 выбирает файл конфигурации, но не переносит процесс в корень его потребителя.
 
-**Лечение.** Запускать build/test из каталога site: `node ../delba-ui/tools/cli.mjs
+**Лечение.** Запускать build/test из каталога site: `node ../delba-frontend/tools/cli.mjs
 test --suite library`. После неверного запуска повторить генерацию из site до QA.
 
 **Проверка.** Полные library/browser gates начинают с project generation из site;
@@ -714,7 +721,7 @@ Library typecheck сообщил об отсутствии React.ViewTransition 
 runtime-модулю. Подключение только в tsconfig кита не покрывает потребителей его
 исходников. Runtime fallback при отсутствии Boundary сохраняется.
 Воспроизведение: `npm run typecheck` из кита; проверка исправления — эта команда
-и `pnpm exec delba-ui test` из потребителя после интеграции всех изменений.
+и `pnpm exec delba-frontend test` из потребителя после интеграции всех изменений.
 
 ### Shared skills проверяются по установленному источнику, а не только локальному имени
 
@@ -749,7 +756,7 @@ sync не заменяет чужую shared ссылку автоматичес
 
 Исправление: в `tools/check-rules.mjs` остались границы публичных native
 controls (`raw-button`, `raw-input`, `raw-anchor`); форматирование
-выполняется отдельно через `@delba/ui/prettier`, а визуальная композиция
+выполняется отдельно через `@delba/frontend/prettier`, а визуальная композиция
 проверяется предметным браузерным сценарием. Типы, React refs,
 состояние, фокус, клавиатура и существующие behavioral D-тесты
 не сокращаются. Устаревшие проверки motion-owner в `check-rules`

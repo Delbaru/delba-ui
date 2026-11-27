@@ -6,7 +6,7 @@ import test from 'node:test';
 
 import { componentSkinSources, generateComponentSkin } from '../skin';
 
-const statesModule = '@delba/ui/skin-states';
+const statesModule = '@delba/frontend/skin-states';
 const effects = new Set(['opacity']);
 
 function withSkinModule(source: string, run: (folder: string, file: string) => Promise<void>) {

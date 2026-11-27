@@ -25,7 +25,7 @@
 ## Применение
 
 ```tsx
-import { LexicalText } from '@delba/ui';
+import { LexicalText } from '@delba/frontend';
 
 export function Description({ html }: { html: string }) {
   return <LexicalText content={html} links="text" rows={[4, 6, 4]} />;
@@ -36,7 +36,7 @@ export function Description({ html }: { html: string }) {
 или when='inView'. Последовательность HTML выбирается явно:
 
 ```tsx
-import { LexicalText } from '@delba/ui';
+import { LexicalText } from '@delba/frontend';
 
 export function DeliveryStep({ step }: { step: number }) {
   return <LexicalText animate={{

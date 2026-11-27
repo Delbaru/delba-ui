@@ -20,7 +20,7 @@ CSS-сетка для двумерной композиции. Использу�
 ## Пример
 
 ```tsx
-import { Grid, GridItem } from '@delba/ui';
+import { Grid, GridItem } from '@delba/frontend';
 
 export function GridExample() {
   return <Grid columns={[3, 1, 2]} gap={[24, 12, 16]}>

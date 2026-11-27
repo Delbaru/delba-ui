@@ -60,22 +60,22 @@
 ## 3. Устройство
 
 ```
-src/index.ts         публичный вход `@delba/ui`; остальное в src — приватно (карта `exports` в package.json)
+src/index.ts         публичный вход `@delba/frontend`; остальное в src — приватно (карта `exports` в package.json)
 src/components/<Имя>/ компонент: TSX, SCSS, типы, index.ts
 src/core/            ядро: раскладка (box, responsive, utilities), breakpoints, motion, text-format,
                      cn (cx), treePath, _mixins.scss, tokens.global.scss, генераты _utilities/_scale
 src/hooks/           общие хуки: useMediaQuery, useOutsideDismiss, usePresence, useSwapTransition,
                      useAnchoredFloating, useSharedMotion, useTextOverflow, useTooltip, useFancybox
-src/skin/            движок шкур (`@delba/ui/skin`): defineSkin, resolveSkin, states(); словари — у проекта
+src/skin/            движок шкур (`@delba/frontend/skin`): defineSkin, resolveSkin, states(); словари — у проекта
 assets/icons/ui/     иконки компонентов — импортом (`assetUrl`), проекту не копируются
 theme/               tokens.default.scss — стартовая тема (нулевая специфичность, перебивается проектом)
-tools/               cli.mjs (bin `delba-ui`: build | watch | check), next.mjs (`@delba/ui/next`),
-                     config.ts (`@delba/ui/config`), sass/ (SCSS-входы `@delba/ui/*`), skin.ts,
+tools/               cli.mjs (bin `delba-frontend`: build | watch | check), next.mjs (`@delba/frontend/next`),
+                     config.ts (`@delba/frontend/config`), sass/ (SCSS-входы `@delba/frontend/*`), skin.ts,
                      utilities/ (генератор), check-boundary|tokens|rules|migration.mjs
 ```
 
-**Кит — пакет воркспейса проекта** (`@delba/ui`), своей сборки у него нет. Проверки самого кита —
-`pnpm --filter @delba/ui check`; полный запуск вместе с договором проекта — `delba-ui test`
+**Кит — пакет воркспейса проекта** (`@delba/frontend`), своей сборки у него нет. Проверки самого кита —
+`pnpm --filter @delba/frontend check`; полный запуск вместе с договором проекта — `delba-frontend test`
 из папки приложения. Отдельные `typecheck | test | boundary` остаются для диагностики: [`README.md`](../README.md) и
 `прочитать .agents/skills/ui-verify/SKILL.md`. Новый публичный вход — строка в `exports` и `src/index.ts`; импорт снаружи в обход
 них — не вход, а ошибка.
@@ -85,7 +85,7 @@ tools/               cli.mjs (bin `delba-ui`: build | watch | check), next.mjs (
 
 ### Сообщения полей
 
-`UiConfig.messages` задаёт сообщения проверок и доступные подписи действий при сборке.
+`FrontendConfig.messages` задаёт сообщения проверок и доступные подписи действий при сборке.
 Разделы `validation`, `input` и `calendar` переопределяются частично; остальные строки
 сохраняют умолчания кита. Например:
 

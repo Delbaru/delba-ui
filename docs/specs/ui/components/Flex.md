@@ -18,7 +18,7 @@
 ## Пример
 
 ```tsx
-import { Flex, Text } from '@delba/ui';
+import { Flex, Text } from '@delba/frontend';
 
 export function FlexExample() {
   return <Flex as="section" dir={['row', 'column', 'row']}

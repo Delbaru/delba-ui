@@ -1,12 +1,12 @@
+import type { FrontendConfig } from './config';
+
 export interface ConfigLoadOptions {
-    /** Directory used for discovery and for direct UI configs without a root. */
+    /** Directory used for discovery within the owning checkout. */
     cwd?: string;
-    /** Explicit path relative to cwd; null disables discovery for standalone tooling. */
+    /** Explicit delba.config.ts path relative to cwd; null disables discovery. */
     config?: string | null;
-    /** Select a section of a project composition; direct configs are used as-is. */
-    profile?: string;
 }
-export interface LoadedProjectConfig<T = Record<string, unknown>> {
+export interface LoadedProjectConfig<T = FrontendConfig> {
     file: string;
     project: Record<string, unknown>;
     value: T;
@@ -16,6 +16,6 @@ export interface LoadedProjectConfig<T = Record<string, unknown>> {
     close(): Promise<void>;
 }
 export function resolveConfigFile(options?: ConfigLoadOptions): string | null;
-export function loadProjectConfig<T = Record<string, unknown>>(
+export function loadProjectConfig<T = FrontendConfig>(
     options?: ConfigLoadOptions,
 ): Promise<LoadedProjectConfig<T> | null>;

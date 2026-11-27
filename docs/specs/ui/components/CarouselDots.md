@@ -26,7 +26,7 @@ runtime-проверка не выполнялась в рамках карто�
 
 ```tsx
 'use client';
-import { Carousel, CarouselDots } from '@delba/ui';
+import { Carousel, CarouselDots } from '@delba/frontend';
 
 export function Gallery() {
   return <section>

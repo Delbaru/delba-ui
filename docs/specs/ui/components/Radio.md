@@ -25,7 +25,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { Radio } from '@delba/ui';
+import { Radio } from '@delba/frontend';
 
 export function SideChoice() {
   const [side, setSide] = useState('left');

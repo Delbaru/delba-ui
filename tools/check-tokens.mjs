@@ -15,7 +15,7 @@
 //     и читает их с фолбэком на прежний вариант: фолбэк — для тем, написанных до ролей.
 // Токен, стоящий фолбэком другого (`var(--a, var(--b))`), в договор не входит.
 // `--with-defaults` засчитывает стартовую тему `theme/tokens.default.scss`; `--typography h1,p1` —
-// варианты проекта из ui.config.ts: у каждого в теме должен быть `--font-<имя>`.
+// варианты проекта из delba.config.ts → delbaFrontend: у каждого в теме должен быть `--font-<имя>`.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -170,13 +170,13 @@ if (isMain) {
   if (motionAt >= 0) {
     const generatedFile = args[motionAt + 1];
     if (!generatedFile || !fs.existsSync(generatedFile)) {
-      console.error('[ui:tokens] ✗ нет шкалы motion — выполни delba-ui build');
+      console.error('[ui:tokens] ✗ нет шкалы motion — выполни delba-frontend build');
       process.exit(1);
     }
     const generated = fs.readFileSync(generatedFile, 'utf8');
     const duplicates = files.flatMap((file) => motionTokenDuplicates(fs.readFileSync(file, 'utf8'), generated).map((name) => `${name} ← ${path.relative(process.cwd(), file)}`));
     if (duplicates.length) {
-      console.error('[ui:tokens] ✗ время задано дважды; редактируй motion.timing в ui.config.ts');
+      console.error('[ui:tokens] ✗ время задано дважды; редактируй motion.timing в delba.config.ts → delbaFrontend');
       duplicates.forEach((message) => console.error(`  ${message}`));
       process.exit(1);
     }
@@ -197,7 +197,7 @@ if (isMain) {
     ...[...contract.tokens].filter(([name]) => !declared.has(name)).map(([name, users]) => [name, users]),
     ...[...contract.families].filter(([prefix]) => ![...declared].some((name) => name.startsWith(prefix))).map(([prefix, users]) => [`${prefix}*`, users]),
     ...[...contract.attributes].filter(([attr]) => !styles.includes(`[${attr}`)).map(([attr, users]) => [`[${attr}]`, users]),
-    ...variants.map((name) => `--font-${name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`).filter((name) => !declared.has(name)).map((name) => [name, ['typography в ui.config.ts']]),
+    ...variants.map((name) => `--font-${name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`).filter((name) => !declared.has(name)).map((name) => [name, ['typography в delba.config.ts → delbaFrontend']]),
   ];
   const total = contract.tokens.size + contract.families.size + contract.attributes.size + variants.length;
 

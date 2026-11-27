@@ -25,7 +25,7 @@
 В Next.js-приложении с подключённой темой и стилями кита:
 
 ```tsx
-import { Button } from '@delba/ui';
+import { Button } from '@delba/frontend';
 
 export function CatalogLink() {
   return <Button href="/catalog">Каталог</Button>;

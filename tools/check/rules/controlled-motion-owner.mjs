@@ -27,7 +27,7 @@ export function controlledMotionOwners(source) {
       .find(file => fs.existsSync(file) && fs.statSync(file).isFile()) ?? null;
   };
   const imported = (from, module, name, seen) => {
-    if (module === '@delba/ui' && name === 'Modal') return { modal: true };
+    if (module === '@delba/frontend' && name === 'Modal') return { modal: true };
     const file = moduleFile(from, module);
     return file ? exported(read(file), name, seen) : null;
   };

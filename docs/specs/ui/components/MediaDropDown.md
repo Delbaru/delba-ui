@@ -28,7 +28,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { MediaDropDown, type MediaDropDownSelection } from '@delba/ui';
+import { MediaDropDown, type MediaDropDownSelection } from '@delba/frontend';
 
 export function Attachment() {
   const [item, setItem] = useState<MediaDropDownSelection | null>(null);

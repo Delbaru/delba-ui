@@ -1,12 +1,12 @@
-﻿# CarouselProgress
+# CarouselProgress
 
-Действующий публичный вход — `@delba/ui/carousel`.
+Действующий публичный вход — `@delba/frontend/carousel`.
 Индикатор времени autoplay одного NativeCarousel; не индикатор положения слайдов.
 
 ```tsx
 'use client';
 
-import { NativeCarousel, CarouselProgress, useCarouselController } from '@delba/ui/carousel';
+import { NativeCarousel, CarouselProgress, useCarouselController } from '@delba/frontend/carousel';
 
 export function TimedGallery() {
   const controller = useCarouselController();

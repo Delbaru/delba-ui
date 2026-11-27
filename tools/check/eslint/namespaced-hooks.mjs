@@ -125,8 +125,8 @@ export const namespacedHooksRule = {
       const def = variable?.defs.find(entry => entry.type === 'ImportBinding');
       if (!def || def.parent?.type !== 'ImportDeclaration') return null;
       const path = def.parent.source.value;
-      if (path === '@delba/ui' && def.node.type === 'ImportNamespaceSpecifier') return 'ui-module';
-      if (path === '@delba/ui' && def.node.type === 'ImportSpecifier' && (def.node.imported.name ?? def.node.imported.value) === 'ui') return 'namespace';
+      if (path === '@delba/frontend' && def.node.type === 'ImportNamespaceSpecifier') return 'ui-module';
+      if (path === '@delba/frontend' && def.node.type === 'ImportSpecifier' && (def.node.imported.name ?? def.node.imported.value) === 'ui') return 'namespace';
       if (PUBLIC_MODULES.test(resolveImport(context.filename ?? context.getFilename(), path) ?? '')) {
         if (def.node.type === 'ImportNamespaceSpecifier') return 'module';
         if (def.node.type === 'ImportSpecifier' && FACTORIES.has(def.node.imported.name ?? def.node.imported.value)) return 'factory';

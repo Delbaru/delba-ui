@@ -232,7 +232,7 @@ export function motionScss(motion?: UiMotion): string {
     }
     for (const [role, name] of Object.entries(resolveEasing(motion)))
         declarations.push(`  --t-t-f-${role}: ${resolveEasingPreset(name).css};`);
-    return `// AUTO-GENERATED: tools/motion.ts (ui.config.ts). Do not edit.\n:root {\n${declarations.join('\n')}\n}\n`;
+    return `// AUTO-GENERATED: tools/motion.ts (delba.config.ts → delbaFrontend). Do not edit.\n:root {\n${declarations.join('\n')}\n}\n`;
 }
 
 function resolveEasing(motion?: UiMotion): Record<MotionEasingRole, SerializedEasing> {

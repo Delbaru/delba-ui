@@ -36,7 +36,7 @@ const isOwn = (file: string) => OWN_SOURCES.some((dir) => file.startsWith(dir + 
 
 /**
  * Файлы `.ts/.tsx` папки скана. SKIP проверяется по пути ОТ корня скана, а не по абсолютному: кит,
- * поставленный git-зависимостью, сам лежит в `<проект>/node_modules/@delba/ui` — по полному пути
+ * поставленный git-зависимостью, сам лежит в `<проект>/node_modules/@delba/frontend` — по полному пути
  * он выпал бы целиком, а `node_modules` внутри корня скана должен пропускаться, как и раньше.
  */
 export function walk(root: string, dir = root, out: string[] = []): string[] {

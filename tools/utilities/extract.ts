@@ -31,7 +31,7 @@ export interface Source {
 export interface ExtractOptions {
   /** Значения из словарей, которые на вызовах пишутся ИМЕНЕМ (`radius='md'`): `{ r: [8, 12, 16] }`. */
   readonly seeds?: Readonly<Record<string, readonly UtilityEntry[]>>;
-  /** Варианты типографики проекта (`typography` в ui.config.ts); не заданы — прежний набор кита. */
+  /** Варианты типографики проекта (`typography` в delba.config.ts → delbaFrontend); не заданы — прежний набор кита. */
   readonly typography?: readonly string[];
   /** Путь модуля импорта → файл (относительные пути и алиасы проекта). */
   readonly resolveModule?: (fromFile: string, specifier: string) => string | undefined;

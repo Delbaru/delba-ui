@@ -1,22 +1,22 @@
-// Типы плагина Next (`@delba/ui/next`) — для `next.config.ts` в strict: у next.mjs своих нет.
+// Типы плагина Next (`@delba/frontend/next`) — для `next.config.ts` в strict: у next.mjs своих нет.
 import type { NextConfig } from 'next';
 
 /** Второй аргумент конфига-функции Next. */
-export interface UiNextContext {
+export interface FrontendNextContext {
     readonly defaultConfig: NextConfig;
 }
 
 /** Конфиг Next функцией: `(phase, { defaultConfig }) => config`. */
-export type UiNextConfigFunction = (
+export type FrontendNextConfigFunction = (
     phase: string,
-    context: UiNextContext,
+    context: FrontendNextContext,
 ) => NextConfig | Promise<NextConfig>;
 
-/** Папка SCSS-входов кита для `sassOptions.loadPaths`: `@use '@delba/ui/mixins'` и прочие. */
-export declare const UI_SASS: string;
+/** Папка SCSS-входов кита для `sassOptions.loadPaths`: `@use '@delba/frontend/mixins'` и прочие. */
+export declare const FRONTEND_SASS: string;
 
-/** Подключает кит к Next: исходники кита в сборку, SCSS-входы `@delba/ui/*` и генераты. */
-export declare function withUi(
-    nextConfig?: NextConfig | UiNextConfigFunction,
+/** Подключает кит к Next: исходники кита в сборку, SCSS-входы `@delba/frontend/*` и генераты. */
+export declare function withFrontend(
+    nextConfig?: NextConfig | FrontendNextConfigFunction,
     options?: { config?: string },
-): (phase: string, context: UiNextContext) => Promise<NextConfig>;
+): (phase: string, context: FrontendNextContext) => Promise<NextConfig>;

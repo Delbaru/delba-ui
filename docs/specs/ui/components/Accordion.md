@@ -24,7 +24,7 @@
 ```tsx
 'use client';
 import { useState } from 'react';
-import { Accordion, AccordionItem } from '@delba/ui';
+import { Accordion, AccordionItem } from '@delba/frontend';
 
 export function Help() {
   const [value, setValue] = useState<string | null>(null);

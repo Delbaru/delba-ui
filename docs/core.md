@@ -3,7 +3,7 @@
 Прежде чем заводить помощник — проверь здесь. Копия любой из этих вещей внутри компонента
 считается ошибкой ревью: расхождение копий и есть источник «на планшете поехало».
 
-`resolveResponsive` из `@delba/ui` нормализует scalar/короткий tuple в
+`resolveResponsive` из `@delba/frontend` нормализует scalar/короткий tuple в
 `[desktop, mobile, tablet]`. Недостающий mobile/tablet наследует desktop;
 `null` остаётся явным пропуском. Вычисляемый вход нормализуют один раз перед
 JSX, затем передают явную тройку: `w={[width[0], width[1], width[2]]}`.
@@ -12,12 +12,12 @@ JSX, затем передают явную тройку: `w={[width[0], width[1
 
 ## Первый показ страницы
 
-`delba-ui build` собирает SVG из `public/icons` потребителя в `src/core/inline-icons.ts`.
+`delba-frontend build` собирает SVG из `public/icons` потребителя в `src/core/inline-icons.ts`.
 Icon использует один реестр в SSR и hydration; локальные глифы появляются до клиентских
 эффектов. Watch следит за SVG, удалённый файл исчезает из манифеста. Неверный SVG
 останавливает сборку. Внешние URL сохраняют существующий путь загрузки.
 
-`pageReadyScript({ timeoutMs: 3000 })` из `@delba/ui/startup` — необязательный bootstrap
+`pageReadyScript({ timeoutMs: 3000 })` из `@delba/frontend/startup` — необязательный bootstrap
 для проектов, которым нужен готовый первый показ после загрузки шрифтов. Размести
 обычный inline script в head до body. Глобальные стили кита скрывают страницу и
 приостанавливают CSS-анимации только после активации скриптом; без JS контент виден.
@@ -28,7 +28,7 @@ Icon использует один реестр в SSR и hydration; локал�
 bootstrap восстанавливает исходное состояние этого атрибута.
 
 ```tsx
-import { pageReadyScript } from '@delba/ui/startup';
+import { pageReadyScript } from '@delba/frontend/startup';
 
 <html suppressHydrationWarning>
   <head>
@@ -45,7 +45,7 @@ import { pageReadyScript } from '@delba/ui/startup';
 fallback-шрифта, начальная геометрия изображений остаются ответственностью проекта:
 ожидание первого показа дополняет их, не заменяет.
 
-Проверка потребителя: `delba-ui startup --url <production-URL> --font "h1=Family"`.
+Проверка потребителя: `delba-frontend startup --url <production-URL> --font "h1=Family"`.
 Она использует установленный Playwright/Chromium, не запускает сервер и проверяет
 390/1440 px: холодный кеш, задержку fonts/JS и отключённый JS. Ошибки страницы,
 пустые SVG в header, скрытый/inert контент, fallback готовности и CLS выше
@@ -59,7 +59,7 @@ preload может передаваться HTTP Link, а не только DOM.
 
 ## Раскладка
 
-`NativeCarousel` из `@delba/ui/carousel` использует собственную ленту и общий
+`NativeCarousel` из `@delba/frontend/carousel` использует собственную ленту и общий
 `Transition`; Swiper не входит в этот runtime-вход. `useCarouselController()` даёт
 `next/prev/goTo`, `play/pause/stop`, snapshot и подписку; `useCarouselSnapshot()`
 подключает дискретное UI-состояние. Точки и миниатюры используют тот же протокол,
@@ -105,7 +105,7 @@ preload может передаваться HTTP Link, а не только DOM.
 
 ## Pointer-жесты
 
-`beginPointerGesture(start, options)` из `@delba/ui` объединяет lifecycle
+`beginPointerGesture(start, options)` из `@delba/frontend` объединяет lifecycle
 перетаскивания окон, карточек и разделителей. Источник —
 `src/core/base/pointer-gesture.ts`; продуктовые координаты, порядок, права,
 сохранение и клавиатурные действия остаются у потребителя.
@@ -154,7 +154,7 @@ blur/hidden/lostcapture, cleanup/unmount и повторный жест. Unit-с
 
 ## Полосы и медиазапросы
 
-`@use '@delba/ui/mixins' as m` предоставляет `m.breakpoint(m|t|d)` для непропсовых
+`@use '@delba/frontend/mixins' as m` предоставляет `m.breakpoint(m|t|d)` для непропсовых
 эффектов (transform, opacity, pointer-events) на полосе кита. Миксин читает существующий
 SCSS-словарь `$breakpoints`, неизвестное имя останавливает Sass. Он позволяет задать
 начальное состояние эффекта до гидратации без `useMediaQuery` и копирования границ.
@@ -178,7 +178,7 @@ SCSS-словарь `$breakpoints`, неизвестное имя останав
 `composeEventHandlers(user, internal, { cancelable })`. Первый предотвращает
 перенос фокуса pointer-действием; второй сохраняет порядок и явно определяет,
 останавливает ли preventDefault внутреннее действие. Эти функции и
-`useMergedRefs` импортируются из `@delba/ui`, без копирования реализации в CMS.
+`useMergedRefs` импортируются из `@delba/frontend`, без копирования реализации в CMS.
 
 `InteractionScope` в `core/InteractionScope.tsx` объединяет pointer/focus и
 дочерние interaction locks без дополнительного DOM. Внутренний
@@ -192,10 +192,10 @@ Input не складывает поверх него ещё одно храни
 Форматирование телефона принадлежит `core/fields/phone.ts`: его используют поле
 и публичная серверная валидация. Договор Input — на [странице компонента](specs/ui/components/Input.md).
 
-`@delba/ui/validation` — чистый вход без React и стилей: `EMAIL_REGEX`, `EMAIL_PATTERN`,
+`@delba/frontend/validation` — чистый вход без React и стилей: `EMAIL_REGEX`, `EMAIL_PATTERN`,
 `phoneMask`. Его можно использовать в серверных обработчиках и Node-тестах. У
 `phoneMask.validate` успех — `undefined`, ошибка — строка; обязательность и допустимые
-страны определяет форма. Прежние экспорты из `@delba/ui` сохранены.
+страны определяет форма. Прежние экспорты из `@delba/frontend` сохранены.
 
 `ScrollArea` — нативный viewport прокрутки на основе Flex. Принимает общие layout-пропсы,
 DOM ref и события самого viewport; поиск, заголовок и действия размещаются снаружи.
@@ -209,7 +209,7 @@ DOM ref и события самого viewport; поиск, заголовок 
 а отступ дорожки — возможность WebKit. Отступ содержимого задаётся `p/pr/pl`, отдельно от дорожки.
 В браузере без scroll-driven animations остаётся полноценная прокрутка без fade.
 Для существующего viewport, в том числе корневого `<html>`, используйте
-`scrollbarProps(options)` из `@delba/ui`: spread возвращает className и style, работает
+`scrollbarProps(options)` из `@delba/frontend`: spread возвращает className и style, работает
 на сервере и не меняет владельца прокрутки. `Modal.scroll.scrollbar` принимает те же
 настройки; `Modal.scroll.gutter` по-прежнему управляет прежним отступом содержимого.
 В Chromium `.ui-scrollbar` всегда использует WebKit-геометрию без кнопок-стрелок;
@@ -217,7 +217,7 @@ native `scrollbar-width/color` сбрасываются даже при конф
 В Firefox сохраняется нативный thin/auto. Включайте контракт на самом узле прокрутки
 через `ScrollArea` или `scrollbarProps`, а не только через `overflow` на обычном блоке.
 
-Общие значения задаются в `ui.config.ts`:
+Общие значения задаются в секции `delbaFrontend` файла `delba.config.ts`:
 `scrollbar: { width: 6, color: 'currentColor', trackColor: 'transparent', inset: 4,
 gutter: 'stable', autoHide: true, hideDelay: 0.3, showDuration: 0.15, fadeDuration: 0.2 }`.
 Длительности — секунды. Это умолчания кита; настройки конкретного viewport имеют
@@ -387,7 +387,7 @@ Fixed/sticky-панель с top=0 сохраняет зону возврата 
 кешируется через ResizeObserver. Прежний `InteractionScope target={ref} edge="top"` совместим,
 но для обычной поверхности отдельная render-обёртка не нужна.
 
-`@delba/ui/url` — чистая дверь без компонентов и SCSS. `createUrl(pathname)` создаёт
+`@delba/frontend/url` — чистая дверь без компонентов и SCSS. `createUrl(pathname)` создаёт
 независимый API маршрута для SSR/адаптера роутера. `installBrowserUrl(window)` устанавливает
 глобальный `url.current()/href()/query(key)/hash()/isCurrent()/isActive()/props()`;
 методы читают живой location, но не подписывают React. Сервис существует только в браузере;
@@ -400,7 +400,7 @@ Fixed/sticky-панель с top=0 сохраняет зону возврата 
 `subscribe`). Колесо над прокручиваемым контейнером, открытой `aria-modal` или узлом с
 `data-smooth-scroll-ignore` — браузеру. Чистая математика хода, отступа и
 разбора якорей — `smooth-scroll.ts` с тестами; `MEDIA_QUERY.touch` — «главный ввод — палец».
-Кривые импортируются из лёгкого `@delba/ui/motion`: `easing={scrollEasing.ease}`.
+Кривые импортируются из лёгкого `@delba/frontend/motion`: `easing={scrollEasing.ease}`.
 Автодополнение показывает `linear`, `ease`, `easeIn`, `easeOut`, `easeInOut`,
 `easeOutExpo` с описаниями. Формулы принадлежат киту; собственная функция остаётся
 доступна для особого случая. Те же пресеты принимает `scrollTo`.
@@ -553,7 +553,7 @@ Fallback vw-длины записываются эквивалентным calc:
 В `core/base/motion-defaults.ts` находятся единые умолчания всех семейств движения;
 `motion.defaults` их уточняет. Генератор выпускает CSS tokens и нормализованный runtime config.
 `readMotionDefaultMs` и `useMotionTime` согласуют JS clocks с тем же semantic token в CSS.
-`motionEasing` (`@delba/ui/motion`) задаёт JS и CSS кривую одним пресетом; `frameResponse`
+`motionEasing` (`@delba/frontend/motion`) задаёт JS и CSS кривую одним пресетом; `frameResponse`
 объединяет лишь общий расчёт frame-independent damping scroll/parallax/perspective.
 
 Смена содержимого использует тот же объектный договор:
@@ -648,13 +648,13 @@ Observer отслеживает добавление/удаление детей
 Ключи: `fade`, `up` (снизу), `down` (сверху), `left` / `right` (слева / справа), `scale` (из 0.96), `expandX` (раскрытие слева направо), `blur`; все — с fade. Для линии задайте `effect: 'expandX', fade: false`: наблюдатель видит ненулевую исходную ширину, обрезка и отдельный обработчик скролла не нужны.
 Опции (`RevealOptions`): `stagger` (нет — ход у самого узла), `delay` (`0`), `duration`
 (токен `--t-m-reveal-duration`, кривая `--t-t-f-cubic-bezier`), `distance` (число rpx, процент собственного размера
-или имя из `ui.config.motion.distance`; по умолчанию `32`), `once` (`true`; `false` —
+или имя из `delbaFrontend.motion.distance`; по умолчанию `32`), `once` (`true`; `false` —
 прячет снова, когда элемент уходит вниз), `threshold` и `rootMargin` из `motion.inView`
 (стартовые значения `0` и `'0px'`). Margin принимает объект с четырьмя сторонами или legacy string.
 `fade` (`true`; `false` — без прозрачности: узел виден с первого кадра и только доезжает).
 Внутренний `start` получает значение из публичного `when`; отдельного переключателя старта нет.
 
-`stagger`, `delay`, `duration` принимают имя из `ui.config.motion.timing` либо число секунд.
+`stagger`, `delay`, `duration` принимают имя из `delbaFrontend.motion.timing` либо число секунд.
 Ключи задаёт конфиг, `UiMotionTiming.names` выводится через `keyof` (см. README); фиксированного
 списка в ядре нет. Генератор выпускает `_motion.scss`, runtime использует CSS-переменные.
 Именованный каскад вычисляет `calc(delay + порядок × stagger)`, поэтому ручное умножение не нужно.
@@ -675,7 +675,7 @@ layout/paint. Запись `in` не откладывается; очередь 
 после чего пишутся состояния и подключаются observers. Отпущенные до доставки цели
 исключаются. При отсутствии Document.getAnimations остаётся проверка отдельной цели.
 
-`motion.visibility.rootMargin` в `ui.config.ts` задаёт зону подготовки непрерывных
+`delbaFrontend.motion.visibility.rootMargin` в `delba.config.ts` задаёт зону подготовки непрерывных
 idle/parallax/perspective-анимаций (по умолчанию `100px`). Генератор печатает
 `--t-m-visibility-root-margin`; наблюдатели читают его у своего узла при подключении.
 Новая запись именует top/right/bottom/left в `px`/`%`; legacy string поддерживается.
@@ -781,7 +781,7 @@ Object ref читается после commit, поэтому первый mount
 
 ## SCSS
 
-`useAnimationVisibility(enabled?)` из `@delba/ui` возвращает стабильный DOM callback-ref
+`useAnimationVisibility(enabled?)` из `@delba/frontend` возвращает стабильный DOM callback-ref
 для HTMLElement/SVGElement. Записывает `--idle-animation-state: running|paused` при входе
 в экран и изменении видимости документа; CSS подключает его через `animation-play-state`.
 Смещение наблюдения — 100 px, чтобы движение возобновлялось перед входом в кадр.
@@ -815,7 +815,7 @@ spinbutton, внешний ref указывает на стабильный ко
 специфичностью. Добавил в код `var(--новый-токен)` — добавь его и сюда, иначе у потребителя молча
 пропадёт цвет или отступ. Проверка — `tools/check-tokens.mjs`.
 
-`useUrl()` из @delba/ui — реактивный адаптер Next App Router на usePathname. Он возвращает
+`useUrl()` из @delba/frontend — реактивный адаптер Next App Router на usePathname. Он возвращает
 API createUrl текущего маршрута и сохраняет SSR; потребителям не нужен локальный re-export.
 
 `Box scroll="y"` (также `"x"` / `"both"`) задаёт нативную область прокрутки со скроллбаром кита.
@@ -852,7 +852,7 @@ keyboard, nested ancestors и подтверждение controlled open; InputC
 
 ### Сообщения интерфейса
 
-ui.config.messages задаёт частичные разделы validation, input, calendar, textarea,
+delbaFrontend.messages задаёт частичные разделы validation, input, calendar, textarea,
 select, richTextarea, video и carousel. Полный typed-словарь разрешается один раз
 через resolveUiMessages и одинаков для SSR и клиента. Секции и ключи проверяются
 по DEFAULT_UI_MESSAGES, без параллельного списка допустимых секций в генераторе.
@@ -882,8 +882,8 @@ node_modules, generated, dist/build/coverage и скрытые каталоги 
 
 ### Публичный skin-контракт
 
-`@delba/ui/skin` экспортирует `resolveSkin`, `skinPad`, `skinRadius` и функции
-классов; `@delba/ui/skin/runtime` — `defineSkin` и `useSkin`. Это механика, а
+`@delba/frontend/skin` экспортирует `resolveSkin`, `skinPad`, `skinRadius` и функции
+классов; `@delba/frontend/skin/runtime` — `defineSkin` и `useSkin`. Это механика, а
 цветовые оси, размеры и пресеты остаются словарями приложения. `useSkin`
 возвращает оси, класс, ref и геометрию: явные props выигрывают у пресета,
 пресет — у defaults. У конфигурации без scales нет скрытых шкал по умолчанию;
@@ -897,12 +897,13 @@ responsive-кортежем `[desktop, mobile, tablet]` с одинаковым 
 пропускает конкретную полосу. `ref` передаётся атому без внутреннего
 переписывания callback: React 19 cleanup принадлежит вызывающему.
 
-Sass-движок экспортируется через `@delba/ui/skin/effects` с переменными
+Sass-движок экспортируется через `@delba/frontend/skin/effects` с переменными
 `$fills`, `$lines`, `$texts`, `$icon-colors`, `$shadows` (`!default`).
 Проект подставляет собственные карты через `@forward ... with (...)`;
 библиотека не импортирует проектный `_axes-tokens.scss` и не задаёт цвета
-за потребителя. Генератор UI-пакета должен получить `seeds.p` для парных
-паддингов, вычисляемых в runtime helpers и отсутствующих литералом в JSX.
+за потребителя. Словарь `delbaFrontend.theme.padding` содержит также парные
+паддинги, вычисляемые в runtime helpers и отсутствующие литералом в JSX.
+CLI передаёт значения словаря генератору утилит напрямую.
 
 Проверки контракта: `tests/Skin/unit/index.test.ts`,
 `tests/Skin/unit/runtime.test.ts`,

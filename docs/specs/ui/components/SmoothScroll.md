@@ -33,7 +33,7 @@ hash новой страницы проходит через общий меха
 
 ```tsx
 'use client';
-import { SmoothScroll, useSmoothScroll } from '@delba/ui';
+import { SmoothScroll, useSmoothScroll } from '@delba/frontend';
 
 function GoTop() {
   const { scrollTo } = useSmoothScroll();

@@ -182,7 +182,7 @@ required/aria-семантику.
 поле может переопределить сообщение. Механизм не хранит копию текста required
 в каждом режиме. Переводы предусмотрены как возможность будущего расширения,
 но выбор языка, locale provider и загрузка переводов сейчас не внедряются.
-Настройка — `ui.config.messages.validation/input/calendar`, с частичным
+Настройка — `delbaFrontend.messages.validation/input/calendar`, с частичным
 переопределением и проверкой структуры при генерации. Проп emptyMessage сохраняет
 приоритет над общим required. Подробности — [development](../../../development.md).
 
@@ -258,7 +258,7 @@ useSwapTransition: второй движок не создаётся. Прави
 ```tsx
 'use client';
 import { useState } from 'react';
-import { Input } from '@delba/ui';
+import { Input } from '@delba/frontend';
 
 export function NameField() {
   const [name, setName] = useState('');
