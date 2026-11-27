@@ -34,10 +34,10 @@ the supplied class. This internal detail does not add a root package export.
 explicit feed anchor centers only its own viewport, not an ancestor page.
 
 
-The `ui.collapse.use` public door now has a browser consumer fixture exercising its shared trigger, controlled state and imperative show/hide commands. Source coverage is in `tests/Collapse/e2e/Collapse.spec.ts`; execution remains unverified.
+The `ui.collapse.use` public door now has a browser consumer fixture exercising its shared trigger, controlled state and imperative show/hide commands. Source coverage is in `tests/Collapse/e2e/Collapse.spec.ts`; the complete scenario passed on 27.11.2026, with 43 affected frame/collapse/modal/SSR cases also passing.
 
 
-Feed follow and history-anchor browser coverage is authored in `tests/Scroll/e2e/FeedScroll.spec.ts` against the real `ui.scroll.feed.use` hook and Flex scroll surface. The fixture exercises bottom-follow, reader-gesture release, append without forced scroll, latest, and prepend anchor restoration. Browser execution remains unverified.
+Feed follow and history-anchor browser coverage is authored in `tests/Scroll/e2e/FeedScroll.spec.ts` against the real `ui.scroll.feed.use` hook and Flex scroll surface. The fixture exercises bottom-follow, reader-gesture release, append without forced scroll, latest, and prepend anchor restoration. Browser the complete scenario passed on 27.11.2026, with 43 affected frame/collapse/modal/SSR cases also passing.
 
 ## RPX и feed surface
 

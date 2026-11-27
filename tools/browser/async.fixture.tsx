@@ -28,7 +28,7 @@ export function AsyncFixture() {
           loading: <div data-testid="async-loading">Loading source</div>,
           empty: <div data-testid="async-empty">No results</div>,
           error: (error, refetch) => (
-            <div role="alert">
+            <div>
               <span>{(error as { message?: string }).message}</span>
               <Button onClick={() => refetch?.()}>Retry source</Button>
             </div>

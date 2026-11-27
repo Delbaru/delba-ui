@@ -778,3 +778,17 @@ Exact browser projection paths must follow reviewed owner path casing. The struc
 An illustrative wildcard path inside a block comment can contain the comment terminator and prevent the entire public checker package from loading. Use prose for such paths. Reproduce with `node --check tools/check/eslint/project-checks.mjs` and import both public entries from the consumer and library roots; keep architecture assertions enabled.
 
 Keep the ESLint adapter and the TypeScript AST checker on the same composition implementation. Complex local map/flatMap and named render helpers are review warnings, not a ban on ordinary slots or callbacks. Use the public `@delba/eslint` entry with the workspace package present. The standalone Node test command and library gate discover the same root and tools tests; browser specs and type fixtures stay with their own runners. Reproduce with the library gate and the composition/discovery regression sources in `tools/check/tests` after dependency resolution.
+
+### Browser fixture preserves mechanism ownership and real geometry
+
+Async already owns its error alert; a fixture adding another role=alert makes
+strict locators ambiguous. Remove the duplicate role, retaining the mechanism's
+accessible error. Styled native choices are activated via their visible label
+and verified with toBeChecked; Select follows its actual button/option roles.
+For feed wheel tests, derive the delta from measured scrollTop and assert the
+intended endpoint before testing reader-position preservation.
+Reproduce: Async.spec.ts, Form.spec.ts and FeedScroll.spec.ts in the browser suite.
+On 27.11.2026 the initial run passed 243/248; all five failures passed receipt-checked
+retries after these fixture corrections. 43 affected frame/collapse/modal/SSR
+cases also passed. The initial failed aggregate report is retained; it is not
+rewritten into a successful full run.

@@ -9,9 +9,10 @@ test('feed follows growth until a reader gesture releases following', async ({ p
   await expect.poll(scrollTop).toBeGreaterThan(0);
   await expect(bottom).toHaveText('false');
 
+  const followedPosition = await scrollTop();
   await viewport.hover();
-  await page.mouse.wheel(0, -1000);
-  await expect.poll(scrollTop).toBeLessThan(100);
+  await page.mouse.wheel(0, -(followedPosition + 100));
+  await expect.poll(scrollTop).toBe(0);
   await expect(bottom).toHaveText('true');
   const readerPosition = await scrollTop();
 

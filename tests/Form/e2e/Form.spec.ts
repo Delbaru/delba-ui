@@ -128,9 +128,10 @@ test('persistent subscription uses the latest committed initial values', async (
 test('named choice and file primitives bind the nearest form and reset', async ({ page }) => {
   await page.goto('/');
   const checkbox = page.getByRole('checkbox', { name: 'Named checkbox' });
-  await checkbox.check();
+  await checkbox.locator('xpath=ancestor::label').click();
+  await expect(checkbox).toBeChecked();
   await page.getByLabel('Named category').click();
-  await page.getByText('Alpha', { exact: true }).last().click();
+  await page.getByRole('option', { name: 'Alpha', exact: true }).click();
   await page.getByLabel('Named files').setInputFiles({
     name: 'named.txt', mimeType: 'text/plain', buffer: Buffer.from('file'),
   });
@@ -292,13 +293,19 @@ test('onChange receives a detached snapshot for local edits only', async ({ page
 
 test('optional named primitives bind to the nearest form and reset with the owner', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('checkbox', { name: 'Optional enabled' }).check();
-  await page.getByRole('checkbox', { name: 'Notifications' }).check();
-  await page.getByRole('radio', { name: 'SMS' }).check();
+  const enabled = page.getByRole('checkbox', { name: 'Optional enabled' });
+  const notifications = page.getByRole('checkbox', { name: 'Notifications' });
+  const sms = page.getByRole('radio', { name: 'SMS' });
+  await enabled.locator('xpath=ancestor::label').click();
+  await expect(enabled).toBeChecked();
+  await notifications.locator('xpath=ancestor::label').click();
+  await expect(notifications).toBeChecked();
+  await sms.locator('xpath=ancestor::label').click();
+  await expect(sms).toBeChecked();
   await page.getByRole('button', { name: 'High' }).click();
   await page.getByRole('textbox', { name: 'Optional text' }).fill('text value');
   await page.getByRole('textbox', { name: 'Optional note' }).fill('note value');
-  await page.getByRole('combobox', { name: 'Optional tags' }).click();
+  await page.getByRole('button', { name: 'Optional tags', exact: true }).click();
   await page.getByRole('option', { name: 'Beta' }).click();
 
   const values = () => page.getByTestId('named-values').textContent().then(text => JSON.parse(text ?? '{}'));
