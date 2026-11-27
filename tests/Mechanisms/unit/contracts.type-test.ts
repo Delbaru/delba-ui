@@ -6,6 +6,7 @@ import type {
   CollectionDefinition,
   CollectionOptions,
   FormOptions,
+  DraftConflicts,
   PopupOptions,
   ScrollOptions,
   ScrollbarOptions,
@@ -59,3 +60,10 @@ export type MechanismHookContracts = [
 ];
 
 export type ScrollbarContract = ScrollbarOptions;
+
+export const fieldConflicts: DraftConflicts<{ title: string; count: number }> = {
+  title: { previous: 'old', incoming: 'new' },
+  count: { previous: 1, incoming: 2 },
+};
+// @ts-expect-error A numeric field cannot receive a string conflict value.
+export const invalidConflict: DraftConflicts<{ count: number }> = { count: { previous: 1, incoming: '2' } };

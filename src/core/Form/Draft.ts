@@ -39,10 +39,16 @@ export function removeSubmitted(current: readonly unknown[], submitted: readonly
 
 export type FieldEquality<T extends object> = (field: FieldName<T>, left: T[FieldName<T>], right: T[FieldName<T>]) => boolean;
 
+/** Server changes that could not replace a locally edited field. */
+export type DraftConflicts<T extends object> = Partial<{
+  [K in FieldName<T>]: { previous: T[K]; incoming: T[K] };
+}>;
+
 export type DraftSnapshot<T extends object> = {
   values: T;
   baseline: T;
   revisions: Readonly<Record<string, number | undefined>>;
+  conflicts?: DraftConflicts<T>;
   /** In-memory identity of each array occurrence; never persisted or exposed as a field. */
   occurrences?: Readonly<Record<string, readonly symbol[] | undefined>>;
 };
@@ -58,7 +64,11 @@ export function createDraft<T extends object>(initial: T): DraftSnapshot<T> {
 export function setField<T extends object, K extends FieldName<T>>(
   draft: DraftSnapshot<T>, name: K, value: T[K], changedExternally = false,
 ): DraftSnapshot<T> {
-  if (!changedExternally && sameValue(draft.values[name], value)) return draft;
+  const conflicts = { ...draft.conflicts };
+  delete conflicts[name];
+  if (!changedExternally && sameValue(draft.values[name], value)) {
+    return draft.conflicts?.[name] ? { ...draft, conflicts } : draft;
+  }
   const before = draft.values[name];
   const previous = Array.isArray(before) ? before.map((item, index) => ({
     item, token: draft.occurrences?.[name]?.[index] ?? Symbol(),
@@ -69,6 +79,7 @@ export function setField<T extends object, K extends FieldName<T>>(
   }) : undefined;
   return {
     ...draft,
+    conflicts,
     occurrences: { ...draft.occurrences, [name]: occurrences },
     values: { ...draft.values, [name]: snapshotValue(value) },
     revisions: { ...draft.revisions, [name]: (draft.revisions[name] ?? 0) + 1 },
@@ -80,12 +91,16 @@ export function receiveDraft<T extends object>(draft: DraftSnapshot<T>, initial:
   equal: FieldEquality<T> = (_field, left, right) => sameValue(left, right),
 ): DraftSnapshot<T> {
   let next = draft;
+  const conflicts: DraftConflicts<T> = { ...draft.conflicts };
   for (const name of Object.keys(initial) as FieldName<T>[]) {
     if (equal(name, draft.values[name], draft.baseline[name]) || equal(name, draft.values[name], initial[name])) {
       next = setField(next, name, initial[name]);
+      delete conflicts[name];
+    } else if (!equal(name, draft.baseline[name], initial[name])) {
+      conflicts[name] = { previous: snapshotValue(draft.baseline[name]), incoming: snapshotValue(initial[name]) };
     }
   }
-  return { ...next, baseline: snapshotValue(initial) };
+  return { ...next, baseline: snapshotValue(initial), conflicts };
 }
 
 /** Acknowledge the submitted version, not a later edit (including change-away-and-back). */

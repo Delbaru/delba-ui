@@ -43,6 +43,14 @@ A consumer may temporarily supply `draft.storage` for a pre-existing shared draf
 
 For editing records, `refresh` supplies the last confirmed values and preserves dirty fields. `equal` may express domain normalization for dirty/refresh comparisons (e.g. decimal spelling); revision-based acknowledgement still distinguishes edits made after submit. `changes` remains exact field differences for patch construction. The form controller does not decide field permissions.
 
+`form.conflicts[name]` exposes `{ previous, incoming }` when refresh changes a
+server field that also has a divergent local edit. Local values remain intact;
+unchanged repeated refresh retains the conflict. The product owner renders its
+conflict notice and may use `form.set(name, incoming)` to accept the server value
+or `form.set(name, form.values[name])` to explicitly keep the local value.
+Editing that field, reset/clear, acknowledgement of its unchanged submitted
+revision, or refresh converging with the local value clears its conflict.
+
 ### Shared admission (stabilization)
 
 Draft forms with the same scoped storage key share one in-process admission ticket through useActionInvocation, including independently mounted surfaces. The ticket lives until actual settlement, not until a component unmounts. Local owner changes do not release that shared ticket. This is not a durable server idempotency receipt and does not coordinate browser tabs. Independent forms without a shared key retain local admission. Browser integration/StrictMode acceptance is still required.

@@ -143,6 +143,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
     if (!incoming || sameValue(entry.lastReceived, incoming)) return;
     entry.lastReceived = snapshotValue(incoming);
     entry.draft = receiveDraft(entry.draft, incoming, options.equal);
+    entry.error = undefined;
     notify();
   }, [entry, options.refresh, options.equal]);
 
@@ -259,7 +260,7 @@ export function useForm<T extends object, R>(options: FormOptions<T, R>): FormCo
   );
 
   return {
-    values, changes, dirty, valid, errors, disabled, ready: entry.ready,
+    values, changes, conflicts: entry.draft.conflicts ?? {}, dirty, valid, errors, disabled, ready: entry.ready,
     error: entry.error, persisted: entry.persisted,
     unsaved,
     loading: invocation.pending,

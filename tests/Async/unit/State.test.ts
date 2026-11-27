@@ -47,7 +47,21 @@ test('falsey non-null errors are completed failures rather than perpetual loadin
     for (const error of ['', 0, false]) {
         const state = asyncSourceState({ error });
         assert.equal(state.error, error);
+        assert.equal(state.hasError, true);
         assert.equal(state.pending, false);
         assert.equal(state.empty, true);
     }
+});
+
+test('only null and undefined mean no error; object errors preserve identity', () => {
+    for (const error of [null, undefined]) {
+        const state = asyncSourceState({ data: ['current'], error });
+        assert.equal(state.hasError, false);
+        assert.equal(state.error, error);
+    }
+    const error = { status: 0, detail: 'offline' };
+    const state = asyncSourceState({ data: ['current'], error });
+    assert.equal(state.error, error);
+    assert.equal(state.hasError, true);
+    assert.equal(state.keepCurrent, true);
 });

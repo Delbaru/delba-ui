@@ -345,3 +345,39 @@ test('standalone action controllers report failures and settle without success',
   await expect(page.getByTestId('action-provider-failures')).toHaveText('1');
   await expect(button).toBeEnabled();
 });
+
+test('confirmed refresh clears stale server validation and updates untouched fields', async ({ page }) => {
+  await page.goto('/');
+  const fixture = page.getByRole('region', { name: 'Server validation fixture' });
+  const submit = fixture.getByRole('button', { name: 'Submit server validation' });
+  await submit.click();
+  await expect(submit).toBeDisabled();
+  await fixture.getByRole('button', { name: 'Refresh confirmed email' }).click();
+  await expect(fixture.getByRole('textbox', { name: 'Server validation email' })).toHaveValue('confirmed@example.com');
+  await expect(fixture.getByTestId('server-validation-error')).toHaveText('');
+  await expect(submit).toBeEnabled();
+});
+
+test('refresh conflicts stay visible until the field owner resolves them', async ({ page }) => {
+  await page.goto('/');
+  const fixture = page.getByRole('region', { name: 'Edit form pilot' });
+  const title = fixture.getByRole('textbox', { name: 'Edit title' });
+  const conflict = fixture.getByTestId('edit-title-conflict');
+  await title.fill('Local title');
+  await fixture.getByRole('button', { name: 'Refresh edit values' }).click();
+  await expect(title).toHaveValue('Local title');
+  await expect(fixture.getByRole('textbox', { name: 'Edit note' })).toHaveValue('Remote note');
+  await expect(conflict).toHaveText('Remote title');
+  await fixture.getByRole('button', { name: 'Refresh edit values' }).click();
+  await expect(conflict).toHaveText('Remote title');
+  await fixture.getByRole('button', { name: 'Accept remote edit title' }).click();
+  await expect(title).toHaveValue('Remote title');
+  await expect(conflict).toBeEmpty();
+  await page.reload();
+  await title.fill('Kept title');
+  await fixture.getByRole('button', { name: 'Refresh edit values' }).click();
+  await expect(conflict).toHaveText('Remote title');
+  await fixture.getByRole('button', { name: 'Keep local edit title' }).click();
+  await expect(title).toHaveValue('Kept title');
+  await expect(conflict).toBeEmpty();
+});

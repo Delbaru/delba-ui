@@ -90,3 +90,22 @@ test('adding the same File twice consumes only the original occurrence', () => {
   assert.deepEqual(settled.values.files, [file]);
   assert.deepEqual(acknowledgeDraft(settled, submitted, initial, ['files']).values.files, [file]);
 });
+
+test('refresh exposes concurrent server changes without replacing dirty values', () => {
+  const local = setField(createDraft({ title: 'old', note: 'old note' }), 'title', 'local');
+  const refreshed = receiveDraft(local, { title: 'remote', note: 'new note' });
+  assert.deepEqual(refreshed.values, { title: 'local', note: 'new note' });
+  assert.deepEqual(refreshed.conflicts, { title: { previous: 'old', incoming: 'remote' } });
+  const repeated = receiveDraft(refreshed, { title: 'remote', note: 'new note' });
+  assert.deepEqual(repeated.conflicts, refreshed.conflicts);
+  assert.deepEqual(setField(repeated, 'title', 'local').conflicts, {});
+  assert.deepEqual(resetDraft(refreshed, refreshed.baseline).conflicts, {});
+  assert.deepEqual(receiveDraft(refreshed, { title: 'local', note: 'new note' }).conflicts, {});
+});
+
+test('unchanged server values do not conflict and acknowledgement resolves submitted fields', () => {
+  const local = setField(createDraft({ title: 'old' }), 'title', 'local');
+  assert.deepEqual(receiveDraft(local, { title: 'old' }).conflicts, {});
+  const refreshed = receiveDraft(local, { title: 'remote' });
+  assert.deepEqual(acknowledgeDraft(refreshed, refreshed, { title: 'saved' }).conflicts, {});
+});

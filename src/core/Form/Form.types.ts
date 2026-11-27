@@ -1,5 +1,5 @@
 import type { ActionInvocationController } from '../../hooks/useActionInvocation';
-import type { FieldName, FieldEquality } from './Draft';
+import type { FieldName, FieldEquality, DraftConflicts } from './Draft';
 
 export type FormErrors<T extends object> = Partial<Record<FieldName<T>, string>>;
 
@@ -58,6 +58,8 @@ export type ActionOptions =
 export interface FormController<T extends object> extends FormScope {
   values: T;
   changes: Partial<T>;
+  /** Refresh conflicts preserve local values and expose the incoming server values. */
+  conflicts: DraftConflicts<T>;
   dirty: boolean;
   valid: boolean;
   errors: FormErrors<T>;

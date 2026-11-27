@@ -4,9 +4,9 @@ import type { ReactNode } from 'react';
 import { asyncSourceState, type AsyncSource } from './State';
 import { useAsyncPresence } from './Presence';
 
-export interface AsyncOptions {
+export interface AsyncOptions<T = unknown> {
     preset: 'default';
-    from: AsyncSource<unknown>;
+    from: AsyncSource<T>;
     loading?: ReactNode;
     empty?: ReactNode;
     error?: ReactNode | ((error: unknown, retry?: () => unknown) => ReactNode);
@@ -16,7 +16,7 @@ export interface AsyncOptions {
 function useAsyncState<T>(from: AsyncSource<T>, timing: AsyncOptions['timing'], enabled: boolean) {
     const state = asyncSourceState(from);
     const phase = useAsyncPresence(state.pending, timing, enabled);
-    return { ...state, phase, error: from.error, retry: from.refetch };
+    return { ...state, phase, retry: from.refetch };
 }
 
 export function useAsync<T>(from: AsyncSource<T>, timing?: AsyncOptions['timing']) {
@@ -27,7 +27,7 @@ export function useAsync<T>(from: AsyncSource<T>, timing?: AsyncOptions['timing'
 export function useAsyncContent(options: AsyncOptions | undefined, children: ReactNode) {
     const state = useAsyncState(options?.from ?? { data: true }, options?.timing, Boolean(options));
     if (!options) return { children, busy: undefined };
-    const failure = state.error !== undefined && state.error !== null ? (
+    const failure = state.hasError ? (
         <span role="alert">{typeof options.error === 'function'
             ? options.error(state.error, state.retry) : options.error ?? 'Не удалось загрузить.'}</span>
     ) : null;

@@ -27,6 +27,6 @@ export function asyncSourceState<T>(from: AsyncSource<T>) {
     const networkFailure = Boolean(from.error !== undefined && from.error !== null &&
         typeof from.error === 'object' && 'status' in from.error && from.error.status === 0);
     const keepCurrent = networkFailure && data !== undefined;
-    return { data, pending, keepCurrent, empty: !pending && (from.empty ?? isAsyncEmpty(data)),
+    return { data, error: from.error, hasError, pending, keepCurrent, empty: !pending && (from.empty ?? isAsyncEmpty(data)),
         refreshing: Boolean(from.refreshing ?? from.isFetching) && data !== undefined };
 }

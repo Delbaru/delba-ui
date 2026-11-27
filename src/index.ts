@@ -129,7 +129,7 @@ export {
 
 export { ui } from './ui';
 export { useFormField } from './core/Form';
-export type { DraftStorage, FormOptions, FormController, FormScope, FormErrors, ActionOptions } from './core/Form';
+export type { DraftStorage, DraftConflicts, FormOptions, FormController, FormScope, FormErrors, ActionOptions } from './core/Form';
 
 export type { CollectionDefinition, CollectionController, CollectionScope, CollectionItem, CollectionOptions } from './core/Collection/Collection';
 

@@ -13,6 +13,7 @@ current data take precedence over the loading phase.
 ## Завершённая семантика ошибки
 
 - Ошибкой считается любое значение, отличное от `null` и `undefined`; `''`, `0` и `false` не должны маскироваться под бесконечную загрузку.
+- `ui.async.use` и чистый source-state возвращают исходный `error` без преобразования и явный `hasError`; адаптеры используют этот флаг вместо truthiness. `AsyncOptions<T = unknown>` сохраняет тип данных в `from: AsyncSource<T>`.
 - `currentData` остаётся единственным источником текущего query result; fallback на устаревший `data` не выполняется.
 - Background network failure может оставить текущие данные на экране; остальные ошибки заменяют content error-state.
 

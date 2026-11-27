@@ -105,6 +105,12 @@ function EditForm() {
       <output data-testid="native-edit-submits">{nativeSubmits}</output>
       <Button onClick={() => setBlockSubmit(value => !value)}>Toggle edit submit guard</Button>
       <output data-testid="edit-dirty">{String(form.dirty)}</output>
+      <output data-testid="edit-title-conflict">{form.conflicts.title?.incoming ?? ''}</output>
+      <Button onClick={() => form.receive({ title: 'Remote title', note: 'Remote note' })}>Refresh edit values</Button>
+      <Button onClick={() => form.set('title', form.values.title)}>Keep local edit title</Button>
+      <Button onClick={() => {
+        if (form.conflicts.title) form.set('title', form.conflicts.title.incoming);
+      }}>Accept remote edit title</Button>
       <Button onClick={() => finish.current?.()}>Confirm edit</Button>
       <Button onClick={form.reset}>Reset edit</Button>
       <Button onClick={form.clear}>Clear edit</Button>
@@ -382,10 +388,12 @@ function ActionFailureFixture() {
 
 function ServerValidationFixture() {
   const [attempts, setAttempts] = useState(0);
+  const [refresh, setRefresh] = useState<{ email: string }>();
   const form = ui.form.use({
     scope: 'server-validation-fixture',
     preset: 'default',
     initial: { email: 'invalid' },
+    refresh,
     submit: async () => {
       setAttempts(value => value + 1);
       throw new Error('Server rejected the email');
@@ -401,6 +409,7 @@ function ServerValidationFixture() {
         <output data-testid="server-validation-error">{form.errors.email ?? ''}</output>
       </Flex>
       <Button onClick={() => { void form.submit(); }}>Force direct submit</Button>
+      <Button onClick={() => setRefresh({ email: 'confirmed@example.com' })}>Refresh confirmed email</Button>
       <output data-testid="server-submit-attempts">{attempts}</output>
     </section>
   );

@@ -1597,3 +1597,20 @@ tools/browser/tests/regressions.spec.ts --grep "waits for visibility|timeline ke
 проверка исправления: browser regression PhoneField у края viewport в
 `tools/browser/tests/regressions.spec.ts`, затем полный browser suite потребителя.
 
+## Async error и Form refresh: не терять наблюдаемое состояние
+
+Чистый Async source-state вычислял присутствие ошибки, но терял исходный `error`,
+хотя public fixture ожидал его. State теперь возвращает `error` и `hasError`;
+`null`/`undefined` означают отсутствие, а `false`/`0`/`''` остаются ошибками.
+Воспроизводимая проверка — `tests/Async/unit/State.test.ts`; generic options
+закреплены в `tests/Mechanisms/unit/contracts.type-test.ts`.
+
+Form refresh сохранял dirty поле, но скрывал конкурентное серверное изменение.
+Draft теперь сохраняет типизированные conflicts; повторный refresh их не стирает,
+явная правка/reset или подтверждение соответствующей revision разрешает конфликт.
+Автоматический confirmed refresh также очищает прежнюю серверную ошибку, как
+публичный `receive`. Сценарии: `tests/Form/unit/Draft.test.ts` и
+`confirmed refresh clears stale server validation` в `tests/Form/e2e/Form.spec.ts`.
+Эти проверки написаны, но их запуск отложен владельцем до общего финала;
+данная запись подтверждает source-причины и исправления, а не runtime PASS.
+
