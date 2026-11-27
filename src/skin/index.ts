@@ -2,7 +2,7 @@ import type { ResponsiveValue } from '../core/base/responsive';
 
 // Движок шкур компонентов проекта: `defineSkin` описывает оси, умолчания и пресеты, `resolveSkin`
 // собирает классы. Покой — глобальными классами осей (`sk_*`), состояния — `_states.scss`, который
-// генератор (`tools/cli.mjs`) пишет из тех же пресетов. Словари осей — данные проекта.
+// генератор (`tools/module.mjs`) пишет из тех же пресетов. Словари осей — данные проекта.
 // Файл без React и без SCSS: его импортирует и генератор в чистом Node.
 
 export type AxisDict = Record<string, readonly string[]>;

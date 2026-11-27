@@ -206,9 +206,9 @@ test('единый шаг принимает оформление JSX без и�
         const file = path.join(project, 'src', 'View.tsx');
         const before = '<Card role="group" id="card"><Text>\n  {label}\n</Text></Card>';
         fs.writeFileSync(file, before);
-        fs.writeFileSync(path.join(project, '.rules-baseline.json'), JSON.stringify({ 'jsx-format': {} }));
         const checkStep = projectSteps(project, {}).at(0);
         assert.equal((await checkStep?.run())?.ok, true);
+        assert.equal(fs.existsSync(path.join(project, '.rules-baseline.json')), false);
         assert.equal(fs.readFileSync(file, 'utf8'), before);
         const fixStep = projectSteps(project, {}, { fix: true }).at(0);
         assert.equal((await fixStep?.run())?.ok, true);

@@ -1,3 +1,5 @@
+import { isMotionTimingName as validMotionTimingName, motionTimingVariable } from './motion-timing';
+export { motionTimingVariable } from './motion-timing';
 import { MOTION_CONFIG } from '../motion-config';
 import { MOTION_TIMING_DEFAULTS, type RuntimeMotionConfig } from './motion-defaults';
 
@@ -16,12 +18,7 @@ export type MotionTime = MotionTimingName | number;
 
 /** Проверка формы имени из JS; принадлежность шкале проверяют типы проекта. */
 export function isMotionTimingName(value: unknown): value is MotionTimingName {
-    return typeof value === 'string' && /^[a-z][A-Za-z0-9]*$/.test(value);
-}
-
-/** CSS-договор прежних длительностей: camelCase в API, kebab-case в CSS. */
-export function motionTimingVariable(name: string): string {
-    return `--t-d-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+    return validMotionTimingName(value);
 }
 
 /** Время в секундах либо имя шкалы → CSS, без чтения DOM (подходит для SSR). */

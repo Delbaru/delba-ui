@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
-import { borderClass, fillClass, textClass } from '../src/skin/index';
+import { renderSkinAxes } from './skin-axes';
 import type { UiSkins } from './config';
 
 // Генератор шкур: словари осей → skin/_tokens.scss (карты для движка) и skin/_classes.scss (классы
@@ -13,6 +14,7 @@ const BANNER = '// Автогенерат шкур кита (tools/skin.ts) — 
 const EFFECTS = ['opacity', 'filter', 'cursor', 'pointerEvents', 'borderColor'];
 const STATES_MODULE = '@delba/frontend/skin-states';
 const SKIP_SKIN_DIRS = new Set(['node_modules', 'tests', '__tests__', 'generated', 'dist', 'build', 'coverage']);
+let skinSession = 0;
 
 /** One skin definition per named owner, including nested visual components. */
 export function componentSkinSources(directory: string): Array<{ folder: string; file: string }> {
@@ -30,8 +32,6 @@ export function componentSkinSources(directory: string): Array<{ folder: string;
 
 type Props = Record<string, unknown>;
 
-const map = (name: string, entries: [string, string][]) =>
-  `$${name}: (\n${entries.map(([k, v]) => `  '${k}': ${v},\n`).join('')});\n`;
 const sassMap = (props: Props) =>
   `(${Object.entries(props)
     .map(([k, v]) => `${k}: ${String(v)}`)
@@ -73,10 +73,21 @@ export async function generateComponentSkin(
   effects: ReadonlySet<string>,
 ): Promise<boolean> {
   const source = `${path.basename(folder)}/${skinFile}`;
-  const mod = (await import(pathToFileURL(path.join(folder, skinFile)).href)) as Record<
-    string,
-    unknown
-  >;
+  // Skin definitions and their TS imports must be fresh on each watch regeneration.
+  // This source session owns only this generator's definition, never project configuration.
+  const { register } = await import('tsx/cjs/api');
+  const namespace = `frontend-skin-${process.pid}-${++skinSession}`;
+  const session = register({ namespace });
+  let mod: Record<string, unknown>;
+  try {
+    mod = session.require(path.join(folder, skinFile), import.meta.url) as Record<string, unknown>;
+  } finally {
+    session.unregister();
+    const cache = createRequire(import.meta.url).cache;
+    for (const key of Object.keys(cache)) {
+      if (key.endsWith(`?namespace=${namespace}`)) delete cache[key];
+    }
+  }
   const def = skinDefinition(mod, source);
   const output = path.join(folder, '_states.scss');
 
@@ -106,34 +117,9 @@ export async function generateSkins(root: string, skins: UiSkins): Promise<numbe
     changed++;
   };
 
-  const lines = Object.entries(skins.lines);
-  write(
-    path.join(SKIN, '_tokens.scss'),
-    BANNER +
-      [
-        map('fills', Object.entries(skins.fills)),
-        map(
-          'lines',
-          lines.map(([k, [w, c]]) => [k, `(${w}, ${c})`]),
-        ),
-        map('texts', Object.entries(skins.texts)),
-        ...Object.entries(skins.maps ?? {}).map(([name, values]) =>
-          map(name, Object.entries(values)),
-        ),
-      ].join('\n'),
-  );
-  write(
-    path.join(SKIN, '_classes.scss'),
-    BANNER +
-      [
-        ...Object.entries(skins.fills).map(([k, v]) => `.${fillClass(k)} { background: ${v}; }`),
-        ...lines.map(
-          ([k, [w, c]]) => `.${borderClass(k)} { border: calc(${w} * var(--rpx)) solid ${c}; }`,
-        ),
-        ...Object.entries(skins.texts).map(([k, v]) => `.${textClass(k)} { color: ${v}; }`),
-      ].join('\n') +
-      '\n',
-  );
+  const rendered = renderSkinAxes(skins);
+  write(path.join(SKIN, '_tokens.scss'), BANNER + rendered.tokens);
+  write(path.join(SKIN, '_classes.scss'), BANNER + rendered.classes);
 
   if (skins.dir === undefined) return changed;
 

@@ -3,8 +3,31 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import { RULES, countViolations } from '../check-rules.mjs';
+
+test('CLI enforces current rules and never creates waiver files', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frontend-current-rules-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const file = path.join(root, 'Controls.tsx');
+  const script = fileURLToPath(new URL('../check-rules.mjs', import.meta.url));
+  const invoke = (...args: string[]) => spawnSync(process.execPath, [script, ...args], {
+    cwd: root, encoding: 'utf8',
+  });
+  fs.writeFileSync(file, 'export const Controls = () => <button>Save</button>;');
+  const failure = invoke('.');
+  assert.equal(failure.status, 1);
+  assert.match(failure.stderr, /raw-button.*Controls\.tsx/);
+  assert.deepEqual(fs.readdirSync(root), ['Controls.tsx']);
+  fs.writeFileSync(file, 'export const Controls = () => <Button>Save</Button>;');
+  assert.equal(invoke('.').status, 0);
+  assert.deepEqual(fs.readdirSync(root), ['Controls.tsx']);
+  assert.equal(invoke('--update', '.').status, 1);
+  assert.equal(invoke('--baseline', 'waivers.json', '.').status, 1);
+  assert.deepEqual(fs.readdirSync(root), ['Controls.tsx']);
+});
 
 test('the product rule gate retains behavioural controls without imposing visual structure', () => {
   assert.deepEqual(Object.keys(RULES).sort(), ['raw-anchor', 'raw-button', 'raw-input']);

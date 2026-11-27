@@ -69,13 +69,13 @@ src/hooks/           общие хуки: useMediaQuery, useOutsideDismiss, useP
 src/skin/            движок шкур (`@delba/frontend/skin`): defineSkin, resolveSkin, states(); словари — у проекта
 assets/icons/ui/     иконки компонентов — импортом (`assetUrl`), проекту не копируются
 theme/               tokens.default.scss — стартовая тема (нулевая специфичность, перебивается проектом)
-tools/               cli.mjs (bin `delba-frontend`: build | watch | check), next.mjs (`@delba/frontend/next`),
+tools/               module.mjs (Toolkit declaration and owner actions), next.mjs (`@delba/frontend/next`),
                      config.ts (`@delba/frontend/config`), sass/ (SCSS-входы `@delba/frontend/*`), skin.ts,
                      utilities/ (генератор), check-boundary|tokens|rules|migration.mjs
 ```
 
 **Кит — пакет воркспейса проекта** (`@delba/frontend`), своей сборки у него нет. Проверки самого кита —
-`pnpm --filter @delba/frontend check`; полный запуск вместе с договором проекта — `delba-frontend test`
+`pnpm --filter @delba/frontend check`; полный запуск вместе с договором проекта — `delba frontend test`
 из папки приложения. Отдельные `typecheck | test | boundary` остаются для диагностики: [`README.md`](../README.md) и
 `прочитать .agents/skills/ui-verify/SKILL.md`. Новый публичный вход — строка в `exports` и `src/index.ts`; импорт снаружи в обход
 них — не вход, а ошибка.

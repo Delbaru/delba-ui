@@ -186,27 +186,38 @@ export function createUtilities(root: string, config: UtilitiesConfig) {
   }
 
   /** Пересборка на правку исходников; `onOwnChange` — правка самого генератора. */
-  function watch(onOwnChange: () => void): void {
+  function watch(onOwnChange: () => void): () => void {
+    const disposers: (() => void)[] = [];
     // Config values are held by the worker, so edits (including inherited configs) restart it.
-    watchPathAliases(configFiles, onOwnChange);
+    disposers.push(watchPathAliases(configFiles, onOwnChange));
     for (const dir of OWN_SOURCES) {
-      fs.watch(dir, { recursive: true }, (_event, file) => {
+      const watcher = fs.watch(dir, { recursive: true }, (_event, file) => {
         if (file && /\.(ts|mjs)$/.test(String(file))) onOwnChange();
       });
+      disposers.push(() => watcher.close());
     }
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     for (const dir of config.scan) {
       const full = path.resolve(root, dir);
-      fs.watch(full, { recursive: true }, (_event, file) => {
+      if (!fs.existsSync(full)) continue;
+      const watcher = fs.watch(full, { recursive: true }, (_event, file) => {
         if (!file) return;
         const changed = path.join(full, String(file));
         if (!/\.tsx?$/.test(changed) || SKIP.test(path.relative(full, changed)) || isOwn(changed)) return;
         clearTimeout(timer);
         timer = setTimeout(build, 200);
       });
+      disposers.push(() => watcher.close());
     }
-    build();
+    if (!build()) {
+      disposers.forEach(close => close());
+      throw new Error('Frontend utility generation failed');
+    }
+    return () => {
+      clearTimeout(timer);
+      disposers.forEach(close => close());
+    };
   }
 
   return { build, watch };

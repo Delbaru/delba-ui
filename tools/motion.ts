@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { isMotionTimingName, motionTimingVariable } from '../src/core/base/timing';
+import { isMotionTimingName, motionTimingVariable } from '../src/core/base/motion-timing';
 import {
     isMotionDistanceName,
     motionDistanceVariable,

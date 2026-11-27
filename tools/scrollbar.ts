@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { scrollbarProps, type ScrollbarOptions } from '../src/components/ScrollArea/scrollbar';
-import { SCROLLBAR_DEFAULTS } from '../src/core/base/scrollbar';
+import type { ScrollbarOptions } from '../src/components/ScrollArea/scrollbar';
+import { SCROLLBAR_DEFAULTS, scrollbarStyle } from '../src/core/base/scrollbar';
 
 const OUTPUT = fileURLToPath(new URL('../src/core/scrollbar-config.ts', import.meta.url));
 
@@ -33,7 +33,7 @@ export function scrollbarTs(options?: ScrollbarOptions): string {
 
 export function scrollbarCss(options?: ScrollbarOptions): string {
     validateScrollbar(options);
-    const variables = scrollbarProps({ ...SCROLLBAR_DEFAULTS, ...options }).style;
+    const variables = scrollbarStyle({ ...SCROLLBAR_DEFAULTS, ...options });
     return `// AUTO-GENERATED: tools/scrollbar.ts. Do not edit.\n:root {\n${Object.entries(variables).filter(([key]) => key.startsWith('--')).map(([key, value]) => `  ${key}: ${value};`).join('\n')}\n}\n`;
 }
 

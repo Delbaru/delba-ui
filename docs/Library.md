@@ -29,4 +29,4 @@
 Искать по граблям: `grep -rn '<фраза>' docs/lessons/` — заголовки записей это правила, а не даты.
 Читать файл уроков целиком не нужно.
 
-[Executable configuration and config-loader](configuration.md) describes the Node-only TS loader and project/application path contract.
+[Frontend module configuration](configuration.md) describes explicit settings, Toolkit actions and the native Next ENV boundary.

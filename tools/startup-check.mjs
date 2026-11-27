@@ -10,7 +10,7 @@ export function assertRenderedFont(selector, family, actual) {
 /** Read-only production audit. The caller starts the correct app before supplying its URL. */
 export async function checkStartup(argv) {
   const value = name => argv[argv.indexOf(name) + 1];
-  if (!argv.includes('--url')) throw new Error('Usage: delba-frontend startup --url <running production URL> [--font "selector=family"] [--max-cls 0.001]');
+  if (!argv.includes('--url')) throw new Error('Usage: delba frontend startup --url <running production URL> [--font "selector=family"] [--max-cls 0.001]');
   const url = new URL(value('--url'));
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error('Use an HTTP(S) URL without credentials');
   const maxCls = argv.includes('--max-cls') ? Number(value('--max-cls')) : 0.001;

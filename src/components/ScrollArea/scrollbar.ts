@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { scrollbarStyle } from '../../core/base/scrollbar';
 import { SCROLLBAR_CONFIG } from '../../core/scrollbar-config';
 
 export interface ScrollbarOptions {
@@ -37,18 +38,6 @@ export function scrollbarProps(options: ScrollbarOptions = {}): { className: str
     };
     return {
         className: 'ui-scrollbar',
-        style: {
-            '--ui-scrollbar-width': `calc(${settings.width} * var(--rpx))`,
-            '--ui-scrollbar-color': settings.color,
-            '--ui-scrollbar-track': settings.trackColor,
-            '--ui-scrollbar-inset': `calc(${settings.inset} * var(--rpx))`,
-            '--ui-scrollbar-native-width': settings.width === 0 ? 'none' : settings.width <= 8 ? 'thin' : 'auto',
-            '--ui-scrollbar-auto-hide': settings.autoHide ? 1 : 0,
-            '--ui-scrollbar-rest-opacity': settings.autoHide ? 0 : 1,
-            '--ui-scrollbar-hide-delay': `${settings.hideDelay}s`,
-            '--ui-scrollbar-show-duration': `${settings.showDuration}s`,
-            '--ui-scrollbar-fade-duration': `${settings.fadeDuration}s`,
-            scrollbarGutter: settings.gutter,
-        } as CSSProperties,
+        style: scrollbarStyle(settings),
     };
 }

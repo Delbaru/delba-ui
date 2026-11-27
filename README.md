@@ -29,11 +29,12 @@
 | `@delba/frontend/phone-field` | отдельный вход международного телефона для загрузки по необходимости; основной вход сохранён | `import('@delba/frontend/phone-field').then(({ PhoneField }) => PhoneField)` |
 | `@delba/frontend/skin` | движок шкур для D-/Shared-компонентов | `import { defineSkin } from '@delba/frontend/skin'` |
 | `@delba/frontend/icons/*` | иконки кита (`assets/icons/ui/*`) | `import eye from '@delba/frontend/icons/eye/style-1/eye.svg'` → `assetUrl(eye)` |
-| `@delba/frontend/next` | плагин Next `withFrontend` и `FRONTEND_SASS` (типы — `tools/next.d.mts`) | `export default withFrontend(nextConfig)` |
+| `@delba/frontend/next` | плагин Next `withFrontend` и `FRONTEND_SASS` (типы — `tools/next.d.mts`) | `export default withFrontend(nextConfig, { settings: delbaFrontend })` |
 | `@delba/frontend/rich-text` | роли и санитайзер rich-text без React и SCSS — для node-скриптов и route handlers; роль-вариант проекта → классы `textVariantClasses` | `import { sanitizeRichTextHtml, textVariantClasses } from '@delba/frontend/rich-text'` |
 | `@delba/frontend/config` | тип `FrontendConfig` для секции `delbaFrontend` | `import type { FrontendConfig } from '@delba/frontend/config'` |
+| `@delba/frontend/module` | Toolkit declaration and explicit generation/check/Next owner API | `prepareFrontend({ root, settings })` |
+| `@delba/frontend/next-env` | Node-only native Next ENV boundary | `prepareNextEnvironment(env)` |
 | `@delba/frontend/url` | API маршрута без React и SCSS; браузерный глобальный сервис устанавливается приложением | `createUrl(pathname)`, `installBrowserUrl(window)` |
-| `delba-frontend` | CLI (bin пакета) | `delba-frontend build`, `watch`, `check`, `test` |
 
 SCSS-входы — под теми же именами, но их даёт `loadPaths` плагина (`FRONTEND_SASS` = `tools/sass`), а не `exports`:
 
@@ -65,13 +66,14 @@ packages:
 ```jsonc
 // site/package.json
 "dependencies": { "@delba/frontend": "workspace:*" /* + peer-зависимости кита, см. его package.json */ },
-"scripts": { "check": "delba-frontend build && tsc --noEmit && eslint . && delba-frontend check" }
+"scripts": { "check": "delba frontend build && tsc --noEmit && eslint . && delba frontend check" }
 ```
 
 ```js
 // next.config.mjs
 import { withFrontend } from '@delba/frontend/next';
-export default withFrontend(nextConfig);
+import { delbaFrontend } from './configs/delbaFrontend';
+export default withFrontend(nextConfig, { settings: delbaFrontend });
 ```
 
 Алиасов `@delba/frontend` в `tsconfig.json` не нужно: tsc, eslint-import-resolver и Turbopack находят пакет
@@ -89,16 +91,16 @@ export default withFrontend(nextConfig);
 watcher, который умирает вместе с dev. Проект со своим конфигом Next берёт `FRONTEND_SASS` из
 `@delba/frontend/next` и кладёт его в `sassOptions.loadPaths` сам.
 
-**CLI** использует секцию `delbaFrontend` из `delba.config.ts`. Корень приложения —
-папка этого файла; `--config path/to/delba.config.ts` выбирает его явно.
+**Toolkit CLI** загружает секцию `delbaFrontend` и передаёт библиотеке явные
+`root`, `settings` и выбранное `env`. Библиотека не ищет project config и ENV.
 Полный договор — [конфигурация](docs/configuration.md).
 
 ```bash
-delba-frontend build   # шкуры, утилиты, масштаб, время анимаций
-delba-frontend watch   # то же и следит; правка конфига или пресета — перезапуск
-delba-frontend check   # красные линии (--update опускает планку), договор темы, старые пути к киту
-delba-frontend test    # типы, архитектура, границы, unit-тесты и договор проекта
-delba-frontend test --suite all # дополнительно браузер/SSR
+delba frontend build   # шкуры, утилиты, масштаб, время анимаций
+delba frontend watch   # то же и следит; правка конфига или пресета — перезапуск
+delba frontend check   # правила, токены, импорты и анатомия UI потребителя
+delba frontend test    # типы, архитектура, границы и unit-тесты библиотеки
+delba frontend test --browser # дополнительно браузер/SSR
 ```
 
 Авторские настройки ([`FrontendConfig`](tools/config.ts)) содержат `theme.sources`,
@@ -126,7 +128,7 @@ export default { delbaFrontend };
 
 Имена и значения принадлежат проекту. Генератор пишет из `motion.timing` CSS-переменные
 в `src/core/_motion.scss`; файл не коммитится. Эти длительности повторно в теме не объявляют:
-`delba-frontend test` отклоняет дублирование. Имеющиеся CSS-роли кита (`fast`, `normal`, `slow`,
+`delba frontend test` отклоняет дублирование. Имеющиеся CSS-роли кита (`fast`, `normal`, `slow`,
 `verySlow`) нужно сохранить; рядом можно добавить свои имена.
 
 ```ts
@@ -227,7 +229,7 @@ Idle glow автоматически ставится на паузу вне э�
 `Text.fontSize` принимает rpx-число либо CSS-длину: `min(calc(var(--rpx) * 92), 10svh)` позволяет
 уменьшать заголовок на невысоком первом экране, сохраняя размер из шкалы на высоком.
 
-`delba-frontend test --suite browser` запускает Playwright-сценарии, включая серверный HTML и гидратацию.
+`delba frontend test --browser` запускает Playwright-сценарии, включая серверный HTML и гидратацию.
 При первой установке поставьте Chromium для Playwright из корня кита:
 
 ```bash
@@ -243,7 +245,7 @@ React, Next, Sass и остальные интеграции — `peerDependenci
 `dependencies`.
 
 Полная проверка из одного места: в корневом `package.json` проекта задайте
-`"ui:test": "pnpm --filter <приложение> --silent exec delba-frontend test"` и запускайте `npm run ui:test --silent`.
+`"ui:test": "pnpm --filter <приложение> --silent exec delba frontend test"` и запускайте `npm run ui:test --silent`.
 Успешные шаги занимают по строке; ошибка показывает подробности и возвращает код 1.
 В `test` отсутствующий токен темы — ошибка; production-сборка приложения проверяется проектом.
 
@@ -266,7 +268,7 @@ React, Next, Sass и остальные интеграции — `peerDependenci
   настоящая папка `<проект>/node_modules/@delba/frontend`, а не симлинк воркспейса. Генератор утилит
   сканирует его и там: `node_modules`, `.next`, `dist`… пропускаются по пути от корня скана, а не по
   абсолютному. Генераты пишутся внутрь этой папки и стираются переустановкой: `withFrontend` пишет их
-  заново на каждом `next dev`/`next build`, без плагина — `delba-frontend build` после установки.
+  заново на каждом `next dev`/`next build`, без плагина — `delba frontend build` после установки.
 - **Пакеты** — `peerDependencies` в [`package.json`](package.json). Там же `sideEffects`:
   благодаря ему сборка выкидывает со страницы то, что она не использует (Lexical, Swiper,
   видеоплеер), даже если импорт идёт через общий вход. Стенд, который ставит без devDependencies,
@@ -277,7 +279,7 @@ React, Next, Sass и остальные интеграции — `peerDependenci
   выше; проект со своим скриптом зовёт генератор напрямую:
 
   ```bash
-  node --import tsx <кит>/tools/utilities/cli.ts build --config path/to/delba.config.ts # или watch
+  delba frontend build # or watch
   ```
 
   Используется та же секция `delbaFrontend`: значения padding берутся из `theme.padding`,
@@ -324,7 +326,7 @@ React, Next, Sass и остальные интеграции — `peerDependenci
 - **Тему.** Договор — это CSS-переменные, семейства типографики и используемые правила
   порядка (`[data-order-mobile]`…), которые библиотека берёт у проекта. Responsive-скрытие
   задаётся `hide={[desktop, mobile, tablet]}` и генерируется китом; legacy-правила
-  `[data-hide-mobile/tablet/pc]` из тем удаляются. Проверка — `delba-frontend check`, без CLI:
+  `[data-hide-mobile/tablet/pc]` из тем удаляются. Проверка — `delba frontend check`, без CLI:
 
   ```bash
   node <кит>/tools/check-tokens.mjs <папки стилей проекта…>    # чего не хватает
@@ -382,20 +384,18 @@ pnpm --filter @delba/frontend test         # юнит-тесты ядра и too
 pnpm --filter @delba/frontend boundary     # ни одного импорта наружу папки
 ```
 
-Из папки приложения — `delba-frontend check`: красные линии с храповиком (`check-rules.mjs`), договор темы
+Из папки приложения — `delba frontend check`: действующие правила (`check-rules.mjs`), договор темы
 (`check-tokens.mjs`) и старые пути к киту (`check-migration.mjs`). Каждый скрипт запускается и сам:
-`node <кит>/tools/check-rules.mjs --baseline <файл> <папки проекта…>`.
+`node <кит>/tools/check-rules.mjs <папки проекта…>`.
 
 `tsconfig.json` библиотеки строже обычного: помимо `strict` включены `noUncheckedIndexedAccess`,
 `noImplicitReturns`, `noImplicitOverride`, `noFallthroughCasesInSwitch`, `noUnusedLocals` и
 `noUnusedParameters`. `any`, `@ts-ignore`, `eslint-disable` и утверждений `!` в коде нет;
 `as unknown as` — одно, в точке стирания типа реестра анимаций `Text` (`defineAnimation`).
 
-`check-rules.mjs` считает нарушения красных линий в коде ПРОЕКТА (сырые `<button>`/`<input>`/`<a>`,
-инлайн-`<svg>`, условный рендер без анимации, числа мимо сетки 4, транзишны без токенов,
-`@media`, SCSS там, где есть проп, `mt`/`mb` вместо `gap`, константа вместо литерала, модуль без
-корневого класса). Планка лежит в проекте; сборка падает, только если нарушений стало больше.
-Правило, которого в планке ещё нет (пришло с обновлением кита), дописывается в неё текущим числом.
+`check-rules.mjs` проверяет поведенческие контракты сырых `<button>`/`<input>`/`<a>`
+в коде проекта. Действующие правила требуют нуля нарушений. Файлы исключений не
+читаются и не создаются; обновление библиотеки не принимает новый долг автоматически.
 
 **Правила вёрстки для проекта — [`docs/rules.md`](docs/rules.md).** Скилл вёрстки каждого проекта
 ссылается на него и дописывает у себя только своё.
@@ -425,7 +425,7 @@ git add delba-frontend pnpm-lock.yaml && git commit -m "UI: обновить б�
 
 **2026-09-23 — кит стал пакетом `@delba/frontend` с картой `exports`.** Проект на 1.x лез внутрь папки
 сабмодуля; теперь раскладка приватна (`src/components`, `src/core`, `assets`), а входы — в таблице
-«Граница». `delba-frontend check` (и `check-tokens.mjs`, который зовут socrat и D4Y) находит старые пути и
+«Граница». `delba frontend check` (и `check-tokens.mjs`, который зовут socrat и D4Y) находит старые пути и
 `<Container/>` и печатает замену построчно: `node <кит>/tools/check-migration.mjs <папки проекта…>`.
 
 **1. Пакет воркспейса.** Папку сабмодуля (`UI`, `delba-frontend` — как угодно) — в `packages` у
@@ -443,8 +443,7 @@ git add delba-frontend pnpm-lock.yaml && git commit -m "UI: обновить б�
 | `'<UI>/skin'` | `'@delba/frontend/skin'` |
 | `import { withFrontend } from '<UI>/next.mjs'` | `import { withFrontend } from '@delba/frontend/next'` |
 | `import type { FrontendConfig } from '<UI>/tools/config'` | `import type { FrontendConfig } from '@delba/frontend/config'` |
-| `node <UI>/tools/cli.mjs build` | `delba-frontend build` (bin пакета) |
-| `node --import tsx <UI>/tools/utilities/cli.ts …` | без изменений (путь `tools/` тот же) |
+| `node <UI>/tools/cli.mjs build` | `delba frontend build` (Toolkit CLI) |
 
 Нужного символа нет в `@delba/frontend` — это повод добавить его во вход кита, а не лезть в `src/`.
 
@@ -523,4 +522,4 @@ export const Container = ({ className, ...props }: BoxProps) => <Box container c
 - ~~**`<Container/>` устарел.**~~ Удалён в 2.0, замена — проп `container` у Flex, Grid и Box.
 - ~~**Иконки кита — импортом.**~~ Сделано в 2.0: `assets/` импортом, копия в `public/` не нужна.
 
-Executable project compositions and the Node-only `@delba/frontend/config-loader` contract: [configuration](docs/configuration.md).
+Toolkit module declaration, explicit owner settings and native Next ENV: [configuration](docs/configuration.md).

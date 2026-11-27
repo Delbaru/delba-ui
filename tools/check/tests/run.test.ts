@@ -10,129 +10,12 @@ import { startProgress } from '../progress.mjs';
 import { discoverTests, projectSteps, uiCheckSteps } from '../index.mjs';
 import { runNode, runSteps } from '../run.mjs';
 
-test('the toolkit generates once and runs its library suite without duplicate consumer checks', () => {
-    const kit = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-    const steps = uiCheckSteps({ project: kit });
-    const names = steps.map((step: { name: string }) => step.name);
-    assert.equal(names.filter((name: string) => name === 'Генерация').length, 1);
-    assert.equal(names.filter((name: string) => name === 'Тесты').length, 1);
-    assert.equal(names.filter((name: string) => name === 'Браузер').length, 0);
-    assert.ok(steps.every((step: { suite?: string }) => step.suite !== 'project'));
-    assert.throws(() => uiCheckSteps({ project: kit, suite: 'project', typecheckCache: 'cache.tsbuildinfo' }), /requires a consumer/);
-});
-
-test('CI suites cover the complete gate without dropping checks; each starts with generation', (context) => {
-    const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-check-consumer-'));
-    context.after(() => fs.rmSync(project, { recursive: true, force: true }));
-    const complete = uiCheckSteps({ project, suite: 'all' }).map((step: { name: string }) => step.name);
-    assert.ok(complete.includes('Анатомия D-компонентов'));
-    for (const fix of [false, true]) {
-        const standard = uiCheckSteps({ project, fix });
-        const explicitStandard = uiCheckSteps({ project, fix, suite: 'standard' });
-        assert.deepEqual(
-            standard.map((step: { name: string }) => step.name),
-            explicitStandard.map((step: { name: string }) => step.name),
-        );
-        assert.deepEqual(
-            standard.map((step: { name: string }) => step.name),
-            uiCheckSteps({ project, fix, suite: 'all' })
-                .filter((step: { suite?: string }) => step.suite !== 'browser')
-                .map((step: { name: string }) => step.name),
-        );
-    }
-    const partitioned = ['library', 'project', 'browser'].flatMap((suite) => {
-        const steps = uiCheckSteps({ project, suite });
-        assert.equal(steps[0]?.name, 'Генерация');
-        return steps.filter((step: { name: string }) => step.name !== 'Генерация').map((step: { name: string }) => step.name);
-    });
-    assert.deepEqual(partitioned.sort(), complete.filter((name: string) => name !== 'Генерация').sort());
-    assert.throws(() => uiCheckSteps({ suite: 'typo' }), /Unknown UI suite/);
-    assert.throws(() => uiCheckSteps({ suite: 'project', fix: true }), /--suite standard or all/);
-    for (const shard of ['0/4', '5/4', '1/0', 'oops']) {
-        assert.throws(() => uiCheckSteps({ suite: 'browser', shard }), /valid index\/total/);
-    }
-    assert.throws(() => uiCheckSteps({ suite: 'all', shard: '1/4' }), /--suite browser/);
-    assert.deepEqual(uiCheckSteps({ project, suite: 'browser', shard: '1/4' }).map((step: { name: string }) => step.name), ['Генерация', 'Браузер']);
-});
-
-test('opt-in incremental consumer types still reject changed source and global declarations', async () => {
-    assert.throws(() => uiCheckSteps({ suite: 'all', typecheckCache: 'cache.tsbuildinfo' }), /--suite project/);
-    assert.throws(() => uiCheckSteps({ suite: 'project', typecheckCache: '' }), /--suite project/);
-    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'ui incremental types '));
-    const files = ['tsconfig.json', 'source.ts', 'globals.d.ts', 'cache.tsbuildinfo'];
-    try {
-        fs.writeFileSync(path.join(fixture, 'tsconfig.json'), JSON.stringify({
-            compilerOptions: { strict: true, noEmit: true, types: [], skipLibCheck: true, target: 'ES2022' },
-            files: ['source.ts', 'globals.d.ts'],
-        }));
-        const source = path.join(fixture, 'source.ts');
-        const globals = path.join(fixture, 'globals.d.ts');
-        fs.writeFileSync(source, 'const result: SharedResult = { value: 1 };');
-        fs.writeFileSync(globals, 'interface SharedResult { value: number }');
-        const check = uiCheckSteps({ project: fixture, suite: 'project', typecheckCache: 'cache.tsbuildinfo' })
-            .find((step: { name: string }) => step.name === 'Типы проекта');
-        assert.ok(check);
-        assert.equal((await check.run()).ok, true);
-        assert.ok(fs.existsSync(path.join(fixture, 'cache.tsbuildinfo')));
-        assert.equal((await check.run()).ok, true);
-        fs.writeFileSync(source, 'const result: SharedResult = { value: "invalid" };');
-        assert.equal((await check.run()).ok, false);
-        fs.writeFileSync(source, 'const result: SharedResult = { value: 1 };');
-        assert.equal((await check.run()).ok, true);
-        fs.writeFileSync(globals, 'interface SharedResult { value: string }');
-        const failure = await check.run();
-        assert.equal(failure.ok, false);
-        assert.match(failure.output, /source.ts/);
-    } finally {
-        for (const file of files) fs.rmSync(path.join(fixture, file), { force: true });
-        fs.rmdirSync(fixture);
-    }
-});
-
-test('consumer test concurrency is bounded and successful tests report counts', async context => {
-    for (const value of [0, -1, 1.5, 17, NaN]) {
-        assert.throws(() => uiCheckSteps({ testConcurrency: value }), /testConcurrency/);
-    }
-    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-test-workers-'));
-    context.after(() => fs.rmSync(fixture, { recursive: true, force: true }));
-    fs.mkdirSync(path.join(fixture, 'src'));
-    for (const name of ['one', 'two']) {
-        fs.writeFileSync(path.join(fixture, 'src', `${name}.test.mjs`), `
-            import {test} from 'node:test';
-            import {appendFileSync} from 'node:fs';
-            test('${name}', async () => {
-                appendFileSync('order.txt', '${name}:start\\n');
-                await new Promise(resolve => setTimeout(resolve, 50));
-                appendFileSync('order.txt', '${name}:end\\n');
-            });
-        `);
-    }
-    const step = uiCheckSteps({ project: fixture, suite: 'project', testConcurrency: 1 })
-        .find((item: {name: string}) => item.name === 'Тесты проекта');
-    assert.ok(step);
-    const result = await step.run();
-    assert.equal(result.ok, true, result.output);
-    assert.match(result.output, /Tests: 2 passed, 0 failed, 0 skipped/);
-    assert.deepEqual(fs.readFileSync(path.join(fixture, 'order.txt'), 'utf8').trim().split('\n'), ['one:start', 'one:end', 'two:start', 'two:end']);
-});
-
-test('runner concurrency uses explicit options before environment and rejects invalid environment', context => {
-    const previous = { tests: process.env.DELBA_TEST_CONCURRENCY, checks: process.env.DELBA_CHECK_CONCURRENCY };
-    context.after(() => {
-        for (const [key, value] of [['DELBA_TEST_CONCURRENCY', previous.tests], ['DELBA_CHECK_CONCURRENCY', previous.checks]]) {
-            if (value === undefined) delete process.env[key!];
-            else process.env[key!] = value;
-        }
-    });
-    process.env.DELBA_TEST_CONCURRENCY = '17';
-    process.env.DELBA_CHECK_CONCURRENCY = '3';
-    assert.throws(() => uiCheckSteps(), /testConcurrency/);
-    assert.throws(() => uiCheckSteps({ testConcurrency: 1 }), /checkConcurrency/);
-    assert.doesNotThrow(() => uiCheckSteps({ testConcurrency: 1, checkConcurrency: 2 }));
-    process.env.DELBA_TEST_CONCURRENCY = '1';
-    process.env.DELBA_CHECK_CONCURRENCY = '2';
-    assert.doesNotThrow(() => uiCheckSteps());
-    assert.throws(() => uiCheckSteps({ testConditions: [''] }), /testConditions/);
+test('library suites own units and fixtures; consumer execution is rejected', () => {
+    const names = uiCheckSteps({ suite: 'all' }).map((step: { name: string }) => step.name);
+    assert.equal(names.length, 7);
+    assert.throws(() => uiCheckSteps({ project: '/consumer' }), /Unsupported/);
+    assert.throws(() => uiCheckSteps({ suite: 'project' }), /Unknown UI suite/);
+    assert.throws(() => uiCheckSteps({ suite: 'browser', shard: '0/4' }), /valid index/);
 });
 
 test('ошибка и исключение не скрывают остальные результаты и делают общий итог красным', async () => {
@@ -262,34 +145,6 @@ test('репортёр тестов показывает упавший тест
     } finally {
         fs.rmSync(file, { force: true });
         fs.rmdirSync(fixture);
-    }
-});
-
-test('consumer test conditions resolve server-only exports without changing library tests', async () => {
-    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'ui-server-conditions-'));
-    const source = path.join(fixture, 'src');
-    const modules = path.join(fixture, 'node_modules');
-    const probe = path.join(modules, 'server-probe');
-    fs.mkdirSync(source);
-    fs.mkdirSync(probe, { recursive: true });
-    fs.writeFileSync(path.join(fixture, 'package.json'), '{"type":"module"}');
-    fs.writeFileSync(path.join(probe, 'package.json'), JSON.stringify({
-        name: 'server-probe', type: 'module', exports: { 'react-server': './server.js', default: './client.js' },
-    }));
-    fs.writeFileSync(path.join(probe, 'server.js'), 'export const value = 42;');
-    fs.writeFileSync(path.join(probe, 'client.js'), 'throw new Error("server-only export requires react-server");');
-    fs.writeFileSync(path.join(source, 'server.test.ts'), 'import assert from "node:assert/strict"; import {value} from "server-probe"; assert.equal(value, 42);');
-    try {
-        const step = (options = {}) => uiCheckSteps({ project: fixture, ...options, suite: 'project' })
-            .find((item: { name: string }) => item.name === 'Тесты проекта');
-        assert.equal((await step()?.run())?.ok, false);
-        assert.equal((await step({ testConditions: ['react-server'] })?.run())?.ok, true);
-    } finally {
-        fs.rmSync(path.join(fixture, '.verification'), { recursive: true, force: true });
-        for (const file of ['package.json', 'src/server.test.ts', 'node_modules/server-probe/package.json', 'node_modules/server-probe/server.js', 'node_modules/server-probe/client.js']) {
-            fs.unlinkSync(path.join(fixture, file));
-        }
-        for (const directory of [probe, modules, source, fixture]) fs.rmdirSync(directory);
     }
 });
 

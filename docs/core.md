@@ -45,7 +45,7 @@ import { pageReadyScript } from '@delba/frontend/startup';
 fallback-шрифта, начальная геометрия изображений остаются ответственностью проекта:
 ожидание первого показа дополняет их, не заменяет.
 
-Проверка потребителя: `delba-frontend startup --url <production-URL> --font "h1=Family"`.
+Проверка потребителя: `delba frontend startup --url <production-URL> --font "h1=Family"`.
 Она использует установленный Playwright/Chromium, не запускает сервер и проверяет
 390/1440 px: холодный кеш, задержку fonts/JS и отключённый JS. Ошибки страницы,
 пустые SVG в header, скрытый/inert контент, fallback готовности и CLS выше

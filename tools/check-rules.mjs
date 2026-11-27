@@ -101,12 +101,11 @@ const isMain =
 
 if (isMain) {
   const args = process.argv.slice(2);
-  const baselineFile = args[args.indexOf('--baseline') + 1];
-  const update = args.includes('--update');
   const fix = args.includes('--fix');
-  const dirs = args.filter((arg, i) => !arg.startsWith('--') && args[i - 1] !== '--baseline');
-  if (!baselineFile || !dirs.length) {
-    console.error('Usage: node check-rules.mjs --baseline <file.json> [--update] [--fix] <dirs…>');
+  const unknown = args.filter(arg => arg.startsWith('--') && arg !== '--fix');
+  const dirs = args.filter(arg => !arg.startsWith('--'));
+  if (unknown.length || !dirs.length) {
+    console.error('Usage: node check-rules.mjs [--fix] <dirs...>');
     process.exit(1);
   }
 
@@ -120,56 +119,15 @@ if (isMain) {
   }
 
   const { counts, places } = countViolations(dirs);
-  const total = (rule, data) => Object.values(data[rule] ?? {}).reduce((a, b) => a + b, 0);
-
-  if (update || !fs.existsSync(baselineFile)) {
-    const strict = Object.entries(RULES).filter(([rule, definition]) => definition.baseline === false && total(rule, counts) > 0);
-    if (strict.length) {
-      console.error(`[ui:rules] ✗ правила без планки требуют нулевых нарушений: ${strict.map(([rule]) => `${rule} ${total(rule, counts)}`).join(', ')}`);
-      process.exit(1);
-    }
-    const stored = Object.fromEntries(Object.keys(RULES).map(rule => [rule, RULES[rule].baseline === false ? {} : counts[rule]]));
-    fs.writeFileSync(baselineFile, `${JSON.stringify(stored, null, 2)}\n`);
-    const summary = Object.keys(RULES)
-      .map((rule) => `${rule} ${total(rule, counts)}`)
-      .join(', ');
-    console.log(`[ui:rules] планка записана: ${summary}`);
-    process.exit(0);
-  }
-
-  const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
-  // Правило, которого нет в планке, пришло с обновлением кита: старые места проекта — его долг, а не
-  // поломка. Правила с baseline:false всегда требуют нуля и не принимают этот долг.
-  const fresh = Object.keys(RULES).filter((rule) => !(rule in baseline) && RULES[rule].baseline !== false);
-  if (fresh.length) {
-    for (const rule of fresh) baseline[rule] = counts[rule];
-    fs.writeFileSync(baselineFile, `${JSON.stringify(baseline, null, 2)}\n`);
-    console.log(
-      `[ui:rules] новые правила в планке: ${fresh.map((rule) => `${rule} ${total(rule, counts)}`).join(', ')}`,
-    );
-  }
-  let grew = 0;
-  for (const [rule, def] of Object.entries(RULES)) {
-    for (const [file, n] of Object.entries(counts[rule])) {
-      const allowed = def.baseline === false ? 0 : baseline[rule]?.[file] ?? 0;
-      if (n > allowed) {
-        grew += n - allowed;
-        console.error(
-          `[ui:rules] ✗ ${rule}: ${file} — было ${allowed}, стало ${n} (строки ${places[rule][file].join(', ')}) → ${def.hint}`,
-        );
-      }
+  let violations = 0;
+  for (const [rule, definition] of Object.entries(RULES)) {
+    for (const [file, count] of Object.entries(counts[rule])) {
+      violations += count;
+      console.error(`[ui:rules] ${rule}: ${file} - ${count} violation(s), lines ${places[rule][file].join(', ')} - ${definition.hint}`);
     }
   }
-  const lowered = Object.keys(RULES).filter((rule) => total(rule, counts) < total(rule, baseline));
-  const summary = Object.keys(RULES)
-    .map((rule) => `${rule} ${total(rule, counts)}`)
-    .join(', ');
-  if (grew) {
-    console.error(`[ui:rules] ✗ новых нарушений красных линий: ${grew}`);
-    process.exit(1);
-  }
-  console.log(
-    `[ui:rules] ✓ новых нарушений нет (${summary})` +
-      (lowered.length ? `; планку можно опустить: ${lowered.join(', ')} → --update` : ''),
-  );
+  if (violations) {
+    console.error(`[ui:rules] ${violations} rule violation(s)`);
+    process.exitCode = 1;
+  } else console.log('[ui:rules] no rule violations');
 }

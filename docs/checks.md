@@ -1,180 +1,42 @@
-# Приёмка
+# Frontend verification
 
-Своей сборки у библиотеки нет: она пакет воркспейса проекта (`@delba/frontend`), команды — из его корня.
+## 1. Library and consumer ownership
 
----
+`pnpm --filter @delba/frontend check` owns the library gate: generation, types,
+architecture, boundaries, starter theme and units. `test` runs library units;
+`boundary` and `typecheck` remain focused entrypoints.
 
-## 1. Обязательный минимум
+Toolkit commands `delba frontend build`, `watch`, `check`, `test` receive explicit
+settings and selected ENV. No library bin or config-discovery CLI remains.
+`delba frontend check` checks consumer UI tokens, rules, imports and anatomy.
+`delba frontend test` runs only library checks; `--browser` selects its own
+Playwright/SSR fixtures. Product suites, Node conditions, QA guards, native
+integration and product typechecks belong to the product module and Toolkit.
 
-```bash
-npm run ui:test --silent            # из корня serdcaBezGranic, без заголовка npm
-# В другом проекте: delba-frontend test из папки приложения с delba.config.ts.
-```
-
-Команда последовательно запускает генерацию, типы кита, архитектурные правила, границы,
-строгую проверку стартовой темы, юнит-тесты,
-правила проекта, тему проекта, импорты и форму публичных D-компонентов в
-`src/shared/ui` и `src/cms/ui`. D-анатомия проверяется только в этих проектных корнях;
-пустые и внутренние helper-папки пропускаются. Настройки берёт из
-секции `delbaFrontend` файла `delba.config.ts`; путь к нему можно указать через `--config`.
-Внутренняя политика single-config требует `DName.tsx`, `DName.config.ts`,
-`DName.module.scss` и `index.ts` и запрещает отдельный `DName.skin.ts`.
-Единый config объединяет размеры, оформление, пресеты и состояния, используя
-действующий resolver. Авторский конфиг не переключает и не отключает эту проверку.
-Корень и остальные настройки описаны в [конфигурации](configuration.md).
-
-`pnpm --filter @delba/frontend check` запускает только проверки самого кита: типы, архитектуру,
-границы, стартовую тему и юнит-тесты. Тема и правила приложения требуют запуска из проекта.
-`delba-frontend check` остаётся быстрой проверкой приложения, включая `--update` для его планки.
-Отдельные `typecheck`, `test` и `boundary` сохранены для диагностики конкретного шага.
-
-После полного прогона исправляй все найденные независимые ошибки пакетом,
-затем повторяй только упавшее. После исправлений нужен один финальный полный профиль:
+Internal `runUiChecks` supports `standard`, `library`, `browser`, `all`, `shard`,
+`fix`, `failedOnly` and `reportFile`. `project`, `configArg`, consumer concurrency,
+consumer test conditions and consumer typecheck-cache options are removed.
+Generation is the required first step. `standard` equals `library`; browser is
+explicit. Browser shard syntax remains `index/total`.
 
 ```sh
-npm run check
-npm run check -- --failed
-delba-frontend test --suite project --report .verification/ui-project.json
-delba-frontend test --suite project --report .verification/ui-project.json --failed
+pnpm --filter @delba/frontend check
+pnpm --filter @delba/frontend check -- --failed
+# From an application with Toolkit:
+delba frontend check
+delba frontend test
+delba frontend test --browser
 ```
 
-По умолчанию отчёт лежит в `.verification/ui-<suite>.json` корня приложения/кита.
-В отчёте только статусы шагов и хеш профиля, без логов и окружения. Отсутствующий
-или чужой отчёт, изменённый набор шагов, suite, config path либо флаги профиля
-запрещают `--failed`; зелёный предыдущий отчёт также требует финального полного
-прогона. Исправления исходников не меняют профиль. Subset не объявляется полным PASS.
-Обязательная подготовка и зависимости повторяются перед упавшими/заблокированными
-шагами; остальные успешные проверки пропускаются. Подготовка, не прошедшая проверку,
-явно блокирует зависимые шаги, не скрывая ошибки независимых проверок.
+`@delba/frontend/verify` exposes `runNode`, `runNodeTests`, `runSteps` for explicit
+owner adapters; it does not discover or orchestrate product tests. Failed-only
+runs require matching report/profile and failed state, repeat required preparation,
+and preserve independent passed checks. A subset is never full acceptance.
 
-Экспорт `@delba/frontend/verify` — тонкий вход для адаптеров потребителей:
-
-```js
-import { runNode, runNodeTests, runSteps } from '@delba/frontend/verify';
-await runSteps([
-  { id: 'generate', name: 'Генерация', run: () => runNode(['tools/generate.mjs'], process.cwd()) },
-  { id: 'tests', name: 'Тесты', dependsOn: ['generate'], run: ({ failedOnly }) => runNodeTests({
-    cwd: process.cwd(), files: ['tests/**/*.test.ts'], nodeArgs: ['--import', 'tsx'],
-    stateFile: '.verification/tests.state', failedOnly,
-  }) },
-], { reportFile: '.verification/project.json', failedOnly: process.argv.includes('--failed'), profile: 'project' });
-```
-
-`runSteps` возвращает boolean; шаг имеет `id` (по умолчанию name), name, run,
-необязательные `dependsOn` и `required`. Зависимости предшествуют шагу в списке.
-В старом линейном плане required блокирует все последующие шаги; в явном плане
-dependsOn блокирует только зависимых. `run` получает `{ failedOnly }`: true только
-для ранее упавшего шага, false для подготовки и ранее заблокированных шагов.
-`runNodeTests` возвращает результат runNode и summary с числом выполненных тестов
-и упавших файлов; runSteps показывает число тестов в короткой строке результата.
-
-Node 24.7+ повторяет case через [native rerun state](https://nodejs.org/api/cli.html#--test-rerun-failures).
-Node 22 выполняет полный запуск без изменения engines и повторяет только упавшие
-файлы. Если runner/preload упал до сообщения файла, следующий повтор явно сообщает
-о запуске упавшего test-шага целиком. Пустой/пропущенный набор не считается успехом.
-Профиль Node включает cwd, files, nodeArgs и версию Node; files и glob передаются
-без изменения. Состояние suite не является кешем и не проверяет HEAD/содержимое
-исходников. Playwright повторяется через `--last-failed`; отсутствие либо изменение
-его сохранённого состояния требует нового полного browser-прогона. Не разделяй один
-report/stateFile между параллельными запусками.
-
-В свежем самостоятельном checkout перед `npm run check` выполни
-`node tools/cli.mjs build`: игнорируемые runtime-генераты нужны типам и unit-тестам.
-Потребительский `delba-frontend test` выполняет генерацию первым шагом самостоятельно.
-
-Сборка приложения и визуальная приёмка остаются в проверке самого проекта: у UI-кита своей
-production-сборки нет. `delba-frontend build` пишет генераты: утилиты, масштаб, шкуры.
-
-⚠️ **После правки глобального типа** (например `UiRules`) инкрементальный кеш врёт: `tsgo` показывал
-0 ошибок при 229 настоящих. Запускай с `--incremental false`.
-
----
-
-## Устройство общего запуска
-
-Структура находится в `tools/check/`:
-
-- `rules/component-anatomy.mjs` — AST-проверка собственных SCSS и именованных классов визуальных компонентов.
-- `rules/project-props.mjs` — общий анализ class-значений для кита и потребителей:
-  `global-component-class` запрещает literal Name в cx/className/classList, массивах
-  и template fallback. Runtime-модели TS/JS тоже сканируются; utility/vendor/module классы
-  сохраняются. У этого правила нет legacy-планки: отсутствие ключа, завышенный
-  baseline и `--update` не разрешают новые глобальные именные дубли.
-- `test-placement.mjs` — обязательное размещение unit/static/browser тестов в `tests/`; runtime, fixtures и config не перемещает.
-- `component-catalog.mjs` — инвентарь фактических TSX-экспортов всех package-входов и полнота страниц каталога.
-- `rules/collapse.mjs` — правило: получает TypeScript AST и возвращает нарушения, без вывода.
-- `architecture.mjs` — чтение TS/TSX и список архитектурных правил.
-- `index.mjs` — единый список шагов проверки кита и проекта.
-- `run.mjs` — запуск процессов и общий итог: 0 при успехе, 1 при ошибке.
-- `reporter.mjs` — вывод только упавших тестов и их причин, без списка успешных тестов.
-- `format.mjs` — короткие цветные статусы; при ошибке — подробности, место и ссылка на методичку.
-- `progress.mjs` — индикатор текущего шага в одной строке, затем строка заменяется результатом.
-
-Шаг описывается как `{ name, run }`, а результат — `{ ok, output, warnings }` или
-`{ ok, diagnostics }` для архитектурных правил. Неудачная генерация прекращает запуск;
-независимые проверки продолжаются, чтобы показать остальные ошибки за один раз.
-Успешный stdout дочерних процессов скрыт; stderr с предупреждениями сохраняется.
-Ненулевой код завершения и исключение делают общий итог неуспешным.
-Каждый шаг и общий итог показывают длительность в секундах по монотонным часам,
-включая ошибку и исключение; это позволяет найти медленный этап без полного stdout.
-Браузерные сценарии изолированы и fullyParallel: в CI используются два worker;
-локально Windows сохраняет один worker, остальные системы — два. Четыре worker
-в замере CI 16 октября не дали выигрыша (167 с против прежних 166 с), поэтому
-эксперимент отменён. Для Node unit-тестов библиотеки CI явно задаёт `--test-concurrency=2`.
-Тесты потребителя получают concurrency через `--test-concurrency 1..16`,
-option runner `testConcurrency` или `DELBA_TEST_CONCURRENCY`;
-без настройки в CI используются два файла одновременно. Число workers выбирается
-по реальной квоте CPU/RAM, а не по числу видимых ядер хоста.
-DelbaOS получает файлы и Node arguments из собственного `root --plan`; библиотека
-не переопределяет его concurrency и preload (см. [договор](configuration.md)).
-`--check-concurrency 2`, option runner `checkConcurrency: 2` или
-`DELBA_CHECK_CONCURRENCY=2` позволяют выполнять два независимых проверочных шага
-одновременно; по умолчанию шаги последовательны. Генерация всегда завершается
-до следующих шагов; её ошибка останавливает gate. Ошибки остальных шагов
-собираются вместе и сохраняют неуспешный общий exit code. При параллельных
-шагах дополнительно учитывай число unit workers, чтобы не перегрузить runner.
-Unit-репортёр показывает количество passed/failed/skipped и пять медленных
-тестов дольше секунды; успешные тесты по одному по-прежнему не печатаются.
-
-`delba-frontend test --suite project|library|browser` разделяет тот же список шагов для CI;
-без параметра выполняется `standard`: library и project без браузера.
-`--suite all` явно добавляет полный browser/SSR-набор; `--suite browser` запускает его отдельно.
-Каждая часть сначала генерирует CSS. Project содержит
-типы, тесты и договор потребителя; library — типы, архитектуру, границы, тему и unit-тесты
-кита; browser — browser/SSR. `--shard index/total` допустим только для browser и передаётся
-штатному Playwright. Локальный `--fix` поддерживает standard и all. Тест проверяет, что
-объединение частей не потеряло и не задвоило ни одного шага полного gate.
-
-Для CI потребителя `--suite project --typecheck-cache <file>` включает штатный
-инкрементальный tsc с отдельным tsbuildinfo. По умолчанию все типы проверяются с
-`--incremental false`; полный gate и library этот параметр не принимают. Кеш
-потребителя разделяется по Node/TypeScript, lockfile, конфигу, глобальным `.d.ts`
-и версиям кита/SDK: изменение глобальных типов начинает проверку заново.
-Исходники проекта могут меняться внутри одной линии кеша — tsc перечитывает их и
-зависимости. Регрессия проверяет ошибки в исходнике и глобальных типах после прогрева.
-
-Обычная проверка и деплой используют стандартный режим владельца DelbaUI.
-Полный browser/SSR-набор запускается явно при работе над соответствующим поведением.
-Его сценарии сохраняются, но не включаются автоматически в каждый выпуск проекта.
-Старые явные `--suite browser` в workflows требуют отдельного обновления потребителя.
-Успех standard не означает прохождение браузерной приёмки.
-
-Существующие `check-*.mjs` остаются реализациями проверок; прямые пути сохранены для других
-потребителей. Общая команда переиспользует их, а не дублирует проверки.
-
-Договор правила — `{ id, docs, check(source, { root }) }`. Нарушение содержит
-`{ line, column, message, fix }`; runner добавляет файл и путь документации.
-Следующее правило добавляется отдельным модулем и одной строкой в список правил;
-обход файлов и формат сообщений остаются общими. Цвет включён в интерактивном терминале,
-`NO_COLOR` отключает его. Ссылку `file://` можно открыть в поддерживающем её терминале.
-Индикатор работает только в интерактивном терминале; в CI, `TERM=dumb` и при перенаправлении
-вывода он отключён. `--silent` относится к npm и убирает его заголовок; вывод проверок сохраняется.
-
-Границы первого правила описаны в [авторинге](authoring.md). Оно не доказывает отсутствие
-любых копий collapse. В serdcaBezGranic полный запуск включён в job `check` GitHub Actions
-до деплоя. Локальная приёмка `pnpm verify` запускает UI-gate, проверки сайта и сборку;
-сам `site build` тесты повторно не запускает.
-Обязательный статус для merge настраивается отдельно в GitHub.
+The native Next plugin and module generation share `prepareFrontend`; no separate
+CLI preparation exists. Standalone library checks pass `{root: KIT, settings: {}}`.
+Settings, host ENV and module actions are documented in [configuration](configuration.md).
+Runtime checks for the configuration migration remain deferred by the owner.
 
 ## 2. Чек-лист по своему диффу
 
@@ -210,9 +72,7 @@ Unit-репортёр показывает количество passed/failed/sk
 Отчитываюсь фактами. Проверка не запускалась — говорю. Упала — показываю вывод. Часть объёма не
 сделана — называю, что именно и почему.
 
-Для server-only тестов потребителя используй `delba-frontend test --test-condition react-server`
-или option runner `testConditions: ['react-server']`. Условия применяются только
-к тестам проекта; библиотека и браузер сохраняют обычный React runtime.
+Product Node tests and server-only conditions belong to the consuming module and Toolkit runner.
 
 Пути проверяемой темы задаются в `delbaFrontend.theme.sources`. Если тема использует
 стартовые токены `@delba/frontend/theme`, включи исходники стартовой темы в этот
