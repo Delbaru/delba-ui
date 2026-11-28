@@ -1,12 +1,24 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type ReactNode, type MouseEvent, type KeyboardEvent, type FocusEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+    useEffect,
+    useId,
+    useRef,
+    useState,
+    type ReactNode,
+    type MouseEvent,
+    type KeyboardEvent,
+    type FocusEvent,
+    type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { Dropdown, type DropdownProps } from '../../components/Dropdown';
 import { Tooltip } from '../../components/Tooltip';
 import { useTooltip } from '../../hooks/useTooltip';
 import { ContextPopup, type ContextPoint } from './Context';
 import { useMergedRefs } from '../useMergedRefs';
 import styles from './Popup.module.scss';
+import { useTooltipScope } from './TooltipScope';
+export { TooltipScope, useTooltipScope } from './TooltipScope';
 
 export type TooltipPopup = {
     preset: 'tooltip';
@@ -15,6 +27,8 @@ export type TooltipPopup = {
     gap?: number;
     surface?: boolean;
     on?: 'hover';
+    /** Only show this tooltip inside an enabled TooltipScope. */
+    scoped?: boolean;
 };
 type PopupController = { close(): void };
 type MenuContent = ReactNode | ((popup: PopupController) => ReactNode);
@@ -23,12 +37,33 @@ export type PopupPlacement = 'top' | 'bottom' | 'left' | 'right';
 export type MenuPosition = PopupPlacement | `${PopupPlacement}-${'start' | 'end'}`;
 export type PopupOptions =
     | TooltipPopup
-    | { preset: 'context'; on?: 'rightClick'; label?: string; children: MenuContent; panel?: Panel; boundary?: (opener: HTMLElement) => HTMLElement | null }
-    | { preset: 'menu'; on?: 'click' | 'hover'; label?: string; children: MenuContent; panel?: Panel; position?: MenuPosition; consume?: boolean };
+    | {
+          preset: 'context';
+          on?: 'rightClick';
+          label?: string;
+          children: MenuContent;
+          panel?: Panel;
+          boundary?: (opener: HTMLElement) => HTMLElement | null;
+      }
+    | {
+          preset: 'menu';
+          on?: 'click' | 'hover';
+          label?: string;
+          children: MenuContent;
+          panel?: Panel;
+          position?: MenuPosition;
+          consume?: boolean;
+      };
 
 export function resolvePopupOptions(options?: PopupOptions) {
-    if (options?.preset === 'tooltip' &&
-        (options.text === null || options.text === undefined || options.text === false || options.text === '')) return undefined;
+    if (
+        options?.preset === 'tooltip' &&
+        (options.text === null ||
+            options.text === undefined ||
+            options.text === false ||
+            options.text === '')
+    )
+        return undefined;
     return options;
 }
 
@@ -39,7 +74,9 @@ function inside(currentTarget: HTMLElement, target: EventTarget | null) {
 function nestedControl(currentTarget: HTMLElement, target: EventTarget | null) {
     const view = currentTarget.ownerDocument.defaultView;
     if (!view || !(target instanceof view.Element)) return false;
-    const control = target.closest('a,button,input,textarea,select,label,[role="button"],[role="link"],[contenteditable]:not([contenteditable="false"]),[data-ui-popup-trigger]');
+    const control = target.closest(
+        'a,button,input,textarea,select,label,[role="button"],[role="link"],[contenteditable]:not([contenteditable="false"]),[data-ui-popup-trigger]',
+    );
     return Boolean(control && control !== currentTarget && currentTarget.contains(control));
 }
 
@@ -49,16 +86,24 @@ function coarsePointer(element: HTMLElement) {
 }
 
 export function usePopup(input?: PopupOptions) {
-    const options = resolvePopupOptions(input);
+    const tooltipScope = useTooltipScope();
+    const options = resolvePopupOptions(
+        input?.preset === 'tooltip' && input.scoped && !tooltipScope ? undefined : input,
+    );
     const anchor = useRef<HTMLElement | null>(null);
     const surface = useRef<HTMLElement | null>(null);
     const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const contextTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const contextPress = useRef<{ pointerId: number; x: number; y: number; opener: HTMLElement } | null>(null);
+    const contextPress = useRef<{
+        pointerId: number;
+        x: number;
+        y: number;
+        opener: HTMLElement;
+    } | null>(null);
     const [point, setPoint] = useState<ContextPoint | null>(null);
     const [open, setOpen] = useState(false);
     const [keyboard, setKeyboard] = useState(false);
-    const kind = options?.preset === 'menu' ? options.on ?? 'click' : options?.preset;
+    const kind = options?.preset === 'menu' ? (options.on ?? 'click') : options?.preset;
     const [preset, setPreset] = useState(kind);
     if (preset !== kind) {
         setPreset(kind);
@@ -69,9 +114,12 @@ export function usePopup(input?: PopupOptions) {
     const tooltipOptions = options?.preset === 'tooltip' ? options : undefined;
     const tooltipId = useId();
     const tooltip = useTooltip({
-        enabled: Boolean(tooltipOptions), direction: tooltipOptions?.position ?? 'top',
+        enabled: Boolean(tooltipOptions),
+        direction: tooltipOptions?.position ?? 'top',
         gap: tooltipOptions?.gap,
-        lazyPortal: true, hoverDelayMs: 400, resetKey: tooltipOptions?.text,
+        lazyPortal: true,
+        hoverDelayMs: 400,
+        resetKey: tooltipOptions?.text,
     });
     const anchorRef = useMergedRefs(anchor, tooltipOptions ? tooltip.anchorRef : undefined);
     const clearTimer = () => {
@@ -83,19 +131,36 @@ export function usePopup(input?: PopupOptions) {
         contextTimer.current = null;
         contextPress.current = null;
     };
-    useEffect(() => () => { clearTimer(); clearContextPress(); }, [kind]);
-    const close = () => { clearTimer(); clearContextPress(); setPoint(null); setOpen(false); setKeyboard(false); };
+    useEffect(
+        () => () => {
+            clearTimer();
+            clearContextPress();
+        },
+        [kind],
+    );
+    const close = () => {
+        clearTimer();
+        clearContextPress();
+        setPoint(null);
+        setOpen(false);
+        setKeyboard(false);
+    };
     const context = options?.preset === 'context';
     const menu = options?.preset === 'menu';
     const hover = menu && options.on === 'hover';
     const visible = context ? Boolean(point) : menu && open;
     const menuId = useId();
-    const position = menu ? options.position ?? (hover ? 'top' : 'bottom-start') : 'bottom-start';
+    const position = menu ? (options.position ?? (hover ? 'top' : 'bottom-start')) : 'bottom-start';
     const placement = position.split('-')[0] as PopupPlacement;
-    const align = position.endsWith('-start') ? 'start' : position.endsWith('-end') ? 'end' : 'center';
+    const align = position.endsWith('-start')
+        ? 'start'
+        : position.endsWith('-end')
+          ? 'end'
+          : 'center';
     let content: ReactNode = null;
     if (context && point) {
-        content = typeof options.children === 'function' ? options.children({ close }) : options.children;
+        content =
+            typeof options.children === 'function' ? options.children({ close }) : options.children;
     }
 
     function inRegion(target: EventTarget | null) {
@@ -103,14 +168,23 @@ export function usePopup(input?: PopupOptions) {
         if (!view || !(target instanceof view.Node)) return false;
         if (anchor.current?.contains(target) || surface.current?.contains(target)) return true;
         // Reuse Dropdown's logical ancestry for portals nested inside this menu.
-        return target instanceof view.Element && Boolean(target.closest('[data-dropdown-ancestors]')
-            ?.getAttribute('data-dropdown-ancestors')?.split(' ').includes(menuId));
+        return (
+            target instanceof view.Element &&
+            Boolean(
+                target
+                    .closest('[data-dropdown-ancestors]')
+                    ?.getAttribute('data-dropdown-ancestors')
+                    ?.split(' ')
+                    .includes(menuId),
+            )
+        );
     }
     function leave(target: EventTarget | null, preserveFocus = false) {
         if (!hover || inRegion(target)) return;
         clearTimer();
         timeout.current = setTimeout(() => {
-            if (preserveFocus && inRegion(anchor.current?.ownerDocument.activeElement ?? null)) return;
+            if (preserveFocus && inRegion(anchor.current?.ownerDocument.activeElement ?? null))
+                return;
             close();
         }, 150);
     }
@@ -118,7 +192,10 @@ export function usePopup(input?: PopupOptions) {
         if (!inside(event.currentTarget, event.target)) return;
         if (tooltipOptions) tooltip.anchorHandlers.onMouseEnter();
         if (nestedControl(event.currentTarget, event.target)) return;
-        if (hover && !coarsePointer(event.currentTarget)) { clearTimer(); setOpen(true); }
+        if (hover && !coarsePointer(event.currentTarget)) {
+            clearTimer();
+            setOpen(true);
+        }
     }
     function onMouseLeave(event: MouseEvent<HTMLElement>) {
         if (!inside(event.currentTarget, event.target)) return;
@@ -131,11 +208,18 @@ export function usePopup(input?: PopupOptions) {
         if (hover) clearTimer();
     }
     function onBlur(event: FocusEvent<HTMLElement>) {
-        if (tooltipOptions && tooltipOptions.on !== 'hover' && !inRegion(event.relatedTarget)) tooltip.anchorHandlers.onBlur();
+        if (tooltipOptions && tooltipOptions.on !== 'hover' && !inRegion(event.relatedTarget))
+            tooltip.anchorHandlers.onBlur();
         leave(event.relatedTarget);
     }
     function onContextMenu(event: MouseEvent<HTMLElement>) {
-        if (!context || event.defaultPrevented || !inside(event.currentTarget, event.target) || nestedControl(event.currentTarget, event.target)) return;
+        if (
+            !context ||
+            event.defaultPrevented ||
+            !inside(event.currentTarget, event.target) ||
+            nestedControl(event.currentTarget, event.target)
+        )
+            return;
         event.preventDefault();
         event.stopPropagation();
         clearContextPress();
@@ -143,21 +227,37 @@ export function usePopup(input?: PopupOptions) {
         const opener = event.currentTarget;
         const x = event.clientX;
         const y = event.clientY;
-        setPoint(current => current && current.opener === opener && current.x === x && current.y === y
-            ? current : { x, y, opener });
+        setPoint((current) =>
+            current && current.opener === opener && current.x === x && current.y === y
+                ? current
+                : { x, y, opener });
     }
     function onPointerDown(event: ReactPointerEvent<HTMLElement>) {
-        if (!context || event.defaultPrevented || event.pointerType !== 'touch' || !event.isPrimary ||
-            event.button !== 0 || !inside(event.currentTarget, event.target) ||
-            nestedControl(event.currentTarget, event.target)) return;
+        if (
+            !context ||
+            event.defaultPrevented ||
+            event.pointerType !== 'touch' ||
+            !event.isPrimary ||
+            event.button !== 0 ||
+            !inside(event.currentTarget, event.target) ||
+            nestedControl(event.currentTarget, event.target)
+        )
+            return;
         clearContextPress();
-        const press = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, opener: event.currentTarget };
+        const press = {
+            pointerId: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            opener: event.currentTarget,
+        };
         contextPress.current = press;
         // A stationary touch opens the same context surface as right-click/Shift+F10.
         contextTimer.current = setTimeout(() => {
             if (contextPress.current !== press || anchor.current !== press.opener) return;
-            setPoint(current => current && current.opener === press.opener
-                ? current : { x: press.x, y: press.y, opener: press.opener });
+            setPoint((current) =>
+                current && current.opener === press.opener
+                    ? current
+                    : { x: press.x, y: press.y, opener: press.opener });
         }, 500);
     }
     function onPointerMove(event: ReactPointerEvent<HTMLElement>) {
@@ -173,20 +273,24 @@ export function usePopup(input?: PopupOptions) {
     }
     function onKeyDown(event: KeyboardEvent<HTMLElement>) {
         if (event.defaultPrevented || event.target !== event.currentTarget) return;
-        if (context && (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) {
+        if (context && (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))) {
             const rect = event.currentTarget.getBoundingClientRect();
             event.preventDefault();
             event.stopPropagation();
             setPoint({ x: rect.left + 8, y: rect.top + 8, opener: event.currentTarget });
-        } else if (menu && (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown')) {
+        } else if (
+            menu &&
+            (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown')
+        ) {
             // Native buttons/anchors already generate a click for keyboard activation.
-            if (event.key !== 'ArrowDown' && event.currentTarget.matches('button,a[href],input')) return;
+            if (event.key !== 'ArrowDown' && event.currentTarget.matches('button,a[href],input'))
+                return;
             event.preventDefault();
             event.stopPropagation();
             clearTimer();
             setKeyboard(true);
             const expand = event.key === 'ArrowDown';
-            setOpen(value => expand || !value);
+            setOpen((value) => expand || !value);
         } else if (visible && event.key === 'Escape') {
             event.preventDefault();
             event.stopPropagation();
@@ -194,50 +298,112 @@ export function usePopup(input?: PopupOptions) {
         }
     }
     function onClick(event: MouseEvent<HTMLElement>) {
-        if (!menu || event.defaultPrevented || !inside(event.currentTarget, event.target) || nestedControl(event.currentTarget, event.target)) return;
+        if (
+            !menu ||
+            event.defaultPrevented ||
+            !inside(event.currentTarget, event.target) ||
+            nestedControl(event.currentTarget, event.target)
+        )
+            return;
         // Hover has a tap/keyboard fallback; desktop pointer clicks do not close its panel.
         if (hover && event.detail !== 0 && !coarsePointer(event.currentTarget)) return;
-        const nativeNavigation = event.currentTarget.matches('a[href],button[type="submit"],button[type="reset"]');
+        const nativeNavigation = event.currentTarget.matches(
+            'a[href],button[type="submit"],button[type="reset"]',
+        );
         if (nativeNavigation && options.consume !== true) return;
         if (options.consume !== false) event.preventDefault();
         event.stopPropagation();
         clearTimer();
         setKeyboard(event.detail === 0);
-        setOpen(value => !value);
+        setOpen((value) => !value);
     }
 
-    const popup = context && point ? (
-        <ContextPopup
-            id={menuId}
-            point={point}
-            onClose={close}
-            label={options.label}
-            boundary={options.boundary?.(point.opener)}
-            panel={options.panel}
-        >{content}</ContextPopup>
-    ) : menu && open ? (
-        <Dropdown anchorRef={anchor} surfaceRef={surface} open onOpenChange={next => { if (!next) close(); }}
-            id={menuId} role="menu" aria-label={options.label} keyboard="menu" initialFocus={!hover || keyboard ? 'first' : undefined}
-            returnFocus={hover && !keyboard ? false : anchor} closeOn={{ escape: true, blur: true }}
-            panel={{ ...options.panel, portal: true, placement: options.position || hover ? placement : options.panel?.placement ?? placement,
-                side: options.position || hover ? align : options.panel?.side ?? align,
-                onMouseEnter: event => { options.panel?.onMouseEnter?.(event); if (hover) clearTimer(); },
-                onMouseLeave: event => { options.panel?.onMouseLeave?.(event); leave(event.relatedTarget, true); },
-                onFocus: event => { options.panel?.onFocus?.(event); if (hover) clearTimer(); },
-                onBlur: event => { options.panel?.onBlur?.(event); leave(event.relatedTarget); },
-            }}>
-            {closeDropdown => typeof options.children === 'function' ? options.children({ close: closeDropdown }) : options.children}
-        </Dropdown>
-    ) : tooltipOptions ? (
-        <Tooltip as="span" ref={tooltip.tooltipRef} id={tooltipId}
-            surface={tooltipOptions.surface}
-            className={tooltipOptions.surface === false ? styles.Tooltip : undefined}
-            {...tooltip.bubbleProps}>{tooltipOptions.text}</Tooltip>
-    ) : null;
+    const popup =
+        context && point ? (
+            <ContextPopup
+                id={menuId}
+                point={point}
+                onClose={close}
+                label={options.label}
+                boundary={options.boundary?.(point.opener)}
+                panel={options.panel}
+            >
+                {content}
+            </ContextPopup>
+        ) : menu && open ? (
+            <Dropdown
+                anchorRef={anchor}
+                surfaceRef={surface}
+                open
+                onOpenChange={(next) => {
+                    if (!next) close();
+                }}
+                id={menuId}
+                role="menu"
+                aria-label={options.label}
+                keyboard="menu"
+                initialFocus={!hover || keyboard ? 'first' : undefined}
+                returnFocus={hover && !keyboard ? false : anchor}
+                closeOn={{ escape: true, blur: true }}
+                panel={{
+                    ...options.panel,
+                    portal: true,
+                    placement:
+                        options.position || hover
+                            ? placement
+                            : (options.panel?.placement ?? placement),
+                    side: options.position || hover ? align : (options.panel?.side ?? align),
+                    onMouseEnter: (event) => {
+                        options.panel?.onMouseEnter?.(event);
+                        if (hover) clearTimer();
+                    },
+                    onMouseLeave: (event) => {
+                        options.panel?.onMouseLeave?.(event);
+                        leave(event.relatedTarget, true);
+                    },
+                    onFocus: (event) => {
+                        options.panel?.onFocus?.(event);
+                        if (hover) clearTimer();
+                    },
+                    onBlur: (event) => {
+                        options.panel?.onBlur?.(event);
+                        leave(event.relatedTarget);
+                    },
+                }}
+            >
+                {(closeDropdown) =>
+                    typeof options.children === 'function'
+                        ? options.children({ close: closeDropdown })
+                        : options.children
+                }
+            </Dropdown>
+        ) : tooltipOptions ? (
+            <Tooltip
+                as="span"
+                ref={tooltip.tooltipRef}
+                id={tooltipId}
+                surface={tooltipOptions.surface}
+                className={tooltipOptions.surface === false ? styles.Tooltip : undefined}
+                {...tooltip.bubbleProps}
+            >
+                {tooltipOptions.text}
+            </Tooltip>
+        ) : null;
     return {
-        anchor: anchorRef, popup, onContextMenu, onKeyDown, onClick,
-        onPointerDown, onPointerMove, onPointerUp, onPointerCancel,
-        onMouseEnter, onMouseLeave, onFocus, onBlur, open: visible,
+        anchor: anchorRef,
+        popup,
+        onContextMenu,
+        onKeyDown,
+        onClick,
+        onPointerDown,
+        onPointerMove,
+        onPointerUp,
+        onPointerCancel,
+        onMouseEnter,
+        onMouseLeave,
+        onFocus,
+        onBlur,
+        open: visible,
         describedBy: tooltipOptions && tooltip.isActive ? tooltipId : undefined,
         controls: visible && (menu || context) ? menuId : undefined,
     };

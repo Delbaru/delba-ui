@@ -1,7 +1,18 @@
 'use client';
 
+import { resolvePresetProps } from '../../core/Preset';
 import { useEffect, useRef, useState, type MouseEvent, type Ref, type SyntheticEvent } from 'react';
-import { boxLayout, createLayoutClasses, cx, MEDIA_QUERY, splitBoxLayout, splitRootDomProps, useMergedRefs, type WithRef } from '#core';
+import {
+    boxLayout,
+    createLayoutClasses,
+    cx,
+    MEDIA_QUERY,
+    stateProps,
+    splitBoxLayout,
+    splitRootDomProps,
+    useMergedRefs,
+    type WithRef,
+} from '#core';
 import { useElement } from '#core/Element';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { VIDEO_DEFAULTS } from './Video.config';
@@ -14,7 +25,8 @@ const classes = createLayoutClasses();
 
 /** Tuple sources wait for hydration; scalar sources remain available during SSR. */
 export function videoSource(source: Source | undefined, viewport: Viewport): string | undefined {
-    const address = (value: VideoSrcTuple[number] | undefined) => typeof value === 'string' ? value : value?.src;
+    const address = (value: VideoSrcTuple[number] | undefined) =>
+        typeof value === 'string' ? value : value?.src;
     if (!Array.isArray(source)) return address(source);
     if (!viewport.mounted) return undefined;
     const [desktop, mobile, tablet] = source;
@@ -24,7 +36,17 @@ export function videoSource(source: Source | undefined, viewport: Viewport): str
 }
 
 /** Responsive source and the optional play overlay follow the real media element. */
-function useVideoMedia({ ref, src, poster, autoPlay, onPlay, onPause, onEnded }: Pick<VideoProps, 'src' | 'poster' | 'autoPlay' | 'onPlay' | 'onPause' | 'onEnded'> & { ref?: Ref<HTMLVideoElement> }) {
+function useVideoMedia({
+    ref,
+    src,
+    poster,
+    autoPlay,
+    onPlay,
+    onPause,
+    onEnded,
+}: Pick<VideoProps, 'src' | 'poster' | 'autoPlay' | 'onPlay' | 'onPause' | 'onEnded'> & {
+    ref?: Ref<HTMLVideoElement>;
+}) {
     const node = useRef<HTMLVideoElement | null>(null);
     const mobile = useMediaQuery(MEDIA_QUERY.mobile);
     const belowDesktop = useMediaQuery(MEDIA_QUERY.below);
@@ -36,7 +58,11 @@ function useVideoMedia({ ref, src, poster, autoPlay, onPlay, onPause, onEnded }:
     const source = { src: videoSource(src, viewport), poster: videoSource(poster, viewport) };
     const mergedRef = useMergedRefs(node, ref);
     useEffect(() => {
-        setPlaying(node.current ? !node.current.paused && !node.current.ended : autoPlay && Boolean(source.src));
+        setPlaying(
+            node.current
+                ? !node.current.paused && !node.current.ended
+                : autoPlay && Boolean(source.src),
+        );
     }, [autoPlay, source.src]);
 
     return {
@@ -51,19 +77,44 @@ function useVideoMedia({ ref, src, poster, autoPlay, onPlay, onPause, onEnded }:
             },
         },
         events: {
-            onPlay(event: SyntheticEvent<HTMLVideoElement>) { setPlaying(true); onPlay?.(event); },
-            onPause(event: SyntheticEvent<HTMLVideoElement>) { setPlaying(false); onPause?.(event); },
-            onEnded(event: SyntheticEvent<HTMLVideoElement>) { setPlaying(false); onEnded?.(event); },
+            onPlay(event: SyntheticEvent<HTMLVideoElement>) {
+                setPlaying(true);
+                onPlay?.(event);
+            },
+            onPause(event: SyntheticEvent<HTMLVideoElement>) {
+                setPlaying(false);
+                onPause?.(event);
+            },
+            onEnded(event: SyntheticEvent<HTMLVideoElement>) {
+                setPlaying(false);
+                onEnded?.(event);
+            },
         },
     };
 }
 
-export function useVideo(props: WithRef<VideoProps, HTMLVideoElement>) {
+export function useVideo(input: WithRef<VideoProps, HTMLVideoElement>) {
+    const props = resolvePresetProps(input);
     const { box, rest } = splitBoxLayout(props);
     const {
-        ref, className, style, 'data-point-events': dataPointEvents,
-        src, poster, rootW, rootH, objectFit, objectPosition,
-        linkState, perspective3d, parallax, animate, onPlay, onPause, onEnded,
+        ref,
+        state,
+        className,
+        style,
+        'data-point-events': dataPointEvents,
+        src,
+        poster,
+        rootW,
+        rootH,
+        objectFit,
+        objectPosition,
+        linkState,
+        perspective3d,
+        parallax,
+        animate,
+        onPlay,
+        onPause,
+        onEnded,
         showPlayButton = VIDEO_DEFAULTS.showPlayButton,
         controls = VIDEO_DEFAULTS.controls,
         autoPlay = VIDEO_DEFAULTS.autoPlay,
@@ -79,7 +130,10 @@ export function useVideo(props: WithRef<VideoProps, HTMLVideoElement>) {
             parallax,
             animate: {
                 appearance: animate?.appearance,
-                hover: animate?.hover && animate.hover.effect === 'transform' ? animate.hover : undefined,
+                hover:
+                    animate?.hover && animate.hover.effect === 'transform'
+                        ? animate.hover
+                        : undefined,
             },
         },
         style,
@@ -88,6 +142,7 @@ export function useVideo(props: WithRef<VideoProps, HTMLVideoElement>) {
 
     return {
         root: {
+            ...stateProps(state),
             ...rootProps,
             ...element.attributes,
             ...element.events,
@@ -116,6 +171,9 @@ export function useVideo(props: WithRef<VideoProps, HTMLVideoElement>) {
                 ...classes.value('objectPosition', objectPosition ?? VIDEO_DEFAULTS.objectPosition),
             ),
         },
-        play: showPlayButton && media.source.src && !media.playback.playing ? media.playback.start : undefined,
+        play:
+            showPlayButton && media.source.src && !media.playback.playing
+                ? media.playback.start
+                : undefined,
     };
 }

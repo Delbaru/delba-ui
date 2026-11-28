@@ -1,7 +1,9 @@
 // Stable cascade order and styles on native hosts (including html, body and browser snapshots).
 @use 'sass:meta';
 
-@layer ui.scale, ui.components, ui.utilities, ui.states;
+@layer ui.base, ui.scale, ui.components, ui.utilities, ui.states;
+
+@include meta.load-css('./base');
 
 @include meta.load-css('./motion');
 @include meta.load-css('./scrollbar-policy');
@@ -10,5 +12,5 @@
 @include meta.load-css('./PageTransition/PageTransition.module');
 
 @layer ui.utilities {
-  @include meta.load-css('./utilities');
+    @include meta.load-css('./utilities');
 }

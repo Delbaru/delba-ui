@@ -1,0 +1,140 @@
+@use '@delba/frontend/skin-states' as frontendTheme;
+
+.document {
+    position: relative;
+}
+.content {
+    min-height: 1.7em;
+    outline: none;
+    @include frontendTheme.typography-role(body);
+    color: var(--text);
+    overflow-wrap: anywhere;
+    p {
+        margin: 0 0 calc(8 * var(--rpx));
+    }
+    p:last-child {
+        margin-bottom: 0;
+    }
+    ul,
+    ol {
+        margin: calc(8 * var(--rpx)) 0;
+        padding-left: calc(24 * var(--rpx));
+    }
+    ul {
+        list-style: disc outside;
+    }
+    ol {
+        list-style: decimal outside;
+    }
+    li {
+        display: list-item;
+        margin: calc(2 * var(--rpx)) 0;
+    }
+    li::marker {
+        color: var(--text-muted);
+    }
+    h1,
+    h2,
+    h3 {
+        font-size: calc(18 * var(--rpx));
+        font-weight: 600;
+        line-height: 1.4;
+        margin: calc(12 * var(--rpx)) 0 calc(8 * var(--rpx));
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font: inherit;
+        white-space: normal;
+    }
+    th,
+    td {
+        background: var(--surface);
+        border: calc(1 * var(--rpx)) solid var(--line-strong);
+        padding: calc(6 * var(--rpx)) calc(10 * var(--rpx));
+        min-width: calc(90 * var(--rpx));
+        vertical-align: top;
+        text-align: left;
+    }
+    th {
+        background: var(--sunken);
+        font-weight: 600;
+    }
+    th p,
+    td p {
+        margin: 0;
+    }
+}
+.bold {
+    font-weight: 600;
+}
+.tableScroll {
+    max-width: 100%;
+    overflow-x: auto;
+    margin: calc(8 * var(--rpx)) 0;
+    border-radius: calc(6 * var(--rpx));
+}
+.underline {
+    text-decoration: underline;
+}
+.strikethrough {
+    text-decoration: line-through;
+}
+.underline.strikethrough {
+    text-decoration: underline line-through;
+}
+.italic {
+    font-style: italic;
+}
+.inlineCode,
+.code {
+    font-family: Consolas, monospace;
+    background: var(--sunken);
+    border-radius: calc(4 * var(--rpx));
+}
+.inlineCode {
+    cursor: pointer;
+    padding: calc(2 * var(--rpx)) calc(4 * var(--rpx));
+}
+.content code:not(.code) {
+    cursor: pointer;
+}
+.code {
+    cursor: text;
+    display: block;
+    position: relative;
+    white-space: pre-wrap;
+    tab-size: 4;
+    padding: calc(40 * var(--rpx)) calc(12 * var(--rpx)) calc(12 * var(--rpx));
+}
+.code::before {
+    content: attr(data-highlight-language);
+    position: absolute;
+    top: calc(8 * var(--rpx));
+    left: calc(12 * var(--rpx));
+    @include frontendTheme.typography-role(body);
+    color: var(--text-muted);
+}
+.code[data-code-active]::before {
+    visibility: hidden;
+}
+.tokenKeyword {
+    color: var(--info-text);
+}
+.tokenString {
+    color: var(--success-text);
+}
+.tokenComment {
+    color: var(--text-subtle);
+}
+.tokenFunction {
+    color: var(--info-text);
+}
+.tokenNumber {
+    color: var(--warning-text);
+}
+.quote {
+    margin: calc(8 * var(--rpx)) 0;
+    border-left: calc(3 * var(--rpx)) solid var(--line);
+    padding-left: calc(12 * var(--rpx));
+}

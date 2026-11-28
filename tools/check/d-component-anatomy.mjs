@@ -1,14 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import ts from 'typescript';
+import { checkDComponentAuthoring } from './rules/component-anatomy.mjs';
 
 const PUBLIC_COMPONENT = /^D[A-Z][A-Za-z0-9]*$/;
 const DEFAULT_ROOTS = ['src/shared/ui', 'src/cms/ui'];
 
-function expectedFiles(componentName, singleConfig) {
+function expectedFiles(componentName) {
   return [
     `${componentName}.tsx`,
-    `${componentName}.config.ts`,
-    ...(singleConfig ? [] : [`${componentName}.skin.ts`]),
     `${componentName}.module.scss`,
     'index.ts',
   ];
@@ -21,13 +21,19 @@ function legacyFiles(componentName) {
     `${lowerName}.tsx`,
     `${lowerName}.config.ts`,
     `${lowerName}.skin.ts`,
+    `${lowerName}.types.ts`,
     `${lowerName}.module.scss`,
     `${lowerBaseName}.tsx`,
     `${lowerBaseName}.config.ts`,
     `${lowerBaseName}.skin.ts`,
+    `${lowerBaseName}.types.ts`,
     `${lowerBaseName}.module.scss`,
     'config.ts',
     'skin.ts',
+    'types.ts',
+    `${componentName}.config.ts`,
+    `${componentName}.types.ts`,
+    `${componentName}.skin.ts`,
     'index.tsx',
   ];
 }
@@ -39,7 +45,6 @@ function legacyFiles(componentName) {
 export function validateDComponentAnatomy(
   projectRoot,
   roots = DEFAULT_ROOTS,
-  { singleConfig = false } = {},
 ) {
   const diagnostics = [];
 
@@ -62,27 +67,32 @@ export function validateDComponentAnatomy(
       const entries = fs.readdirSync(componentDirectory, { withFileTypes: true });
       const files = new Set(entries.filter((entry) => entry.isFile()).map((entry) => entry.name));
       const sourceMarkers = new Set([
-        ...expectedFiles(componentName, false),
+        ...expectedFiles(componentName),
         ...legacyFiles(componentName),
       ]);
       const isPublicImplementation = [...files].some((file) => sourceMarkers.has(file));
       if (!isPublicImplementation) continue;
 
-      for (const expectedFile of expectedFiles(componentName, singleConfig)) {
+      for (const expectedFile of expectedFiles(componentName)) {
         if (!files.has(expectedFile)) {
           diagnostics.push(`${diagnosticPath}: expected ${expectedFile}`);
         }
       }
 
-      for (const legacyFile of [
-        ...legacyFiles(componentName),
-        ...(singleConfig ? [`${componentName}.skin.ts`] : []),
-      ]) {
+      for (const legacyFile of legacyFiles(componentName)) {
         if (files.has(legacyFile)) {
           diagnostics.push(
-            `${diagnosticPath}: legacy duplicate ${legacyFile}; use the canonical anatomy`,
+            `${diagnosticPath}: legacy duplicate ${legacyFile}; use TSX/module.scss/index and keep small props/presets in ${componentName}.tsx`,
           );
         }
+      }
+
+      const entry = path.join(componentDirectory, `${componentName}.tsx`);
+      if (files.has(`${componentName}.tsx`)) {
+        const source = ts.createSourceFile(entry, fs.readFileSync(entry, 'utf8'), ts.ScriptTarget.Latest, true);
+        for (const diagnostic of checkDComponentAuthoring(source)) diagnostics.push(
+          `${diagnosticPath}/${componentName}.tsx:${diagnostic.line}: ${diagnostic.message}`,
+        );
       }
     }
   }

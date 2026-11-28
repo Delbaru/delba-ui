@@ -1,6 +1,21 @@
 export { LexicalText } from './LexicalText';
-export type { LexicalTextAnimate, LexicalTextProps, LexicalTextVariant, RichTextChangeAnimate } from './LexicalText.types';
-export { RICH_ROLES, isRichRole, resolveRole, roleClassKeys, isTextVariantName, tagDefaultRole, textVariantClasses, type RichRole, type RichTag } from './roles';
+export type {
+    LexicalTextAnimate,
+    LexicalTextProps,
+    LexicalTextVariant,
+    RichTextChangeAnimate,
+} from './LexicalText.types';
+export {
+    RICH_ROLES,
+    isRichRole,
+    resolveRole,
+    roleClassKeys,
+    isTextVariantName,
+    tagDefaultRole,
+    textVariantClasses,
+    type RichRole,
+    type RichTag,
+} from './roles';
 
 /**
  * Классы CSS-модуля `RichText`: корень `RichText`, роли блока `role-*`, `role-m-*`, `role-t-*`.
@@ -14,3 +29,4 @@ export { default as richTextClasses } from './LexicalText.module.scss';
 
 export type { LexicalDocument } from './types';
 
+export type { LexicalTextPresets } from './LexicalText.types';

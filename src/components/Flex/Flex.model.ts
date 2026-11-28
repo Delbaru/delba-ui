@@ -1,9 +1,15 @@
 'use client';
 
+import { resolvePresetProps } from '../../core/Preset';
 import { useRef } from 'react';
 import {
-    boxLayout, containerClass, createLayoutClasses, cx,
-    splitBoxLayout, stateProps, type WithRef,
+    boxLayout,
+    containerClass,
+    createLayoutClasses,
+    cx,
+    splitBoxLayout,
+    stateProps,
+    type WithRef,
 } from '#core';
 import { useInteractiveElement } from '#core/Element';
 import { useAsyncContent } from '../../core/Async/Async';
@@ -19,16 +25,45 @@ import styles from './Flex.module.scss';
 
 const c = createLayoutClasses();
 
-export function useFlex({
-    ref, as = 'div', children, ui, className, style,
-    display, gap, rowGap, columnGap, dir, justify, align, wrap, container,
-    state, trackInteraction, onInteractionChange, motionScope,
-    scrollFade, perspective3d, parallax, animate, linkState,
-    collapse, collapseGap, onCollapseEnd, collapseFade, collapseOverflowVisible,
-    collapseAxis, collapseAppear, collapseKeepMounted, onCollapseFound,
-    collapseRef, onTransition,
-    ...props
-}: WithRef<FlexProps, HTMLElement>) {
+export function useFlex(input: WithRef<FlexProps, HTMLElement>) {
+    const {
+        ref,
+        as = 'div',
+        children,
+        ui,
+        className,
+        style,
+        display,
+        gap,
+        rowGap,
+        columnGap,
+        dir,
+        justify,
+        align,
+        wrap,
+        container,
+        state,
+        trackInteraction,
+        onInteractionChange,
+        motionScope,
+        scrollFade,
+        perspective3d,
+        parallax,
+        animate,
+        linkState,
+        collapse,
+        collapseGap,
+        onCollapseEnd,
+        collapseFade,
+        collapseOverflowVisible,
+        collapseAxis,
+        collapseAppear,
+        collapseKeepMounted,
+        onCollapseFound,
+        collapseRef,
+        onTransition,
+        ...props
+    } = resolvePresetProps(input);
     const { box, rest } = splitBoxLayout(props);
     const scroll = useScrollSurface(ui?.scroll);
     const collapseInput = ui?.collapse?.settings ?? collapse;
@@ -76,22 +111,36 @@ export function useFlex({
             style,
             onSubmit: form.onSubmit,
             onAnimationEnd: contentMotion.onAnimationEnd,
-            tabIndex: rest.tabIndex ?? (selectable || popup && popup.preset !== 'tooltip' ? 0 : undefined),
+            tabIndex:
+                rest.tabIndex ??
+                (selectable || (popup && popup.preset !== 'tooltip') ? 0 : undefined),
             'aria-busy': rest['aria-busy'] ?? asyncContent.busy,
             'aria-selected': rest['aria-selected'] ?? selectable?.checked,
         },
-        events: [{ handlers: {
-            onMouseDown: selectable?.onMouseDown,
-            onClick: selectable?.onClick,
-        } }],
-        afterEvents: [{ handlers: {
-            onKeyDown: selectable?.onKeyDown,
-        }, cancelable: true }, {
-            handlers: { onKeyDown: form.onKeyDown }, cancelable: true,
-        }],
+        events: [
+            {
+                handlers: {
+                    onMouseDown: selectable?.onMouseDown,
+                    onClick: selectable?.onClick,
+                },
+            },
+        ],
+        afterEvents: [
+            {
+                handlers: {
+                    onKeyDown: selectable?.onKeyDown,
+                },
+                cancelable: true,
+            },
+            {
+                handlers: { onKeyDown: form.onKeyDown },
+                cancelable: true,
+            },
+        ],
     });
-    const collapseLayout = !display || display.some(value =>
-        value === null || value === 'flex' || value === 'inline-flex');
+    const collapseLayout =
+        !display ||
+        display.some((value) => value === null || value === 'flex' || value === 'inline-flex');
     return {
         host: element.host,
         html: rest.dangerouslySetInnerHTML != null,
@@ -103,8 +152,10 @@ export function useFlex({
             ...stateProps(state, trackInteraction && active && 'interacting'),
             'data-ui-collapse-layout': collapseLayout ? '' : undefined,
             'data-motion-scope': motionScope ? '' : undefined,
-            'data-scroll-axis': scroll?.axis ?? (rest as { 'data-scroll-axis'?: string })['data-scroll-axis'],
-            'data-scroll-preset': scroll?.preset ?? (rest as { 'data-scroll-preset'?: string })['data-scroll-preset'],
+            'data-scroll-axis':
+                scroll?.axis ?? (rest as { 'data-scroll-axis'?: string })['data-scroll-axis'],
+            'data-scroll-preset':
+                scroll?.preset ?? (rest as { 'data-scroll-preset'?: string })['data-scroll-preset'],
             'data-ui-collection': ui?.collection?.domId,
             'data-ui-collection-item': selectable?.collectionId,
             'data-ui-collection-key': selectable?.key,
@@ -113,25 +164,31 @@ export function useFlex({
         }),
         frame: {
             popup: element.popup,
-            interaction: trackInteraction || onInteractionChange ? {
-                target: interactionRef,
-                onChange: onInteractionChange,
-            } : undefined,
-            collapse: collapseOptions ? {
-                ...collapseOptions,
-                ref: undefined,
-                clip: box.minH != null,
-                axis: collapseOptions.axis ?? collapseAxis,
-                gap: collapseOptions.gap ?? collapseGap,
-                fade: collapseOptions.fade ?? collapseFade,
-                overflowVisibleWhenOpen: collapseOptions.overflowVisibleWhenOpen ?? collapseOverflowVisible,
-                appear: collapseOptions.appear ?? collapseAppear,
-                keepMounted: collapseOptions.keepMounted ?? collapseKeepMounted,
-                onFound: collapseOptions.onFound ?? onCollapseFound,
-                onEnd: collapseOptions.onEnd ?? onCollapseEnd,
-                onTransition: collapseOptions.onTransition ?? onTransition,
-                handleRef: collapseOptions.ref ?? collapseRef,
-            } : undefined,
+            interaction:
+                trackInteraction || onInteractionChange
+                    ? {
+                          target: interactionRef,
+                          onChange: onInteractionChange,
+                      }
+                    : undefined,
+            collapse: collapseOptions
+                ? {
+                      ...collapseOptions,
+                      ref: undefined,
+                      clip: box.minH != null,
+                      axis: collapseOptions.axis ?? collapseAxis,
+                      gap: collapseOptions.gap ?? collapseGap,
+                      fade: collapseOptions.fade ?? collapseFade,
+                      overflowVisibleWhenOpen:
+                          collapseOptions.overflowVisibleWhenOpen ?? collapseOverflowVisible,
+                      appear: collapseOptions.appear ?? collapseAppear,
+                      keepMounted: collapseOptions.keepMounted ?? collapseKeepMounted,
+                      onFound: collapseOptions.onFound ?? onCollapseFound,
+                      onEnd: collapseOptions.onEnd ?? onCollapseEnd,
+                      onTransition: collapseOptions.onTransition ?? onTransition,
+                      handleRef: collapseOptions.ref ?? collapseRef,
+                  }
+                : undefined,
         },
     };
 }

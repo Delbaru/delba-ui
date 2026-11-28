@@ -8,66 +8,93 @@ import type { useTextarea } from '../Textarea.model';
 import styles from './TextareaControl.module.scss';
 
 export function TextareaControl({
-  control,
+    control,
 }: {
-  control: ReturnType<typeof useTextarea>['control'];
+    control: ReturnType<typeof useTextarea>['control'];
 }) {
-  return (
-    <Flex
-      {...control.appearance}
-      className={cx(styles.TextareaControl, control.appearance.className)}
-      position={['relative', 'relative', 'relative']}
-      align={['stretch', 'stretch', 'stretch']}
-      data-has-counter={
-        (control.counter.visible && control.counter.placement === 'inside') || undefined
-      }
-      data-inline-error={control.feedback.text ? 'true' : undefined}
-      role="presentation"
-      onClick={control.focus}
-    >
-      <Flex
-        w={['100%', '100%', '100%']}
-        animate={{
-            change: {
-                effect: 'fade',
-                key: control.loading ? 'skeleton' : 'value',
-                duration: 'fast'
+    return (
+        <Flex
+            {...control.appearance}
+            className={cx(styles.TextareaControl, control.appearance.className)}
+            position={['relative', 'relative', 'relative']}
+            dir={[control.layout, control.layout, control.layout]}
+            gap={control.gap}
+            align={
+                control.layout === 'row'
+                    ? ['center', 'center', 'center']
+                    : ['stretch', 'stretch', 'stretch']
             }
-        }}
-      >
-        {control.loading ? (
-          <Skeleton rows={control.rows} h={[16, 16, 16]} />
-        ) : (
-          <textarea
-              {...control.native}
-              ref={control.ref}
-              className={cx(styles.field, control.fieldStyle?.className)}
-              style={control.fieldStyle?.style}
-          />
-        )}
-      </Flex>
-      {control.feedback.text && (
-        <Text
-            id={control.feedback.id}
-            role="alert"
-            variant={['body', 'body', 'body']}
-            color="var(--error)"
-            className={styles.inlineError}
+            data-has-counter={
+                (control.counter.visible && control.counter.placement === 'inside') || undefined
+            }
+            data-inline-error={control.feedback.text ? 'true' : undefined}
+            role="presentation"
+            onClick={control.focus}
         >
-          {control.feedback.text}
-        </Text>
-      )}
-      {control.counter.visible && control.counter.placement === 'inside' && (
-        <Text
-            variant={['caption', 'caption', 'caption']}
-            fontSize={[8, 8, 8]}
-            color="var(--text-muted)"
-            aria-live="polite"
-            className={styles.counter}
-        >
-          {control.counter.text}
-        </Text>
-      )}
-    </Flex>
-  );
+            <Flex
+                w={control.layout === 'column' ? ['100%', '100%', '100%'] : undefined}
+                grow={control.layout === 'row' ? [1, 1, 1] : undefined}
+                minW={[0, 0, 0]}
+                animate={{
+                    change: {
+                        effect: 'fade',
+                        key: control.loading ? 'skeleton' : 'value',
+                        duration: 'fast',
+                    },
+                }}
+            >
+                {control.loading ? (
+                    <Skeleton rows={control.rows} h={[16, 16, 16]} />
+                ) : (
+                    <textarea
+                        {...control.native}
+                        ref={control.ref}
+                        className={cx(styles.field, control.fieldStyle?.className)}
+                        style={{
+                            ...(control.autoGrow
+                                ? { maxHeight: '40vh', overflowY: 'auto' }
+                                : undefined),
+                            ...control.fieldStyle?.style,
+                        }}
+                    />
+                )}
+            </Flex>
+
+            {control.slots?.attachments}
+
+            {control.slots?.actions && (
+                <Flex
+                    justify={['end', 'end', 'end']}
+                    align={['center', 'center', 'center']}
+                    gap={[4, 4, 4]}
+                >
+                    {control.slots.actions}
+                </Flex>
+            )}
+
+            {control.feedback.text && (
+                <Text
+                    id={control.feedback.id}
+                    role="alert"
+                    variant={['body', 'body', 'body']}
+                    color="var(--error)"
+                    className={styles.inlineError}
+                >
+                    {control.feedback.text}
+                </Text>
+            )}
+
+            {control.counter.visible && control.counter.placement === 'inside' && (
+                <Text
+                    variant={['caption', 'caption', 'caption']}
+                    fontSize={[8, 8, 8]}
+                    color="var(--text-muted)"
+                    aria-live="polite"
+                    className={styles.counter}
+                >
+                    {control.counter.text}
+                </Text>
+            )}
+        </Flex>
+    );
 }

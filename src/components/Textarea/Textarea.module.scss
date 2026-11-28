@@ -3,49 +3,50 @@
 @use '../../core/field-sizes' as fields;
 
 @layer ui.components {
-  $sizes: fields.$height-values;
+    $sizes: fields.$height-values;
 
-  .Textarea {
-  }
-  .TextareaWrapper {
-    position: relative;
-    transition: var(--t-fast);
-  }
-  @mixin size-classes($p: '') {
-    .#{$p}size_default {
-      --textarea-width: calc(var(--rpx) * 290);
-      --textarea-min-height: calc(var(--rpx) * 120);
-      width: var(--textarea-width);
-      min-height: var(--textarea-min-height);
+    :where(.Textarea) {
+        @include m.typography-role(body);
+    }
+    .TextareaWrapper {
+        position: relative;
+        transition: var(--t-fast);
+    }
+    @mixin size-classes($p: '') {
+        .#{$p}size_default {
+            --textarea-width: calc(var(--rpx) * 290);
+            --textarea-min-height: calc(var(--rpx) * 120);
+            width: var(--textarea-width);
+            min-height: var(--textarea-min-height);
+        }
+
+        .#{$p}size_fullWidth {
+            --textarea-width: 100%;
+            --textarea-min-height: calc(var(--rpx) * 120);
+            width: var(--textarea-width);
+            min-height: var(--textarea-min-height);
+        }
     }
 
-    .#{$p}size_fullWidth {
-      --textarea-width: 100%;
-      --textarea-min-height: calc(var(--rpx) * 120);
-      width: var(--textarea-width);
-      min-height: var(--textarea-min-height);
-    }
-  }
+    @mixin textarea-classes($bp: null) {
+        $p: if(
+            sass($bp == null): '' ; else: '#{$bp}_',
+        );
 
-  @mixin textarea-classes($bp: null) {
-    $p: if(
-      sass($bp == null): '' ; else: '#{$bp}_',
-    );
+        @each $t in $sizes {
+            .#{$p}height_#{$t} {
+                --textarea-min-height: calc(var(--rpx) * #{$t});
+                height: calc(var(--rpx) * #{$t});
+                min-height: calc(var(--rpx) * #{$t});
+            }
+        }
 
-    @each $t in $sizes {
-      .#{$p}height_#{$t} {
-        --textarea-min-height: calc(var(--rpx) * #{$t});
-        height: calc(var(--rpx) * #{$t});
-        min-height: calc(var(--rpx) * #{$t});
-      }
+        @include size-classes($p);
     }
 
-    @include size-classes($p);
-  }
+    @include textarea-classes();
 
-  @include textarea-classes();
-
-  @include utils.withBreakpoints() using ($bp) {
-    @include textarea-classes($bp);
-  }
+    @include utils.withBreakpoints() using ($bp) {
+        @include textarea-classes($bp);
+    }
 }

@@ -1,0 +1,210 @@
+@use 'sass:map';
+@use 'sass:list';
+@use 'sass:string';
+@use '../responsive-generated' as responsive;
+
+// Values come from the utility registry. This sheet only owns destinations and native selectors.
+$properties: (
+    display,
+    width,
+    min-width,
+    max-width,
+    height,
+    min-height,
+    max-height,
+    padding,
+    padding-top,
+    padding-right,
+    padding-bottom,
+    padding-left,
+    margin,
+    margin-top,
+    margin-right,
+    margin-bottom,
+    margin-left,
+    border-radius,
+    border-top-left-radius,
+    border-top-right-radius,
+    border-bottom-right-radius,
+    border-bottom-left-radius,
+    background,
+    position,
+    top,
+    bottom,
+    left,
+    right,
+    color,
+    --field-placeholder-color,
+    gap,
+    row-gap,
+    column-gap,
+    border-width,
+    border-style,
+    border-color,
+    border,
+    border-top,
+    border-right,
+    border-bottom,
+    border-left,
+    flex-direction,
+    flex-wrap,
+    align-items,
+    justify-content,
+    justify-items,
+    align-content,
+    grid-auto-flow,
+    grid-template-columns,
+    grid-template-rows,
+    grid-column-end,
+    grid-row-end,
+    grid-column-start,
+    grid-row-start,
+    font,
+    font-size,
+    font-weight,
+    line-height,
+    font-family,
+    text-transform,
+    letter-spacing,
+    text-align,
+    white-space,
+    object-fit,
+    object-position,
+    flex-grow,
+    flex-shrink,
+    aspect-ratio,
+    opacity,
+    cursor,
+    overflow,
+    overflow-x,
+    overflow-y,
+    z-index,
+    box-shadow
+);
+
+$field-properties: (
+    height,
+    min-height,
+    max-height,
+    gap,
+    row-gap,
+    column-gap,
+    padding,
+    padding-top,
+    padding-right,
+    padding-bottom,
+    padding-left,
+    border-radius,
+    border-top-left-radius,
+    border-top-right-radius,
+    border-bottom-right-radius,
+    border-bottom-left-radius,
+    background,
+    color,
+    --field-placeholder-color,
+    border-width,
+    border-style,
+    border-color,
+    border,
+    border-top,
+    border-right,
+    border-bottom,
+    border-left,
+    font,
+    font-size,
+    font-weight,
+    line-height,
+    font-family,
+    text-transform,
+    letter-spacing,
+    text-align,
+    white-space
+);
+
+$disabled: ':is(:disabled, [disabled], [aria-disabled="true"], [state~="disabled"], label:has(input:disabled), :has(> [data-ui-preset-field][state~="disabled"]))';
+$error: ':is([state~="error"], [aria-invalid]:not([aria-invalid="false"]), :has(> [data-ui-preset-field][state~="error"]))';
+$states: (
+    base: '',
+    hover: ':is(:hover, [state~="hover"]):not(#{$disabled}):not(#{$error})',
+    focus: ':is(:focus-within, [state~="focus"]):not(#{$disabled}):not(#{$error})',
+    focusWithin: ':is(:focus-within, [state~="focusWithin"]):not(#{$disabled}):not(#{$error})',
+    focusVisible:
+        ':is(:focus-visible, [state~="focusVisible"], :has(:focus-visible)):not(#{$disabled}):not(#{$error})',
+    active:
+        ':is([state~="active"], [aria-current]:not([aria-current="false"]), :has(> [data-ui-preset-field][state~="active"])):not(#{$disabled})',
+    pressed: ':is(:active, [state~="pressed"], [aria-pressed="true"]):not(#{$disabled})',
+    checked: ':is(:checked, [state~="checked"], [aria-checked="true"], label:has(input:checked))',
+    open: ':is([open], [state~="open"], [aria-expanded="true"])',
+    selected:
+        ':is([state~="selected"], [aria-selected="true"], :where([state~="selected"], [aria-selected="true"]) *)',
+    error: $error,
+    disabled: $disabled,
+);
+
+// Explicit ordinary props follow preset defaults and states, including overlapping shorthands.
+$authored-states: $states;
+$states: map.set($states, explicit, '');
+@each $name, $selector in $authored-states {
+    @if $name != base {
+        $states: map.set($states, 'explicit_#{$name}', $selector);
+    }
+}
+
+// Variable values are instance-local; marker classes exist only for authored properties/bands.
+// Two classes keep explicit native props stronger than ordinary utility selectors in this layer.
+@function key($property) {
+    $result: '';
+    @for $index from 1 through string.length($property) {
+        $character: string.slice($property, $index, $index);
+        @if $character == '-' {
+            $character: '_';
+        }
+        $result: $result + $character;
+    }
+    @return $result;
+}
+
+@mixin destination($property, $value) {
+    @if list.index($field-properties, $property) {
+        & > :where([data-ui-preset-field]) {
+            #{$property}: $value;
+        }
+    } @else {
+        #{$property}: $value;
+    }
+}
+
+@layer ui.utilities {
+    @each $band in (d, m, t) {
+        @media #{map.get(responsive.$breakpoints, $band)} {
+            @each $state, $selector in $states {
+                @each $property in $properties {
+                    .Preset.#{$band}_#{$state}_#{key($property)} {
+                        @if $selector == '' {
+                            #{$property}: var(--preset-#{$band}-#{$state}-#{$property});
+                        } @else {
+                            &:where(#{$selector}) {
+                                #{$property}: var(--preset-#{$band}-#{$state}-#{$property});
+                            }
+                        }
+                    }
+                    .Preset.Field.field_#{$band}_#{$state}_#{key($property)} {
+                        @if $selector == '' {
+                            @include destination(
+                                $property,
+                                var(--preset-field-#{$band}-#{$state}-#{$property})
+                            );
+                        } @else {
+                            &:where(#{$selector}) {
+                                @include destination(
+                                    $property,
+                                    var(--preset-field-#{$band}-#{$state}-#{$property})
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

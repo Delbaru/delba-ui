@@ -1,12 +1,13 @@
+import type { Preset, PresetMap, PresetStates } from '../../core/Preset';
 import type React from 'react';
 import type { CSSProperties } from 'react';
 
 import type {
-  BoxLayoutProps,
-  ComponentStateValue,
-  FieldValueChangeHandler,
-  ResponsiveValue,
-  StateLinkInput,
+    BoxLayoutProps,
+    ComponentStateValue,
+    FieldValueChangeHandler,
+    ResponsiveValue,
+    StateLinkInput,
 } from '#core';
 import type { TextRole, TextVariantName } from '../../core/base/typography';
 import type { MotionChannels, SurfaceMotionOptions } from '#core/Motion';
@@ -18,76 +19,82 @@ type SizeKey = 'default' | 'fullWidth';
 type FontKey = TextVariantName | TextRole;
 
 export interface InputProps
-  extends Omit<
-      React.InputHTMLAttributes<HTMLInputElement>,
-      | 'color'
-      | 'placeholder'
-      | 'size'
-      | 'width'
-      | 'minWidth'
-      | 'maxWidth'
-      | 'height'
-      | 'minHeight'
-      | 'maxHeight'
-    >,
-    BoxLayoutProps,
-    Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
-  /** Motion channels for the field frame. */
-  animate?: MotionChannels;
-  style?: CSSProperties;
-  /** Настоящее событие ввода; target.value содержит текст нативного поля, до форматирования. */
-  onChange?: React.ChangeEventHandler<HTMLInputElement>;
-  /** Значение модели после маски, seed, шага числа или выбора даты. */
-  onValueChange?: FieldValueChangeHandler<HTMLInputElement>;
+    extends Omit<
+            React.InputHTMLAttributes<HTMLInputElement>,
+            | 'color'
+            | 'placeholder'
+            | 'size'
+            | 'width'
+            | 'minWidth'
+            | 'maxWidth'
+            | 'height'
+            | 'minHeight'
+            | 'maxHeight'
+        >,
+        BoxLayoutProps,
+        Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
+    /** Native visual defaults; explicit props override each preset field. */
+    preset?: Preset<InputProps>;
+    states?: PresetStates<InputProps>;
+    /** Motion channels for the field frame. */
+    animate?: MotionChannels;
+    style?: CSSProperties;
+    /** Настоящее событие ввода; target.value содержит текст нативного поля, до форматирования. */
+    onChange?: React.ChangeEventHandler<HTMLInputElement>;
+    /** Значение модели после маски, seed, шага числа или выбора даты. */
+    onValueChange?: FieldValueChangeHandler<HTMLInputElement>;
 
-  variant?: ResponsiveValue<VariantKey>;
-  size?: ResponsiveValue<SizeKey>;
-  /** Типографика поля (--font-*). Не задан → роль `body`. */
-  font?: FontKey;
+    variant?: ResponsiveValue<VariantKey>;
+    size?: ResponsiveValue<SizeKey>;
+    /** Типографика поля (--font-*). Не задан → роль `body`. */
+    font?: FontKey;
 
-  color?: string;
+    color?: string;
 
-  placeholder?: string;
-  placeholderColor?: string;
-  /** Значение-подсказка: очищается по фокусу и возвращается при уходе из пустого поля. */
-  seed?: string;
-  label?: string;
-  labelColor?: string;
-  comment?: string;
-  showNumberControls?: boolean;
-  numberOptions?: number[];
-  /** Кнопка показа пароля. По умолчанию выключена. */
-  revealable?: boolean;
-  /** Скелетон вместо значения; оболочка и подпись остаются на месте. */
-  loading?: boolean;
+    placeholder?: string;
+    placeholderColor?: string;
+    /** Значение-подсказка: очищается по фокусу и возвращается при уходе из пустого поля. */
+    seed?: string;
+    label?: string;
+    labelColor?: string;
+    comment?: string;
+    showNumberControls?: boolean;
+    numberOptions?: number[];
+    /** Кнопка показа пароля. По умолчанию выключена. */
+    revealable?: boolean;
+    /** Скелетон вместо значения; оболочка и подпись остаются на месте. */
+    loading?: boolean;
 
-  length?: { min?: number; max?: number };
-  /** Формат type='tel': код страны, длина и группы цифр. По умолчанию +7. */
-  phone?: PhoneFormat;
-  /** Содержимое по краям строки поля; ref и события остаются у самого input. */
-  slots?: { start?: React.ReactNode; end?: React.ReactNode };
-  type?: React.HTMLInputTypeAttribute;
+    length?: { min?: number; max?: number };
+    /** Формат type='tel': код страны, длина и группы цифр. По умолчанию +7. */
+    phone?: PhoneFormat;
+    /** Содержимое по краям строки поля; ref и события остаются у самого input. */
+    slots?: { start?: React.ReactNode; end?: React.ReactNode };
+    type?: React.HTMLInputTypeAttribute;
 
-  error?: string;
+    error?: string;
 
-  /** Сворачивать поле целиком, включая подпись, ошибку и комментарий. */
-  collapse?: CollapseOptions;
+    /** Сворачивать поле целиком, включая подпись, ошибку и комментарий. */
+    collapse?: CollapseOptions;
 
-  state?: ComponentStateValue;
+    state?: ComponentStateValue;
 
-  /** Класс строки с фоном и рамкой; className относится ко всей оболочке. */
-  rowClassName?: string;
-  /** Оформление нативного input; className/style корня по-прежнему относятся ко всему полю. */
-  field?: { className?: string; style?: CSSProperties };
-  /** Сохранить нативный required для форм с браузерной валидацией. По умолчанию обязательность проверяет кит. */
-  nativeValidation?: boolean;
+    /** Класс строки с фоном и рамкой; className относится ко всей оболочке. */
+    rowClassName?: string;
+    /** Оформление нативного input; className/style корня по-прежнему относятся ко всему полю. */
+    field?: { className?: string; style?: CSSProperties };
+    /** Сохранить нативный required для форм с браузерной валидацией. По умолчанию обязательность проверяет кит. */
+    nativeValidation?: boolean;
 
-  required?: boolean;
-  emptyMessage?: string;
-  validate?: (value: string) => string | undefined;
-  /** Ошибка внутри значения или под полем. По умолчанию inside; для телефона — below. */
-  errorPlacement?: 'inside' | 'below';
+    required?: boolean;
+    emptyMessage?: string;
+    validate?: (value: string) => string | undefined;
+    /** Ошибка внутри значения или под полем. По умолчанию inside; для телефона — below. */
+    errorPlacement?: 'inside' | 'below';
 
-  linkState?: StateLinkInput;
-  'data-point-events'?: string;
+    linkState?: StateLinkInput;
+    'data-point-events'?: string;
 }
+
+/** Named native visual defaults authored by the consumer. */
+export type InputPresets = PresetMap<InputProps>;

@@ -1,14 +1,14 @@
 import type { WithRef } from '#core';
 
 import {
-  createLayoutClasses,
-  cx,
-  fieldHelperPaddingLeft,
-  fieldLayoutClasses,
-  fieldRootLayoutClasses,
-  resolveFieldLayout,
-  splitBoxLayout,
-  stateProps,
+    createLayoutClasses,
+    cx,
+    fieldHelperPaddingLeft,
+    fieldLayoutClasses,
+    fieldRootLayoutClasses,
+    resolveFieldLayout,
+    splitBoxLayout,
+    stateProps,
 } from '#core';
 import type { InputProps } from './Input.types';
 import styles from './Input.module.scss';
@@ -16,165 +16,173 @@ import styles from './Input.module.scss';
 const classes = createLayoutClasses(styles, { local: { h: 'height' } });
 
 interface FieldState {
-  active: boolean;
-  hasValue: boolean;
-  readOnly: boolean;
-  error?: string;
-  inputType: string;
+    active: boolean;
+    hasValue: boolean;
+    readOnly: boolean;
+    error?: string;
+    inputType: string;
 }
 
 type AppearanceOptions = Pick<
-  InputProps,
-  | 'variant'
-  | 'size'
-  | 'font'
-  | 'color'
-  | 'placeholderColor'
-  | 'label'
-  | 'labelColor'
-  | 'required'
-  | 'className'
-  | 'style'
-  | 'rowClassName'
-  | 'state'
-  | 'linkState'
-  | 'animate'
-  | 'perspective3d'
-  | 'parallax'
-  | 'collapse'
+    InputProps,
+    | 'variant'
+    | 'size'
+    | 'font'
+    | 'color'
+    | 'placeholderColor'
+    | 'label'
+    | 'labelColor'
+    | 'required'
+    | 'className'
+    | 'style'
+    | 'rowClassName'
+    | 'state'
+    | 'disabled'
+    | 'linkState'
+    | 'animate'
+    | 'perspective3d'
+    | 'parallax'
+    | 'collapse'
 > &
-  import('../../core').BoxLayoutProps;
+    import('../../core').BoxLayoutProps;
 
 /** Resolves visual state and motion; input value and events stay with the field model. */
 function appearance(props: AppearanceOptions, state: FieldState) {
-  const { box } = splitBoxLayout(props);
-  const layout = resolveFieldLayout({
-    ...box,
-    variant: props.variant,
-    size: props.size,
-    color: props.color,
-    placeholderColor: props.placeholderColor,
-  });
+    const { box } = splitBoxLayout(props);
+    const layout = resolveFieldLayout({
+        ...box,
+        variant: props.variant,
+        size: props.size,
+        color: props.color,
+        placeholderColor: props.placeholderColor,
+    });
 
-  return {
-    helperPadding: fieldHelperPaddingLeft(layout.p, layout.pl),
-    label: props.label
-      ? {
-          text: props.label,
-          color: props.labelColor,
-          required: props.required,
-        }
-      : undefined,
-    root: {
-      className: cx(
-          styles.Input,
-          ...classes.value('text', props.font ? [props.font, props.font, props.font] : undefined),
-          ...fieldRootLayoutClasses(classes, box),
-          state.inputType,
-          styles[state.inputType],
-          props.className,
-      ),
-      style: props.style,
-      collapse: props.collapse,
-      animate: props.animate,
-      perspective3d: props.perspective3d,
-      parallax: props.parallax,
-      linkState: props.linkState,
-      ...stateProps(state.active && 'active'),
-    },
-    control: {
-      className: cx(
-        ...fieldLayoutClasses(classes, layout),
-        props.rowClassName,
-      ),
-      style: undefined,
-      ...stateProps(
-        props.state,
-        state.error && 'error',
-        state.active && 'active',
-        state.hasValue && 'filled',
-        state.readOnly && 'readonly',
-      ),
-    },
-  };
+    return {
+        helperPadding: fieldHelperPaddingLeft(layout.p, layout.pl),
+        label: props.label
+            ? {
+                  text: props.label,
+                  color: props.labelColor,
+                  required: props.required,
+              }
+            : undefined,
+        root: {
+            className: cx(
+                styles.Input,
+                ...classes.value(
+                    'text',
+                    props.font ? [props.font, props.font, props.font] : undefined,
+                ),
+                ...fieldRootLayoutClasses(classes, box),
+                state.inputType,
+                styles[state.inputType],
+                props.className,
+            ),
+            style: props.style,
+            collapse: props.collapse,
+            animate: props.animate,
+            perspective3d: props.perspective3d,
+            parallax: props.parallax,
+            linkState: props.linkState,
+            ...stateProps(
+                props.state,
+                props.disabled && 'disabled',
+                state.active && 'active',
+                state.error && 'error',
+            ),
+        },
+        control: {
+            'data-ui-preset-field': '',
+            className: cx(...fieldLayoutClasses(classes, layout), props.rowClassName),
+            style: undefined,
+            ...stateProps(
+                props.state,
+                props.disabled && 'disabled',
+                state.error && 'error',
+                state.active && 'active',
+                state.hasValue && 'filled',
+                state.readOnly && 'readonly',
+            ),
+        },
+    };
 }
 
 /** Separates public field behavior from layout/decoration and native input attributes. */
 function read(props: WithRef<InputProps, HTMLInputElement>) {
-  const { rest } = splitBoxLayout(props);
-  const {
-    ref,
-    type,
-    value,
-    defaultValue,
-    error,
-    id,
-    disabled,
-    onChange,
-    onValueChange,
-    onFocus,
-    onBlur,
-    onKeyDown,
-    required,
-    emptyMessage,
-    validate,
-    placeholder,
-    seed,
-    length,
-    numberOptions,
-    phone,
-    variant,
-    size,
-    font,
-    color,
-    placeholderColor,
-    label,
-    labelColor,
-    comment,
-    className,
-    style,
-    rowClassName,
-    field,
-    slots,
-    loading,
-    revealable,
-    showNumberControls,
-    errorPlacement,
-    nativeValidation,
-    collapse,
-    state,
-    linkState,
-    animate,
-    perspective3d,
-    parallax,
-    'data-point-events': pointEvents,
-    ...inputProps
-  } = rest;
+    const { rest } = splitBoxLayout(props);
+    const {
+        ref,
+        type,
+        value,
+        defaultValue,
+        error,
+        id,
+        disabled,
+        onChange,
+        onValueChange,
+        onFocus,
+        onBlur,
+        onKeyDown,
+        required,
+        emptyMessage,
+        validate,
+        placeholder,
+        seed,
+        length,
+        numberOptions,
+        phone,
+        variant,
+        size,
+        font,
+        color,
+        placeholderColor,
+        label,
+        labelColor,
+        comment,
+        className,
+        style,
+        rowClassName,
+        field,
+        slots,
+        loading,
+        revealable,
+        showNumberControls,
+        errorPlacement,
+        nativeValidation,
+        collapse,
+        state,
+        linkState,
+        animate,
+        perspective3d,
+        parallax,
+        'data-point-events': pointEvents,
+        ...inputProps
+    } = rest;
 
-  return {
-    ref,
-    type,
-    value,
-    defaultValue,
-    error,
-    id,
-    disabled,
-    onChange,
-    onValueChange,
-    onFocus,
-    onBlur,
-    onKeyDown,
-    required,
-    emptyMessage,
-    validate,
-    placeholder,
-    seed,
-    length,
-    numberOptions,
-    phoneFormat: phone,
-    onInvalid: inputProps.onInvalid,
-    inputProps: { ...inputProps, placeholder },
-  };
+    return {
+        ref,
+        type,
+        value,
+        defaultValue,
+        error,
+        id,
+        disabled,
+        onChange,
+        onValueChange,
+        onFocus,
+        onBlur,
+        onKeyDown,
+        required,
+        emptyMessage,
+        validate,
+        placeholder,
+        seed,
+        length,
+        numberOptions,
+        phoneFormat: phone,
+        onInvalid: inputProps.onInvalid,
+        inputProps: { ...inputProps, placeholder },
+    };
 }
 
 export const inputConfig = { read, appearance };

@@ -1,9 +1,16 @@
+import type { Preset, PresetMap, PresetStates } from '../../core/Preset';
 import type React from 'react';
 import type { CSSProperties } from 'react';
 import type { BoxLayoutProps, ComponentStateValue, ResponsiveValue, StateLinkInput } from '#core';
 import type { MotionChannels, SurfaceMotionOptions } from '#core/Motion';
 
-export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>, Omit<BoxLayoutProps, 'aspectRatio'>, Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
+export interface CheckboxProps
+    extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>,
+        BoxLayoutProps,
+        Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
+    /** Native visual defaults; explicit props override each preset field. */
+    preset?: Preset<CheckboxProps>;
+    states?: PresetStates<CheckboxProps>;
     /** Motion on the label containing the native input. */
     animate?: MotionChannels;
     /** Show the decorative checkbox; the native input and label are preserved. */
@@ -23,3 +30,6 @@ export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputE
     'data-point-events'?: string;
     linkState?: StateLinkInput;
 }
+
+/** Named native visual defaults authored by the consumer. */
+export type CheckboxPresets = PresetMap<CheckboxProps>;

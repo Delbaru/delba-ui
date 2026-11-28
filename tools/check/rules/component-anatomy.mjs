@@ -30,6 +30,63 @@ const nonvisualAdapters = new Map([
 ]);
 const isProvider = (tag) => ts.isPropertyAccessExpression(tag) && tag.name.text === 'Provider';
 
+function expressionOf(node) {
+  while (ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isParenthesizedExpression(node)) node = node.expression;
+  return node;
+}
+
+/** Consumer roles author small props and visual data in the TSX that renders them. */
+export function checkDComponentAuthoring(source) {
+  const diagnostics = [];
+  const maps = [];
+  const forbidden = new Set();
+  const report = (node, message, fix) => diagnostics.push({ ...position(source, node), message, fix });
+  const visit = (node) => {
+    if (ts.isIdentifier(node) && (/^(?:.*_)?(?:AXES|SCALES)$/.test(node.text)
+        || ['defineSkin', 'useSkin', 'skinPad', 'skinRadius'].includes(node.text))) forbidden.add(node.text);
+    if (ts.isImportDeclaration(node) && ts.isStringLiteralLike(node.moduleSpecifier)
+        && /\.(?:config|types|skin)(?:\.[cm]?[jt]sx?)?$/.test(node.moduleSpecifier.text)) report(node,
+      'D-роль импортирует отдельный config/types/skin вместо публичного входа.',
+      'Малые собственные props и presets перенесите в TSX; соседние роли импортируйте через их публичный вход.');
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      const named = /^(?:presets|[A-Za-z0-9_]*Presets|[A-Z0-9_]*PRESETS)$/.test(node.name.text);
+      if (named && node.initializer) {
+        const value = expressionOf(node.initializer);
+        const statement = node.parent.parent;
+        if (!ts.isVariableStatement(statement) || !ts.isSourceFile(statement.parent)) report(node,
+          'Локальные presets D-роли должны находиться на уровне модуля.',
+          'Перенесите обычный объект presets над компонентом.');
+        if (!ts.isObjectLiteralExpression(value)) report(node,
+          'Presets D-роли должны быть обычным локальным объектом.',
+          'Запишите визуальные props и states непосредственно в presets, без фабрики или промежуточной таблицы.');
+        else {
+          maps.push({ node, count: value.properties.filter(property => !ts.isSpreadAssignment(property)).length });
+          const inspect = (child) => {
+            if (ts.isSpreadAssignment(child)) report(child,
+              'Presets D-роли не используют общие style-спреды.',
+              'Запишите визуальные поля непосредственно; именованный preset части передайте через её объектный слот.');
+            if (ts.isIdentifier(child) && ['common', 'sizes'].includes(child.text)) report(child,
+              `Presets D-роли используют промежуточную таблицу ${child.text}.`,
+              'Запишите геометрию и состояния непосредственно в каждом пресете.');
+            ts.forEachChild(child, inspect);
+          };
+          inspect(value);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  const count = maps.reduce((total, map) => total + map.count, 0);
+  if (count > 6) report(maps[0].node,
+    `У D-роли ${count} локальных визуальных пресетов; максимум 6.`,
+    'Объедините случайные варианты; данные и действия передавайте props экземпляра.');
+  for (const name of forbidden) report(source,
+    `Авторский код D-роли использует ${name}.`,
+    'Используйте обычные локальные presets с публичным типом Frontend и явные props/states.');
+  return diagnostics;
+}
+
 /** Named JSX functions, including internal parts. Hooks and text/array render helpers are not components. */
 export function visualComponents(source) {
   const found = [];
@@ -108,6 +165,9 @@ export const componentAnatomyRule = {
   id: 'component-anatomy',
   docs: 'docs/development.md',
   check(source, { root }) {
+    const projectRelative = path.relative(root, source.fileName).split(path.sep).join('/');
+    if (/^src\/(?:shared|cms)\/ui\/D[A-Z][A-Za-z0-9]*\/[^/]+\.tsx$/.test(projectRelative)
+        && !ignoredFile.test(source.fileName)) return checkDComponentAuthoring(source);
     const relative = path.relative(path.resolve(root, 'src/components'), source.fileName);
     if (relative.startsWith('..') || path.isAbsolute(relative) || ignoredFile.test(source.fileName)) return [];
     const diagnostics = [];
@@ -145,6 +205,7 @@ export const componentAnatomyRule = {
   },
 };
 
+/** Native mechanisms retain their reviewed types/config split, distinct from consumer D-roles. */
 export function checkComponentScaffolds(root) {
   const diagnostics = [];
   for (const { directory: component, name } of publicComponentScaffolds) {

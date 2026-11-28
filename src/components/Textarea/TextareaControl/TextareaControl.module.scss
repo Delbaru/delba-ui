@@ -1,95 +1,97 @@
 @use '../../../core/mixins' as m;
 @layer ui.components {
-  .TextareaControl {
-    transition: var(--t-fast);
-    display: flex;
-    align-items: stretch;
-    position: relative;
-    cursor: auto;
+    .TextareaControl {
+        transition: var(--t-fast);
+        display: flex;
+        align-items: stretch;
+        position: relative;
+        cursor: auto;
 
-    .field {
-      flex: 1;
-      min-width: 0;
-      padding: 0;
-      margin: 0;
-      border: none;
-      background: transparent;
-      color: inherit;
-      outline: none;
-      caret-color: var(--primary);
-      @include m.typography-role(body);
-      resize: none;
+        .field {
+            flex: 1;
+            min-width: 0;
+            padding: 0;
+            margin: 0;
+            border: none;
+            background: transparent;
+            color: inherit;
+            outline: none;
+            caret-color: var(--primary);
+            font: inherit;
+            letter-spacing: inherit;
+            text-transform: inherit;
+            resize: none;
 
-      &::placeholder {
-        color: var(--field-placeholder-color, var(--text-muted));
-      }
-      &:-webkit-autofill,
-      &:-webkit-autofill:hover,
-      &:-webkit-autofill:focus,
-      &:-webkit-autofill:active {
-        -webkit-text-fill-color: inherit;
-        caret-color: var(--primary);
-        transition:
-          background-color 600000s 0s,
-          color 600000s 0s;
-      }
-    }
+            &::placeholder {
+                color: var(--field-placeholder-color, var(--text-muted));
+            }
+            &:-webkit-autofill,
+            &:-webkit-autofill:hover,
+            &:-webkit-autofill:focus,
+            &:-webkit-autofill:active {
+                -webkit-text-fill-color: inherit;
+                caret-color: var(--primary);
+                transition:
+                    background-color 600000s 0s,
+                    color 600000s 0s;
+            }
+        }
 
-    &[data-inline-error='true'] .field {
-      color: transparent;
-      -webkit-text-fill-color: transparent;
+        &[data-inline-error='true'] .field {
+            color: transparent;
+            -webkit-text-fill-color: transparent;
 
-      &::placeholder {
-        color: transparent;
-      }
-    }
+            &::placeholder {
+                color: transparent;
+            }
+        }
 
-    .inlineError {
-      position: absolute;
-      inset: 0;
-      padding: inherit;
-      min-width: 0;
-      overflow: hidden;
-      pointer-events: none;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-    }
+        .inlineError {
+            position: absolute;
+            inset: 0;
+            padding: inherit;
+            min-width: 0;
+            overflow: hidden;
+            pointer-events: none;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
 
-    &[data-has-counter='true'] .field {
-      padding-bottom: var(--s-4);
-    }
-    &[data-has-counter='true'] .inlineError {
-      padding-right: calc(var(--s-8) + var(--s-48));
-    }
+        &[data-has-counter='true'] .field {
+            padding-bottom: var(--s-4);
+        }
+        &[data-has-counter='true'] .inlineError {
+            padding-right: calc(var(--s-8) + var(--s-48));
+        }
 
-    .counter {
-      position: absolute;
-      right: var(--s-8);
-      bottom: var(--s-8);
-      z-index: 1;
-      pointer-events: none;
-    }
+        .counter {
+            position: absolute;
+            right: var(--s-8);
+            bottom: var(--s-8);
+            z-index: 1;
+            pointer-events: none;
+        }
 
-    &[state~='error'] {
-      border-color: var(--error);
-    }
+        &[state~='error'] {
+            border-color: var(--error);
+        }
 
-    &[state~='active'] {
-      &:active {
-        border-color: var(--text-muted);
-      }
+        &[state~='active'] {
+            &:active {
+                border-color: var(--text-muted);
+            }
+        }
+        &:not([state~='error']):hover {
+            border-color: var(--text-muted);
+        }
     }
-    &:not([state~='error']):hover {
-      border-color: var(--text-muted);
-    }
-  }
 }
 @layer ui.states {
-  .TextareaControl .field:focus::placeholder {
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-  }
+    .TextareaControl .field:focus::placeholder {
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+    }
 }

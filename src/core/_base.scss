@@ -1,0 +1,67 @@
+@use './mixins' as theme;
+
+@layer ui.base {
+    :root {
+        color-scheme: light;
+
+        &[data-theme='dark'] {
+            color-scheme: dark;
+        }
+    }
+
+    :where(*, *::before, *::after) {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    :where(html, body) {
+        scrollbar-gutter: stable;
+    }
+
+    :where(body) {
+        @include theme.typography-role(body);
+        margin: 0;
+        color: var(--text);
+        background: var(--sunken);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+    }
+
+    @for $level from 1 through 6 {
+        :where(h#{$level}) {
+            @include theme.typography-role(h#{$level});
+            margin: 0;
+        }
+    }
+
+    :where(ul, ol) {
+        padding-left: calc(24 * var(--rpx));
+
+        &:not(:last-child) {
+            margin-bottom: calc(12 * var(--rpx));
+        }
+    }
+
+    :where(a) {
+        text-decoration: none;
+        transition: var(--t-fast);
+    }
+
+    :where(img) {
+        pointer-events: none;
+    }
+
+    :where(input[type='number']) {
+        appearance: textfield;
+
+        &::-webkit-outer-spin-button,
+        &::-webkit-inner-spin-button {
+            appearance: none;
+            margin: 0;
+        }
+    }
+
+    :where([data-point-events='none']) {
+        pointer-events: none;
+    }
+}

@@ -1,49 +1,45 @@
-import { clamp } from '#core';
+import { clampDuration, durationMaximum, durationParts } from '#core/Duration';
 import { durationPickerDefaults } from './DurationPicker.config';
 
 export interface DurationWheelModel {
-  value: number;
-  max: number;
-  onChange(value: number): void;
+    value: number;
+    max: number;
+    onChange(value: number): void;
 }
 
 export interface DurationPickerModel {
-  wheels: { hours: DurationWheelModel; minutes: DurationWheelModel };
+    wheels: { hours: DurationWheelModel; minutes: DurationWheelModel };
 }
 
 /** Resolves a controlled duration into bounded wheel values and their minute commits. */
 export function resolveDurationPickerModel(options: {
-  value: number;
-  maxMinutes?: number;
-  onValueChange(minutes: number): void;
+    value: number;
+    maxMinutes?: number;
+    onValueChange(minutes: number): void;
 }): DurationPickerModel {
-  const { value, maxMinutes, onValueChange } = options;
-  const defaultMaximum = durationPickerDefaults.maxMinutes;
-  const requestedMaximum = maxMinutes ?? defaultMaximum;
-  const maximum = Number.isFinite(requestedMaximum)
-    ? Math.max(0, Math.round(requestedMaximum))
-    : defaultMaximum;
-  const total = clamp(Number.isFinite(value) ? Math.round(value) : 0, 0, maximum);
-  const hours = Math.floor(total / 60);
-  const minutes = total % 60;
-  const maximumHours = Math.floor(maximum / 60);
+    const { value, maxMinutes, onValueChange } = options;
+    const defaultMaximum = durationPickerDefaults.maxMinutes;
+    const requestedMaximum = maxMinutes ?? defaultMaximum;
+    const maximum = durationMaximum(requestedMaximum);
+    const { hours, minutes } = durationParts(value, maximum);
+    const maximumHours = Math.floor(maximum / 60);
 
-  function commitHours(nextHours: number) {
-    onValueChange(Math.min(maximum, nextHours * 60 + minutes));
-  }
+    function commitHours(nextHours: number) {
+        onValueChange(clampDuration(nextHours * 60 + minutes, maximum));
+    }
 
-  function commitMinutes(nextMinutes: number) {
-    onValueChange(hours * 60 + nextMinutes);
-  }
+    function commitMinutes(nextMinutes: number) {
+        onValueChange(clampDuration(hours * 60 + nextMinutes, maximum));
+    }
 
-  return {
-    wheels: {
-      hours: { value: hours, max: maximumHours, onChange: commitHours },
-      minutes: {
-        value: minutes,
-        max: hours === maximumHours ? maximum % 60 : 59,
-        onChange: commitMinutes,
-      },
-    },
-  };
+    return {
+        wheels: {
+            hours: { value: hours, max: maximumHours, onChange: commitHours },
+            minutes: {
+                value: minutes,
+                max: hours === maximumHours ? maximum % 60 : 59,
+                onChange: commitMinutes,
+            },
+        },
+    };
 }

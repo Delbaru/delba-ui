@@ -1,45 +1,100 @@
 import {
-  borderClasses,
-  layoutSpaceClasses,
-  radiusClasses,
-  sizeClasses,
-  type AspectRatioProps,
-  type BorderStyleProps,
-  type GrowProps,
-  type ShrinkProps,
-  type LayoutSpaceProps,
-  type RadiusPropsShort,
-  type SizePropsShort,
-  type PositionProps,
-  type VisibilityProps,
+    borderClasses,
+    typographyClasses,
+    type TypographyProps,
+    type VisualProps,
+    layoutSpaceClasses,
+    radiusClasses,
+    sizeClasses,
+    type AspectRatioProps,
+    type BorderStyleProps,
+    type GrowProps,
+    type ShrinkProps,
+    type LayoutSpaceProps,
+    type RadiusPropsShort,
+    type SizePropsShort,
+    type PositionProps,
+    type VisibilityProps,
 } from '../base/shared-props';
 import { resolveResponsiveInput, type ResponsiveValue } from '../base/responsive';
 import type { ClassBuilder } from './layout-classes';
 
 /** Пропсы «коробки», которые одинаково понимает корень любого компонента. */
 export interface BoxLayoutProps
-  extends LayoutSpaceProps,
-    SizePropsShort,
-    RadiusPropsShort,
-    BorderStyleProps,
-    AspectRatioProps,
-    GrowProps,
-    ShrinkProps,
-    PositionProps,
-    VisibilityProps {
-  /** Фон коробки на каждой полосе ширины. */
-  bg?: ResponsiveValue<string>;
+    extends LayoutSpaceProps,
+        SizePropsShort,
+        RadiusPropsShort,
+        BorderStyleProps,
+        AspectRatioProps,
+        GrowProps,
+        ShrinkProps,
+        PositionProps,
+        VisibilityProps,
+        TypographyProps,
+        VisualProps {
+    /** Фон коробки на каждой полосе ширины. */
+    bg?: ResponsiveValue<string>;
 }
 
 export const BOX_LAYOUT_KEYS = [
-  'bg',
-  'p', 'pt', 'pr', 'pb', 'pl',
-  'm', 'mt', 'mr', 'mb', 'ml',
-  'w', 'minW', 'maxW', 'h', 'minH', 'maxH',
-  'r', 'tlr', 'trr', 'brr', 'blr', 'borderTLR', 'borderTRR', 'borderBRR', 'borderBLR',
-  'border', 'borderC', 'borderS', 'borderW', 'borderT', 'borderR', 'borderB', 'borderL',
-  'aspectRatio', 'grow', 'shrink',
-  'position', 'top', 'bottom', 'left', 'right', 'hide',
+    'bg',
+    'fontSize',
+    'fontWeight',
+    'lineHeight',
+    'fontFamily',
+    'letterSpacing',
+    'textTransform',
+    'textAlign',
+    'whiteSpace',
+    'opacity',
+    'cursor',
+    'overflow',
+    'overflowX',
+    'overflowY',
+    'zIndex',
+    'boxShadow',
+    'p',
+    'pt',
+    'pr',
+    'pb',
+    'pl',
+    'm',
+    'mt',
+    'mr',
+    'mb',
+    'ml',
+    'w',
+    'minW',
+    'maxW',
+    'h',
+    'minH',
+    'maxH',
+    'r',
+    'tlr',
+    'trr',
+    'brr',
+    'blr',
+    'borderTLR',
+    'borderTRR',
+    'borderBRR',
+    'borderBLR',
+    'border',
+    'borderC',
+    'borderS',
+    'borderW',
+    'borderT',
+    'borderR',
+    'borderB',
+    'borderL',
+    'aspectRatio',
+    'grow',
+    'shrink',
+    'position',
+    'top',
+    'bottom',
+    'left',
+    'right',
+    'hide',
 ] as const satisfies readonly (keyof BoxLayoutProps)[];
 
 export type BoxLayoutKey = (typeof BOX_LAYOUT_KEYS)[number];
@@ -53,42 +108,51 @@ type WithoutBoxLayout<P> = P extends unknown ? Omit<P, BoxLayoutKey> : never;
  * Делит пропсы на «коробку» и остальное (остальное уходит на DOM-узел). Единственное место,
  * где нужны приведения: TypeScript не сужает тип ключа по членству в Set.
  */
-export function splitBoxLayout<P extends BoxLayoutProps>(props: P): { box: BoxLayoutProps; rest: WithoutBoxLayout<P> } {
-  const box: Record<string, unknown> = {};
-  const rest: Record<string, unknown> = {};
+export function splitBoxLayout<P extends BoxLayoutProps>(
+    props: P,
+): { box: BoxLayoutProps; rest: WithoutBoxLayout<P> } {
+    const box: Record<string, unknown> = {};
+    const rest: Record<string, unknown> = {};
 
-  for (const [key, value] of Object.entries(props)) {
-    if (BOX_LAYOUT_KEY_SET.has(key)) box[key] = value;
-    else rest[key] = value;
-  }
+    for (const [key, value] of Object.entries(props)) {
+        if (BOX_LAYOUT_KEY_SET.has(key)) box[key] = value;
+        else rest[key] = value;
+    }
 
-  return { box: box as BoxLayoutProps, rest: rest as WithoutBoxLayout<P> };
+    return { box: box as BoxLayoutProps, rest: rest as WithoutBoxLayout<P> };
 }
 
 /** Классы утилит корня из пропсов коробки. Не заданный проп ничего не добавляет. */
 export function boxLayout(c: ClassBuilder, box: BoxLayoutProps): string[] {
-  const hidden = box.hide === undefined ? undefined : resolveResponsiveInput(box.hide);
-  return [
-    ...layoutSpaceClasses(c, box),
-    ...radiusClasses(c, box),
-    ...sizeClasses(c, box),
-    ...c.value('bg', box.bg),
-    ...borderClasses(c, box),
-    ...c.value('ratio', box.aspectRatio),
-    ...c.value('grow', box.grow),
-    ...c.value('shrink', box.shrink),
-    ...c.value('position', box.position),
-    ...c.value('top', box.top),
-    ...c.value('bottom', box.bottom),
-    ...c.value('left', box.left),
-    ...c.value('right', box.right),
-    ...c.value('hide', hidden && [hidden[0] ? 'true' : null, hidden[1] ? 'true' : null, hidden[2] ? 'true' : null]),
-  ];
+    const hidden = box.hide === undefined ? undefined : resolveResponsiveInput(box.hide);
+    return [
+        ...layoutSpaceClasses(c, box),
+        ...typographyClasses(c, box),
+        ...radiusClasses(c, box),
+        ...sizeClasses(c, box),
+        ...c.value('bg', box.bg),
+        ...borderClasses(c, box),
+        ...c.value('ratio', box.aspectRatio),
+        ...c.value('grow', box.grow),
+        ...c.value('shrink', box.shrink),
+        ...c.value('position', box.position),
+        ...c.value('top', box.top),
+        ...c.value('bottom', box.bottom),
+        ...c.value('left', box.left),
+        ...c.value('right', box.right),
+        ...c.value(
+            'hide',
+            hidden && [
+                hidden[0] ? 'true' : null,
+                hidden[1] ? 'true' : null,
+                hidden[2] ? 'true' : null,
+            ],
+        ),
+    ];
 }
 
 /** Колонка контента страницы — одна на Flex и Grid, а не свой вариант у каждого. */
 export interface ContainerProp {
-  /** Поля `--s-container` по бокам, `max-width: --width-container`, по центру на всю доступную ширину. */
-  container?: boolean;
+    /** Поля `--s-container` по бокам, `max-width: --width-container`, по центру на всю доступную ширину. */
+    container?: boolean;
 }
-

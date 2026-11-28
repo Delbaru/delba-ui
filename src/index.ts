@@ -1,4 +1,14 @@
 import './styles.scss';
+export * from './core/Preset';
+export { TooltipScope, useTooltipScope } from './core/Popup/Popup';
+export { useDuration } from './core/Duration';
+export type {
+    DurationOptions,
+    DurationController,
+    DurationInputProps,
+    DurationUnit,
+} from './core/Duration';
+export * from './core/RichEditor';
 export * from './components/Accordion';
 export * from './components/Button';
 export * from './components/Calendar';
@@ -30,7 +40,11 @@ export * from './components/Section';
 export * from './components/ScrollArea';
 export * from './components/Skeleton';
 export * from './components/Select';
-export type { FieldValueChangeDetails, FieldValueChangeHandler, FieldValueChangeReason } from './core/base/field-value';
+export type {
+    FieldValueChangeDetails,
+    FieldValueChangeHandler,
+    FieldValueChangeReason,
+} from './core/base/field-value';
 export * from './components/SwitchButton';
 export * from './components/TabTrack';
 export * from './components/Text';
@@ -40,40 +54,40 @@ export * from './core/treePath';
 export * from './components/Video';
 export * from './components/VideoPlayer';
 export {
-  assetUrl,
-  BREAKPOINT,
-  createHandles,
-  composeEventHandlers,
-  cx,
-  focusWhenReady,
-  focusableElements,
-  preserveFocus,
-  MEDIA_QUERY,
-  motion,
-  Transition,
-  mergeComponentStates,
-  MOTION_END_BUFFER_MS,
-  prefersReducedMotion,
-  registerScrollProvider,
-  resolveSeedField,
-  resolveResponsive,
-  scrollTo,
-  unregisterScrollProvider,
-  type EntityHandle,
-  type FocusTarget,
-  type FocusWhenReadyOptions,
-  type HandlesRegistry,
-  type HandlesShape,
-  type TransitionResult,
-  type TransitionStatus,
-  type TransitionStep,
-  type TransitionTime,
-  type ScrollProviderApi,
-  type ScrollResult,
-  type ScrollTarget,
-  type ScrollToOptions,
-  type SeedField,
-  type SeedFieldInput,
+    assetUrl,
+    BREAKPOINT,
+    createHandles,
+    composeEventHandlers,
+    cx,
+    focusWhenReady,
+    focusableElements,
+    preserveFocus,
+    MEDIA_QUERY,
+    motion,
+    Transition,
+    mergeComponentStates,
+    MOTION_END_BUFFER_MS,
+    prefersReducedMotion,
+    registerScrollProvider,
+    resolveSeedField,
+    resolveResponsive,
+    scrollTo,
+    unregisterScrollProvider,
+    type EntityHandle,
+    type FocusTarget,
+    type FocusWhenReadyOptions,
+    type HandlesRegistry,
+    type HandlesShape,
+    type TransitionResult,
+    type TransitionStatus,
+    type TransitionStep,
+    type TransitionTime,
+    type ScrollProviderApi,
+    type ScrollResult,
+    type ScrollTarget,
+    type ScrollToOptions,
+    type SeedField,
+    type SeedFieldInput,
 } from './core';
 export { clamp, clamp01 } from './core/utils';
 export { pad, pluralize, type PluralForms } from './core/base/text-format';
@@ -83,34 +97,75 @@ export { createUrl, createBrowserUrl, installBrowserUrl, type BrowserUrl } from 
 export { calendar } from './core/Calendar/Calendar';
 export type { CalendarGridOptions } from './core/Calendar/Calendar';
 export type { CalendarDay, CalendarOptions } from './core/Calendar/useCalendar';
+export { useEdit, useEditActivity } from './core/Edit';
+export type { EditController, EditElement, EditOptions, EditState } from './core/Edit';
 export { SMOOTH_SCROLL_IGNORE } from './core/Scroll/Smooth';
 export type {
-  SmoothOptions,
-  SmoothScrollApi,
-  SmoothScrollTarget,
-  SmoothScrollToOptions,
-  SmoothScrollEasing,
-  SmoothScrollOffset,
+    SmoothOptions,
+    SmoothScrollApi,
+    SmoothScrollTarget,
+    SmoothScrollToOptions,
+    SmoothScrollEasing,
+    SmoothScrollOffset,
 } from './core/Scroll/Smooth';
-export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
-export { useAnchoredFloating, type FloatingAlign, type FloatingAnchorPoint, type FloatingPlacement, type FloatingStrategy } from './hooks/useAnchoredFloating';
-export { useFloatingSurface, type FloatingDismissReason, type UseFloatingSurfaceOptions } from './hooks/useFloatingSurface';
-export { useTooltip, type UseTooltipOptions, type UseTooltipResult, type TooltipBubbleProps } from './hooks/useTooltip';
+export {
+    useOutsideDismiss,
+    type DismissRef,
+    type OutsideDismissInsideProps,
+    type UseOutsideDismissOptions,
+} from './hooks/useOutsideDismiss';
+export {
+    useAnchoredFloating,
+    type FloatingAlign,
+    type FloatingAnchorPoint,
+    type FloatingPlacement,
+    type FloatingStrategy,
+} from './hooks/useAnchoredFloating';
+export {
+    useFloatingSurface,
+    type FloatingDismissReason,
+    type UseFloatingSurfaceOptions,
+} from './hooks/useFloatingSurface';
+export {
+    useTooltip,
+    type UseTooltipOptions,
+    type UseTooltipResult,
+    type TooltipBubbleProps,
+} from './hooks/useTooltip';
 export { useMediaQuery } from './hooks/useMediaQuery';
 export { useScroll } from './hooks/useScroll';
 export { useUrl } from './hooks/useUrl';
 export type { ScrollSnapshot, ScrollState, ScrollWatchOptions } from './core/base/scroll-direction';
-export { InteractionScope, useInteractionActivity, type InteractionScopeProps } from './core/InteractionScope';
+export {
+    InteractionScope,
+    useInteractionActivity,
+    type InteractionScopeProps,
+} from './core/InteractionScope';
 export { useAnimationVisibility } from './hooks/useAnimationVisibility';
 export type { CollapseHandle } from './hooks/useCollapseMotion';
 export type { CollapseControls } from './hooks/useCollapseControls';
 export type { CollapseOptions } from './components/Collapse/CollapseWrap';
 export { useInView, type UseInViewOptions } from './core/useInView';
-export type { ComponentStateValue, GrowProps, ShrinkProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';
+export type {
+    ComponentStateValue,
+    GrowProps,
+    ShrinkProps,
+    LayoutSpaceProps,
+    RadiusPropsShort,
+    ResponsiveValue,
+    SizePropsShort,
+} from './core';
 export { useMergedRefs } from './core/useMergedRefs';
 export type { TextRole, TextVariantName } from './core/base/typography';
 export { isAppearanceAnimate, isInViewAnimate, isOpenAnimate } from './core/reveal/reveal';
-export type { AppearanceAnimate, InViewAnimate, OpenAnimate, RevealConfig, RevealKey, RevealOptions } from './core/reveal/reveal';
+export type {
+    AppearanceAnimate,
+    InViewAnimate,
+    OpenAnimate,
+    RevealConfig,
+    RevealKey,
+    RevealOptions,
+} from './core/reveal/reveal';
 export type { MotionTime, MotionTimingName } from './core/base/timing';
 export type { MotionDistance, MotionDistanceName } from './core/base/distance';
 export type { HoverTransformOptions, HoverTransformValues } from './core/base/hover-motion';
@@ -118,31 +173,51 @@ export type { MotionChannels, OpenMotionChannels } from './core/Motion';
 export * from './components/PhoneField';
 
 export { useScrollProgress, type ScrollProgressOptions } from './hooks/useScrollProgress';
-export { PageTransition, type PageTransitionProps, type PageTransitionAnimate } from './components/PageTransition';
 export {
-  ActionInvocationProvider,
-  useActionInvocation,
-  type ActionInvocationResult,
-  type ActionFailureContext,
-  type ActionFailureHandler,
-  type ActionCancellationPredicate,
-  type ActionInvocationOptions,
-  type ActionInvocationController,
+    PageTransition,
+    type PageTransitionProps,
+    type PageTransitionAnimate,
+} from './components/PageTransition';
+export {
+    ActionInvocationProvider,
+    useActionInvocation,
+    type ActionInvocationResult,
+    type ActionFailureContext,
+    type ActionFailureHandler,
+    type ActionCancellationPredicate,
+    type ActionInvocationOptions,
+    type ActionInvocationController,
 } from './hooks/useActionInvocation';
 export {
-  beginPointerGesture,
-  type PointerGestureStart,
-  type PointerGestureResult,
-  type PointerGestureEndReason,
-  type PointerGestureOptions,
-  type PointerGestureSession,
+    beginPointerGesture,
+    type PointerGestureStart,
+    type PointerGestureResult,
+    type PointerGestureEndReason,
+    type PointerGestureOptions,
+    type PointerGestureSession,
 } from './core/base/pointer-gesture';
 
 export { ui } from './ui';
 export { useFormField } from './core/Form';
-export type { DraftStorage, DraftConflicts, FormOptions, FormController, FormScope, FormErrors, ActionOptions } from './core/Form';
+export type {
+    DraftStorage,
+    DraftConflicts,
+    FormOptions,
+    FormController,
+    FormScope,
+    FormErrors,
+    ActionOptions,
+} from './core/Form';
 
-export type { CollectionDefinition, CollectionController, CollectionScope, CollectionItem, CollectionOptions, CollectionCheckController, CollectionCheckOptions } from './core/Collection';
+export type {
+    CollectionDefinition,
+    CollectionController,
+    CollectionScope,
+    CollectionItem,
+    CollectionOptions,
+    CollectionCheckController,
+    CollectionCheckOptions,
+} from './core/Collection';
 
 export { applyCheckRange, checkRangeItems } from './core/Collection';
 

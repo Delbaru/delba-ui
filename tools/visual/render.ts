@@ -2,9 +2,10 @@ import type { FrontendConfig } from '../config';
 import { responsiveMedia, responsiveScaleCss } from '../../src/core/base/responsive-definition';
 import { renderSkinAxes } from '../skin-axes';
 
-export const tokenName = (name: string): string => name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+export const tokenName = (name: string): string =>
+    name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 const rpx = (value: number) => `calc(${value} * var(--rpx))`;
-const cssValue = (value: string | number) => typeof value === 'number' ? rpx(value) : value;
+const cssValue = (value: string | number) => (typeof value === 'number' ? rpx(value) : value);
 
 export function colorValues(config: FrontendConfig): Record<string, string> {
     const values: Record<string, string> = {};
@@ -14,9 +15,10 @@ export function colorValues(config: FrontendConfig): Record<string, string> {
     };
     for (const [role, value] of Object.entries(config.colors)) {
         if (typeof value === 'string') set(tokenName(role), value);
-        else for (const [state, color] of Object.entries(value)) {
-            set(`${tokenName(role)}${state === 'normal' ? '' : `-${state}`}`, color);
-        }
+        else
+            for (const [state, color] of Object.entries(value)) {
+                set(`${tokenName(role)}${state === 'normal' ? '' : `-${state}`}`, color);
+            }
     }
     return values;
 }
@@ -35,7 +37,10 @@ export function renderFrontendTheme(config: FrontendConfig, spacingValues: reado
         set(`t-${tokenName(name)}`, `all var(--t-d-${tokenName(name)}) var(--t-t-f-ease)`);
     }
     for (const [role, font] of Object.entries(config.fonts)) {
-        set(`font-family-${tokenName(role)}`, `'${font.family.replaceAll("'", "\\'")}', ${font.fallback}`);
+        set(
+            `font-family-${tokenName(role)}`,
+            `'${font.family.replaceAll("'", "\\'")}', ${font.fallback}`,
+        );
         for (const face of font.faces) {
             fontCss.push(`@font-face {
   font-family: '${font.family.replaceAll("'", "\\'")}';
@@ -47,12 +52,22 @@ export function renderFrontendTheme(config: FrontendConfig, spacingValues: reado
         }
     }
     for (const [role, value] of Object.entries(colors)) {
-        if (!['inherit', 'initial', 'unset', 'revert', 'revert-layer'].includes(value)) set(role, value);
+        if (!['inherit', 'initial', 'unset', 'revert', 'revert-layer'].includes(value))
+            set(role, value);
     }
-    for (const [role, value] of Object.entries(config.gradients)) set(`gradient-${tokenName(role)}`, value);
-    const prefixes = { spaces: 's', dimensions: 'size', positions: 'position', radii: 'radius' } as const;
-    for (const [group, prefix] of Object.entries(prefixes) as Array<[keyof typeof prefixes, string]>) {
-        for (const [role, value] of Object.entries(config.geometry[group] ?? {})) set(`${prefix}-${tokenName(role)}`, rpx(value));
+    for (const [role, value] of Object.entries(config.gradients))
+        set(`gradient-${tokenName(role)}`, value);
+    const prefixes = {
+        spaces: 's',
+        dimensions: 'size',
+        positions: 'position',
+        radii: 'radius',
+    } as const;
+    for (const [group, prefix] of Object.entries(prefixes) as Array<
+        [keyof typeof prefixes, string]
+    >) {
+        for (const [role, value] of Object.entries(config.geometry[group] ?? {}))
+            set(`${prefix}-${tokenName(role)}`, rpx(value));
     }
     for (const value of spacingValues) {
         if (!Number.isSafeInteger(value) || value < 0 || value % 4 !== 0)
@@ -60,34 +75,50 @@ export function renderFrontendTheme(config: FrontendConfig, spacingValues: reado
         set(`s-${value}`, rpx(value));
     }
     for (const [role, value] of Object.entries(config.geometry.padding)) {
-        set(`padding-${tokenName(role)}`, Array.isArray(value) ? value.map(rpx).join(' ') : rpx(value as number));
+        set(
+            `padding-${tokenName(role)}`,
+            Array.isArray(value) ? value.map(rpx).join(' ') : rpx(value as number),
+        );
     }
-    for (const [role, value] of Object.entries(config.geometry.shadows)) set(`shadow-${tokenName(role)}`, value);
-    const bandVariables: Record<'desktop' | 'mobile' | 'tablet', string[]> = { desktop: [], mobile: [], tablet: [] };
+    for (const [role, value] of Object.entries(config.geometry.shadows))
+        set(`shadow-${tokenName(role)}`, value);
+    const bandVariables: Record<'desktop' | 'mobile' | 'tablet', string[]> = {
+        desktop: [],
+        mobile: [],
+        tablet: [],
+    };
     const variableNames = new Set(root.keys());
     for (const [role, value] of Object.entries(config.variables)) {
         const name = tokenName(role);
-        if (variableNames.has(name)) throw new Error(`Duplicate generated theme variable --${name}`);
+        if (variableNames.has(name))
+            throw new Error(`Duplicate generated theme variable --${name}`);
         variableNames.add(name);
         if (Array.isArray(value)) {
             (['desktop', 'mobile', 'tablet'] as const).forEach((band, index) => {
                 const entry = value[index];
-                if (entry !== null && entry !== undefined) bandVariables[band].push(`  --${tokenName(role)}: ${cssValue(entry)};`);
+                if (entry !== null && entry !== undefined)
+                    bandVariables[band].push(`  --${tokenName(role)}: ${cssValue(entry)};`);
             });
         } else set(tokenName(role), cssValue(value as string | number));
     }
-    const typographyVariables: Record<'desktop' | 'mobile' | 'tablet', string[]> = { desktop: [], mobile: [], tablet: [] };
+    const typographyVariables: Record<'desktop' | 'mobile' | 'tablet', string[]> = {
+        desktop: [],
+        mobile: [],
+        tablet: [],
+    };
     const definedTypography: Record<string, Record<'desktop' | 'mobile' | 'tablet', string[]>> = {};
     const typographyNames = new Set<string>();
     for (const [role, typography] of Object.entries(config.typography)) {
-        if (typographyNames.has(tokenName(role))) throw new Error(`Duplicate generated typography role ${role}`);
+        if (typographyNames.has(tokenName(role)))
+            throw new Error(`Duplicate generated typography role ${role}`);
         typographyNames.add(tokenName(role));
         definedTypography[role] = { desktop: [], mobile: [], tablet: [] };
         (['desktop', 'mobile', 'tablet'] as const).forEach((band, index) => {
             const declarations = typographyVariables[band];
             const name = tokenName(role);
             const properties = {
-                fontFamily: (value: string | number) => `var(--font-family-${tokenName(String(value))})`,
+                fontFamily: (value: string | number) =>
+                    `var(--font-family-${tokenName(String(value))})`,
                 fontSize: (value: string | number) => rpx(Number(value)),
                 fontWeight: String,
                 lineHeight: String,
@@ -101,23 +132,18 @@ export function renderFrontendTheme(config: FrontendConfig, spacingValues: reado
                     definedTypography[role]?.[band].push(tokenName(field));
                 }
             }
-
         });
     }
-    const bands = (['desktop', 'mobile', 'tablet'] as const).map(band =>
-        `@media ${media[band]} {
+    const bands = (['desktop', 'mobile', 'tablet'] as const)
+        .map(
+            (band) =>
+                `@media ${media[band]} {
 :root {
 ${[...bandVariables[band], ...typographyVariables[band]].join('\n')}
 }
-}`).join('\n\n');
-    const bodyTypography = (['desktop', 'mobile', 'tablet'] as const).map(band => {
-        const declarations = (definedTypography.body?.[band] ?? []).map(property => `  ${property}: var(--type-body-${property});`).join('\n');
-        return `@media ${media[band]} {
-  :where(body) {
-${declarations}
-  }
-}`;
-    }).join('\n');
+}`,
+        )
+        .join('\n\n');
     const css = `/* AUTO-GENERATED by Frontend. */
 ${fontCss.join('\n\n')}
 
@@ -126,29 +152,60 @@ ${[...root].map(([name, value]) => `  --${name}: ${value};`).join('\n')}
 }
 ${responsiveScaleCss(config.responsive)}
 ${bands}
-${bodyTypography}
-:where(body) { color: var(--text); background: var(--surface); }
 `;
-    const references = Object.fromEntries(Object.entries(colors).map(([name, value]) => [
-        name,
-        ['inherit', 'initial', 'unset', 'revert', 'revert-layer'].includes(value) ? value : `var(--${name})`,
-    ]));
-    const axes = { fills: references, texts: references, lines: config.geometry.lines,
-        maps: { 'icon-colors': references, shadows: config.geometry.shadows } };
+    const references = Object.fromEntries(
+        Object.entries(colors).map(([name, value]) => [
+            name,
+            ['inherit', 'initial', 'unset', 'revert', 'revert-layer'].includes(value)
+                ? value
+                : `var(--${name})`,
+        ]),
+    );
+    const axes = {
+        fills: references,
+        texts: references,
+        lines: config.geometry.lines,
+        maps: { 'icon-colors': references, shadows: config.geometry.shadows },
+    };
     const skin = renderSkinAxes(axes);
     const runtime = `// AUTO-GENERATED by Frontend. Do not edit.
-export const FRONTEND_THEME = ${JSON.stringify({
-        responsive: config.responsive, motionTiming: Object.keys(config.motion.timing), geometry: config.geometry, colors: references, typography: Object.keys(config.typography), typographyFields: definedTypography, fonts: Object.keys(config.fonts),
-    }, null, 4)} as const;
+export const FRONTEND_THEME = ${JSON.stringify(
+        {
+            responsive: config.responsive,
+            motionTiming: Object.keys(config.motion.timing),
+            geometry: config.geometry,
+            colors: references,
+            typography: Object.keys(config.typography),
+            typographyFields: definedTypography,
+            fonts: Object.keys(config.fonts),
+        },
+        null,
+        4,
+    )} as const;
 `;
-    const preview = (['desktop', 'mobile', 'tablet'] as const).map(band =>
-        `  @if $device == '${band}' {
+    const preview = (['desktop', 'mobile', 'tablet'] as const)
+        .map(
+            (band) =>
+                `  @if $device == '${band}' {
     --rpx: 1px;
 ${typographyVariables[band].join('\n')}
-  }`).join('\n');
-    const typographyMap = Object.entries(definedTypography).map(([role, bands]) =>
-        `  '${role}': (${Object.entries(bands).map(([band, fields]) => `${band}: (${fields.map(field => `'${field}'`).join(', ')}${fields.length === 1 ? ',' : ''})`).join(', ')})`).join(',\n');
-    const typographyTokens = Object.keys(config.typography).map(role => `  '${role}': '${tokenName(role)}'`).join(',\n');
+  }`,
+        )
+        .join('\n');
+    const typographyMap = Object.entries(definedTypography)
+        .map(
+            ([role, bands]) =>
+                `  '${role}': (${Object.entries(bands)
+                    .map(
+                        ([band, fields]) =>
+                            `${band}: (${fields.map((field) => `'${field}'`).join(', ')}${fields.length === 1 ? ',' : ''})`,
+                    )
+                    .join(', ')})`,
+        )
+        .join(',\n');
+    const typographyTokens = Object.keys(config.typography)
+        .map((role) => `  '${role}': '${tokenName(role)}'`)
+        .join(',\n');
     const typographyScss = `@use 'sass:map';
 @use './responsive-generated' as responsive;
 

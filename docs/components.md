@@ -5,6 +5,51 @@
 [выделенным entrypoints](architecture.md#границы-импорта). Проектные экраны
 сначала используют свои D-роли и пресеты. Указанные примеры описывают публичный API.
 
+## Авторские пресеты
+
+`ButtonPresets`, `FlexPresets`, `InputPresets`, `TextPresets` и типы других
+владельцев описывают таблицы визуальных props со `states`. Примитив получает
+объект через `preset`, явные props переопределяют его defaults. События, refs и
+данные передаются экземпляру. Пресеты разрешает общий runtime Frontend.
+
+```tsx
+import { Button, Text, type ButtonPresets } from '@delba/frontend';
+
+const presets = {
+  secondary: {
+    h: [32, 32, 32],
+    p: [[4, 12], [4, 12], [4, 12]],
+    r: [4, 4, 4],
+    font: 'body',
+    bg: ['var(--surface)', 'var(--surface)', 'var(--surface)'],
+    states: { disabled: { opacity: 0.4 } },
+  },
+} satisfies ButtonPresets;
+
+export function SaveButton() {
+  return (
+    <Button preset={presets.secondary} type="submit">
+      <Text as="span" variant={['body', 'body', 'body']}>Сохранить</Text>
+    </Button>
+  );
+}
+```
+
+Для простой D-роли основной состав — TSX/module.scss/index.ts. Небольшие типы
+и до шести локальных пресетов находятся в TSX; поля записываются прямо, без
+common/sizes/AXES/SCALES/skin boilerplate. Составные роли используют смысловые
+слоты `button`/`icon`/`text` с именованными пресетами частей, затем явные overrides.
+Проект OS выводит авторский текст через DText со скалярным `variant` из шести
+ролей h1/h2/h3/p1/p2/p3, без публичного `preset`. Для native Button/Input/Textarea
+используется именованный `font`, без дублирования raw typography. Внутри самого
+Frontend подписи выводит Text; библиотека не импортирует D-роли приложения.
+
+Семейство кнопок OS: DButton принимает `text`, DButton.Icon — только `icon` и
+обязательный `aria-label`, DButton.IconText — `text` и объект `icon` с
+`position: 'left' | 'right'`. DButton.Download — самостоятельная файловая
+композиция со слотами button/icon и Body для имени/размера. Глиф IconText
+выводится один раз, сторону меняет нативный `dir` Button row/row-reverse.
+
 ## Раскладка
 
 | Компонент | Применение и основной API |
@@ -79,7 +124,7 @@ export function ScrollPanel({ children }: { children: ReactNode }) {
 
 | Компонент | Применение и основной API |
 | --- | --- |
-| Text | Семантика, `role`, типографика и текстовые эффекты, включая timeline. |
+| Text | Семантика через `as`, именованная типографика через адаптивный `variant` и текстовые эффекты, включая timeline. |
 | LexicalText | Вывод HTML или Lexical document. Общие стили форматированного текста доступны через `richTextClasses`. |
 | Icon | Inline SVG из `src`, `component` или проектного `name`. Размеры SVG и корня задаются отдельно, paint управляется props SVG. |
 | Img | Next Image с адаптивным `src`, сменой изображения, loading и доступным `alt`. |
@@ -97,7 +142,7 @@ export function ScrollPanel({ children }: { children: ReactNode }) {
 
 | Компонент | Применение и основной API |
 | --- | --- |
-| Button | Действие или переход. Сохраняет нативный тип кнопки/ссылки, ref, disabled/pending, подсказку и popup. `textAlign` задаёт выравнивание текста по полосам. |
+| Button | Действие или переход. Сохраняет нативный тип кнопки/ссылки, ref, disabled/pending, подсказку и popup. `font` выбирает именованную типографику, `textAlign` — выравнивание текста по полосам, `dir` — направление и порядок частей. |
 | Calendar | Оформленный выбор локальной даты `YYYY-MM-DD`. `minValue` и `maxValue` включены в диапазон. Calendar и поле даты Input используют общее ядро. |
 | Input | Нативное однострочное поле, date и маски, validation, error/feedback и действия. Обновление значения и встроенные действия используют его полевой controller. |
 | DurationPicker | Выбор длительности в часах и минутах. |
@@ -109,6 +154,20 @@ export function ScrollPanel({ children }: { children: ReactNode }) {
 | ChoiceButtons | Короткий видимый набор вариантов. |
 | SwitchButton | Переключатель boolean с нативным состоянием поля. |
 | PhoneField | Номер и страна. Callback получает структурированные сведения о номере. Также из `@delba/frontend/phone-field`. |
+
+### Длительность с собственной разметкой
+
+`ui.duration.use({ value, onChange, maxMinutes?, disabled?, scope? })` принимает
+управляемое число минут. Передай `hoursProps`/`minutesProps` двум Input, а
+`rootRef` — общему контейнеру. `commit`, `cancel` и `clamp` доступны отдельно.
+Механизм допускает временно пустой числовой черновик, нормализует перенос минут
+на blur/Enter и ограничивает итог целыми неотрицательными минутами до maxMinutes
+(по умолчанию 1440). Enter и последующий blur не дублируют изменение.
+Escape отменяет черновик, смена scope сбрасывает ввод предыдущего объекта.
+Стрелки и колесо используют шаг 60 для часов и 1 для минут; Ctrl/Meta выбирает
+10, Shift — 30. Nonpassive wheel listener и его cleanup принадлежат Frontend.
+Disabled блокирует изменение; подписи и расположение полей задаёт потребитель.
+DurationPicker сохраняет отдельное представление колёс и общую арифметику границ.
 
 `onChange.preventDefault()` отменяет дальнейшее изменение модели Input/Textarea,
 включая привязку Form. У неконтролируемого текстового поля восстанавливается прежний текст. Выбранный
@@ -192,7 +251,7 @@ Button принимает `appearance`, `hover` и `idle`. Подсказка з
 `ui.popup` с `preset: 'tooltip'`, `text` и необязательными
 `position`, `gap`, `surface`. При миграции Button перенеси `tooltip`,
 `tooltipDirection` и `tooltipGap` в `text`, `position` и `gap` этого объекта.
-Проектный DButton переводит свой prop `tooltip` в настройки popup.
+Проектные D-роли передают настройки подсказки тем же объектом `ui.popup`.
 
 ```tsx
 import { Button } from '@delba/frontend';
@@ -252,7 +311,7 @@ export function OrderStatus({ status }: { status: string }) {
 | Dropdown | Панель возле триггера. Позиционирование, dismiss, overlay и nested portal принадлежат поверхности. |
 | ContextPopup | Контекстная панель в переданной `point` с opener и возвратом фокуса. |
 | MediaDropDown | Выбор медиа через URL или загрузку файла. |
-| Modal | Диалог с `trigger` или `open` и `onOpenChange`, overlay, focus boundary и доступным именем. |
+| Modal | Диалог с `trigger` или `open` и `onOpenChange`, overlay, focus boundary и доступным именем. `drag: { handle, margin }` задаёт селектор ручки и отступ от viewport в CSS px. `closeOn.ignoreWithin` оставляет клавиатурные события области, выбранной селектором. `scroll.overflow` выбирает `auto` или `hidden`. |
 | ModalProvider | Стек модальных окон и программное открытие через `useModal`. |
 | Tooltip | Краткое пояснение. Действие сохраняет собственное доступное имя. |
 | ActionInvocationProvider | Область обработки pending, ошибок и отмены прикладного действия. |
