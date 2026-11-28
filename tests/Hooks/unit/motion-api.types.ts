@@ -1,4 +1,3 @@
-import type { BoxProps } from '../../../src/components/Box';
 import type { FlexProps } from '../../../src/components/Flex';
 import type { GridProps } from '../../../src/components/Grid/Grid.types';
 import type { TextProps } from '../../../src/components/Text';
@@ -15,7 +14,6 @@ type NoLegacyProps<Props> = Extract<keyof Props, 'animation' | 'transitionKey' |
 
 /** Compiled by the strict library type gate; tuples and strings must not re-enter public motion. */
 export type ObjectMotionContract = [
-  Assert<ObjectOnly<BoxProps['animate']>>,
   Assert<ObjectOnly<FlexProps['animate']>>,
   Assert<ObjectOnly<GridProps['animate']>>,
   Assert<ObjectOnly<TextProps['animate']>>,
@@ -23,7 +21,6 @@ export type ObjectMotionContract = [
   Assert<ObjectOnly<ImgProps['animate']>>,
   Assert<ObjectOnly<IconProps['animate']>>,
   Assert<ObjectOnly<ModalProps['animate']>>,
-  Assert<NoLegacyProps<BoxProps>>,
   Assert<NoLegacyProps<FlexProps>>,
   Assert<NoLegacyProps<GridProps>>,
   Assert<NoLegacyProps<TextProps>>,

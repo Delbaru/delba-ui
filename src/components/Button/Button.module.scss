@@ -1,145 +1,107 @@
+@use 'sass:map' as frontendMap;
+@use '../../core/responsive-generated' as frontendResponsive;
 @use '../../core/scss-utils' as utils;
 
 @layer ui.components {
-  .Button {}
-  .ui-button[aria-disabled='true'] {
+  :where(.Button) {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      color: inherit;
+      border: 0;
+      transition: var(--t-fast);
+      -webkit-tap-highlight-color: transparent;
+      // Без !important: слой ui.components слабее стилей проекта, и своё кольцо фокуса
+      // ставится обычным правилом. С !important оно не доезжало — кнопка оставалась без
+      // видимого фокуса, что бы проект ни написал.
+      outline: none;
+      user-select: none;
+  }
+}
+
+@layer ui.components {
+  .Button[aria-disabled='true'] {
       cursor: default;
       pointer-events: none;
   }
 
   // Theme may override the foreground and radius without changing variants.
-  @mixin variant-classes($p: '') {
-      .#{$p}variant_primary {
-          background: var(--primary);
-          color: var(--on-fill, var(--black));
-          border-radius: var(--button-radius, 999px);
-          border: calc(2 * var(--rpx)) solid var(--primary);
+  @mixin interaction-variant($name, $role, $padding) {
+      .#{$name} {
+          background: var(--#{$role});
+          color: var(--on-fill, var(--#{$role}-foreground));
+          border: calc(2 * var(--rpx)) solid var(--#{$role});
+          border-radius: var(--button-radius, var(--radius-sm));
 
-          &:not([data-button-hover]):hover,
-          &:not([data-button-hover])[state~='hover'] {
-              background: var(--white-100);
-              color: var(--black);
-              border-color: var(--black);
+          &:not([data-ui-hover='rise']):hover,
+          &:not([data-ui-hover='rise'])[state~='hover'] {
+              background: var(--#{$role}-hover);
+              border-color: var(--#{$role}-hover);
+          }
+
+          &:active,
+          &[state~='pressed'] {
+              background: var(--#{$role}-pressed);
+              border-color: var(--#{$role}-pressed);
           }
 
           &[disabled],
           &[state~='disabled'] {
-              background: var(--text-muted);
-              border-color: var(--text-muted);
-              color: var(--black);
               pointer-events: none;
               opacity: 0.2;
           }
-
-          @media (max-width: 767px) {
-              border-width: var(--rpx);
-          }
       }
-      :where(.#{$p}variant_primary) {
-          padding: var(--s-12) var(--s-32);
-      }
+      :where(.#{$name}) { padding: $padding; }
+  }
 
-
-
-      .#{$p}variant_secondary {
-          background: transparent;
-          color: var(--text);
-          border: calc(2 * var(--rpx)) solid var(--text);
-          border-radius: var(--button-radius, 999px);
-
-          &:not([data-button-hover]):hover,
-          &:not([data-button-hover])[state~='hover'] {
-              background: var(--white-100);
-              color: var(--black);
-              border-color: var(--white-100);
-          }
-
-          @media (max-width: 767px) {
-              border-width: var(--rpx);
-          }
-      }
-      :where(.#{$p}variant_secondary) {
-          padding: 0 var(--s-64);
-      }
-
-
-
-      .#{$p}variant_secondaryFill {
-          background: var(--text);
-          color: var(--on-fill, var(--black));
-          border: calc(2 * var(--rpx)) solid var(--text);
-          border-radius: var(--button-radius, 999px);
-
-          &:not([data-button-hover]):hover,
-          &:not([data-button-hover])[state~='hover'] {
-              background: var(--primary);
-              color: var(--on-fill, var(--black));
-              border-color: var(--black);
-          }
-      }
-      :where(.#{$p}variant_secondaryFill) {
-          padding: 0 var(--s-64);
-      }
-
-
-
-      .#{$p}variant_tertiary {
-          background: var(--tertiary);
-          color: var(--on-fill, var(--black));
-          border: calc(2 * var(--rpx)) solid var(--tertiary);
-          border-radius: var(--button-radius, 999px);
-
-          &:not([data-button-hover]):hover,
-          &:not([data-button-hover])[state~='hover'] {
-              background: var(--text);
-              color: var(--on-fill, var(--black));
-              border-color: var(--black);
-          }
-      }
-      :where(.#{$p}variant_tertiary) {
-          padding: 0 var(--s-64);
-      }
+  @mixin variant-classes($p: '') {
+      @include interaction-variant('#{$p}variant_primary', primary, var(--s-12) var(--s-32));
+      @include interaction-variant('#{$p}variant_secondary', secondary, 0 var(--s-64));
+      @include interaction-variant('#{$p}variant_secondaryFill', secondary, 0 var(--s-64));
+      @include interaction-variant('#{$p}variant_tertiary', secondary, 0 var(--s-64));
   }
 
   @mixin size-classes($p: '') {
       .#{$p}size_small {
-          @media (max-width: 767px) {
+          @media #{frontendMap.get(frontendResponsive.$breakpoints, m)} {
               height: calc(var(--rpx) * 40);
           }
 
-          @media (min-width: 768px) and (max-width: 1023px) {
+          @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
               height: calc(var(--rpx) * 48);
           }
 
-          @media (min-width: 1024px) {
+          @media #{frontendMap.get(frontendResponsive.$breakpoints, d)} {
               height: calc(var(--rpx) * 56);
           }
       }
 
       .#{$p}size_medium {
-          @media (max-width: 767px) {
+          @media #{frontendMap.get(frontendResponsive.$breakpoints, m)} {
               height: calc(var(--rpx) * 48);
           }
 
-          @media (min-width: 768px) and (max-width: 1023px) {
+          @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
               height: calc(var(--rpx) * 56);
           }
 
-          @media (min-width: 1024px) {
+          @media #{frontendMap.get(frontendResponsive.$breakpoints, d)} {
               height: calc(var(--rpx) * 68);
           }
       }
 
       .#{$p}size_large {
-          @media (max-width: 767px) {
+          @media #{frontendMap.get(frontendResponsive.$breakpoints, m)} {
               height: calc(var(--rpx) * 64);
           }
 
-          @media (min-width: 768px) and (max-width: 1023px) {
+          @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
               height: calc(var(--rpx) * 72);
           }
 
-          @media (min-width: 1024px) {
+          @media #{frontendMap.get(frontendResponsive.$breakpoints, d)} {
               height: calc(var(--rpx) * 80);
           }
       }

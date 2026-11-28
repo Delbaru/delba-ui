@@ -2,9 +2,9 @@
 
 import { createElement, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
-import { MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../core';
+import { MOTION_END_BUFFER_MS, prefersReducedMotion } from '#core';
 import { motionTimeCss, readMotionTimeMs, type MotionTime } from '../../../core/base/timing';
-import { normalizeImgAnimate, type ImgAnimate } from './types';
+import { resolveImgChange, type ImgChangeAnimate } from './types';
 import { ImgSwap } from '../ImgSwap/ImgSwap';
 import { readMotionDefaultMs } from '../../../core/base/motion-config';
 
@@ -30,12 +30,21 @@ interface SwapState {
  * промежуточные пропускаются. Первый рендер без хода, «меньше движения» — мгновенная подмена.
  * Без `animate` отдаёт содержимое как есть.
  */
-export function useImgSwap(animate: ImgAnimate | undefined, identity: string, content: ReactNode): { node: ReactNode; loaded: (loadedIdentity: string) => void } {
-  const config = normalizeImgAnimate(animate);
+export function useImgSwap(
+  change: ImgChangeAnimate | undefined,
+  identity: string,
+  renderContent: (loaded: () => void) => ReactNode,
+): ReactNode {
+  const config = resolveImgChange(change);
   const kind = config?.effect ?? null;
   const effect = kind === 'veil' && config?.veil == null ? 'fade' : kind;
 
   const [swap, setSwap] = useState<SwapState>({ outgoing: null, incoming: null, turn: 0, pending: false, pendingIdentity: null, dir: 1 });
+  const content = renderContent(() => setSwap(state => (
+    state.pending && state.pendingIdentity === identity
+      ? { ...state, pending: false, pendingIdentity: null }
+      : state
+  )));
   const scopeRef = useRef<HTMLSpanElement | null>(null);
   const committedRef = useRef(identity);
   // Что сейчас на экране в покое: станет уходящим слоем на следующей смене.
@@ -44,7 +53,10 @@ export function useImgSwap(animate: ImgAnimate | undefined, identity: string, co
 
   // Смена источника в покое — поправка состояния в рендере: прежний кадр становится слоем в том же
   // коммите. Посреди хода не трогаем: следующий рендер после его конца начнёт смену к последнему src.
-  if (kind != null && identity !== committedRef.current && !busy) {
+  if (kind == null && (busy || identity !== committedRef.current)) {
+    committedRef.current = identity;
+    setSwap(state => ({ ...state, outgoing: null, incoming: null, pending: false, pendingIdentity: null }));
+  } else if (kind != null && identity !== committedRef.current && !busy) {
     const outgoing = shownRef.current;
     committedRef.current = identity;
     setSwap((s) =>
@@ -58,33 +70,27 @@ export function useImgSwap(animate: ImgAnimate | undefined, identity: string, co
   if (!busy && identity === committedRef.current) shownRef.current = content;
 
   const duration: MotionTime | undefined = config?.duration;
-  const running = busy && !swap.pending;
+  const running = kind !== null && busy && !swap.pending;
 
   // Ход доехал — снимаем прежний слой. Длительность — из опций или токена, вдвое у вуали.
   useEffect(() => {
     if (!running) return undefined;
     const base = duration === undefined ? readMotionDefaultMs('imgSwap', 'duration', scopeRef.current ?? undefined) : readMotionTimeMs(duration, scopeRef.current ?? undefined);
-    const timer = window.setTimeout(() => setSwap((s) => ({ ...s, outgoing: null })), base * (effect === 'veil' ? 2 : 1) + MOTION_END_BUFFER_MS);
+    const timer = window.setTimeout(() => {
+      setSwap(state => ({ ...state, outgoing: null, incoming: null }));
+    }, base * (effect === 'veil' ? 2 : 1) + MOTION_END_BUFFER_MS);
     return () => window.clearTimeout(timer);
   }, [running, swap.turn, duration, effect]);
 
-  const loaded = (loadedIdentity: string) => setSwap((s) => (
-    s.pending && s.pendingIdentity === loadedIdentity
-      ? { ...s, pending: false, pendingIdentity: null }
-      : s
-  ));
-
-  if (kind == null) return { node: content, loaded };
+  if (kind == null) return content;
 
   const style = {
     ...(config?.duration !== undefined ? { '--img-swap-d': motionTimeCss(config.duration) } : null),
     '--img-swap-dir': String(swap.dir),
   } as CSSProperties;
 
-  const node = createElement(ImgSwap, {
+  return createElement(ImgSwap, {
     ref: scopeRef, effect, style, turn: swap.turn, busy, running, pending: swap.pending,
     outgoing: swap.outgoing, current, veil: config?.veil,
   });
-
-  return { node, loaded };
 }

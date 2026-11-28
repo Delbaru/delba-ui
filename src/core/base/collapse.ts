@@ -18,9 +18,9 @@ export interface CollapseFrame {
 }
 
 export interface CollapseNodes {
-  /** Обёртка `.ui-collapse`: на ней зазор, состояние `data-open` и токены длительности. */
+  /** Обёртка раскрытия: на ней зазор, состояние `data-open` и токены длительности. */
   wrap: HTMLElement;
-  /** Слой `.ui-collapse-inner`: он клипает и он же ведёт размер, когда сам блок сжаться не может. */
+  /** Внутренний слой: он клипает и он же ведёт размер, когда сам блок сжаться не может. */
   inner: HTMLElement;
   /** Сворачиваемый блок (сам `Flex`). */
   content: HTMLElement | null;
@@ -115,7 +115,7 @@ export function animateCollapse(nodes: CollapseNodes, options: CollapseRunOption
   const { axis, gapSide = 'start', open, sizeOnInner, fade } = options;
   const target = sizeOnInner || !content ? inner : content;
 
-  // Радиус обрезки — у содержимого: клипает внутренний слой (clip-path в _flex.scss), а скругление
+  // Радиус обрезки — у содержимого: клипает внутренний слой (clip-path в Collapse.module.scss), а скругление
   // нарисовано на блоке. Без него углы карточки становятся прямыми ровно на середине сворачивания.
   if (content) wrap.style.setProperty('--collapse-radius', getComputedStyle(content).borderRadius);
 

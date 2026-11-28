@@ -36,7 +36,7 @@
     @media #{map.get(utils.$breakpoints, d)} {
       .monthPick,
       .yearPick {
-        font: m.role-font(body, subtitle);
+        @include m.typography-role(body);
       }
     }
   }

@@ -1,7 +1,8 @@
 @layer ui.components {
   .InputActions {
-    &[role='button'] {
-      cursor: pointer;
+    button:focus-visible {
+      outline: calc(2 * var(--rpx)) solid var(--primary);
+      outline-offset: calc(2 * var(--rpx));
     }
     .dateToggle {
       position: relative;
@@ -13,7 +14,7 @@
         transform: translateY(-50%);
         width: calc(2 * var(--rpx));
         height: calc(var(--input-height, 100%) - 2 * var(--rpx));
-        background: var(--white-100);
+        background: var(--primary-foreground);
       }
     }
     .passwordToggle {
@@ -24,14 +25,10 @@
         transition: fill var(--t-d-fast) var(--t-t-f-ease);
       }
       &:hover svg path[fill]:not([fill='none']) {
-        fill: var(--black);
+        fill: var(--text);
       }
     }
     .numberArrows {
-      .btn {
-        cursor: pointer;
-        transition: var(--t-fast);
-      }
       .up {
         transform: scaleY(-1);
       }

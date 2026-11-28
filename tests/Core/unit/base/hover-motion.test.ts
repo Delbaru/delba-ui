@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { hoverMotionStyle, hoverTransformCss, isHoverTransformAnimate, resolveHoverTransform } from '../../../../src/core/base/hover-motion';
+import { hoverMotionStyle, hoverTransformCss } from '../../../../src/core/base/hover-motion';
 
 test('hover uses signed shared distances and timing tokens without DOM reads', () => {
     assert.equal(hoverTransformCss({ x: 4, y: -2, scale: 1.025, rotate: 45 }),
@@ -12,18 +12,6 @@ test('hover uses signed shared distances and timing tokens without DOM reads', (
     assert.equal(style['--hover-motion-duration' as keyof typeof style], 'var(--t-d-very-slow)');
     assert.equal(style['--hover-motion-easing' as keyof typeof style], 'var(--t-t-f-ease-out)');
     assert.match(String(style['--hover-motion-from' as keyof typeof style]), /scale\(0\.9090909090909091\)/);
-});
-
-test('guards preserve button rise, icon changes and legacy content animation', () => {
-    const transform = { when: 'hover', effect: 'transform', x: 4 };
-    assert.equal(isHoverTransformAnimate(transform), true);
-    assert.equal(resolveHoverTransform(transform), transform);
-    assert.equal(resolveHoverTransform({ when: 'load', effect: 'up', hover: transform }), transform);
-    for (const other of [{ when: 'hover', effect: 'rise' }, { when: 'change', effect: 'swap' }, 'swap', ['fadeIn'], null, false]) {
-        assert.equal(isHoverTransformAnimate(other), false);
-        assert.equal(resolveHoverTransform(other), undefined);
-    }
-    assert.equal(resolveHoverTransform({ when: 'load', effect: 'up', hover: false }), undefined);
 });
 
 test('invalid scalar input falls back to neutral values and safe tokens', () => {

@@ -6,13 +6,27 @@ import { globalComponentMarkers } from './project-props.mjs';
 
 const ignoredFile = /\.(?:test|typecheck|type-test|d)\.tsx?$/;
 const componentName = /^[A-Z][A-Za-z0-9]*$/;
+export const publicComponentScaffolds = [
+  'Accordion', 'Accordion/AccordionItem', 'Button', 'Calendar',
+  'Carousel', 'Carousel/CarouselDots', 'Carousel/CarouselNav',
+  'NativeCarousel/CarouselProgress', 'NativeCarousel/CarouselTimer',
+  'Checkbox', 'ChoiceButtons', 'Dropdown', 'DurationPicker', 'Flex',
+  'GradientBorder', 'Grid', 'Grid/GridItem', 'Icon', 'Img', 'Input',
+  'Marquee', 'MediaDropDown', 'Modal', 'Modal/ModalProvider', 'NativeCarousel',
+  'PageTransition', 'PhoneField', 'Radio', 'ScrollArea',
+  'ScrollArea/ScrollbarActivity', 'Section', 'Select', 'Skeleton',
+  'SwitchButton', 'TabTrack', 'Text', 'Textarea',
+  'Toast/ToastProvider', 'Tooltip', 'Video', 'VideoPlayer',
+].map(directory => ({ directory, name: path.basename(directory) })).concat([
+  { directory: 'RichText', name: 'LexicalText' },
+  { directory: 'RichTextarea', name: 'LexicalTextarea' },
+]);
 // Reviewed lifecycle adapters add no DOM; their visual owner keeps the marker.
 const nonvisualAdapters = new Map([
   ['PageTransition/PageTransition.tsx:PageTransition', 'React ViewTransition owns native snapshots; this boundary adds no DOM element.'],
   ['Modal/Modal.tsx:Modal', 'Public mode dispatcher; ModalSurface owns the DOM.'],
   ['Modal/Modal.tsx:DeclarativeModal', 'Declaration/trigger adapter; ModalSurface owns the DOM.'],
   ['Text/animations/textSlide/TextSlide.tsx:TextSlide', 'Dispatches to three renderers; each owns its DOM root.'],
-  ['Text/Text.tsx:CollapsibleText', 'Retains children while CollapseWrap owns the transition DOM.'],
 ]);
 const isProvider = (tag) => ts.isPropertyAccessExpression(tag) && tag.name.text === 'Provider';
 
@@ -92,7 +106,7 @@ function hasNamedClass(source, name, stylesheet) {
 
 export const componentAnatomyRule = {
   id: 'component-anatomy',
-  docs: 'docs/authoring.md',
+  docs: 'docs/development.md',
   check(source, { root }) {
     const relative = path.relative(path.resolve(root, 'src/components'), source.fileName);
     if (relative.startsWith('..') || path.isAbsolute(relative) || ignoredFile.test(source.fileName)) return [];
@@ -118,6 +132,7 @@ export const componentAnatomyRule = {
         continue;
       }
       const css = fs.readFileSync(own, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+      if (!css.trim()) continue;
       if (!new RegExp(`\\.${name}(?![\\w-])`).test(css)) report(node,
         `${name}: в собственном SCSS отсутствует .${name}.`, 'Определите именованный корневой селектор; не добавляйте фиктивные декларации.');
       const owners = [source, parse(path.join(path.dirname(source.fileName), `${name}.model.ts`)),
@@ -129,3 +144,28 @@ export const componentAnatomyRule = {
     return diagnostics;
   },
 };
+
+export function checkComponentScaffolds(root) {
+  const diagnostics = [];
+  for (const { directory: component, name } of publicComponentScaffolds) {
+    const directory = path.join(root, 'src/components', component);
+    const requiredFiles = [
+      `${name}.types.ts`, `${name}.config.ts`, `${name}.tsx`,
+      `${name}.module.scss`, 'index.ts',
+    ];
+    for (const requiredFile of requiredFiles) {
+      const file = path.join(directory, requiredFile);
+      if (fs.statSync(file, { throwIfNoEntry: false })?.isFile()) continue;
+      diagnostics.push({
+        file,
+        line: 1,
+        column: 1,
+        rule: componentAnatomyRule.id,
+        severity: 'error',
+        docs: path.join(root, componentAnatomyRule.docs),
+        message: `${name}: отсутствует ${requiredFile}.`,
+      });
+    }
+  }
+  return diagnostics;
+}

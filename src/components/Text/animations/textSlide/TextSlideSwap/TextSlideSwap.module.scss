@@ -1,4 +1,165 @@
+@use '../../../../../core/mixins' as m;
+
 @layer ui.components {
+  // Своп-слайд значения ПОСИМВОЛЬНО: строка из ячеек-символов. Неизменившийся символ — статичный inline-block
+  // (без клипа, чтобы не резать выносные элементы). Изменившийся — ячейка с overflow (клипует сдвиг) и стеком
+  // двух слоёв в одной grid-ячейке: старый уезжает вверх, новый въезжает снизу. Длительность — CSS-var.
   .TextSlideSwap {
+    // inline-block, vertical-align: baseline держит выравнивание в inline-контексте (as='span'). Ширину при
+    // смене значения НЕ ведём здесь — её ведут сами ячейки-одометры (каждая едет от ширины старого символа к
+    // новому), а вьюпорт width:auto подхватывает сумму сам. На уровне вьюпорта ведём только высоту (смена числа
+    // строк при переносе «N из M» в узком контейнере). Перенос наследуется от host-Text.
+    display: inline-block;
+    vertical-align: baseline;
+    transition: height var(--slide-swap-dur, var(--t-m-text-slide-duration)) var(--t-t-f-cubic-bezier);
+
+    // Слово целиком не переносим по буквам (перенос допустим только между словами — по пробелам-ячейкам).
+    // tabular-nums держим на словах (цифры одной ширины — таймер не прыгает 9→0); на пробелах-ячейках не нужно.
+    //
+    // ⚠️ `!important` тут не украшение: Text задаёт `font-variant-numeric: lining-nums
+    // proportional-nums !important`, и без ответного `!important` табличные цифры проигрывали —
+    // правило стояло в файле, а свопящееся число всё равно дрожало на каждой смене разряда.
+    // `lining-nums` повторяем осознанно: свойство ОДНО, и перечисление затирает соседнюю ось.
+    .Word {
+      display: inline-block;
+      white-space: nowrap;
+      font-variant-numeric: lining-nums tabular-nums !important;
+    }
+
+    // ⚠️ Табличные фигуры выше объявлены, но НИЧЕГО не дают: в гарнитуре сайта их нет (замер —
+    // «000000» и «111111» в Raleway 40px дают 147.38 против 118.56 и с `tabular-nums`, и без).
+    // То есть ширина ячеек у свопа НЕ фиксирована, и на крупном кегле смена значения читается как
+    // пляска цифр. Крупному числу, которое пересчитывается от действия, правильнее взять `counter` —
+    // он пишет значение одним узлом, без ячеек и вертикального хода.
+
+    .Static {
+      display: inline-block;
+      vertical-align: bottom;
+    }
+
+    // Ячейка-одометр: новый символ (in) — в потоке, задаёт ширину/высоту ПОКОЯ ячейки; старый (out) — абсолют,
+    // из раскладки выключен, поэтому в покое ширина = новый символ (без рывка на размонтировании старого и без
+    // гонки таймеров). overflow клипует вертикальный слайд. Ширину на время свопа ведёт плагин (transition
+    // width): пин старой ширины символа → глайд к новой → релиз в auto (= новый символ).
+    .Cell {
+      display: inline-block;
+      position: relative;
+      overflow: hidden;
+      vertical-align: bottom;
+      transition: width var(--slide-swap-dur, var(--t-m-text-slide-duration))
+        var(--t-t-f-cubic-bezier);
+    }
+
+    // will-change — только на время свопа. В покое сменившийся символ снова становится статичным без слоя,
+    // иначе он растеризуется grayscale-сглаживанием и выглядит мыльным рядом с обычным текстом. Анимируем
+    // ТОЛЬКО transform (без opacity): ячейка клипует, старый/новый символ не накладываются и фейд не нужен.
+    .In {
+      display: inline-block;
+      will-change: transform;
+      backface-visibility: hidden;
+      animation: ui-slide-enter var(--slide-swap-dur, var(--t-m-text-slide-duration))
+        var(--t-t-f-cubic-bezier) backwards;
+    }
+
+    // Старый символ — абсолют поверх нового (левый-верхний угол ячейки), уезжает вверх под клип.
+    .Out {
+      position: absolute;
+      left: 0;
+      top: 0;
+      will-change: transform;
+      backface-visibility: hidden;
+      animation: ui-slide-leave var(--slide-swap-dur, var(--t-m-text-slide-duration))
+        var(--t-t-f-cubic-bezier) forwards;
+    }
+  }
+
+  // Whole labels keep their natural kerning and wrapping, including in rest. The clip includes
+  // ascenders/descenders outside a tight heading line box; travel includes that extra ink space.
+  .Value {
+    max-width: 100%;
+
+    .ValueViewport {
+      display: block;
+      position: relative;
+      // clip-path preserves the text baseline; overflow:hidden makes an inline-block
+      // use its bottom edge as the baseline and raises the label next to plain text.
+      clip-path: inset(-0.16em 0);
+    }
+
+    .ValueStatic,
+    .ValueIn {
+      display: block;
+    }
+
+    .ValueIn {
+      animation: ui-slide-value-enter var(--slide-swap-dur, var(--t-m-text-slide-duration))
+        var(--t-t-f-cubic-bezier) both;
+    }
+
+    .ValueOut {
+      position: absolute;
+      inset-inline: 0;
+      top: 0;
+      animation: ui-slide-value-leave var(--slide-swap-dur, var(--t-m-text-slide-duration))
+        var(--t-t-f-cubic-bezier) both;
+    }
+  }
+
+  @keyframes ui-slide-value-enter {
+    from {
+      transform: translateY(calc(100% + 0.32em));
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes ui-slide-value-leave {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(calc(-100% - 0.32em));
+    }
+  }
+
+  // Чистый слайд без opacity: ячейка клипует вынос, поэтому цифра остаётся чёткой (полная непрозрачность),
+  // а не полупрозрачно-мыльной. Старая уезжает вверх за край клипа, новая въезжает снизу.
+  @keyframes ui-slide-enter {
+    from {
+      transform: translateY(100%);
+    }
+
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes ui-slide-leave {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(-100%);
+    }
+  }
+
+
+  @include m.reduced-motion {
+    .TextSlideSwap {
+      transition: none;
+
+      .Cell {
+        transition: none;
+      }
+
+      .In,
+      .Out,
+      .ValueIn,
+      .ValueOut {
+        animation: none;
+      }
+    }
   }
 }

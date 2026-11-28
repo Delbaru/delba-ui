@@ -1,87 +1,21 @@
 ---
 name: ui-motion
-description: 'Общая механика анимаций @delba/frontend: appearance, content swap, collapse, hover, parallax, perspective и lifecycle. Применять при изменении motion API, хуков и переходов кита.'
+description: 'Изменять и проверять анимации, переходы, collapse, reveal и parallax в Frontend.'
 ---
 
-# Motion UI-кита
+# Движение Frontend
 
-Для браузерной диагностики Reveal, scroll roots и переходов используй
-[browser guide](../../../docs/browser-verification.md); общий порядок QA — shared `delba-browser`.
+Прочитай [договор движения](../../../docs/architecture.md#движение-и-первый-показ)
+и тип animate самого компонента. Общие timings, easing и defaults принадлежат
+[FrontendConfig](../../../docs/configuration.md).
 
-Применяй по задаче без отдельного вызова. Прочитай [принципы](../../../docs/specs/architecture/principles.md)
-и [спецификацию движения](../../../docs/specs/ui/motion.md); если меняется публичный
-договор — также [API](../../../docs/specs/architecture/api.md). Новый результат
-фиксируется через [карту спецификаций](../../../docs/specs/README.md), проверяется
-по её критериям и [приёмке](../../../docs/specs/verification/acceptance.md).
+Бери `appearance`, `hover`, `idle` и `change` из общего договора Motion.
+Сверяй тип компонента, DOM-хост и клип, а также конкурирующие CSS-свойства.
+Специальные эффекты принадлежат своему каналу и компоненту. Примеры —
+[каталог](../../../docs/components.md#анимация-компонентов).
 
-Пути — от корня UI-репозитория. Сначала [ui-component](../ui-component/SKILL.md),
-затем [authoring §3.1 и §6](../../../docs/authoring.md), нужный раздел
-[core](../../../docs/core.md) и существующий хук/компонент.
-
-| Сценарий | Владелец |
-|---|---|
-| Появление, observer, общая композиция transform | useSharedMotion / useReveal / core/reveal |
-| Смена содержимого | useContentMotion и специфичный эффект примитива |
-| Сворачивание, команды и итог перехода | CollapseWrap, useCollapseState/Motion/Controls, core/base/collapse |
-| Скролл и курсор | useParallaxMotion / usePerspective3dMotion, общие проверки visibility |
-| Время, расстояния, reduced motion | core/base/timing, distance, motion и конфиг потребителя |
-
-Перед новым эффектом найди соседний реализованный сценарий и потребителей.
-Общий API — только объект animate с when/effect. Публичные animation/transitionKey,
-reveal и строковые/tuple-входы удалены; переход описан в docs/motion-migration.md.
-Внутренние normalized options, CSS и observer общего движка сохраняются.
-Корневой collapse относится ко всему компоненту, объект части — к части.
-
-- Один владелец controlled-состояния; фаза движения не становится второй моделью open.
-- DOM ref сохраняет назначение и cleanup; ручка поведения отдельна.
-- Callback ref сохраняет идентичность между рендерами, чтобы не сбрасывать движение.
-- Пользовательские события компонуются; отмена действия не отменяет обязательный cleanup.
-- Для pointer capture различай собственную потерю захвата и всплывший `lostpointercapture`
-  дочернего implicit touch capture; проверяй настоящий touch, а не только mouse drag.
-- Обратная команда, cancel и unmount корректно завершают ожидающий результат.
-- При навигации/Back/Forward отменяй активную и отложенную цель независимо от
-  смены pathname; согласуй нативное восстановление у владельца SmoothScroll,
-  не добавляй второй контроллер позиции в потребителе.
-- Адаптер Transition сохраняет исходный объект для композиции ядра; проверяй together/sequence.
-- Повторная команда во время движения сохраняет позицию и скорость; tap не прерывает ход до порога drag.
-- Reduced motion сохраняет результат и lifecycle; первый SSR и hydration согласованы.
-  Initial state времени читает generated runtime без DOM; scoped CSS уточняется после commit.
-- Пауза вне экрана/скрытого документа и снятие слушателей/observer/rAF обязательны
-  там, где механика их создаёт. Не дублируй движок в компоненте.
-- Локальный pointer/focus до первого visibility callback сохраняет цель; scheduler
-  приостанавливает кадры. Проверяй delayed observer вместе с заменой DOM и cleanup.
-- Сглаживание учитывает время кадра, а не число кадров; на разных Hz длительность одинакова.
-- Все публичные motion duration/delay, включая legacy counter и Carousel, — секунды или timing name.
-  Пороги, инерция и общие defaults поведения доступны в ui.config, без скрытых числовых fallback
-  в движке; численные допуски и коэффициенты формул остаются внутренними и объясняются кодом.
-  Defaults эффектов берутся из motion.defaults; прокруткой целиком владеет motion.scroll.
-  Кривые берутся из motionEasing, damping — из frameResponse/timeResponse.
-  Observer margins — явные top/right/bottom/left; legacy % не подменяют единицами vh. Lenis удалён.
-- --t-fast/normal/slow — полный transition с all. Для списка свойств используй
-  transition-property отдельно; `height var(--t-normal)` — некорректный CSS.
-
-Проверяй быстрый разворот, смену контента посреди хода, повторное открытие, callback один раз,
-фокус, portals, controlled-отказ, reduced motion и unmount. Используй существующие
-unit/browser/SSR fixtures; добавляй тест на установленный баг, без второго runner.
-Для каждого примитива с публичным collapse проверь CSS его настоящего корня:
-закрытый Grid не становится Flex. При смене sibling-состояний измеряй всю поверхность
-с первого кадра; корректный fade не подтверждает нулевую закрытую геометрию.
-Покадровая работа или торможение → [ui-performance](../ui-performance/SKILL.md), приёмка →
-[ui-verify](../ui-verify/SKILL.md). Визуал подтверждается в настоящем потребителе.
-Отдельно измеряй движение детей и размер окрашенного родителя при изменении
-содержимого уже открытого collapse. Для inView учитывай видимость предков,
-задержку появления и округление малых чисел: изменение до того, как число можно
-прочитать, не подтверждает заметную анимацию.
-Для синхронизации вложенного оглавления используй публичный scrollTo с container:
-его команда должна быть независима от прокрутки документа и других viewport.
-Для ViewTransition проверяй промежуточную computed opacity реального снимка,
-включая регистрозависимое имя React: созданный WAAPI Animation сам по себе
-не доказывает совпадение селектора с существующим псевдоэлементом.
-
-
-Новый и рефакторируемый UI использует только объектный animate с явными when/effect.
-Удаляй animation/transitionKey и строковые/tuple-вызовы в мигрируемом сценарии;
-не добавляй совместимые алиасы, fallback или второй движок. inView/load/change
-выбираются по событию, не по внешнему сходству. Проверь внутренние вызовы до ядра.
-Для закреплённой версии кита сначала проверь поддержку API и согласованное обновление;
-отсутствие API не оправдывает скрытый возврат к legacy.
+Покажи start, end, cancel, reduced motion и повторный запуск. Для collapse и
+swap проверь прерывание и последнее состояние, focus и доступность скрытых
+детей. Для reveal проверь первый SSR-показ, root наблюдения и загрузку шрифтов.
+Используй существующий механизм. Ресурсы фазы освобождаются при завершении,
+отмене и unmount. Проверки по [ui-verify](../ui-verify/SKILL.md).

@@ -1,14 +1,12 @@
 'use client';
 
-import Link from 'next/link';
-import { useRef, useState, type ElementType, type HTMLAttributes } from 'react';
+import { useRef, useState } from 'react';
 import {
-  boxLayout, createLayoutClasses, cx, resolveLinkProps, shouldUseNextLink,
-  splitBoxLayout, splitRootDomProps, stateLinkProps, useMergedRefs, type WithRef,
-} from '../../core';
-import { isAppearanceAnimate } from '../../core/reveal/reveal';
-import { isSharedMotionAnimate, useSharedMotion } from '../../hooks/useSharedMotion';
+  boxLayout, createLayoutClasses, cx, splitBoxLayout, splitRootDomProps, type WithRef,
+} from '#core';
+import { useInteractiveElement } from '#core/Element';
 import { useFancybox } from '../../hooks/useFancybox';
+import { IMG_DEFAULTS } from './Img.config';
 import { prepareImage } from './Img.resource';
 import type { ImgProps } from './Img.types';
 import styles from './Img.module.scss';
@@ -26,39 +24,56 @@ export function useImg(props: WithRef<ImgProps, HTMLSpanElement>) {
   } = rest;
   const { rootProps, elementProps } = splitRootDomProps(native);
   const resource = prepareImage(props, box, elementProps);
-  const appearance = isAppearanceAnimate(animate) ? { ...animate, stagger: 0 } : undefined;
-  const motion = useSharedMotion({
-    perspective3d, parallax,
-    animate: appearance ?? (isSharedMotionAnimate(animate) ? animate : undefined),
+  const element = useInteractiveElement({
+    as: 'span',
+    ref,
+    root: { ...rootProps, id, style, href, target, rel, download, newTab, nofollow, noreferrer },
+    className: cx(styles.Img, ...boxLayout(classes, {
+      ...box, w: rootW ?? box.w, h: rootH ?? box.h,
+    }), className),
+    linkState,
+    motion: {
+      perspective3d,
+      parallax,
+      animate: {
+        appearance: animate?.appearance && { ...animate.appearance, stagger: 0 },
+        hover: animate?.hover && animate.hover.effect === 'transform' ? animate.hover : undefined,
+      },
+    },
   });
-  const mergedRef = useMergedRefs(motion.setMotionNode, ref);
-  const Root: ElementType = href ? (shouldUseNextLink(href, target, download) ? Link : 'a') : 'span';
-  const link = href ? resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer }) : null;
   const group = href ? undefined : fancybox?.trim();
-  const lightbox = group ? { href: resource.identity, group, label: resource.image.alt || 'Изображение' } : null;
+  const lightbox = group ? { href: resource.address, group, label: resource.image.alt || 'Изображение' } : null;
   useFancybox(Boolean(lightbox?.href));
 
   const currentIdentity = useRef(resource.identity);
   currentIdentity.current = resource.identity;
   const [loadedIdentity, setLoadedIdentity] = useState<string | null>(null);
-  function ready() {
-    if (currentIdentity.current === resource.identity) setLoadedIdentity(resource.identity);
-  }
+  const imageClassName = cx(
+    ...classes.value('objectFit', objectFit ?? IMG_DEFAULTS.objectFit),
+    ...classes.value('objectPosition', objectPosition ?? IMG_DEFAULTS.objectPosition),
+  );
 
   return {
-    Root, resource, lightbox, blur, ready,
+    host: element.host,
+    resource,
+    lightbox,
+    blur,
     loaded: loadedIdentity === resource.identity,
-    change: isSharedMotionAnimate(animate) ? undefined : animate,
-    imageClassName: cx('ui-img-image', ...classes.value('objectFit', objectFit ?? 'cover'),
-      ...classes.value('objectPosition', objectPosition ?? 'center')),
-    root: {
-      ...(rootProps as HTMLAttributes<HTMLSpanElement>), ...link,
-      ...stateLinkProps(linkState, motion.motionHandlers), ...motion.revealAttrs,
-      ref: mergedRef, id, 'data-point-events': pointEvents,
-      className: cx(styles.Img, 'ui-img', ...boxLayout(classes, {
-        ...box, w: rootW ?? box.w, h: rootH ?? box.h,
-      }), className),
-      style: { ...motion.motionStyle, ...style },
-    },
+    imageClassName,
+    change: animate?.change,
+    root: { ...element.root, 'data-point-events': pointEvents },
+    content: (settled: () => void) => ({
+      resource,
+      className: imageClassName,
+      onLoad(event: Parameters<NonNullable<ImgProps['onLoad']>>[0]) {
+        if (currentIdentity.current === resource.identity) setLoadedIdentity(resource.identity);
+        settled();
+        onLoad?.(event);
+      },
+      onError(event: Parameters<NonNullable<ImgProps['onError']>>[0]) {
+        settled();
+        onError?.(event);
+      },
+    }),
   };
 }

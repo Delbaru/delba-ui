@@ -3,7 +3,7 @@
 
 import { type CSSProperties } from 'react';
 
-import { cx } from '../../../../../core';
+import { cx } from '#core';
 import { motionTimeCss } from '../../../../../core/base/timing';
 import type { TextAnimationContext } from '../../types';
 import type { TextSlideOptions } from '../types';
@@ -20,11 +20,11 @@ export function TextSlideHover({ content, options }: TextAnimationContext<TextSl
   } as CSSProperties;
 
   return (
-    <span className={cx(styles.TextSlideHover, 'ui-slide-hover')} style={hoverStyle}>
-      <span className={'ui-slide-hover-viewport'}>
-        <span className={cx('ui-slide-hover-layer', 'ui-slide-hover-base')}>{content}</span>
+    <span className={styles.TextSlideHover} style={hoverStyle}>
+      <span className={styles.Viewport}>
+        <span className={cx(styles.Layer, styles.Base)}>{content}</span>
 
-        <span aria-hidden="true" className={cx('ui-slide-hover-layer', 'ui-slide-hover-alt')}>
+        <span aria-hidden="true" className={cx(styles.Layer, styles.Alternate)}>
           {content}
         </span>
       </span>

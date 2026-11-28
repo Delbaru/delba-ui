@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
+import type { MotionChannels } from '#core/Motion';
 import type { MotionTime } from '../../core/base/timing';
 import type { MotionDistance } from '../../core/base/distance';
 
 export type PageTransitionAnimate = {
-    when: 'change';
     effect: 'fade' | 'up';
     duration?: MotionTime;
     distance?: MotionDistance;
@@ -15,5 +15,6 @@ export type PageTransitionProps = {
     location: string;
     /** A unique snapshot name when several boundaries are mounted. */
     name?: string;
-    animate: PageTransitionAnimate;
+    /** Native snapshot effect applied when the location changes. */
+    animate: Required<Pick<MotionChannels<{ change: PageTransitionAnimate }>, 'change'>>;
 };

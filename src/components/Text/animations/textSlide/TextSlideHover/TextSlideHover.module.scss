@@ -1,4 +1,49 @@
+@use '../../../../../core/mixins' as m;
+
 @layer ui.components {
+  // Hover-слайд: корень-вьюпорт со стеком из двух слоёв; :hover/:focus разъезжает их по вертикали.
   .TextSlideHover {
+    display: inline-block;
+
+    .Viewport {
+      display: inline-grid;
+      overflow: hidden;
+      vertical-align: top;
+    }
+
+    .Layer {
+      grid-area: 1 / 1;
+      display: block;
+      transition:
+        transform var(--text-slide-duration, var(--t-m-text-slide-hover-duration)) var(--t-t-f-ease),
+        color var(--text-slide-duration, var(--t-m-text-slide-hover-duration)) var(--t-t-f-ease);
+      will-change: transform;
+    }
+
+    .Base {
+      transform: translateY(0);
+    }
+
+    .Alternate {
+      transform: translateY(100%);
+      color: var(--text-slide-hover-color, var(--primary));
+    }
+
+    &:hover .Base,
+    &:focus-visible .Base,
+    &:focus-within .Base {
+      transform: translateY(-100%);
+    }
+
+    &:hover .Alternate,
+    &:focus-visible .Alternate,
+    &:focus-within .Alternate {
+      transform: translateY(0);
+    }
+  }
+
+
+  @include m.reduced-motion {
+    .TextSlideHover .Layer { transition: none; }
   }
 }

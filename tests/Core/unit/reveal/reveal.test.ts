@@ -41,7 +41,7 @@ test('horizontal expansion is an appearance effect and keeps an observable start
   const reveal = resolveReveal({ effect: 'expandX', fade: false });
   assert.equal(reveal?.key, 'expandX');
   assert.deepEqual(revealAttrs(reveal), { 'data-reveal': 'expandX' });
-  const css = compile(path.join(import.meta.dirname, '../../../../src/core/reveal/_reveal.scss')).css;
+  const css = compile(path.join(import.meta.dirname, '../../../../src/core/reveal/Reveal.module.scss')).css;
   assert.match(css, /data-reveal=expandX/);
   assert.match(css, /--reveal-s: 0\.001 1/);
   assert.match(css, /transform-origin: left center/);
@@ -129,14 +129,14 @@ test('down enters from above and distances keep rpx, percent and named token sem
 });
 
 test('compiled reveal CSS starts down above, reverses on close and removes motion on request', () => {
-  const css = compile(path.join(import.meta.dirname, '../../../../src/core/reveal/_reveal.scss')).css;
+  const css = compile(path.join(import.meta.dirname, '../../../../src/core/reveal/Reveal.module.scss')).css;
   assert.match(css, /\[data-reveal=down\] \{\s*--reveal-t: 0 calc\(var\(--reveal-shift\) \* -1\);/);
   assert.match(css, /\[data-reveal-state=out\] \{\s*animation: ui-reveal-out [^;]+ reverse both;/);
   assert.match(css, /@media screen and \(scripting: enabled\) and \(prefers-reduced-motion: reduce\) \{[\s\S]*\[data-reveal-state\] \{\s*animation: none;/);
 });
 
 test('load cascade index counts only eligible children', () => {
-  const css = compile(path.join(import.meta.dirname, '../../../../src/core/reveal/_reveal.scss')).css;
+  const css = compile(path.join(import.meta.dirname, '../../../../src/core/reveal/Reveal.module.scss')).css;
   const firstIndex = css.split('\n').find((line) => line.includes(':nth-child(1 of'));
   assert.ok(firstIndex);
   assert.match(firstIndex, /\[data-reveal-skip\]/);

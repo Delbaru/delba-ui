@@ -1,5 +1,5 @@
 import { Transition } from '../../core/base/transition';
-import type { CarouselNavigationState } from '../Carousel/types';
+import type { CarouselNavigationState } from '../Carousel';
 import { INITIAL_CAROUSEL_PLAYBACK, type CarouselPlaybackSnapshot, type CarouselPlaybackSource } from './playback';
 import { normalizedCarouselProgress, type CarouselMotionProgressSource } from './motion-progress';
 

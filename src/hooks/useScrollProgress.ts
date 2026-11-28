@@ -3,8 +3,8 @@
 import { useEffect, type RefObject } from 'react';
 
 import { MEDIA_QUERY } from '../core/base/breakpoints';
-import { useSmoothScroll } from '../components/SmoothScroll';
 import { timeResponse } from '../core/base/damping';
+import { subscribeWindowScroll } from '../core/Scroll/Smooth/scroll-events';
 
 export interface ScrollProgressOptions {
   /** Время догоняющего движения в секундах; 0 привязывает полосу напрямую к прокрутке. */
@@ -13,18 +13,20 @@ export interface ScrollProgressOptions {
 
 /** Масштабирует отдельную декоративную поверхность по прогрессу документа. Не обновляет React по кадрам. */
 export function useScrollProgress(surface: RefObject<HTMLElement | null>, { lag = 0 }: ScrollProgressOptions = {}) {
-    const scrollApi = useSmoothScroll();
     useEffect(() => {
         const el = surface.current;
         if (!el) return;
 
-        const still = matchMedia(MEDIA_QUERY.reducedMotion);
+        const { ownerDocument: document } = el;
+        const view = document.defaultView;
+        if (!view) return;
+        const still = view.matchMedia(MEDIA_QUERY.reducedMotion);
         let shown = 0;
         let target = 0;
         let frame = 0;
         let last = 0;
         let max = 0;
-        let y = scrollApi.scrollY;
+        let y = view.scrollY;
 
         const paint = () => { el.style.transform = `scaleX(${shown})`; };
 
@@ -33,39 +35,39 @@ export function useScrollProgress(surface: RefObject<HTMLElement | null>, { lag 
             last = now;
             if (Math.abs(target - shown) < 0.0005) shown = target;
             paint();
-            frame = shown === target ? 0 : requestAnimationFrame(tick);
+            frame = shown === target ? 0 : view.requestAnimationFrame(tick);
         };
 
         const measure = () => {
             target = max > 0 ? Math.max(0, Math.min(1, y / max)) : 0;
             if (still.matches || lag <= 0) {
-                cancelAnimationFrame(frame);
+                view.cancelAnimationFrame(frame);
                 frame = 0;
                 shown = target;
                 paint();
             } else if (!frame) {
-                last = performance.now();
-                frame = requestAnimationFrame(tick);
+                last = view.performance.now();
+                frame = view.requestAnimationFrame(tick);
             }
         };
 
         const dimensions = () => {
-            max = document.documentElement.scrollHeight - innerHeight;
+            max = (document.scrollingElement ?? document.documentElement).scrollHeight - view.innerHeight;
             measure();
         };
-        const resize = new ResizeObserver(dimensions);
+        const resize = new view.ResizeObserver(dimensions);
         resize.observe(document.body);
-        const unsubscribe = scrollApi.subscribe((value) => { y = value; measure(); });
-        addEventListener('resize', dimensions);
+        const unsubscribe = subscribeWindowScroll((value) => { y = value; measure(); }, view);
+        view.addEventListener('resize', dimensions);
         still.addEventListener('change', measure);
         dimensions();
 
         return () => {
-            cancelAnimationFrame(frame);
+            view.cancelAnimationFrame(frame);
             resize.disconnect();
             unsubscribe();
-            removeEventListener('resize', dimensions);
+            view.removeEventListener('resize', dimensions);
             still.removeEventListener('change', measure);
         };
-    }, [scrollApi, surface, lag]);
+    }, [surface, lag]);
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
-import { prefersReducedMotion } from '../../../../core';
+import { prefersReducedMotion } from '#core';
 import { readMotionTimeMs, type MotionTime } from '../../../../core/base/timing';
 import { readMotionDefaultMs } from '../../../../core/base/motion-config';
 import { createCountMotion } from './countMotion';

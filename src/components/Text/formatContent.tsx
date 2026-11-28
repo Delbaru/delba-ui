@@ -1,11 +1,12 @@
-import type React from 'react';
+import React from 'react';
 
 import {
   decodeHtmlEntities,
   stripHtmlTags,
-  resolveResponsive,
+  resolveResponsiveInput,
   type ResponsiveValue,
-} from '../../core';
+} from '#core';
+import { DEFAULT_TEXT_FORMAT } from './Text.config';
 
 export type TextFormat = 'default' | 'plain' | 'breaks';
 
@@ -21,16 +22,29 @@ const splitByBr = (value: string): (string | React.ReactElement)[] => {
  */
 export function resolveTextContent(
   children: React.ReactNode,
-  format: ResponsiveValue<TextFormat> = ['default', 'default', 'default'],
+  format: ResponsiveValue<TextFormat> = DEFAULT_TEXT_FORMAT,
 ): React.ReactNode {
   if (typeof children !== 'string') return children;
 
   const resolvedFormat = Array.isArray(format)
-    ? (resolveResponsive(format)[0] ?? 'default')
+    ? (resolveResponsiveInput(format)[0] ?? 'default')
     : format;
   const decoded = decodeHtmlEntities(children);
 
   if (resolvedFormat === 'plain') return stripHtmlTags(decoded);
   if (resolvedFormat === 'breaks') return splitByBr(decoded);
   return children;
+}
+
+/** Convert formatted content to one string for native text nodes and values. */
+export function resolvePlainTextContent(content: React.ReactNode): string {
+  let text = '';
+  React.Children.forEach(content, child => {
+    if (typeof child === 'string' || typeof child === 'number' || typeof child === 'bigint') {
+      text += child;
+    } else if (React.isValidElement<{ children?: React.ReactNode }>(child)) {
+      text += child.type === 'br' ? '\n' : resolvePlainTextContent(child.props.children);
+    }
+  });
+  return text;
 }

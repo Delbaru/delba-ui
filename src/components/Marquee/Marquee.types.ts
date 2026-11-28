@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import type { Flex } from '../Flex';
-import type { ResponsiveValue } from '../../core';
+import type { ResponsiveValue } from '#core';
 
 export type MarqueeProps = Omit<
   ComponentProps<typeof Flex>,

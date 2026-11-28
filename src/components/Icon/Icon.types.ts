@@ -1,15 +1,15 @@
 import type React from 'react';
 import type { CSSProperties, SVGProps } from 'react';
-import type { BoxLayoutProps, ComponentStateValue, ResponsiveValue, SizeValue, StateLinkInput } from '../../core';
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
+import type { BoxLayoutProps, ComponentStateValue, ResponsiveValue, SizeValue, StateLinkInput } from '#core';
+import type { MotionChannels, SurfaceMotionOptions } from '#core/Motion';
+import type { TooltipPopup } from '../../core/Popup/Popup';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
-import type { IconTooltipDirection } from './IconTooltip/IconTooltip';
 import type { IconComponent, IconSource } from './svg';
-import type { IconAnimate } from './swap';
+import type { IconChangeAnimate } from './swap';
 
 // `r` у SVG — радиус окружности; у Icon это радиус коробки (кортежем), поэтому родной убран.
 type IconBaseSvgProps = Omit<SVGProps<SVGSVGElement>, 'width' | 'height' | 'color' | 'rotate' | 'strokeWidth' | 'r' | 'onFocus' | 'onBlur'>;
-export type IconElementProps = IconBaseSvgProps & Record<string, unknown>;
+export type IconAnimate = MotionChannels<{ change: IconChangeAnimate }>;
 
 type IconRootSizeProps = {
   rootW?: ResponsiveValue<SizeValue>;
@@ -30,7 +30,12 @@ type IconRootStyleProps = {
   rootClassName?: string;
 };
 
-export interface IconProps extends Omit<IconBaseSvgProps, keyof BoxLayoutProps>, BoxLayoutProps, IconRootSizeProps, IconRootStyleProps, SharedMotionProps<IconAnimate> {
+export interface IconProps
+  extends Omit<IconBaseSvgProps, keyof BoxLayoutProps>,
+    BoxLayoutProps,
+    IconRootSizeProps,
+    IconRootStyleProps,
+    Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
   /** Focus callbacks receive the actual focusable Icon element, which may be its anchor. */
   onFocus?: React.FocusEventHandler<Element>;
   onBlur?: React.FocusEventHandler<Element>;
@@ -43,17 +48,17 @@ export interface IconProps extends Omit<IconBaseSvgProps, keyof BoxLayoutProps>,
   src?: string | IconComponent;
 
   // Имя иконки проекта (загружается из его public/icons/{name}.svg). Иконки кита — импортом:
-  // import arrow from '@delba/frontend/icons/arrows/arrow_bold.svg' → src={assetUrl(arrow)}
-  // Пример: name="ui/arrows/arrow_bold" -> загружает /icons/ui/arrows/arrow_bold.svg
+  // import arrow from '@delba/frontend/icons/controls/arrow-up.svg' → src={assetUrl(arrow)}
+  // Пример: name="actions/arrow-up" -> загружает /icons/actions/arrow-up.svg
   name?: string;
 
   // hover-иконка. Поддерживает старую строку с именем файла, path string и object source.
   // Примеры:
-  // hover="ui/favourite/favourite_white.svg"
-  // hover="/icons/ui/favourite/favourite_white.svg"
+  // hover="actions/favourite-filled.svg"
+  // hover="/icons/actions/favourite-filled.svg"
   // hover={FavouriteHoverIcon}
-  // hover={{ src: '/icons/ui/favourite/favourite_white.svg' }}
-  // hover={{ name: 'ui/favourite/favourite_white' }}
+  // hover={{ src: '/icons/actions/favourite-filled.svg' }}
+  // hover={{ name: 'actions/favourite-filled' }}
   hover?: string | IconComponent | IconSource;
 
   // Или готовый SVG компонент (результат импорта через SVGR из src/assets/icons)
@@ -78,12 +83,11 @@ export interface IconProps extends Omit<IconBaseSvgProps, keyof BoxLayoutProps>,
   stroke?: string;
   strokeWidth?: ResponsiveValue<number | string>;
   state?: ComponentStateValue;
-  tooltip?: React.ReactNode;
-  tooltipDirection?: IconTooltipDirection;
-  tooltipGap?: number;
+  /** Tooltip anchored to the link, frame, hover stack or inline SVG in that order. */
+  ui?: { popup?: TooltipPopup };
 
   linkState?: StateLinkInput;
 
-  /** Смена глифа: animate={{ when: 'change', effect: 'swap', duration: 'fast' }}. */
-  animate?: SharedMotionProps<IconAnimate>['animate'];
+  /** Смена глифа: animate={{ change: { effect: 'swap', duration: 'fast' } }}. */
+  animate?: IconAnimate;
 }

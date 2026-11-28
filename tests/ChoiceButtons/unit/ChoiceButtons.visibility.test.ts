@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 test('responsive choices hide their real roots through layout utilities without legacy attributes', () => {
   const { ChoiceButtons } = createRequire(import.meta.url)('../../../src/components/ChoiceButtons/ChoiceButtons.tsx') as typeof import('../../../src/components/ChoiceButtons/ChoiceButtons');
   const html = renderToStaticMarkup(createElement(ChoiceButtons, {
-    items: [{ value: 'one', label: 'One' }],
+    items: [{ value: 'one', label: 'One', description: 'Choose the first option' }],
     value: 'one', name: 'choice',
   }));
   assert.doesNotMatch(html, /data-hide-(?:mobile|tablet|pc|desktop)/);
@@ -17,4 +17,7 @@ test('responsive choices hide their real roots through layout utilities without 
   assert.doesNotMatch(roots[0]?.[1] ?? '', /(?:^| )hide_true(?: |$)/);
   assert.match(roots[1]?.[1] ?? '', /\bd_hide_true\b/);
   assert.doesNotMatch(roots[1]?.[1] ?? '', /\b[nt]_hide_true\b/);
+  assert.match(html, /<button[^>]*aria-description="Choose the first option"/);
+  assert.match(html, /<button[^>]*data-ui-popup-trigger=""/);
+  assert.equal((html.match(/type="hidden" name="choice" value="one"/g) ?? []).length, 1);
 });

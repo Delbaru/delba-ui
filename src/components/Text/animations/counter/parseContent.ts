@@ -1,3 +1,5 @@
+import type { CounterOptions } from './types';
+
 export interface ParsedCount {
   to: number;
   prefix: string;
@@ -35,5 +37,30 @@ export function parseCountContent(content: unknown): ParsedCount | null {
       .slice(index + digits.length)
       .trimEnd()
       .replace(/^\s+/, NBSP),
+  };
+}
+
+export function resolveCounterContent(content: unknown, options?: CounterOptions) {
+  const parsed = options?.to == null ? parseCountContent(content) : null;
+  const to = options?.to ?? parsed?.to ?? 0;
+  const prefix = parsed?.prefix ?? '';
+  const suffix = options?.suffix ?? parsed?.suffix ?? '';
+  const grouped = options?.grouped ?? parsed?.grouped ?? false;
+  const decimal = parsed?.decimal;
+  const formatNumber = (value: number) => {
+    if (!decimal) return grouped ? value.toLocaleString('ru-RU') : String(value);
+    const formatted = value.toLocaleString('ru-RU', {
+      useGrouping: grouped,
+      minimumFractionDigits: decimal.places,
+      maximumFractionDigits: decimal.places,
+    });
+    return decimal.separator === ',' ? formatted : formatted.replace(',', decimal.separator);
+  };
+
+  return {
+    to,
+    places: decimal?.places,
+    hasValue: options?.to != null || parsed != null,
+    text: (value: number) => `${prefix}${formatNumber(value)}${suffix}`,
   };
 }

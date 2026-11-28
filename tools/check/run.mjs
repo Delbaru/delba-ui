@@ -11,7 +11,7 @@ import { startProgress } from './progress.mjs';
 export function runNode(args, cwd, { showOutput = false, environment } = {}) {
   return new Promise((resolve) => {
     const env = { ...process.env, ...environment, FORCE_COLOR: '0' };
-    // Playwright assigns FORCE_COLOR to its workers; an inherited NO_COLOR makes Node warn.
+    // FORCE_COLOR and NO_COLOR together make Node warn.
     delete env.NO_COLOR;
     // Иначе Node пропускает отдельный test runner, запущенный из теста самого инструмента.
     delete env.NODE_TEST_CONTEXT;

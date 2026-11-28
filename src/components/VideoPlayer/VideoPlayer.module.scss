@@ -2,8 +2,8 @@
 @layer ui.components {
   .VideoPlayer {
       --media-scrim: color-mix(in srgb, var(--text) 88%, transparent);
-      --media-track: color-mix(in srgb, var(--white-100) 40%, transparent);
-      --media-hover: color-mix(in srgb, var(--white-100) 70%, transparent);
+      --media-track: color-mix(in srgb, var(--primary-foreground) 40%, transparent);
+      --media-hover: color-mix(in srgb, var(--primary-foreground) 70%, transparent);
 
       overflow: hidden;
       user-select: none;
@@ -232,7 +232,7 @@
 
   @layer ui.states {
       .VideoPlayer .volumeTrack:focus-visible {
-          outline: calc(2 * var(--rpx)) solid var(--white-100);
+          outline: calc(2 * var(--rpx)) solid var(--primary-foreground);
           outline-offset: calc(4 * var(--rpx));
       }
   }

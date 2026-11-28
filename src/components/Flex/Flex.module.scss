@@ -1,4 +1,12 @@
 @layer ui.components {
   .Flex {
+    display: flex;
+
+    &[href] {
+      color: inherit;
+      text-decoration: none;
+      // Стили проекта задают видимое кольцо фокуса.
+      outline: none;
+    }
   }
 }

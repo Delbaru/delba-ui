@@ -5,9 +5,8 @@ import type {
   ResponsiveValue,
   SpaceValue,
   StateLinkInput,
-} from '../../core';
-import type { OpenAnimate } from '../../core/reveal/reveal';
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
+} from '#core';
+import type { OpenMotionChannels, SurfaceMotionOptions } from '#core/Motion';
 import type { ScrollbarOptions } from '../ScrollArea/scrollbar';
 type PresetKey = 'default' | 'fullWidth';
 
@@ -36,7 +35,9 @@ export interface ModalTriggerProps {
   'aria-haspopup'?: 'dialog';
 }
 
-export interface ModalSurfaceProps extends BoxLayoutProps, SharedMotionProps<OpenAnimate> {
+export interface ModalSurfaceProps extends BoxLayoutProps, Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
+  /** Dialog surface motion. An open appearance follows the modal stack. */
+  animate?: OpenMotionChannels;
   id?: string;
   children?: React.ReactNode | ((close: () => void) => React.ReactNode);
   /** Dialog controls outside the scrolling content; remain inside its focus boundary. */

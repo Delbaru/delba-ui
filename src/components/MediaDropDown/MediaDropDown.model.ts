@@ -11,7 +11,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from 'react';
-import { stateProps, useMergedRefs, type WithRef } from '../../core';
+import { stateProps, useMergedRefs, type WithRef } from '#core';
 import { MediaOperationOwner } from './lib/operation-owner';
 import { readFileAsDataUrl } from './lib/read-file';
 import {

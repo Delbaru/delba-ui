@@ -1,0 +1,93 @@
+@use '../mixins' as m;
+
+@property --ui-scrollbar-opacity { syntax: '<number>'; inherits: true; initial-value: 1; }
+
+@layer ui.components {
+  // One scrollbar policy, including nested native scroll surfaces.
+  :where(*) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-muted) transparent;
+  }
+
+  // Chromium ignores webkit scrollbar parts when standard styling is active.
+  @supports selector(::-webkit-scrollbar) {
+    :where(*) {
+      scrollbar-width: auto !important;
+      scrollbar-color: auto !important;
+    }
+
+    :where(*)::-webkit-scrollbar {
+      width: var(--ui-scrollbar-width, calc(4 * var(--rpx)));
+      height: var(--ui-scrollbar-width, calc(4 * var(--rpx)));
+    }
+    :where(*)::-webkit-scrollbar-track { background: transparent; }
+    :where(*)::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 999px;
+    }
+    :where(*)::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+    :where(*)::-webkit-scrollbar-button {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      -webkit-appearance: none !important;
+    }
+  }
+
+  .ui-scrollbar {
+      // Progressive enhancement: plain SSR helpers stay visible until the observer mounts.
+      --ui-scrollbar-opacity: 1;
+      --ui-scrollbar-thumb-paint: color-mix(in srgb, var(--ui-scrollbar-color) calc(var(--ui-scrollbar-opacity) * 100%), transparent);
+      --ui-scrollbar-track-paint: color-mix(in srgb, var(--ui-scrollbar-track) calc(var(--ui-scrollbar-opacity) * 100%), transparent);
+      transition: --ui-scrollbar-opacity var(--ui-scrollbar-fade-duration, 0s) ease;
+      scrollbar-color: var(--ui-scrollbar-thumb-paint) var(--ui-scrollbar-track-paint);
+      scrollbar-width: var(--ui-scrollbar-native-width);
+
+      // Chromium ignores WebKit geometry/buttons when standard scrollbar styles are set.
+      // Firefox keeps its native thin/auto fallback above.
+      @supports selector(::-webkit-scrollbar) {
+          // This is an invariant of the custom scrollbar, including consumers
+          // with unlayered or inline native thin/colour overrides. Those styles
+          // otherwise switch Chromium back to OS scrollbars with arrow buttons.
+          scrollbar-width: auto !important;
+          scrollbar-color: auto !important;
+      }
+
+      &::-webkit-scrollbar {
+          width: var(--ui-scrollbar-width);
+          height: var(--ui-scrollbar-width);
+      }
+      &::-webkit-scrollbar-thumb {
+          background: var(--ui-scrollbar-thumb-paint);
+          border-radius: var(--ui-scrollbar-width);
+      }
+      &::-webkit-scrollbar-track {
+          background: var(--ui-scrollbar-track-paint);
+          margin-block: var(--ui-scrollbar-inset);
+          margin-inline: var(--ui-scrollbar-inset);
+      }
+      &::-webkit-scrollbar-button,
+      &::-webkit-scrollbar-button:single-button,
+      &::-webkit-scrollbar-button:double-button,
+      &::-webkit-scrollbar-button:vertical:start:decrement,
+      &::-webkit-scrollbar-button:vertical:end:increment,
+      &::-webkit-scrollbar-button:horizontal:start:decrement,
+      &::-webkit-scrollbar-button:horizontal:end:increment {
+          display: none;
+          width: 0;
+          height: 0;
+          appearance: none;
+      }
+      &::-webkit-scrollbar-corner { background: transparent; }
+  }
+}
+
+@layer ui.states {
+  :where(:root[data-ui-scrollbar-ready]) .ui-scrollbar,
+  :where(:root[data-ui-scrollbar-ready]).ui-scrollbar { --ui-scrollbar-opacity: var(--ui-scrollbar-rest-opacity, 1); }
+  .ui-scrollbar[data-ui-scrollbar-active] { --ui-scrollbar-opacity: 1; transition-duration: var(--ui-scrollbar-show-duration, 0s); }
+  @include m.reduced-motion {
+      .ui-scrollbar, .ui-scrollbar[data-ui-scrollbar-active] { transition-duration: 0s; }
+  }
+  @media (forced-colors: active) { .ui-scrollbar { --ui-scrollbar-opacity: 1; } }
+}

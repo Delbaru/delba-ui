@@ -17,7 +17,7 @@
       color: inherit;
       outline: none;
       caret-color: var(--primary);
-      font: m.role-font(body);
+      @include m.typography-role(body);
       resize: none;
 
       &::placeholder {

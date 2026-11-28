@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
 
-import { resolveScale, scaleCss, type UiScale } from '../../src/core/base/scale';
 import { normalizeCss } from '../../src/core/utilities/keys';
 import { renderRules, type UtilityRule } from '../../src/core/utilities/rules';
 import { extractUtilityRules, type ExtractOptions, type Source } from './extract';
@@ -18,15 +17,12 @@ import { extractUtilityRules, type ExtractOptions, type Source } from './extract
 export interface UtilitiesConfig extends ExtractOptions {
   /** Папки исходников — от `root`. */
   readonly scan: readonly string[];
-  /** Базовые ширины макета; не задано — умолчания кита. */
-  readonly scale?: Partial<UiScale>;
+
 }
 
 export const LIB = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT_CSS = path.join(LIB, 'src', 'core', '_utilities.scss');
 const OUT_FIELDS = path.join(LIB, 'src', 'core', '_field-sizes.scss');
-const OUT_SCALE_CSS = path.join(LIB, 'src', 'core', '_scale.scss');
-const OUT_SCALE_TS = path.join(LIB, 'src', 'core', 'scale.ts');
 /** Код самого генератора: его правка подхватывается только новым процессом. */
 export const OWN_SOURCES = [path.join(LIB, 'tools'), path.join(LIB, 'src', 'core', 'utilities')];
 const SKIP = /(^|[\\/])(node_modules|\.next|dist|generated|\.git|public)([\\/]|$)|\.d\.ts$|\.(test|spec)\.tsx?$/;
@@ -114,9 +110,40 @@ function writeIfChanged(file: string, content: string): boolean {
   return true;
 }
 
+export function createSourceResolver(paths: Record<string, string[]>, known: ReadonlySet<string>) {
+  const options: ts.CompilerOptions = {
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    module: ts.ModuleKind.ESNext,
+    resolvePackageJsonImports: true,
+    allowImportingTsExtensions: true,
+  };
+  const cache = ts.createModuleResolutionCache(process.cwd(), value => value, options);
+  const sourceNames = new Map([...known].map(file => [file.replace(/\\/g, '/'), file]));
+  return (fromFile: string, specifier: string): string | undefined => {
+    if (specifier.startsWith('#')) {
+      const resolved = ts.resolveModuleName(specifier, fromFile, options, ts.sys, cache).resolvedModule;
+      return resolved ? sourceNames.get(resolved.resolvedFileName.replace(/\\/g, '/')) : undefined;
+    }
+    const bases: string[] = [];
+    if (specifier.startsWith('.')) bases.push(path.resolve(path.dirname(fromFile), specifier));
+    for (const [pattern, targets] of Object.entries(paths)) {
+      const star = pattern.indexOf('*');
+      const prefix = star < 0 ? pattern : pattern.slice(0, star);
+      const suffix = star < 0 ? '' : pattern.slice(star + 1);
+      if (star < 0 ? specifier === pattern : specifier.startsWith(prefix) && specifier.endsWith(suffix)) {
+        const rest = star < 0 ? '' : specifier.slice(prefix.length, specifier.length - suffix.length);
+        for (const target of targets) bases.push(target.replace('*', rest));
+      }
+    }
+    for (const base of bases) for (const file of candidates(base)) if (known.has(file)) return file;
+    return undefined;
+  };
+}
+
 export function createUtilities(root: string, config: UtilitiesConfig) {
   const cache = new Map<string, CachedSource>();
   const { paths, files: configFiles } = readPathAliases(root);
+  configFiles.add(path.join(LIB, 'package.json'));
 
   function readSources(): Source[] {
     const files = config.scan.flatMap((dir) => walk(path.resolve(root, dir)));
@@ -128,28 +155,11 @@ export function createUtilities(root: string, config: UtilitiesConfig) {
     });
   }
 
-  function makeResolver(known: Set<string>) {
-    return (fromFile: string, specifier: string): string | undefined => {
-      const bases: string[] = [];
-      if (specifier.startsWith('.')) bases.push(path.resolve(path.dirname(fromFile), specifier));
-      for (const [pattern, targets] of Object.entries(paths)) {
-        const star = pattern.indexOf('*');
-        const prefix = star < 0 ? pattern : pattern.slice(0, star);
-        const suffix = star < 0 ? '' : pattern.slice(star + 1);
-        if (star < 0 ? specifier === pattern : specifier.startsWith(prefix) && specifier.endsWith(suffix)) {
-          const rest = star < 0 ? '' : specifier.slice(prefix.length, specifier.length - suffix.length);
-          for (const target of targets) bases.push(target.replace('*', rest));
-        }
-      }
-      for (const base of bases) for (const file of candidates(base)) if (known.has(file)) return file;
-      return undefined;
-    };
-  }
 
   function build(): boolean {
     const started = performance.now();
     const sources = readSources();
-    const rules = extractUtilityRules(sources, { ...config, resolveModule: makeResolver(new Set(sources.map((s) => s.file))) });
+    const rules = extractUtilityRules(sources, { ...config, resolveModule: createSourceResolver(paths, new Set(sources.map((s) => s.file))) });
 
     const unique = new Map<string, UtilityRule>();
     const collisions: string[] = [];
@@ -171,13 +181,9 @@ export function createUtilities(root: string, config: UtilitiesConfig) {
 
     const css = `${BANNER}\n${renderRules([...unique.values()])}\n`;
     const fields = `${BANNER}\n$height-values: (${heights.join(', ')}) !default;\n`;
-    const scale = resolveScale(config.scale);
-    const scaleTs = `${BANNER}import type { UiScale } from './base/scale';\n\nexport const SCALE: UiScale = ${JSON.stringify(scale)};\n`;
     const changed = [
       writeIfChanged(OUT_CSS, css),
       writeIfChanged(OUT_FIELDS, fields),
-      writeIfChanged(OUT_SCALE_CSS, `${BANNER}\n${scaleCss(scale)}`),
-      writeIfChanged(OUT_SCALE_TS, scaleTs),
     ].some(Boolean);
 
     const ms = Math.round(performance.now() - started);

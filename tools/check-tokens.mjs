@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { reportLegacy } from './check-migration.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss', '_scale.scss', '_motion.scss', '_scrollbar-policy.scss', 'scrollbar-config.ts']);
+const GENERATED = new Set(['_utilities.scss', '_field-sizes.scss', '_scale.scss', '_motion.scss', '_scrollbar-policy.scss', 'scrollbar-config.ts', 'theme.css', 'theme.generated.ts', '_responsive-generated.scss', '_typography-generated.scss']);
 // Генераты шкур несут токены ПРОЕКТА из его словарей — в договор кита они не входят.
 const GENERATED_SKIN = new Set(['_tokens.scss', '_classes.scss'].map((name) => path.join(ROOT, 'src', 'skin', name)));
 // Заглушки в тестах — не потребители темы: их значения в договор токенов не идут.
@@ -78,11 +78,6 @@ function add(map, key, user) {
 }
 
 /** Роли типографики → прежний вариант: разбор `TEXT_ROLES` ядра, чтобы не держать второй список. */
-export function readRoles() {
-  const code = fs.readFileSync(path.join(ROOT, 'src', 'core', 'base', 'typography.ts'), 'utf8');
-  const body = /TEXT_ROLES = \{([^}]*)\}/.exec(code)?.[1] ?? '';
-  return new Map([...body.matchAll(/(\w+):\s*'(\w+)'/g)].map((m) => [m[1], m[2]]));
-}
 
 /** Токены, стоящие фолбэком другого `var()`: `var(--a, var(--b))` → --b. */
 function fallbackTokens(code) {
@@ -132,7 +127,6 @@ export function readContract() {
   }
 
   const ownPrefix = (name) => [...internalPrefixes].some((prefix) => name.startsWith(prefix));
-  for (const role of readRoles().keys()) add(required, `--font-${role}`, 'роль типографики');
   const tokens = [...required]
     .filter(([name]) => !internal.has(name) && !ownPrefix(name))
     .sort(([a], [b]) => a.localeCompare(b));
@@ -151,6 +145,7 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 
 if (isMain) {
   const args = process.argv.slice(2);
+  if (args.includes('--with-defaults')) throw new Error('Use a complete Frontend configuration; theme fallback is unsupported');
   const contract = readContract();
 
   if (args.includes('--list')) {
@@ -162,7 +157,7 @@ if (isMain) {
 
   const typographyAt = args.indexOf('--typography');
   const motionAt = args.indexOf('--generated-motion');
-  const variants = typographyAt < 0 ? [] : (args[typographyAt + 1] ?? '').split(',').filter(Boolean);
+  if (typographyAt >= 0) throw new Error('Typography is validated from the complete Frontend configuration');
   const targets = args.filter((arg, i) => !arg.startsWith('--') && (typographyAt < 0 || i !== typographyAt + 1) && (motionAt < 0 || i !== motionAt + 1));
   // Стили по путям кита 1.x не соберутся вовсе — это важнее недостающего токена.
   if (!reportLegacy(targets)) process.exit(1);
@@ -170,7 +165,7 @@ if (isMain) {
   if (motionAt >= 0) {
     const generatedFile = args[motionAt + 1];
     if (!generatedFile || !fs.existsSync(generatedFile)) {
-      console.error('[ui:tokens] ✗ нет шкалы motion — выполни delba-frontend build');
+      console.error('[ui:tokens] ✗ нет шкалы motion — выполни delba frontend build');
       process.exit(1);
     }
     const generated = fs.readFileSync(generatedFile, 'utf8');
@@ -182,14 +177,11 @@ if (isMain) {
     }
     files.push(generatedFile);
   }
-  if (args.includes('--with-defaults')) files.push(path.join(ROOT, 'theme', 'tokens.default.scss'));
+
   const styles = files.map((file) => stripComments(fs.readFileSync(file, 'utf8'))).join('\n');
   const declared = new Set([...styles.matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]));
 
-  const roles = readRoles();
   const hint = (name) => {
-    const legacy = roles.get(name.replace(/^--font-/, ''));
-    if (legacy) return `  · свяжи со своим вариантом: ${name}: var(--font-…)${declared.has(`--font-${legacy}`) ? ` (до ролей кит брал --font-${legacy})` : ''}`;
     const old = Object.keys(RENAMED).filter((from) => RENAMED[from] === name && declared.has(from));
     return old.length ? `  · переименуй ${old.join(' / ')} → ${name}` : '';
   };
@@ -197,9 +189,8 @@ if (isMain) {
     ...[...contract.tokens].filter(([name]) => !declared.has(name)).map(([name, users]) => [name, users]),
     ...[...contract.families].filter(([prefix]) => ![...declared].some((name) => name.startsWith(prefix))).map(([prefix, users]) => [`${prefix}*`, users]),
     ...[...contract.attributes].filter(([attr]) => !styles.includes(`[${attr}`)).map(([attr, users]) => [`[${attr}]`, users]),
-    ...variants.map((name) => `--font-${name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`).filter((name) => !declared.has(name)).map((name) => [name, ['typography в delba.config.ts → delbaFrontend']]),
   ];
-  const total = contract.tokens.size + contract.families.size + contract.attributes.size + variants.length;
+  const total = contract.tokens.size + contract.families.size + contract.attributes.size;
 
   if (!missing.length) {
     console.log(`[ui:tokens] ✓ договор темы выполнен: ${total} из ${total}`);

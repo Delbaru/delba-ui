@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { MEDIA_QUERY } from '../../core';
+import { MEDIA_QUERY } from '#core';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { attachMarquee } from './Marquee.motion';
 import type { MarqueeProps } from './Marquee.types';

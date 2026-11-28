@@ -1,17 +1,11 @@
+import { FRONTEND_THEME } from '../theme.generated';
 import { isMotionTimingName as validMotionTimingName, motionTimingVariable } from './motion-timing';
 export { motionTimingVariable } from './motion-timing';
 import { MOTION_CONFIG } from '../motion-config';
 import { MOTION_TIMING_DEFAULTS, type RuntimeMotionConfig } from './motion-defaults';
 
-declare global {
-    /** Имена из keyof typeof ui.config.motion.timing; тот же договор, что у UiTypography. */
-    interface UiMotionTiming {}
-}
-
-/** Проект задаёт допустимые имена. Без декларации кит принимает строковые имена темы. */
-export type MotionTimingName = UiMotionTiming extends { names: infer Name extends string }
-    ? Name | keyof typeof MOTION_TIMING_DEFAULTS
-    : string;
+/** Timing names come from the same generated author configuration as CSS and runtime. */
+export type MotionTimingName = (typeof FRONTEND_THEME.motionTiming)[number];
 
 /** Имя общей шкалы либо точное время в секундах. */
 export type MotionTime = MotionTimingName | number;

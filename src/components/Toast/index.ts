@@ -1,4 +1,4 @@
 export { ToastProvider, useToast } from './ToastProvider';
 export { toast } from './Toast.channel';
-export type { ToastOptions, ToastTone } from './ToastProvider';
-export type { ToastAction, ToastApi, ToastProviderProps } from './Toast.types';
+export type { ToastProviderProps } from './ToastProvider';
+export type { ToastAction, ToastApi, ToastOptions, ToastTone } from './Toast.types';

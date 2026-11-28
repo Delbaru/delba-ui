@@ -186,8 +186,6 @@ export function validateMotion(value: unknown): asserts value is UiMotion | unde
     if ('distance' in value) {
         const distance = value.distance;
         if (!isRecord(distance)) throw new Error('motion.distance must be an object');
-        if (Object.keys(distance).length === 0)
-            throw new Error('motion.distance must contain at least one distance');
         for (const [name, amount] of Object.entries(distance)) {
             if (!isMotionDistanceName(name))
                 throw new Error(`motion.distance.${name} must be a camelCase name`);

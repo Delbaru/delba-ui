@@ -1,0 +1,8 @@
+@property --perspective3d { syntax: '<length>'; inherits: false; initial-value: 1600px; }
+@property --perspective3d-rotate-x { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --perspective3d-rotate-y { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --perspective3d-translate-x { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --perspective3d-translate-y { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --perspective3d-translate-z { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --perspective3d-scale { syntax: '<number>'; inherits: false; initial-value: 1; }
+@property --perspective3d-transform { syntax: '*'; inherits: false; initial-value: none; }

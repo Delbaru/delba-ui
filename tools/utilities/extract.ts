@@ -29,6 +29,10 @@ export interface Source {
 }
 
 export interface ExtractOptions {
+  /** Host source ownership for static authored-geometry validation; computed runtime measurements are never quantized. */
+  readonly authoredRoot?: string;
+  readonly implementationRoot?: string;
+
   /** Значения из словарей, которые на вызовах пишутся ИМЕНЕМ (`radius='md'`): `{ r: [8, 12, 16] }`. */
   readonly seeds?: Readonly<Record<string, readonly UtilityEntry[]>>;
   /** Варианты типографики проекта (`typography` в delba.config.ts → delbaFrontend); не заданы — прежний набор кита. */
@@ -132,7 +136,7 @@ function componentFunction(expr: ts.Expression | undefined): ts.FunctionLikeDecl
 function coreHelper(call: ts.CallExpression, facts: FileFacts): string | undefined {
   if (!ts.isIdentifier(call.expression)) return undefined;
   const imported = facts.imports.get(call.expression.text);
-  return imported && /(?:^|\/)core(?:\/layout\/box|\/base\/field-layout)?$/.test(imported.specifier)
+  return imported && /(?:^|[\/#])core(?:\/layout\/box|\/base\/field-layout)?$/.test(imported.specifier)
     ? imported.name : undefined;
 }
 
@@ -385,7 +389,7 @@ function collectComponents(facts: FileFacts): void {
       // Общий стилизатор поля применяет коробку напрямую, даже если p также проброшен в helper pl.
       if (ts.isCallExpression(node) && coreHelper(node, facts) === 'fieldLayoutClasses') {
         for (const prop of [...BOX_LAYOUT_KEYS, 'color', 'placeholderColor']) {
-          if (prop !== 'grow' && prop !== 'aspectRatio') forwards.push({ param: prop, to: prop, tag: null, direct: true });
+          if (prop !== 'grow' && prop !== 'shrink' && prop !== 'aspectRatio') forwards.push({ param: prop, to: prop, tag: null, direct: true });
         }
       }
       if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
@@ -675,6 +679,19 @@ export function extractUtilityRules(sources: readonly Source[], options: Extract
       for (const { utility, direct } of live) {
         for (const value of values) {
           if (value === UNKNOWN || value === undefined || value === null || isObjectRef(value)) continue;
+          const normalizedFile = facts.file.replaceAll('\\', '/');
+          const authoredRoot = options.authoredRoot?.replaceAll('\\', '/');
+          const implementationRoot = options.implementationRoot?.replaceAll('\\', '/');
+          if (authoredRoot && normalizedFile.startsWith(`${authoredRoot}/`) &&
+              (!implementationRoot || !normalizedFile.startsWith(`${implementationRoot}/`)) &&
+              /^(w|h|minW|maxW|minH|maxH|p[trbl]?|m[trbl]?|gap|rowGap|columnGap|r|tlr|trr|brr|blr|top|left|right|bottom)$/.test(utility.name)) {
+            const checkGrid = (entry: Value): void => {
+              if (Array.isArray(entry)) entry.forEach(checkGrid);
+              else if (typeof entry === 'number' && Number.isFinite(entry) && entry % 4 !== 0)
+                throw new Error(`${facts.file}: ${utility.name}=${entry} must be a multiple of four RPX`);
+            };
+            checkGrid(value);
+          }
           if (direct && !hasUnknown(value)) rules.push(...exactRules(utility, value as ResponsiveUtilityValue));
           else for (const entry of looseEntries(utility, value)) rules.push(...looseRules(utility, entry));
         }

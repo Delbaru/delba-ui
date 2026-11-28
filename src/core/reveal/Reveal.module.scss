@@ -1,0 +1,141 @@
+@use 'sass:string';
+@use '../mixins' as m;
+
+@property --reveal-delay { syntax: '*'; inherits: false; initial-value: 0s; }
+
+@layer ui.states {
+  // Появление по скроллу (проп `reveal`). Прячет и двигает только анимация, не статичные стили:
+  // - анимация сильнее любого обычного правила — стили проекта без слоя не перебьют ни прозрачность, ни ход;
+  // - у `ui-reveal` нет кадра `to` — конец хода берётся из собственных стилей узла (его `opacity: .6` доживёт);
+  // - `translate`/`scale`/`filter` — отдельные свойства, поэтому `transform` параллакса и наклона на том
+  //   же узле складывается с ходом, а не затирается им.
+  // Скрывает только `scripting: enabled`: без JS контент виден сразу. JS упал или опоздал — страховка
+  // `ui-reveal-hold` кончается через $hold, и элемент встаёт на место сам.
+  // `start: 'load'` (атрибут `data-reveal-start`) играет ход сразу при первой отрисовке, без JS и наблюдателя:
+  // каскад — `:nth-child` × `--reveal-step`. Заливка `backwards`: после хода анимация не держит `translate`,
+  // и собственные сдвиги узла (ховер стрелки) работают.
+
+  $hold: var(--t-m-reveal-hold);
+  // Узел, помеченный САМИМ китом: `revealAttrs` всегда пишет ОДИН ИЗ КЛЮЧЕЙ, поэтому сужение до
+  // списка у кита ничего не отнимает. Нужно оно потому, что `data-reveal` — атрибут заманчивого
+  // имени: проект вполне держит на нём свой рукописный каскад, и безусловный `[data-reveal]` прятал
+  // бы ЧУЖУЮ разметку на $hold. Так и было в socrat: первый экран стоял пустым 3 с, хотя разметка
+  // приезжала с сервера готовой.
+  // Проверять «значение непустое» НЕДОСТАТОЧНО: бареный JSX-атрибут React печатает как `="true"`,
+  // а не пустой строкой, — под `:not([data-reveal=''])` чужая пометка пролезает целиком.
+  $keys: 'fade', 'up', 'down', 'left', 'right', 'scale', 'expandX', 'blur';
+  $list: '';
+  @each $key in $keys {
+    $list: $list + "[data-reveal='" + $key + "'], ";
+  }
+  // Запятая пишется всем, последняя срезается: ветвление в цикле пришлось бы делать через `if()`,
+  // а он у Sass устаревший (sass-lang.com/d/if-function) и печатает предупреждение на каждый импорт.
+  $own: ':is(' + string.slice($list, 1, -3) + ')';
+  $self: ':where(.Reveal)#{$own}:not([data-reveal-stagger], [data-reveal-state], [data-reveal-start])';
+  $eligible-child: ':not(#{$own}, [data-reveal-state], [data-reveal-skip])';
+  $child: ':where(.Reveal)[data-reveal-stagger]:not([data-reveal-start]) > #{$eligible-child}';
+  $load-self: ":where(.Reveal)[data-reveal-start='load']:not([data-reveal-stagger])";
+  $load-child: ":where(.Reveal)[data-reveal-start='load'][data-reveal-stagger] > #{$eligible-child}";
+  $load-max: 24;
+
+  // Ход узла — только его опции: без сброса вложенный `reveal` наследовал бы задержку и длительность предка.
+  :where(.Reveal)#{$own} {
+    --reveal-delay: initial;
+    --reveal-duration: initial;
+    --reveal-step: 0s;
+    --reveal-o: 0;
+    --reveal-shift: var(--reveal-distance, var(--t-m-reveal-distance));
+    --reveal-t: none;
+    --reveal-s: none;
+    --reveal-f: none;
+  }
+
+  :where(.Reveal)[data-reveal='up'] { --reveal-t: 0 var(--reveal-shift); }
+  :where(.Reveal)[data-reveal='down'] { --reveal-t: 0 calc(var(--reveal-shift) * -1); }
+  :where(.Reveal)[data-reveal='left'] { --reveal-t: calc(var(--reveal-shift) * -1) 0; }
+  :where(.Reveal)[data-reveal='right'] { --reveal-t: var(--reveal-shift) 0; }
+  :where(.Reveal)[data-reveal='scale'] { --reveal-s: 0.96; }
+  // A nonzero initial extent keeps the observer target intersectable, including thin rules.
+  :where(.Reveal)[data-reveal='expandX'] { --reveal-s: 0.001 1; transform-origin: left center; }
+  :where(.Reveal)[data-reveal='blur'] { --reveal-f: blur(calc(var(--rpx) * 8)); }
+
+  @mixin hidden {
+    opacity: var(--reveal-o);
+    translate: var(--reveal-t);
+    scale: var(--reveal-s);
+    filter: var(--reveal-f);
+  }
+
+  @keyframes ui-reveal {
+    from { @include hidden; }
+  }
+
+  // A distinct name restarts the clock after entry has finished; direction alone keeps its old time.
+  @keyframes ui-reveal-out {
+    from { @include hidden; }
+  }
+
+  @keyframes ui-reveal-hold {
+    from, to { @include hidden; }
+  }
+
+  @keyframes ui-reveal-wait {
+    from, to { @include hidden; }
+  }
+
+  @media screen {
+    #{$load-child} {
+      --reveal-delay: inherit;
+    }
+
+    #{$load-self},
+    #{$load-child} {
+      animation: ui-reveal var(--reveal-duration, var(--t-m-reveal-duration)) var(--t-t-f-cubic-bezier)
+        calc(var(--reveal-delay, 0s) + var(--reveal-i, 0) * var(--reveal-step)) backwards;
+    }
+
+    @for $i from 1 through $load-max {
+      :where(.Reveal)[data-reveal-start='load'][data-reveal-stagger] > #{$eligible-child}:nth-child(#{$i} of #{$eligible-child}) { --reveal-i: #{$i - 1}; }
+    }
+
+    @include m.reduced-motion {
+      #{$load-self},
+      #{$load-child} {
+        animation: none;
+      }
+    }
+  }
+
+  @media screen and (scripting: enabled) {
+    #{$self},
+    #{$child} {
+      animation: ui-reveal-hold $hold linear;
+    }
+
+    :where(.Reveal)[data-reveal-state='wait'],
+    :where(.Reveal[data-reveal-stagger]) > [data-reveal-state='wait'] {
+      animation: ui-reveal-wait 1s linear both paused;
+    }
+
+    :where(.Reveal)[data-reveal-state='in'],
+    :where(.Reveal[data-reveal-stagger]) > [data-reveal-state='in'] {
+      animation: ui-reveal var(--reveal-duration, var(--t-m-reveal-duration)) var(--t-t-f-cubic-bezier) var(--reveal-delay, 0s) both;
+      will-change: opacity, translate, scale, filter;
+    }
+
+    :where(.Reveal)[data-reveal-state='out'],
+    :where(.Reveal[data-reveal-stagger]) > [data-reveal-state='out'] {
+      animation: ui-reveal-out var(--reveal-duration, var(--t-m-reveal-duration)) var(--t-t-f-cubic-bezier) var(--reveal-delay, 0s) reverse both;
+      will-change: opacity, translate, scale, filter;
+    }
+
+    @include m.reduced-motion {
+      #{$self},
+      #{$child},
+      :where(.Reveal)[data-reveal-state],
+      :where(.Reveal[data-reveal-stagger]) > [data-reveal-state] {
+        animation: none;
+      }
+    }
+  }
+}

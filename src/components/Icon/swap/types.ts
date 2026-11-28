@@ -12,26 +12,16 @@ export interface IconSwapOptions {
 export type IconSwapKey = 'swap' | 'spin';
 
 /** Объектная настройка смены глифа; первый показ не анимируется. */
-export interface IconChangeAnimate extends Omit<IconSwapOptions, 'duration'> {
-  /** Запускает эффект при смене имени или компонента иконки. */
-  when: 'change';
+export interface IconChangeAnimate extends IconSwapOptions {
   /** Последовательное исчезновение и появление; spin добавляет доворот. */
   effect: IconSwapKey;
-  /** Длительность каждой из двух фаз: секунды либо имя ui.config.motion.timing. */
-  duration?: MotionTime;
 }
 
-/** Object intent for source changes; appearance is handled by shared motion. */
-export type IconAnimate = IconChangeAnimate;
-
-/** Engine options after selecting the change trigger. */
-export type NormalizedIconChangeAnimate = Omit<IconChangeAnimate, 'when'>;
-
 /** Select change options without accepting appearance or hover effects. */
-export function normalizeIconAnimate(value: unknown): NormalizedIconChangeAnimate | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+export function resolveIconChange(value: unknown): IconChangeAnimate | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || 'when' in value) return undefined;
   const candidate = value as Partial<IconChangeAnimate>;
-  if (candidate.when !== 'change' || (candidate.effect !== 'swap' && candidate.effect !== 'spin')) return undefined;
+  if (candidate.effect !== 'swap' && candidate.effect !== 'spin') return undefined;
   return {
     effect: candidate.effect,
     ...(candidate.duration !== undefined ? { duration: candidate.duration } : null),

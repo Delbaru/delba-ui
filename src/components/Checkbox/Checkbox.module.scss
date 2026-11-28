@@ -35,7 +35,7 @@
           &:hover,
           &[state~='hover'] {
               .Box {
-                  border-color: var(--checkbox-hover-border, var(--black)) !important;
+                  border-color: var(--checkbox-hover-border, var(--text)) !important;
               }
           }
 

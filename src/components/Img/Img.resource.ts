@@ -1,9 +1,10 @@
 import { getImageProps, type ImageProps } from 'next/image';
-import { resolveResponsive, type BoxLayoutProps } from '../../core';
+import { resolveResponsiveInput, type BoxLayoutProps } from '#core';
 import { SCALE } from '../../core/scale';
 import { imageUnoptimized, nativeImageSizes } from './optimization';
 import { imageSourceSizes } from './source-sizing';
 import type { ImgProps, ImgSource } from './Img.types';
+import { IMG_DEFAULTS } from './Img.config';
 
 export function imageAddress(source: ImgSource): string {
   if (typeof source === 'string') return source;
@@ -18,7 +19,7 @@ export function prepareImage(props: ImgProps, box: BoxLayoutProps, native: Omit<
   const [desktop, mobile, tablet] = Array.isArray(src) ? src : [src, null, null];
   const automatic = !sizes && sizesWidth === undefined && sizesHeight === undefined && !priority
     && native.preload !== true && loading !== 'eager'
-    && resolveResponsive(objectFit).every(value => value === 'contain');
+    && resolveResponsiveInput(objectFit).every(value => value === 'contain');
   const shared = {
     ...native,
     loading: priority ? 'eager' : (loading ?? (automatic ? 'lazy' : undefined)),
@@ -32,7 +33,7 @@ export function prepareImage(props: ImgProps, box: BoxLayoutProps, native: Omit<
     const fallback = sizes || imageSourceSizes({
       width: sizesWidth ?? props.rootW ?? box.w,
       height: sizesHeight ?? props.rootH ?? box.h,
-      aspectRatio: props.aspectRatio, objectFit: objectFit ?? 'cover', source, scale: SCALE,
+      aspectRatio: props.aspectRatio, objectFit: objectFit ?? IMG_DEFAULTS.objectFit, source, scale: SCALE,
     });
     return {
       ...shared, src: source,
@@ -56,7 +57,13 @@ export function prepareImage(props: ImgProps, box: BoxLayoutProps, native: Omit<
     return [{ media, srcSet, sizes: prepared.sizes }];
   });
   return {
-    identity: imageAddress(desktop), image, sources,
+    address: imageAddress(desktop),
+    identity: JSON.stringify([
+      imageAddress(desktop),
+      imageAddress(mobile ?? tablet ?? desktop),
+      imageAddress(tablet ?? desktop),
+    ]),
+    image, sources,
     picture: sources.length ? getImageProps(image).props : null,
   };
 }

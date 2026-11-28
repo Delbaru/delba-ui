@@ -1,7 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef } from 'react';
-import type { TabTrackThumb } from './TabTrack';
+import type { TabTrackThumb } from './TabTrack.types';
 
 const ACTIVE = "[state~='active']";
 const BODY_WIDTH = 100;

@@ -27,6 +27,6 @@
     position: absolute;
     inset: 0 auto auto 0;
     pointer-events: none;
-    font: m.role-font(body);
+    @include m.typography-role(body);
   }
 }

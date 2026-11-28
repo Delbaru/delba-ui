@@ -1,2 +1,2 @@
 export * from './Dropdown';
-export type { DropdownBackdropOptions } from './DropdownBackdrop/DropdownBackdrop';
+export type { DropdownBackdropOptions } from './Dropdown.types';

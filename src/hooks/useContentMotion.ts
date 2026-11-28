@@ -6,6 +6,7 @@ import { composeEventHandlers } from '../core';
 import { contentAnimationClass, type ContentAnimation, type ContentKey } from './contentMotion';
 import { motionTimeCss, type MotionTime } from '../core/base/timing';
 import { useSwapTransition } from './useSwapTransition';
+import styles from '../core/Motion/ContentMotion.module.scss';
 
 interface ContentMotionInput {
   animation?: ContentAnimation;
@@ -25,9 +26,10 @@ export function useContentMotion({ animation, key, duration, children, onAnimati
   const swapKey = animation ? key : undefined;
   const swap = useSwapTransition(swapKey, children);
   const swapping = swapKey !== undefined;
+  const motionClass = contentAnimationClass(animation, swapping && swap.exiting);
 
   return {
-    className: contentAnimationClass(animation, swapping && swap.exiting),
+    className: motionClass ? styles[motionClass] : undefined,
     style: duration === undefined ? undefined : ({ animationDuration: motionTimeCss(duration) } satisfies CSSProperties),
     children: swap.displayChildren,
     ref: swap.ref,

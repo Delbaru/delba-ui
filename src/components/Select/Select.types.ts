@@ -1,8 +1,8 @@
 import type React from 'react';
 import type { CSSProperties } from 'react';
-import type { BoxLayoutProps, ComponentStateValue, StateLinkInput, ResponsiveValue } from '../../core';
+import type { BoxLayoutProps, ComponentStateValue, StateLinkInput, ResponsiveValue } from '#core';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
+import type { MotionChannels, SurfaceMotionOptions } from '#core/Motion';
 import type { DropdownPanelOptions } from '../Dropdown';
 import type { SelectItem } from './options';
 import type { SelectRenderValuePayload } from './useSelect';
@@ -18,7 +18,9 @@ export interface SelectSearchProps {
 export interface SelectBaseProps<T extends string = string>
   extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue' | 'onChange' | 'dir' | 'rel'>,
     BoxLayoutProps,
-    SharedMotionProps {
+    Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
+  /** Motion channels for the field frame. Use panel.animate for the option list. */
+  animate?: MotionChannels;
   className?: string;
 
   /** Сворачивает всё поле вместе с подписью и ошибкой; не управляет списком вариантов. */

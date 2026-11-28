@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState, type MouseEvent, type Ref, type SyntheticEvent } from 'react';
-import { MEDIA_QUERY, useMergedRefs } from '../../core';
+import { boxLayout, createLayoutClasses, cx, MEDIA_QUERY, splitBoxLayout, splitRootDomProps, useMergedRefs, type WithRef } from '#core';
+import { useElement } from '#core/Element';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import type { VideoProps, VideoSrcTuple } from './Video';
+import { VIDEO_DEFAULTS } from './Video.config';
+import type { VideoProps, VideoSrcTuple } from './Video.types';
+import styles from './Video.module.scss';
 
 type Source = NonNullable<VideoProps['src']>;
 type Viewport = { mounted: boolean; mobile: boolean; belowDesktop: boolean };
+const classes = createLayoutClasses();
 
 /** Tuple sources wait for hydration; scalar sources remain available during SSR. */
 export function videoSource(source: Source | undefined, viewport: Viewport): string | undefined {
@@ -20,7 +24,7 @@ export function videoSource(source: Source | undefined, viewport: Viewport): str
 }
 
 /** Responsive source and the optional play overlay follow the real media element. */
-export function useVideoMedia({ ref, src, poster, autoPlay, onPlay, onPause, onEnded }: Pick<VideoProps, 'src' | 'poster' | 'autoPlay' | 'onPlay' | 'onPause' | 'onEnded'> & { ref?: Ref<HTMLVideoElement> }) {
+function useVideoMedia({ ref, src, poster, autoPlay, onPlay, onPause, onEnded }: Pick<VideoProps, 'src' | 'poster' | 'autoPlay' | 'onPlay' | 'onPause' | 'onEnded'> & { ref?: Ref<HTMLVideoElement> }) {
     const node = useRef<HTMLVideoElement | null>(null);
     const mobile = useMediaQuery(MEDIA_QUERY.mobile);
     const belowDesktop = useMediaQuery(MEDIA_QUERY.below);
@@ -51,5 +55,67 @@ export function useVideoMedia({ ref, src, poster, autoPlay, onPlay, onPause, onE
             onPause(event: SyntheticEvent<HTMLVideoElement>) { setPlaying(false); onPause?.(event); },
             onEnded(event: SyntheticEvent<HTMLVideoElement>) { setPlaying(false); onEnded?.(event); },
         },
+    };
+}
+
+export function useVideo(props: WithRef<VideoProps, HTMLVideoElement>) {
+    const { box, rest } = splitBoxLayout(props);
+    const {
+        ref, className, style, 'data-point-events': dataPointEvents,
+        src, poster, rootW, rootH, objectFit, objectPosition,
+        linkState, perspective3d, parallax, animate, onPlay, onPause, onEnded,
+        showPlayButton = VIDEO_DEFAULTS.showPlayButton,
+        controls = VIDEO_DEFAULTS.controls,
+        autoPlay = VIDEO_DEFAULTS.autoPlay,
+        muted = VIDEO_DEFAULTS.muted,
+        playsInline = VIDEO_DEFAULTS.playsInline,
+        ...native
+    } = rest;
+    const { rootProps, elementProps } = splitRootDomProps(native);
+    const media = useVideoMedia({ ref, src, poster, autoPlay, onPlay, onPause, onEnded });
+    const element = useElement<HTMLSpanElement>({
+        motion: {
+            perspective3d,
+            parallax,
+            animate: {
+                appearance: animate?.appearance,
+                hover: animate?.hover && animate.hover.effect === 'transform' ? animate.hover : undefined,
+            },
+        },
+        style,
+        linkState,
+    });
+
+    return {
+        root: {
+            ...rootProps,
+            ...element.attributes,
+            ...element.events,
+            ref: element.ref,
+            'data-point-events': dataPointEvents,
+            className: cx(
+                styles.Video,
+                element.className,
+                ...boxLayout(classes, { ...box, w: rootW ?? box.w, h: rootH ?? box.h }),
+                className,
+            ),
+            style: element.style,
+        },
+        media: {
+            ...elementProps,
+            ...media.source,
+            ...media.events,
+            controls,
+            autoPlay,
+            muted,
+            playsInline,
+            ref: media.ref,
+            className: cx(
+                styles.VideoElement,
+                ...classes.value('objectFit', objectFit ?? VIDEO_DEFAULTS.objectFit),
+                ...classes.value('objectPosition', objectPosition ?? VIDEO_DEFAULTS.objectPosition),
+            ),
+        },
+        play: showPlayButton && media.source.src && !media.playback.playing ? media.playback.start : undefined,
     };
 }

@@ -108,3 +108,18 @@ test('required search marks the native combobox while optional search stays opti
     assert.doesNotMatch(html, /<div[^>]*aria-required=/);
   }
 });
+
+test('motion on the Select frame does not alter repeated values from grouped options', () => {
+  const options = [{ label: 'Group', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] }];
+  const render = (disabled: boolean) => renderToStaticMarkup(createElement(Select<string>, {
+    options, multiple: true, value: ['a', 'b'], name: 'tags', form: 'editor', disabled,
+    animate: { hover: { effect: 'rise' } },
+  }));
+  const html = render(false);
+  assert.match(html, /^<div[^>]*data-ui-hover="rise"/);
+  const values = (markup: string) => (markup.match(/<input[^>]*>/g) ?? [])
+    .filter(input => input.includes('type="hidden"') && input.includes('name="tags"') && input.includes('form="editor"'))
+    .map(input => input.match(/value="([^"]+)"/)?.[1]);
+  assert.deepEqual(values(html), ['a', 'b']);
+  assert.deepEqual(values(render(true)), []);
+});

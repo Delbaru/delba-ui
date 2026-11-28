@@ -1,4 +1,5 @@
 import * as datePicker from '../../../core/fields/date';
+import { calendar } from '../../../core/Calendar/Calendar';
 import * as timeMask from './time';
 import { formatUiMessage, UI_MESSAGES } from '../../../core/base/messages';
 
@@ -24,14 +25,14 @@ export function validateDateBounds(
   if (!date) return undefined;
 
   const minimum = minValue ? datePicker.parseValue(minValue) : null;
-  if (minimum && datePicker.isBeforeDay(date, minimum)) {
+  if (minimum && !calendar.isWithinBounds(date, minimum)) {
     return formatUiMessage(UI_MESSAGES.validation.dateMin, {
       value: datePicker.formatDisplay(minimum),
     });
   }
 
   const maximum = maxValue ? datePicker.parseValue(maxValue) : null;
-  if (maximum && datePicker.isAfterDay(date, maximum)) {
+  if (maximum && !calendar.isWithinBounds(date, null, maximum)) {
     return formatUiMessage(UI_MESSAGES.validation.dateMax, {
       value: datePicker.formatDisplay(maximum),
     });

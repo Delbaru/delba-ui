@@ -2,7 +2,20 @@ import path from 'node:path';
 import ts from 'typescript';
 import { checkerOf, position, unwrap } from './ast.mjs';
 
-const RESPONSIVE = new Set(('bg p px py pt pr pb pl m mx my mt mr mb ml w minW maxW h minH maxH r tlr trr brr blr borderTLR borderTRR borderBRR borderBLR border borderC borderS borderW borderT borderR borderB borderL aspectRatio grow position top bottom left right hide dir align justify wrap gap columnGap rowGap columns variant color').split(' '));
+const RESPONSIVE = new Set([
+  'bg',
+  'p', 'px', 'py', 'pt', 'pr', 'pb', 'pl',
+  'm', 'mx', 'my', 'mt', 'mr', 'mb', 'ml',
+  'w', 'minW', 'maxW', 'h', 'minH', 'maxH',
+  'r', 'tlr', 'trr', 'brr', 'blr',
+  'borderTLR', 'borderTRR', 'borderBRR', 'borderBLR',
+  'border', 'borderC', 'borderS', 'borderW', 'borderT', 'borderR', 'borderB', 'borderL',
+  'aspectRatio', 'grow', 'shrink',
+  'position', 'top', 'bottom', 'left', 'right', 'hide',
+  'dir', 'align', 'justify', 'wrap',
+  'gap', 'columnGap', 'rowGap', 'columns',
+  'variant', 'color', 'textAlign',
+]);
 const parse = (text, file) => ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const opening = node => ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node);
 const attribute = (node, name) => node.attributes.properties.find(item => ts.isJsxAttribute(item) && item.name.getText() === name);

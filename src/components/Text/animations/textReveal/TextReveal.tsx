@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 
-import { cx, MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../../core';
+import { MOTION_END_BUFFER_MS, prefersReducedMotion } from '#core';
 import { flattenAnimatableText } from '../flattenText';
 import { useTextSwap, commonAffixes } from './useTextSwap';
 import type { TextAnimationContext } from '../types';
@@ -106,7 +106,7 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
     pinnedRef.current = false;
 
     const natural = rect();
-    const words = vp.querySelectorAll<HTMLElement>('[data-reveal-mode="in"] .ui-reveal-word');
+    const words = vp.querySelectorAll<HTMLElement>('[data-reveal-mode="in"] [data-reveal-word]');
     const firstWord = words[0];
     const lastWord = words[words.length - 1];
     const wraps =
@@ -173,7 +173,7 @@ export function TextReveal({ content, options }: TextAnimationContext<TextReveal
   const affixes = previous !== null ? commonAffixes(previous, current) : { prefix: 0, suffix: 0 };
 
   return (
-    <span ref={viewportRef} className={cx(styles.TextReveal, 'ui-reveal')} style={vars}>
+    <span ref={viewportRef} className={styles.TextReveal} style={vars}>
       {previous !== null && (
         <TextRevealLayer
             key={`out-${generation}`}

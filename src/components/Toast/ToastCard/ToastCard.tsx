@@ -5,7 +5,8 @@ import { Icon } from '../../Icon';
 import { Text } from '../../Text';
 import { Button } from '../../Button';
 import { TOAST_TONES } from '../Toast.config';
-import type { ToastItem, ToastProviderProps } from '../Toast.types';
+import type { ToastItem } from '../Toast.types';
+import type { ToastProviderProps } from '../ToastProvider';
 import styles from './ToastCard.module.scss';
 
 export function ToastCard({ item, onExited, onDismiss, renderToast }: {

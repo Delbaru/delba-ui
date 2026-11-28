@@ -1,1 +1,2 @@
-export { GradientBorder, type GradientBorderProps } from './GradientBorder';
+export { GradientBorder } from './GradientBorder';
+export type { GradientBorderProps } from './GradientBorder.types';

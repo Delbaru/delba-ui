@@ -40,7 +40,7 @@ function returnsCurrent(factory) {
 
 export const domRefRule = {
   id: 'dom-ref',
-  docs: 'docs/authoring.md',
+  docs: 'docs/development.md',
   /**
    * `useImperativeHandle(ref, () => node.current, [])` отдаёт узел один раз: после ремоунта узла
    * внешний ref держит старый или `null`. Ручки с методами (`() => ({ focus })`) не затрагиваются.

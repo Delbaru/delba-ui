@@ -1,4 +1,4 @@
-import { IMAGE_CONFIG } from '../../core/image-config';
+import { IMAGE_CONFIG } from '#core/image-config';
 
 /** Keep small native-auto candidates: Next's vw estimate must not treat a fallback as the actual layout. */
 export function nativeImageSizes(fallback: string): string {

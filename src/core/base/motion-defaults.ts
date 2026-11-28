@@ -74,7 +74,7 @@ export const MOTION_DEFAULTS = {
         timelinePageRatio: 0.1,
         driftTolerance: 0.3,
     },
-    buttonIdle: {
+    surfaceIdle: {
         duration: 8,
         strength: 1,
     },

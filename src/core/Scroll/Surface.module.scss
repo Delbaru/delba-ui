@@ -1,0 +1,11 @@
+@layer ui.components {
+  .Surface {
+      min-height: 0;
+      min-width: 0;
+      overscroll-behavior: contain;
+      &[data-scroll-axis='y'] { overflow-y: auto; overflow-x: hidden; }
+      &[data-scroll-axis='x'] { overflow-x: auto; overflow-y: hidden; }
+
+      &.Smooth { overscroll-behavior-y: auto; }
+  }
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
-import type { VideoPlayerController } from './types';
+import type { VideoPlayerController } from './VideoPlayer.types';
 import { readMotionDefaultNumber } from '../../core/base/motion-config';
 
 interface UseSyncedPlayersOptions {

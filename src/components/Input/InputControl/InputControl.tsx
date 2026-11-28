@@ -1,6 +1,6 @@
 'use client';
 import type { MouseEvent, ReactNode } from 'react';
-import { cx, preserveFocus } from '../../../core';
+import { cx, preserveFocus } from '#core';
 import { Flex } from '../../Flex';
 import { Text } from '../../Text';
 import type { useInput } from '../Input.model';
@@ -38,8 +38,9 @@ export function InputControl({ control, decoration, start, end, children }: Inpu
         onMouseDown={preserveInputFocus}
         onClick={control.onClick}
         onBlur={control.onBlur}
-        onMouseEnter={control.onMouseEnter}
-        onMouseLeave={control.onMouseLeave}
+        ui={control.overflowText ? {
+          popup: { preset: 'tooltip', text: control.overflowText, position: 'bottom', gap: 8, on: 'hover' },
+        } : undefined}
     >
       {start != null && <Flex data-input-action="true">{start}</Flex>}
       {decoration.phone && (
@@ -63,10 +64,11 @@ export function InputControl({ control, decoration, start, end, children }: Inpu
         )}
         <Flex
           animate={{
-            when: 'change',
-            effect: 'fade',
-            key: control.loading ? 'skeleton' : 'value',
-            duration: 'fast',
+              change: {
+                  effect: 'fade',
+                  key: control.loading ? 'skeleton' : 'value',
+                  duration: 'fast'
+              }
           }}
           w={['100%', '100%', '100%']}
         >

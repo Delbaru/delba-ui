@@ -1,55 +1,59 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { flushWindowScroll, subscribeWindowScroll } from '../../../src/components/SmoothScroll/scroll-events';
+import { getScrollEvents, subscribeWindowScroll } from '../../../src/core/Scroll/Smooth/scroll-events';
+import type { ScrollView } from '../../../src/core/Scroll/Smooth/viewport';
 
-test('native scroll batches position reads, flushes before engine writes and cancels on final release', () => {
-  const handlers = new Set<() => void>();
+test('native scroll batches per viewport and cancels after the final subscriber', () => {
+  const windowEvents = new EventTarget();
+  const selfEvents = new EventTarget();
   const frames = new Map<number, FrameRequestCallback>();
-  const originals = new Map(['window', 'requestAnimationFrame', 'cancelAnimationFrame'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   let nextFrame = 0;
   let reads = 0;
-  Reflect.defineProperty(globalThis, 'requestAnimationFrame', { configurable: true, value: (callback: FrameRequestCallback) => {
-    frames.set(++nextFrame, callback);
-    return nextFrame;
-  } });
-  Reflect.defineProperty(globalThis, 'cancelAnimationFrame', { configurable: true, value: (id: number) => frames.delete(id) });
-  Reflect.defineProperty(globalThis, 'window', { configurable: true, value: {
-    get scrollY() { reads++; return 320; },
-    addEventListener: (_name: string, handler: () => void) => handlers.add(handler),
-    removeEventListener: (_name: string, handler: () => void) => handlers.delete(handler),
-  } });
+  const view = Object.assign(windowEvents, {
+    requestAnimationFrame(callback: FrameRequestCallback) {
+      frames.set(++nextFrame, callback);
+      return nextFrame;
+    },
+    cancelAnimationFrame(id: number) { frames.delete(id); },
+  }) as unknown as ScrollView;
+  Object.defineProperty(view, 'scrollY', { get() { reads++; return 320; } });
+  const host = Object.assign(selfEvents, { scrollTop: 75 }) as unknown as HTMLElement;
+
+  const windowScroll = getScrollEvents(view);
+  const selfScroll = getScrollEvents(view, host);
   const values: number[] = [];
   const listener = (y: number) => values.push(y);
-  const first = subscribeWindowScroll(listener);
-  const second = subscribeWindowScroll(listener);
-  try {
-    assert.equal(handlers.size, 1);
-    for (let i = 0; i < 3; i++) handlers.forEach((handler) => handler());
-    assert.equal(reads, 0);
-    assert.equal(frames.size, 1);
-    frames.values().next().value?.(0);
-    assert.equal(reads, 1);
-    assert.deepEqual(values, [320, 320]);
-    first();
-    handlers.forEach((handler) => handler());
-    flushWindowScroll();
-    flushWindowScroll();
-    assert.equal(frames.size, 0);
-    assert.equal(reads, 2);
-    assert.deepEqual(values, [320, 320, 320]);
-    handlers.forEach((handler) => handler());
-    second();
-    assert.equal(handlers.size, 0);
-    assert.equal(frames.size, 0);
-    flushWindowScroll();
-    assert.equal(reads, 2);
-  } finally {
-    first();
-    second();
-    for (const [key, descriptor] of originals) {
-      if (descriptor) Reflect.defineProperty(globalThis, key, descriptor);
-      else Reflect.deleteProperty(globalThis, key);
-    }
-  }
+  const first = subscribeWindowScroll(listener, view);
+  const second = subscribeWindowScroll(listener, view);
+  const releaseSelf = selfScroll.subscribe(listener);
+  for (let i = 0; i < 3; i++) view.dispatchEvent(new Event('scroll'));
+  host.dispatchEvent(new Event('scroll'));
+  assert.equal(reads, 0);
+  assert.equal(frames.size, 2);
+
+  selfScroll.flush();
+  assert.equal(frames.size, 1);
+  assert.deepEqual(values, [75]);
+  assert.equal(reads, 0);
+  windowScroll.flush();
+  assert.equal(reads, 1);
+  assert.deepEqual(values, [75, 320, 320]);
+
+  first();
+  view.dispatchEvent(new Event('scroll'));
+  windowScroll.flush();
+  windowScroll.flush();
+  assert.equal(frames.size, 0);
+  assert.equal(reads, 2);
+  assert.deepEqual(values, [75, 320, 320, 320]);
+
+  view.dispatchEvent(new Event('scroll'));
+  host.dispatchEvent(new Event('scroll'));
+  second();
+  releaseSelf();
+  assert.equal(frames.size, 0);
+  view.dispatchEvent(new Event('scroll'));
+  host.dispatchEvent(new Event('scroll'));
+  assert.equal(frames.size, 0);
 });

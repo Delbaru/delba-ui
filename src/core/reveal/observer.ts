@@ -1,3 +1,4 @@
+import styles from './Reveal.module.scss';
 import { MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs } from '../base/motion';
 import { isRevealCascadeChild, isRevealKey, revealDelays, revealObserverKey, type ResolvedReveal } from './reveal';
 
@@ -5,13 +6,19 @@ import { isRevealCascadeChild, isRevealKey, revealDelays, revealObserverKey, typ
 // нет → до гидрации (прячет страховочная анимация `ui-reveal-hold`), wait → ждёт экрана,
 // in → идёт ход, done → доехал: анимация и will-change сняты, узел снова живёт своими стилями.
 const STATE = 'data-reveal-state';
-const HOLD = 'ui-reveal-hold';
+const HOLD = styles['ui-reveal-hold'];
 
-type Target = { host: HTMLElement; config: ResolvedReveal; ownsState: boolean };
+export type RevealHost = HTMLElement | SVGElement;
+
+export function isRevealHost(node: Element | null): node is RevealHost {
+  return node !== null && 'style' in node;
+}
+
+type Target = { host: RevealHost; config: ResolvedReveal; ownsState: boolean };
 
 const observers = new Map<string, IntersectionObserver>();
 const targets = new Map<Element, Target>();
-const hosts = new Map<HTMLElement, { own: Set<Element>; mutations: MutationObserver | null }>();
+const hosts = new Map<RevealHost, { own: Set<Element>; mutations: MutationObserver | null }>();
 const timers = new Map<Element, ReturnType<typeof setTimeout>>();
 const animations = new Map<Element, Animation>();
 const pendingClocks = new Set<Element>();
@@ -91,7 +98,7 @@ function watchCompletion(el: Element, animation?: Animation) {
     return;
   }
   // Нет native clock или CSS заменил рецепт: сохраняем scoped duration/delay и страховку.
-  const ms = el instanceof HTMLElement ? readMotionMs(el, 'animation') : 0;
+  const ms = readMotionMs(el, 'animation');
   timers.set(el, setTimeout(() => {
     timers.delete(el);
     if (el.getAttribute(STATE) === 'in') setState(el, 'done');
@@ -99,7 +106,7 @@ function watchCompletion(el: Element, animation?: Animation) {
 }
 
 function isEntryAnimation(animation: Animation): boolean {
-  return animation instanceof CSSAnimation && animation.animationName === 'ui-reveal' && animation.playState !== 'idle';
+  return animation instanceof CSSAnimation && animation.animationName === styles['ui-reveal'] && animation.playState !== 'idle';
 }
 
 // Страховка без JS кончилась раньше, чем пришёл JS (медленная гидрация): элемент уже виден, и
@@ -132,7 +139,7 @@ function onScreen(el: Element): boolean {
 function prepare(batch: Element[], config: ResolvedReveal) {
   const delays = revealDelays(batch.length, config);
   batch.forEach((el, index) => {
-    if (config.stagger !== 0 && el instanceof HTMLElement) {
+    if (config.stagger !== 0 && isRevealHost(el)) {
       const delay = delays[index] ?? 0;
       el.style.setProperty('--reveal-delay', typeof delay === 'number' ? `${delay}ms` : delay);
     }
@@ -142,7 +149,7 @@ function prepare(batch: Element[], config: ResolvedReveal) {
 }
 
 function onEntries(entries: IntersectionObserverEntry[], observer: IntersectionObserver) {
-  const batches = new Map<HTMLElement, { config: ResolvedReveal; items: Element[] }>();
+  const batches = new Map<RevealHost, { config: ResolvedReveal; items: Element[] }>();
 
   for (const entry of entries) {
     const el = entry.target;
@@ -204,7 +211,7 @@ function flushArmed() {
   }
 }
 
-function arm(el: Element, host: HTMLElement, config: ResolvedReveal) {
+function arm(el: Element, host: RevealHost, config: ResolvedReveal) {
   targets.set(el, { host, config, ownsState: !el.hasAttribute(STATE) });
   hosts.get(host)?.own.add(el);
   pending.add(el);
@@ -219,13 +226,13 @@ function release(el: Element, config: ResolvedReveal) {
   observers.get(revealObserverKey(config))?.unobserve(el);
   if (targets.get(el)?.ownsState) {
     el.removeAttribute(STATE);
-    if (el instanceof HTMLElement) el.style.removeProperty('--reveal-delay');
+    if (isRevealHost(el)) el.style.removeProperty('--reveal-delay');
   }
   targets.delete(el);
   clearCompletion(el);
 }
 
-function syncChildren(host: HTMLElement, own: Set<Element>, config: ResolvedReveal) {
+function syncChildren(host: RevealHost, own: Set<Element>, config: ResolvedReveal) {
   own.forEach((el) => {
     if (el.parentElement !== host || el.hasAttribute('data-reveal-skip') || isRevealKey(el.getAttribute('data-reveal'))) {
       release(el, config);
@@ -244,7 +251,7 @@ function syncChildren(host: HTMLElement, own: Set<Element>, config: ResolvedReve
  * `MutationObserver`: дети меняются и без рендера владельца (Suspense внутри, дозагрузка списка),
  * а неподключённый ребёнок простоял бы спрятанным до конца страховки.
  */
-export function armReveal(host: HTMLElement, config: ResolvedReveal) {
+export function armReveal(host: RevealHost, config: ResolvedReveal) {
   // `start: 'load'` играет CSS с первой отрисовки — наблюдать нечего.
   if (config.start === 'load' || typeof IntersectionObserver === 'undefined' || prefersReducedMotion() || hosts.has(host)) return;
   const own = new Set<Element>();
@@ -268,7 +275,7 @@ export function armReveal(host: HTMLElement, config: ResolvedReveal) {
 }
 
 /** Отпускает узел и его детей: наблюдатель держит цели сильной ссылкой, без этого — утечка. */
-export function releaseReveal(host: HTMLElement) {
+export function releaseReveal(host: RevealHost) {
   const entry = hosts.get(host);
   if (!entry) return;
   entry.mutations?.disconnect();

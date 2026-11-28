@@ -1,5 +1,5 @@
 import { Icon } from '../../Icon';
-import { cx } from '../../../core';
+import { cx } from '#core';
 import styles from './IconSwap.module.scss';
 
 // Плавная смена двух иконок (crossfade + scale) в фикс-боксе 24×24 — ширина не скачет.

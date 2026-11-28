@@ -2,7 +2,7 @@ import { cloneElement, isValidElement } from 'react';
 import type React from 'react';
 import type { Swiper as SwiperInstance } from 'swiper';
 
-import type { CarouselApi, CarouselApiRef, CarouselNavigationState, SlidesPerViewValue } from './types';
+import type { CarouselApi, CarouselApiRef, CarouselNavigationState, SlidesPerViewValue } from './Carousel.types';
 
 // Раскладка слайдов без состояния: видно ли прокрутку, нужен ли повтор для петли, какая страница активна.
 

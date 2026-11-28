@@ -11,7 +11,7 @@ import {
   Mousewheel,
 } from 'swiper/modules';
 import { UI_MESSAGES } from '../../core/base/messages';
-import type { CarouselAutoplay } from './types';
+import type { CarouselAutoplay } from './Carousel.types';
 import type {
   CarouselMeasurement,
   CarouselResolvedLayout,

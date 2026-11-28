@@ -1,115 +1,127 @@
-# Конфигурация Delba Frontend
+# Визуальный конфиг Frontend
 
-Toolkit загружает `delba.config.ts`, выбранное ENV и declarations из публичного
-`./module` пакетов. Frontend получает только собственную явно подключённую секцию.
-Библиотека не ищет конфиг проекта, не читает ENV-файлы и не владеет registry.
+Приложение передаёт один полный `FrontendConfig` из `@delba/frontend/config`.
+Toolkit загружает корневой config и выбранное окружение. Frontend получает
+свою секцию и явный `root`. Полный [starterFrontend](../tools/visual/starter.ts)
+служит самостоятельным примером и fixture библиотеки. Конфиг приложения
+содержит собственные значения и не дополняется стартером.
 
 ```ts
-// configs/delbaFrontend.ts
-import type { FrontendConfig } from '@delba/frontend/config';
-export const delbaFrontend = {
-    theme: {
-        sources: ['src/shared/theme'],
-        padding: { none: 0, field: [8, 12], panel: [16, 24, 16, 24] },
-    },
-    typography: ['h1', 'p1'],
-} as const satisfies FrontendConfig;
-
-// delba.config.ts — композиция, которую читает только Toolkit
-import { delbaFrontend } from './configs/delbaFrontend';
-export default { delbaFrontend };
-
-// next.config.ts — native-интеграция без Toolkit runtime
 import { withFrontend } from '@delba/frontend/next';
-import { delbaFrontend } from './configs/delbaFrontend';
-export default withFrontend({}, { settings: delbaFrontend });
+import { delbaFrontendConfig } from './configs/delbaFrontend';
+
+export default withFrontend({}, { settings: delbaFrontendConfig });
 ```
 
-`FrontendConfig` содержит `theme.sources`, `theme.padding`, `typography`, `motion`,
-`scrollbar`, `skins`, `scale`, `images`, `messages`. Пути относительны переданному
-host `root`. `theme.sources` — непустой список путей проверки токенов. Значения
-`theme.padding` непосредственно поступают в seeds padding-генератора. При отсутствии
-настроек применяются собственные предметные defaults библиотеки.
+При использовании Toolkit та же ссылка указывается в `delba.config.ts` как
+`delbaFrontend: delbaFrontendConfig`. Секция содержит все обязательные поля.
 
-Технические поля `root`, `scan`, `seeds`, `componentAnatomy`, `rules`, `baseline`,
-`themeDefaults` и настройки product test runner в авторской секции запрещены.
-Отдельных config-loader, `--config`, utilities CLI и bin `delba-frontend` нет.
-
-## Публичный модуль
-
-`@delba/frontend/module` default export объявляет `id: 'delbaFrontend'`,
-`command: 'frontend'`, `requires: []` и `configuration.public: []`.
-`resolveFrontendConfiguration(settings, rawEnv, { operation, environment })`
-валидирует только собственную секцию и возвращает
-`{ settings, environment: {}, public: {} }`.
-
-Toolkit передаёт action context с `root`, всей `project`, declaration `package`,
-собственными `settings`, typed `environment`, выбранным `env`, `publicEnvironment`,
-`modules`, `operation`, `environmentName`, `args` и необязательным `run`.
-Frontend использует только нужные ему значения; private imports OS отсутствуют.
-
-| Action | Поведение |
+| Поле | Авторские данные |
 | --- | --- |
-| `build` | `prepareFrontend({ root, settings, env? })`: генерация |
-| `watch` | `watchFrontend(context)`: генерация и watcher с `close()` |
-| `check` | Токены, правила, импорты, анатомия и UI-архитектура потребителя |
-| `test` | Только units библиотеки; `--browser` выбирает её fixtures |
-| `format` | Host Prettier с аргументами action; по умолчанию `--write src` |
-| `startup` | Явный browser-аудит запущенного URL из `context.args` |
-| `dev`, `start` | `runFrontendNext(context, 'dev' / 'start')` |
+| `responsive` | Три возрастающие полосы mobile/tablet/desktop с `minWidth`, `designWidth` и `scale`. На desktop также `scaleLimit`. |
+| `fonts` | Именованные family/fallback/faces, `primary` обязателен. Для системного шрифта faces пуст. |
+| `colors` | primary/secondary со всеми normal/hover/pressed/foreground. surface/text/line/error/warning/success/info и дополнительные роли. |
+| `gradients` | Именованные CSS-градиенты. Допустим пустой словарь. |
+| `typography` | body/caption/micro/title и дополнительные роли. Каждая содержит fontFamily/fontSize/fontWeight/lineHeight/letterSpacing/textTransform. |
+| `geometry` | Именованные dimensions, positions, radii, padding, lines и shadows. `spaces` — необязательный словарь семантических отступов. |
+| `motion` | Полный timing/defaults/carousel/easing/visibility/inView/scroll/distance. |
+| `variables` | Дополнительные CSS-переменные. Строка, RPX-число или строгая адаптивная тройка. |
+| `scrollbar` | Все width/color/trackColor/inset/gutter/autoHide/hideDelay/showDuration/fadeDuration. |
+| `images`, `messages` | Необязательные политики изображений и текстов UI. |
 
-Общий CLI: `delba frontend <action>`. Для Next build владелец приложения вызывает
-`runFrontendNext(context, 'build')`. Product Node tests, DB/QA guards и сценарии
-приложения принадлежат его модулю и Toolkit runner. Библиотечные suites:
-`standard`, `library`, `browser`, `all`; suite `project` удалён.
+Начальная ширина mobile равна 0. `scale: 'fixed'` даёт 1 RPX = 1 px.
+`'fluid'` масштабируется относительно `designWidth` с `scaleLimit` на desktop.
+Media, JS breakpoints, CSS RPX и image sizes используют эти настройки.
 
-Rule checks требуют нулевых нарушений действующих правил. Они не читают и не
-создают baseline-файлы; `--baseline` и `--update` удалены. `--fix` остаётся явной
-операцией форматирования, которая не добавляет исключений правилам.
+Все адаптивные props и шесть полей каждой роли typography используют ровно
+`[desktop, mobile, tablet]`. `null` пропускает значение или CSS-декларацию в своей
+полосе. Полоса без значения не получает desktop автоматически. Неадаптивный
+prop сохраняет собственный тип. Font family указывает на роль `fonts`, CSS
+стек публикуется как `--font-family-<role>`. Типографика использует отдельные
+`--type-<role>-<field>`, поэтому каждое поле может независимо пропустить полосу.
 
-## Native Next и ENV
+Числовые длины означают RPX без объекта-обёртки. Обычная геометрия кратна 4,
+верхнего лимита нет. Font size, letter spacing, толщина border и scrollbar,
+точные детали отрисовки и измеренный DOM допускают дробную геометрию.
+Вес, время и коэффициенты сохраняют собственные единицы. В `variables`
+безразмерные значения передаются строкой, число означает длину.
+Обязательны `padding.none = 0`, `radii.none = 0` и `radii.sm`.
+Padding допускает число, две или четыре стороны, lines — [толщина, цвет, стиль?].
+Авторские словари описывают семантические роли, например `spaces.section = 160`.
+Числовые ключи в `spaces` недопустимы. Для CSS Frontend генерирует только
+числовые `--s-N`, на которые статически ссылаются исходники приложения,
+библиотеки или переданный config. Props используют числовую длину напрямую,
+например `w={[4000, null, null]}`.
 
-`withFrontend(nextConfig, { settings, root? })` требует переданные настройки;
-`root` по умолчанию равен cwd native Next. Плагин и module actions вызывают
-один owner API генерации. После успешной генерации переданный `env` получает
-`DELBA_FRONTEND_OWNER`, чтобы дочерние Next workers не повторяли её.
-Владелец перезапускает watcher после изменения настроек; библиотека не следит
-за неизвестным ей графом project config.
+Дополнительный цвет — CSS-строка, включая `light-dark(...)`, или объект
+интерактивных состояний. Имена camelCase переходят в kebab-case, например
+`primary.normal` даёт `--primary`. Имена управляемых переменных зарезервированы.
 
-Node-only `@delba/frontend/next-env` экспортирует
-`prepareNextEnvironment(env = process.env)`. Host вызывает его до native Next CLI
-или server bootstrap. Helper адаптирует уже выбранное окружение через тот же
-экземпляр `@next/env`, что использует host Next: обновляет initialEnv, сбрасывает
-старое окружение и выставляет `__NEXT_PROCESSED_ENV`. Он не загружает dotenv.
+Длительность в типе `MotionTime` задаётся числом секунд или именем из
+`motion.timing`. CSS и JS используют эту шкалу. Отдельные механизмы уточняют
+доступные настройки в своих типах. Общие значения свечения хранятся в
+`motion.defaults.surfaceIdle.duration` и `motion.defaults.surfaceIdle.strength`.
+После изменения авторского конфига подготовь актуальные проекции темы и motion.
 
-`DELBA_PUBLIC_ENV` — JSON-словарь только явно разрешённой module public projection
-со значениями string/number/boolean/null. Next получает их строковое представление,
-включая строку `'null'`. Любой host `NEXT_PUBLIC_*`, отсутствующий
-в projection, вызывает ошибку. Плагин передаёт в Next `env` только projection;
-server ENV туда не копируется. Переопределение её значений в `nextConfig.env`
-не применяется, а ключ вне projection отвергается.
+Плавная прокрутка Flex берёт общие значения из `motion.scroll`. Для отдельной
+области можно переопределить `lerp`, `duration`, `offset` и `easing` в
+`ui.scroll` с пресетом `smooth`. Если фиксированная длительность отсутствует,
+движок рассчитывает её по расстоянию и границам `minDuration`, `maxDuration`
+и `durationPerScreen`. Длительность указывается в секундах.
 
-`runFrontendNext` запускает child с переданным `context.env`, готовит окружение
-до импорта native Next CLI и передаёт `context.args` как аргументы Next.
-Production bootstrap импортирует этот helper и собственные runtime resolvers,
-без Toolkit. Прямые функции генераторов остаются доступны внутри библиотеки
-для её standalone tooling с явными настройками или собственными defaults.
+## Генерация и стили
 
-Приёмка исходников покрывает own settings, отказ legacy-полей, обязательные
-Next settings, public projection, передачу padding и отсутствие project loading.
-Runtime-проверки этого пакета отложены по отдельному решению владельца.
+`prepareFrontendSources({ root, settings })` создаёт производные CSS, Sass
+и TypeScript для темы, responsive, typography, skin, motion, images, messages,
+scrollbar и icons. Это подготовка импортируемых исходников. Одновременные
+вызовы с тем же root и identity settings объединяются до завершения.
+`prepareFrontend` вызывает эту подготовку и дополнительно генерирует sparse
+utilities. `watchFrontend` возвращает `close()`, host пересоздаёт подписку при
+смене settings. Native test/typecheck actions явно готовят source-зависимость.
 
-## Theme assets
+UI entrypoints импортируют основу стилей автоматически. `withFrontend`
+подготавливает проекции перед Next dev/build и включает их в native сборку.
+Приложение не добавляет ручной импорт generated CSS и не переписывает layout
+для доставки стилей. Для других native hosts есть `styles.scss` и `theme.css`.
+Производные файлы игнорируются Git, их создаёт bootstrap.
 
-`generateThemeAxes({ root, directory, source, rebuildCommand?, fills, lines, texts,
-iconColors, fillClass?, borderClass?, textClass? })` пишет `_axes-tokens.scss` и
-`_axes-classes.scss` в явно указанную папку и возвращает число изменённых файлов.
-Ключи словарей типизируют callback selectors; данные и пути остаются у приложения.
-Renderer общий с библиотечным генератором skins. Линия принимает также третий
-элемент border style. `source` и `rebuildCommand` служат заголовку, файл source
-не загружается библиотекой.
+`@delba/frontend/theme` экспортирует `theme` и типы
+`Fill`, `Border`, `TextColor`, `IconColor`, `Radius`, `Size`, `Pad`, `FontName`.
+`theme` публикует fills/texts/iconColors/lines/radii/paddingValues,
+списки имён, padding/radius/fillClass/borderClass/textClass.
 
-`vendorEmojiAssets({ root, emojis, directory, manifest })` обслуживает переданную
-палитру: pinned Twemoji revision, проверку безопасных SVG, hashes, attribution и
-license. Приложение владеет каталогом emoji и путями outputs. Это явная maintenance
-операция с сетью, она не включается автоматически в build/check/test.
+```scss
+@use '@delba/frontend/skin-states' as theme;
+
+.title {
+  @include theme.typography-role(title);
+}
+
+.preview {
+  @include theme.typography-device(mobile);
+}
+```
+
+`typography-role($role)` выпускает свойства под штатными media. Второй аргумент
+выбирает одну полосу для preview. `typography-device` применяет переменные
+выбранной полосы и fixed RPX. `breakpoint($device)` использует те же границы.
+
+## Node и Next
+
+`@delba/frontend/module` объявляет `delbaFrontend` / `frontend`, `requires: []`
+и пустую public ENV projection. Module actions принимают явные root, settings,
+env и args. Входы — prepare/build/watch/check/test/format/dev/start.
+У Node API есть `runFrontendNext(context, 'dev' | 'build' | 'start')`.
+
+`@delba/frontend/next-env` применяет уже выбранное host окружение через singleton
+`@next/env`. `DELBA_PUBLIC_ENV` содержит только явно переданные scalar JSON
+значения string/number/boolean/null. Next получает их как строки.
+Непроецированные `NEXT_PUBLIC_*` и посторонний `nextConfig.env` отклоняются.
+Production bootstrap использует native helper и runtime resolvers приложения.
+
+`vendorEmojiAssets({ root, emojis, directory, manifest })` — явная операция
+обслуживания pinned Twemoji SVG, лицензии и хэшей. Каталог и набор принадлежат
+приложению. Операция вызывается отдельно от build/check/test.
+
+Точная схема — [tools/config.ts](../tools/config.ts). Runtime-приёмка текущего
+пакета описана в [development.md](development.md).

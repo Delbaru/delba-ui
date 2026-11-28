@@ -1,10 +1,12 @@
+@forward '../core/typography-generated';
 @use 'sass:map';
 @use 'sass:list';
-$fills: () !default;
-$lines: () !default;
-$texts: () !default;
-$icon-colors: () !default;
-$shadows: () !default;
+@use './tokens' as theme;
+$fills: theme.$fills !default;
+$lines: theme.$lines !default;
+$texts: theme.$texts !default;
+$icon-colors: theme.$icon-colors !default;
+$shadows: theme.$shadows !default;
 
 // Словари осей передаёт проект через @forward ... with (...).
 // Здесь нет зависимости от проектного генерата _axes-tokens.scss.

@@ -1,3 +1,4 @@
+@forward './typography-generated' show typography-role;
 // Рецепты, которые повторялись по файлам дословно. Каждый — про НЕпропсовое (пропсом такое не
 // выражается), поэтому живут миксинами, а не утилитами.
 
@@ -13,15 +14,6 @@
   @media #{map.get(utils.$breakpoints, $name)} {
     @content;
   }
-}
-
-// Шрифт служебной роли кита (`body`, `caption`, `micro`) с фолбэком на вариант, которым её
-// набирала тема до ролей. Карта — копия `TEXT_ROLES` из core/base/typography.ts (сверяет тест);
-// `$legacy` — когда это место до ролей брало другой вариант.
-$text-roles: (body: p, caption: small, micro: dop);
-
-@function role-font($role, $legacy: map.get($text-roles, $role)) {
-  @return var(--font-#{$role}, var(--font-#{$legacy}));
 }
 
 // Пользователь просит меньше движения. Строка запроса одна на репозиторий: раньше её писали руками

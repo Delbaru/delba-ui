@@ -1,18 +1,13 @@
 'use client';
 
-import { cx, type WithRef } from '../../core';
-import { Flex } from '../Flex';
-import { AccordionContext, useAccordion } from './Accordion.model';
+import { Flex } from '#components';
+import type { WithRef } from '#core';
+import { ui } from '#ui';
+import { accordion } from './Accordion.config';
 import type { AccordionProps } from './Accordion.types';
-import styles from './Accordion.module.scss';
 
-/** Accessible single or multiple disclosure group; item panels own collapse. */
 export function Accordion(props: WithRef<AccordionProps, HTMLElement>) {
-  const accordion = useAccordion(props);
+  const disclosure = ui.disclosure.use(accordion, props);
 
-  return (
-    <AccordionContext.Provider value={accordion.context}>
-      <Flex {...accordion.root} className={cx(styles.Accordion, props.className)} />
-    </AccordionContext.Provider>
-  );
+  return <Flex {...disclosure.root} ui={{ ...disclosure.root.ui, disclosure }} />;
 }

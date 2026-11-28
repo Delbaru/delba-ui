@@ -3,7 +3,12 @@ import { fileURLToPath } from 'node:url';
 import { discoverTests } from './discovery.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-const files = discoverTests(root, ['tools', 'tests']);
+const { prepareFrontend } = await import('../module.mjs');
+const { registerFrontendSources } = await import('../registration.mjs');
+await registerFrontendSources();
+const { starterFrontend } = await import('../visual/starter.ts');
+await prepareFrontend({ root, settings: starterFrontend });
+const files = discoverTests(root);
 if (!files.length) throw new Error('No library tests discovered.');
 const result = spawnSync(process.execPath, [
     '--import', 'tsx', '--import', './tools/check/unit-runtime.mjs', '--test', ...files,

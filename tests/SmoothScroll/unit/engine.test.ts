@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { registerScrollProvider, scrollTo, unregisterScrollProvider } from '../../../src/core/base/scroll';
-import { createSmoothScroll } from '../../../src/components/SmoothScroll/engine';
+import { createSmoothScroll } from '../../../src/core/Scroll/Smooth/engine';
+import { createSmoothViewport } from '../../../src/core/Scroll/Smooth/viewport';
 
 test('public scrollTo preserves block alignment through the live SmoothScroll provider', async () => {
     const originals = new Map<string, PropertyDescriptor | undefined>();
@@ -35,23 +36,33 @@ test('public scrollTo preserves block alignment through the live SmoothScroll pr
         requestAnimationFrame: requestFrame,
         cancelAnimationFrame: cancelFrame,
         scrollTo: ({ top }: { top: number }) => { writes.push(top); viewport.scrollY = top; },
+        performance: { now: () => clock, getEntriesByType: () => [] },
+        ResizeObserver: class { observe() {} disconnect() {} },
+        getComputedStyle: () => ({ scrollMarginTop: '0px', scrollMarginBottom: '0px' }),
     };
     let targetTop = 1000;
     let targetHeight = 100;
-    const target = {
+    const ownerDocument = {
+        body: {},
+        documentElement: { scrollHeight: 4000 },
+        defaultView: viewport,
+        getElementById: () => target,
+        addEventListener() {},
+        removeEventListener() {},
+    };
+    const target: Element = {
+        ownerDocument,
+        isConnected: true,
         getBoundingClientRect: () => ({ top: targetTop - viewport.scrollY, bottom: targetTop + targetHeight - viewport.scrollY }),
     } as unknown as Element;
     install('window', viewport);
-    install('document', { body: {}, documentElement: { scrollHeight: 4000 }, getElementById: () => target });
-    install('performance', { now: () => clock, getEntriesByType: () => [] });
-    install('PerformanceNavigationTiming', class {});
-    install('ResizeObserver', class { observe() {} disconnect() {} });
-    install('getComputedStyle', () => ({ scrollMarginTop: '0px', scrollMarginBottom: '0px' }));
-    install('requestAnimationFrame', requestFrame);
-    install('cancelAnimationFrame', cancelFrame);
+    install('document', ownerDocument);
+    install('performance', viewport.performance);
     let engine: ReturnType<typeof createSmoothScroll> | undefined;
     try {
-        engine = createSmoothScroll({ lerp: 0.08, wheelMultiplier: 1, duration: 0.5, easing: value => value,
+        const surface = createSmoothViewport(ownerDocument as unknown as Document);
+        assert.ok(surface);
+        engine = createSmoothScroll(surface, { lerp: 0.08, wheelMultiplier: 1, duration: 0.5, easing: value => value,
             offset: 60, mobile: true, anchors: false, updateHash: false });
         registerScrollProvider(engine);
         for (const [block, expected] of [['start', 940], ['center', 720], ['end', 500], ['nearest', 500]] as const) {

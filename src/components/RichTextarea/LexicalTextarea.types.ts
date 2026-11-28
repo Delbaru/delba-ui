@@ -1,19 +1,23 @@
 import type { CSSProperties } from 'react';
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
-import type { BoxLayoutProps, ComponentStateValue, StateLinkInput } from '../../core';
+import type { MotionChannels, SurfaceMotionOptions } from '#core/Motion';
+import type { BoxLayoutProps, ComponentStateValue, StateLinkInput } from '#core';
+import type { PopupOptions } from '../../core/Popup/Popup';
 import type { LexicalTextVariant } from '../RichText';
 import type { LexicalTextareaChangePayload, LexicalTextareaContent, LexicalTextareaVariable } from './types';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 
 export interface LexicalTextareaProps
-  extends BoxLayoutProps, SharedMotionProps {
+  extends BoxLayoutProps, Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
   /** Contenteditable identifier; generated when omitted. */
   id?: string;
   /** Additional classes on the complete editor. */
   className?: string;
   /** Outer composition styles. */
   style?: CSSProperties;
-
+  /** Shared appearance, hover and idle effects on the outer surface. */
+  animate?: MotionChannels;
+  /** Popup attached to the outer editor surface. */
+  ui?: { popup?: PopupOptions };
 
   /** Editable text color. */
   color?: string;

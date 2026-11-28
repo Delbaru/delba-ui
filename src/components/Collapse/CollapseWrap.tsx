@@ -4,9 +4,9 @@ import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, u
 import type React from 'react';
 import { flushSync } from 'react-dom';
 
-import styles from './CollapseWrap.module.scss';
+import styles from '../../core/Collapse/Collapse.module.scss';
 
-import { cx, resolveResponsive, useMergedRefs, type ResponsiveValue, type Transition } from '../../core';
+import { cx, resolveResponsiveInput, useMergedRefs, type ResponsiveValue, type Transition } from '#core';
 import { useCollapseMotion, type CollapseHandle } from '../../hooks/useCollapseMotion';
 import { useCollapseControls, type CollapseControls } from '../../hooks/useCollapseControls';
 
@@ -26,6 +26,8 @@ export interface CollapseWrapProps {
     overflowVisibleWhenOpen?: boolean;
     appear?: boolean;
     clip?: boolean;
+    /** Keep the collapsing surface in a horizontal row. */
+    horizontalContent?: boolean;
     keepMounted?: boolean;
     onFound?: () => void;
     onEnd?: () => void;
@@ -87,6 +89,7 @@ export function CollapseWrap({
     overflowVisibleWhenOpen,
     appear,
     clip,
+    horizontalContent,
     keepMounted,
     onFound,
     onEnd,
@@ -167,7 +170,7 @@ export function CollapseWrap({
     // Зазор движок меряет у CSS; для разных брейкпоинтов JS не дублирует измерение.
     const collapseStyle: Record<string, string> = {};
     if (gap != null) {
-        const [gapD, gapM, gapT] = resolveResponsive(gap);
+        const [gapD, gapM, gapT] = resolveResponsiveInput(gap);
         if (gapD != null) collapseStyle['--collapse-gap-d'] = `calc(${gapD} * var(--rpx))`;
         if (gapM != null) collapseStyle['--collapse-gap-m'] = `calc(${gapM} * var(--rpx))`;
         if (gapT != null) collapseStyle['--collapse-gap-t'] = `calc(${gapT} * var(--rpx))`;
@@ -179,7 +182,8 @@ export function CollapseWrap({
     return (
         <Tag
             ref={setWrapNode}
-            className={cx(styles.CollapseWrap, 'ui-collapse', inline && 'ui-collapse-inline', fade && 'ui-collapse-fade', className)}
+            className={cx(styles.Collapse, inline && styles.Inline, fade && styles.Fade, className)}
+            data-ui-collapse=""
             data-axis={axis}
             data-gap-side={gapSide}
             data-open={visualOpen || undefined}
@@ -191,9 +195,10 @@ export function CollapseWrap({
             <Tag
                 ref={setInnerNode}
                 className={cx(
-                    'ui-collapse-inner',
-                    clip && 'ui-collapse-clip',
-                    overflowVisibleWhenOpen && settled && 'ui-collapse-visible',
+                    styles.Inner,
+                    horizontalContent && styles.HorizontalContent,
+                    clip && styles.Clip,
+                    overflowVisibleWhenOpen && settled && styles.Visible,
                 )}
             >
                 {children}

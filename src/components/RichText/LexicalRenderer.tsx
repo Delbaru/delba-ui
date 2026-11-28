@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import type { LexicalDocument } from './types';
 
-import { cx } from '../../core';
+import { cx } from '#core';
 import { bindShortWords } from '../Text/nonBreaking';
 
 import { isRichRole, roleClassKeys, textVariantClasses } from './roles';

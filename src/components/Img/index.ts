@@ -1,3 +1,3 @@
 export { Img } from './Img';
-export type { ImgProps, ImgSource, ImgSrcTuple } from './Img.types';
-export type { ImgAnimate, ImgChangeAnimate, ImgSwapKey, ImgSwapOptions } from './swap/types';
+export type { ImgAnimate, ImgProps, ImgSource, ImgSrcTuple } from './Img.types';
+export type { ImgChangeAnimate, ImgSwapKey, ImgSwapOptions } from './swap/types';

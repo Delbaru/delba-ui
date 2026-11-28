@@ -8,7 +8,7 @@
     }
     .phonePrefix {
       flex-shrink: 0;
-      font: var(--field-font, #{m.role-font(body)});
+      font: inherit;
       font-variant-numeric: lining-nums proportional-nums;
     }
     &[data-inline-error='true'] {

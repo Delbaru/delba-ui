@@ -1,0 +1,109 @@
+@use '../scss-utils' as utils;
+
+@layer ui.components {
+  .Collapse {
+    // The resting states give the shared WAAPI engine its start and end measurements.
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+
+    &:where(.Inline) {
+      display: inline-grid;
+      vertical-align: middle;
+    }
+
+    > .Inner {
+      min-height: 0;
+      min-width: 0;
+
+      &.Clip:not(.Visible) {
+        clip-path: inset(0 round var(--collapse-radius, 0));
+      }
+    }
+
+    &[data-axis='row'] {
+      &[data-gap-side='start'] {
+        padding-top: 0;
+        &[data-open] { padding-top: var(--collapse-gap-d, 0); }
+      }
+
+      &[data-gap-side='end'] {
+        padding-bottom: 0;
+        &[data-open] { padding-bottom: var(--collapse-gap-d, 0); }
+      }
+
+      > .Inner {
+        display: flex;
+        flex-direction: column;
+
+        &.HorizontalContent { flex-direction: row; }
+
+        // Clip Flex/Grid content on its own border and shadow during height changes.
+        > [data-ui-collapse-layout] { min-height: 0; }
+        &:not(.Visible) > [data-ui-collapse-layout] { overflow: hidden; }
+      }
+
+      // When min-height pins the content, animate the inner layer's height.
+      &:not([data-open]) > .Clip { height: 0; }
+    }
+
+    &[data-axis='column'] {
+      &[data-gap-side='start'] {
+        grid-template-columns: auto;
+        flex-shrink: 0;
+        padding-left: 0;
+        &[data-open] { padding-left: var(--collapse-gap-d, 0); }
+      }
+
+      &[data-gap-side='end'] {
+        padding-right: 0;
+        &[data-open] { padding-right: var(--collapse-gap-d, 0); }
+      }
+
+      > .Inner {
+        display: flex;
+
+        // Preserve width inside the clip so text does not reflow during the animation.
+        > * { flex: none; }
+        &:not(.Visible) { clip-path: inset(0 round var(--collapse-radius, 0)); }
+      }
+
+      &:not([data-open]) > .Inner { width: 0; }
+    }
+
+    @include utils.withBreakpoints() using ($bp) {
+      &[data-axis='row'][data-gap-side='start'][data-open] {
+        padding-top: var(--collapse-gap-#{$bp}, var(--collapse-gap-d, 0));
+      }
+
+      &[data-axis='row'][data-gap-side='end'][data-open] {
+        padding-bottom: var(--collapse-gap-#{$bp}, var(--collapse-gap-d, 0));
+      }
+
+      &[data-axis='column'][data-gap-side='start'][data-open] {
+        padding-left: var(--collapse-gap-#{$bp}, var(--collapse-gap-d, 0));
+      }
+
+      &[data-axis='column'][data-gap-side='end'][data-open] {
+        padding-right: var(--collapse-gap-#{$bp}, var(--collapse-gap-d, 0));
+      }
+    }
+
+    // Descendant collapses keep their own opacity state.
+    &:where(.Fade) {
+      > .Inner { opacity: 0; }
+      &[data-open] > .Inner { opacity: 1; }
+    }
+
+    &[hidden]:not([hidden='until-found']) { display: none; }
+  }
+}
+
+@layer ui.states {
+  .Collapse[data-axis='row']:not([data-open]) {
+    > .Inner:not(.Clip) > [data-ui-collapse-layout] {
+      height: 0;
+      padding-block: 0;
+      border-block-width: 0;
+    }
+  }
+}

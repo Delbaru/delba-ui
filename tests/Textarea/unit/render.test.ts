@@ -9,8 +9,11 @@ test('multiline composition forwards native form props and labels the real field
     id: 'message', label: 'Message', name: 'message', form: 'contact', className: 'consumer-field',
     value: 'hello', rows: 4, length: { max: 20 }, readOnly: true,
     comment: 'Hint', 'aria-describedby': 'external',
+    animate: { idle: { effect: 'glow' } },
   }));
   assert.match(html, /class="[^"]*consumer-field[^"]*"/);
+  assert.match(html, /^<div[^>]*data-ui-idle="glow"/);
+  assert.doesNotMatch(html, /<textarea[^>]*data-ui-idle/);
   assert.match(html, /role="presentation"/);
   assert.match(html, /<label[^>]*for="message"/);
   assert.match(html, /<textarea[^>]*name="message"[^>]*form="contact"/);

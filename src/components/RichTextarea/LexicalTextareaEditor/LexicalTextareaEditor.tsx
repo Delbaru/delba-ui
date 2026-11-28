@@ -5,8 +5,8 @@ import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import { ListPlugin } from '@lexical/react/LexicalListPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
-import { cx } from '../../../core';
-import { Box } from '../../Box';
+import { cx } from '#core';
+import { Flex } from '../../Flex';
 import { Text } from '../../Text';
 import { richTextClasses, type LexicalTextVariant } from '../../RichText';
 import { isAllowedLink } from '../lexical/links';
@@ -28,7 +28,7 @@ interface EditorProps {
 /** Editable document and its Lexical plugins share a single composer and document ref. */
 export function LexicalTextareaEditor({ id, editor, feedback, label, required, placeholder, placeholderColor, variant }: EditorProps) {
   return (
-    <Box className={styles.LexicalTextareaEditor}>
+    <Flex display={['block', 'block', 'block']} className={styles.LexicalTextareaEditor}>
       <EditorRefPlugin editorRef={editor.ref} />
       <ContentSyncPlugin
           content={editor.content}
@@ -64,6 +64,6 @@ export function LexicalTextareaEditor({ id, editor, feedback, label, required, p
           ) : null}
           ErrorBoundary={LexicalErrorBoundary}
       />
-    </Box>
+    </Flex>
   );
 }

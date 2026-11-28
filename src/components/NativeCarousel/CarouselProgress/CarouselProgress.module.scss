@@ -1,4 +1,8 @@
 @layer ui.components {
-  .CarouselProgress {}
-  .fill { transform: scaleX(0); transform-origin: left center; }
+  .CarouselProgress {
+    > .fill {
+      transform: scaleX(0);
+      transform-origin: left center;
+    }
+  }
 }

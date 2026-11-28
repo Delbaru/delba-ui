@@ -1,4 +1,5 @@
 import type React from 'react';
+import { nextNavigationIndex } from '#core/Navigation';
 
 // Данные списка Select без React: плоский список пунктов, сравнение значений, пункт в фокусе.
 
@@ -160,7 +161,6 @@ export function resolveSelectCatalog<T extends string>(input: {
 
 /** Keyboard navigation wraps through available options; an empty list has no active row. */
 export function moveSelectFocus(current: number, direction: 1 | -1, count: number): number {
-  if (count === 0) return -1;
-  if (current < 0) return direction > 0 ? 0 : count - 1;
-  return (current + direction + count) % count;
+  const key = direction === 1 ? 'ArrowDown' : 'ArrowUp';
+  return nextNavigationIndex(key, count, Math.max(-1, current), { axis: 'vertical', loop: true }) ?? -1;
 }

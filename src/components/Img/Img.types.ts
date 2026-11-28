@@ -1,9 +1,9 @@
 import type { ImageProps } from 'next/image';
 import type React from 'react';
 import type { CSSProperties } from 'react';
-import type { BoxLayoutProps, ResponsiveValue, SizeValue, StateLinkInput } from '../../core';
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
-import type { ImgAnimate } from './swap/types';
+import type { BoxLayoutProps, ResponsiveValue, SizeValue, StateLinkInput } from '#core';
+import type { MotionChannels, SurfaceMotionOptions } from '#core/Motion';
+import type { ImgChangeAnimate } from './swap/types';
 
 type ObjectFitKey = 'contain' | 'cover' | 'fill' | 'none' | 'scale_down';
 
@@ -57,11 +57,16 @@ type ImgRootSizeProps = {
   rootH?: ResponsiveValue<SizeValue>;
 };
 
+type ImgChannels = MotionChannels<{ change: ImgChangeAnimate }>;
+export type ImgAnimate = Pick<ImgChannels, 'appearance' | 'change'> & {
+  hover?: Extract<ImgChannels['hover'], { effect: 'transform' }> | false;
+};
+
 export interface ImgProps
   extends ImgBaseProps,
     BoxLayoutProps,
     ImgRootSizeProps,
-    SharedMotionProps<ImgAnimate> {
+    Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
   /** Explicitly override ui.config.images.optimizeApi and the private /api/ default. Only enable optimization for sources accessible without visitor cookies. */
   unoptimized?: boolean;
   /** Additional root class. */
@@ -83,11 +88,11 @@ export interface ImgProps
   src: ImgSource | ImgSrcTuple;
 
   /**
-   * Анимация смены картинки при смене `src`: `{ when: 'change', effect: 'veil', direction }`.
+   * Анимация смены картинки при смене `src`: `{ change: { effect: 'veil', direction } }`.
    * Прежняя картинка держится слоем, пока новая не загрузится и не доедет; первый показ — без хода,
    * «меньше движения» — мгновенно. Объектный API — основной договор. См. `ImgAnimate`.
    */
-  animate?: SharedMotionProps<ImgAnimate>['animate'];
+  animate?: ImgAnimate;
 
   /** How the image fits its frame; defaults to cover. */
   objectFit?: ResponsiveValue<ObjectFitKey>;

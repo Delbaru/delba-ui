@@ -4,7 +4,7 @@ import ts from 'typescript';
 
 import { position } from './ast.mjs';
 
-const docs = 'docs/authoring.md';
+const docs = 'docs/development.md';
 const fixHint = 'Запустите `npm run ui:test -- --fix`.';
 const configCache = new Map();
 

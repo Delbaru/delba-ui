@@ -29,7 +29,7 @@
       height: var(--switch-track-height);
       border-radius: calc(var(--switch-track-height) / 2);
       border: calc(1 * var(--rpx)) solid var(--line);
-      background: var(--background);
+      background: var(--surface);
       transition: var(--switch-transition);
 
       .Thumb {
@@ -50,7 +50,7 @@
 
       .Thumb {
         transform: translateX(calc(var(--switch-track-width) - var(--switch-thumb-size) - var(--switch-thumb-offset) - 3 * var(--rpx)));
-        background: var(--background);
+        background: var(--surface);
       }
     }
 

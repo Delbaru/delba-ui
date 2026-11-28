@@ -1,3 +1,4 @@
+import type { FontName } from '../../theme';
 import type React from 'react';
 import type { CSSProperties } from 'react';
 import type {
@@ -5,9 +6,11 @@ import type {
   ComponentStateValue,
   ResponsiveValue,
   StateLinkInput,
-} from '../../core';
+} from '#core';
+import type { InteractiveRootProps } from '#core/Element';
+import type { SurfaceMotionOptions } from '#core/Motion';
+import type { PopupOptions } from '../../core/Popup/Popup';
 import type { TextRole, TextVariantName } from '../../core/base/typography';
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 import type { TextAnimate } from './animations/types';
 import type { LineHeightValue } from './typography';
@@ -18,20 +21,22 @@ import type { TextFormat } from './formatContent';
  * для Text внутри Text (цветные куски чужого заголовка).
  */
 type VariantKey = TextVariantName | TextRole | 'inherit';
-type FontFamilyKey = 'primary' | 'secondary' | 'inherit';
+type FontFamilyKey = FontName | 'inherit';
 type TextAlignValue = 'left' | 'right' | 'center' | 'justify' | 'start' | 'end';
 type WhiteSpaceValue = 'normal' | 'nowrap' | 'pre' | 'pre-wrap' | 'pre-line' | 'break-spaces';
 
 export interface TextProps
   extends Omit<React.HTMLAttributes<HTMLElement>, 'color'>,
-    Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
+    Pick<InteractiveRootProps, 'href' | 'target' | 'rel' | 'download' | 'prefetch'>,
     Omit<BoxLayoutProps, 'aspectRatio'>,
-    SharedMotionProps<TextAnimate> {
+    Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
   children?: React.ReactNode;
   style?: CSSProperties;
   format?: ResponsiveValue<TextFormat>;
-  /** Появление, эффект текста или композиция: `{ when: 'inView', effect: { up: {}, counter: { to: 100 } } }`. */
-  animate?: SharedMotionProps<TextAnimate>['animate'];
+  /** Text-only hosts receive the final text as a string. Hosts that admit spans can animate the content. */
+  animate?: TextAnimate;
+  /** Popup attached to the text host. */
+  ui?: { popup?: PopupOptions };
   required?: boolean;
 
   newTab?: boolean;

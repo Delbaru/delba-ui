@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 /** Visual status of a completed action. */
 export type ToastTone = 'success' | 'warning' | 'error' | 'info';
 
@@ -16,15 +14,6 @@ export interface ToastOptions {
   durationMs?: number;
   /** Optional reaction to a completed action, such as Undo. */
   action?: ToastAction;
-}
-
-export interface ToastProviderProps {
-  /** Application content sharing this notification queue. */
-  children: ReactNode;
-  /** Project viewport marker/placement. The provider retains queue and portal ownership. */
-  className?: string;
-  /** Project card body; the library retains enter/exit, limits and timer cleanup. */
-  renderToast?: (options: ToastOptions, dismiss: () => void) => ReactNode;
 }
 
 export type ToastItem = ToastOptions & { id: string; open: boolean };

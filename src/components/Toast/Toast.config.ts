@@ -1,7 +1,7 @@
-import { assetUrl } from '../../core';
-import checkIcon from '../../../assets/icons/ui/check/style-3/check.svg';
-import exclamationIcon from '../../../assets/icons/ui/exclamation/style-1/exclamation.svg';
-import crossIcon from '../../../assets/icons/ui/cross/style-7/cross.svg';
+import { assetUrl } from '#core';
+import checkIcon from '#icons/controls/check-outline.svg';
+import exclamationIcon from '#icons/controls/exclamation.svg';
+import closeIcon from '#icons/controls/close.svg';
 import type { ToastTone } from './Toast.types';
 
 export const TOAST_DEFAULTS = { durationMs: 4000, maxVisible: 5 } as const;
@@ -9,6 +9,6 @@ export const TOAST_DEFAULTS = { durationMs: 4000, maxVisible: 5 } as const;
 export const TOAST_TONES: Record<ToastTone, { glyph: string; fill: string }> = {
   success: { glyph: assetUrl(checkIcon), fill: 'var(--success)' },
   warning: { glyph: assetUrl(exclamationIcon), fill: 'var(--warning)' },
-  error: { glyph: assetUrl(crossIcon), fill: 'var(--error)' },
+  error: { glyph: assetUrl(closeIcon), fill: 'var(--error)' },
   info: { glyph: assetUrl(exclamationIcon), fill: 'var(--primary)' },
 };

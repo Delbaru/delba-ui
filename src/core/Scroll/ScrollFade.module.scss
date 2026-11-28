@@ -1,0 +1,57 @@
+@property --scroll-fade-start {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroll-fade-end {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@layer ui.utilities {
+  // Верхняя/левая зона раскрывается на первых --scroll-fade пикселях прокрутки (у старта её нет).
+  @keyframes scrollFadeStart {
+    from { --scroll-fade-start: 0px; }
+    to { --scroll-fade-start: var(--scroll-fade); }
+  }
+
+  // Нижняя/правая зона держится всю дорогу и гаснет на последних --scroll-fade пикселях (у конца её нет).
+  @keyframes scrollFadeEnd {
+    from { --scroll-fade-end: var(--scroll-fade); }
+    to { --scroll-fade-end: 0px; }
+  }
+
+  .VerticalFade {
+    --scroll-fade: calc(16 * var(--rpx));
+    --scroll-fade-start: 0px;
+    --scroll-fade-end: 0px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--scroll-fade-start), #000 calc(100% - var(--scroll-fade-end)), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 var(--scroll-fade-start), #000 calc(100% - var(--scroll-fade-end)), transparent 100%);
+
+    @supports (animation-timeline: scroll()) {
+      animation-name: scrollFadeStart, scrollFadeEnd;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(self block), scroll(self block);
+      animation-range: 0 var(--scroll-fade), calc(100% - var(--scroll-fade)) 100%;
+    }
+  }
+
+  .HorizontalFade {
+    --scroll-fade: calc(16 * var(--rpx));
+    --scroll-fade-start: 0px;
+    --scroll-fade-end: 0px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--scroll-fade-start), #000 calc(100% - var(--scroll-fade-end)), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 var(--scroll-fade-start), #000 calc(100% - var(--scroll-fade-end)), transparent 100%);
+
+    @supports (animation-timeline: scroll()) {
+      animation-name: scrollFadeStart, scrollFadeEnd;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(self inline), scroll(self inline);
+      animation-range: 0 var(--scroll-fade), calc(100% - var(--scroll-fade)) 100%;
+    }
+  }
+}

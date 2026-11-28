@@ -32,7 +32,7 @@ function dynamicUse(call) {
 
 export const collapseRule = {
   id: 'collapse',
-  docs: 'docs/authoring.md',
+  docs: 'docs/development.md',
   /**
    * Движок сворачивания в модулях компонентов: именованные импорты и реэкспорты, `export *`,
    * чтение через namespace-импорт и через `import()`. Namespace ядра ради других помощников и

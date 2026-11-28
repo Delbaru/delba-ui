@@ -104,10 +104,12 @@ export const unanimatedConditionalRule = {
       const collapse = resolve(value(attribute(opening, 'collapse')));
       if (direct && collapse && property(collapse, 'open')) return true;
       const motion = resolve(value(attribute(opening, 'animate')));
-      const when = property(motion, 'when'), effect = property(motion, 'effect');
+      const change = resolve(property(motion, 'change'));
+      if (property(change, 'effect')) return direct || covers(property(change, 'key'), condition);
+      const appearance = resolve(property(motion, 'appearance'));
+      const when = property(appearance, 'when'), effect = property(appearance, 'effect');
       if (!when || !ts.isStringLiteralLike(when) || !effect) return false;
-      if (direct) return ['load', 'change', 'inView'].includes(when.text);
-      if (when.text === 'change') return covers(property(motion, 'key'), condition);
+      if (direct) return ['load', 'inView'].includes(when.text);
       if (when.text === 'load') return covers(value(attribute(opening, 'key')), condition);
       return false;
     };
@@ -121,7 +123,7 @@ export const unanimatedConditionalRule = {
         if (ts.isJsxElement(parent)) {
           if (ownsMotion(parent, condition)) return true;
           const tag = parent.openingElement.tagName.getText(source);
-          if (!/^(?:Flex|Grid|Box|Text|DBox|DText|div|span|section|label)$/.test(tag)) break;
+          if (!/^(?:Flex|Grid|Text|DBox|DText|div|span|section|label)$/.test(tag)) break;
         } else if (!ts.isJsxExpression(parent) && !ts.isJsxFragment(parent) && !ts.isBinaryExpression(parent) && !ts.isConditionalExpression(parent) && !ts.isParenthesizedExpression(parent)) break;
         parent = parent.parent;
       }

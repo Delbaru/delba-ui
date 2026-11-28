@@ -1,9 +1,11 @@
 import type { ComponentType, ReactNode } from 'react';
 
+import { resolveCounterContent } from './counter/parseContent';
 import { animationRegistry } from './registry';
 import type {
   AnimationKey,
   AnimationOptions,
+  AnimationOptionsMap,
   TextAnimate,
   TextAnimationContext,
 } from './types';
@@ -14,54 +16,58 @@ export interface ResolvedAnimation {
   options?: AnimationOptions;
 }
 
-/** Adapt the object intent to the existing text-effect renderer registry. */
-function parse(input: TextAnimate | undefined): {
-  key?: AnimationKey;
-  options?: AnimationOptions;
-} {
-  if (input == null) return {};
+type RendererOptions = {
+  [Key in AnimationKey]: { key: Key; options: AnimationOptionsMap[Key] };
+}[AnimationKey];
 
-  if (typeof input === 'object' && !Array.isArray(input) && 'effect' in input) {
-    if (input.effect === 'counter') {
-      return {
-        key: 'counter',
-        options: {
-          to: input.to,
-          start: input.start,
-          suffix: input.suffix,
-          grouped: input.grouped,
-          trigger: input.when === 'change' ? 'onChange' : input.when === 'load' ? 'onLoad' : 'onView',
-          duration: input.duration,
-        },
-      };
-    }
-    if (input.effect === 'textReveal') {
-      const { when: _when, effect: _effect, ...options } = input;
-      return { key: 'textReveal', options };
-    }
-    if (input.when === 'hover') {
-      return { key: 'textSlide', options: { duration: input.duration, hoverColor: input.hoverColor } };
-    }
-    if ('steps' in input) {
-      return {
-        key: input.effect,
-        options: {
-          steps: input.steps,
-          currentStep: input.currentStep,
-          duration: input.duration,
-          clipHeight: input.clipHeight,
-        },
-      };
-    }
-    if (input.effect === 'textSlide') {
-      return {
-        key: 'textSlide',
-        options: { mode: 'swap', duration: input.duration, ...(input.by ? { by: input.by } : {}) },
-      };
-    }
+/** Translate the Text-owned channels to options for the existing renderer registry. */
+function parse(input: TextAnimate | undefined): RendererOptions | undefined {
+  const appearance = input?.appearance;
+  const hover = input?.hover;
+  const change = input?.change;
+
+  if (appearance?.effect === 'counter') {
+    const { when, to, start, suffix, grouped, duration } = appearance;
+    return {
+      key: 'counter',
+      options: { to, start, suffix, grouped, duration, trigger: when === 'load' ? 'onLoad' : 'onView' },
+    };
+  }
+  if (hover && hover.effect === 'textSlide') {
+    return { key: 'textSlide', options: { duration: hover.duration, hoverColor: hover.hoverColor } };
+  }
+  if (change?.effect === 'counter') {
+    const { to, start, suffix, grouped, duration } = change;
+    return { key: 'counter', options: { to, start, suffix, grouped, duration, trigger: 'onChange' } };
+  }
+  if (change?.effect === 'textReveal') {
+    const { effect, ...options } = change;
+    return { key: effect, options };
+  }
+  if (change?.steps && typeof change.currentStep === 'number') {
+    const { effect, steps, currentStep, duration, clipHeight } = change;
+    return { key: effect, options: { steps, currentStep, duration, clipHeight } };
+  }
+  if (change?.effect === 'textSlide') {
+    const { by, duration } = change;
+    return { key: 'textSlide', options: { mode: 'swap', duration, ...(by ? { by } : {}) } };
   }
 
-  return {};
+  return undefined;
+}
+
+/** Effects with their own values still supply the selected value on a native text host. */
+export function resolveTextOnlyAnimation(input: TextAnimate | undefined, content: string): string {
+  const animation = parse(input);
+  if (animation?.key === 'counter') {
+    const counter = resolveCounterContent(content, animation.options);
+    return counter.hasValue ? counter.text(counter.to) : content;
+  }
+  if (animation?.key === 'textSlide' || animation?.key === 'textClip') {
+    const { steps, currentStep } = animation.options;
+    if (steps && currentStep !== undefined) return steps[currentStep] ?? content;
+  }
+  return content;
 }
 
 /**
@@ -72,9 +78,10 @@ export function resolveAnimation(
   input: TextAnimate | undefined,
   content: ReactNode,
 ): ResolvedAnimation {
-  const { key, options } = parse(input);
-  const plugin = key ? animationRegistry[key] : undefined;
-  if (!plugin) return { active: false };
+  const animation = parse(input);
+  if (!animation) return { active: false };
+  const { options } = animation;
+  const plugin = animationRegistry[animation.key];
 
   const active = plugin.isActive ? plugin.isActive(options, content) : true;
   return active ? { active, Inner: plugin.Inner, options } : { active: false };

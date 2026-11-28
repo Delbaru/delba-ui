@@ -1,3 +1,5 @@
+@use 'sass:map' as frontendMap;
+@use '../../../core/responsive-generated' as frontendResponsive;
 @use '../../../core/mixins' as m;
 @layer ui.components {
   .SelectOptions {
@@ -21,11 +23,11 @@
     font-weight: 600;
     pointer-events: none;
 
-    @media (min-width: 768px) and (max-width: 1023px) {
+    @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
       padding: calc(12 * var(--rpx)) calc(16 * var(--rpx)) calc(4 * var(--rpx));
     }
 
-    @media (min-width: 1024px) {
+    @media #{frontendMap.get(frontendResponsive.$breakpoints, d)} {
       padding: calc(12 * var(--rpx)) calc(24 * var(--rpx)) calc(4 * var(--rpx));
     }
   }
@@ -53,7 +55,6 @@
     .OptionContent {
       flex: 1;
       min-width: 0;
-      display: flex;
       align-items: center;
       overflow: visible;
       color: inherit;
@@ -63,7 +64,7 @@
       flex: 1;
       min-width: 0;
       color: inherit;
-      font: m.role-font(body);
+      @include m.typography-role(body);
       white-space: normal;
       overflow: visible;
       text-overflow: clip;

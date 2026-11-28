@@ -8,11 +8,11 @@ import type { ResponsiveValue } from '../base/responsive';
 export type SpaceValue = number | string;
 
 export type SpaceShorthandValue =
-  | [SpaceValue]
-  | [SpaceValue, SpaceValue]
-  | [SpaceValue, SpaceValue, SpaceValue]
-  | [SpaceValue, SpaceValue, SpaceValue, SpaceValue];
+  | readonly [SpaceValue]
+  | readonly [SpaceValue, SpaceValue]
+  | readonly [SpaceValue, SpaceValue, SpaceValue]
+  | readonly [SpaceValue, SpaceValue, SpaceValue, SpaceValue];
 
 type SpaceEntry = SpaceValue | SpaceShorthandValue;
 
-export type ResponsiveSpaceValue = ResponsiveValue<SpaceEntry> | SpaceShorthandValue;
+export type ResponsiveSpaceValue = ResponsiveValue<SpaceEntry>;

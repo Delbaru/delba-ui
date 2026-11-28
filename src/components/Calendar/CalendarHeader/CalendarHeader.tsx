@@ -1,7 +1,7 @@
-import { assetUrl, cx, stateProps } from '../../../core';
+import { assetUrl, cx, stateProps } from '#core';
 import { UI_MESSAGES } from '../../../core/base/messages';
-import arrowIcon from '../../../../assets/icons/ui/arrows/style-2/arrow.svg';
-import chevronIcon from '../../../../assets/icons/ui/arrows/style-3/arrow.svg';
+import arrowIcon from '#icons/controls/chevron-right.svg';
+import chevronIcon from '#icons/controls/chevron-down-thin.svg';
 import { Button } from '../../Button';
 import { Flex } from '../../Flex';
 import { Icon } from '../../Icon';
@@ -11,7 +11,8 @@ import styles from './CalendarHeader.module.scss';
 
 interface CalendarHeaderProps {
   id: string;
-  month: Date;
+  monthIndex: number;
+  year: number;
   disabled: boolean;
   choosingMonth: boolean;
   changeMonth(delta: number): void;
@@ -21,7 +22,8 @@ interface CalendarHeaderProps {
 
 export function CalendarHeader({
   id,
-  month,
+  monthIndex,
+  year,
   disabled,
   choosingMonth,
   changeMonth,
@@ -64,7 +66,7 @@ export function CalendarHeader({
             {...stateProps(choosingMonth && 'active')}
             onClick={toggleMonth}
         >
-          <Text variant={['inherit', 'inherit', 'inherit']}>{labels.months[month.getMonth()]}</Text>
+          <Text variant={['inherit', 'inherit', 'inherit']}>{labels.months[monthIndex]}</Text>
           <Icon
               src={assetUrl(chevronIcon)}
               w={[20, 20, 20]}
@@ -75,7 +77,7 @@ export function CalendarHeader({
         </Button>
 
         <Flex align={['center', 'center', 'center']} gap={[4, 4, 4]} className={styles.yearPick}>
-          <Text variant={['inherit', 'inherit', 'inherit']}>{month.getFullYear()}</Text>
+          <Text variant={['inherit', 'inherit', 'inherit']}>{year}</Text>
           <Flex dir={['column', 'column', 'column']} align={['center', 'center', 'center']}>
             <Button
                 type="button"

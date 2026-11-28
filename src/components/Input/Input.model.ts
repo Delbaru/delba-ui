@@ -1,20 +1,62 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { FocusEvent, MouseEvent } from 'react';
-import { stateLinkProps, useMergedRefs, type WithRef } from '../../core';
-import { useSharedMotion } from '../../hooks/useSharedMotion';
+import { useMergedRefs, type WithRef } from '#core';
+import { useFormField } from '#core/Form';
+import { useTextOverflow } from '../../hooks/useTextOverflow';
 import { useField, useFieldFeedback, focusContains } from '../Field';
 import { useDatePicker } from './InputCalendar/InputCalendar';
 import { inputConfig } from './Input.config';
 import { inputModes } from './Input.modes';
 import { useInputActions } from './InputActions/InputActions';
-import { useInputOverflow } from './InputOverflow/InputOverflow';
 import type { InputProps } from './Input.types';
 import styles from './Input.module.scss';
 
+function useInputBinding(props: WithRef<InputProps, HTMLInputElement>): WithRef<InputProps, HTMLInputElement> {
+  const field = useFormField<unknown>(props.name);
+  const nativeFile = useRef<HTMLInputElement | null>(null);
+  const fileRef = useMergedRefs(nativeFile, props.ref);
+  const files = props.type === 'file' && props.value === undefined && field &&
+    (Array.isArray(field.value) || field.value === undefined)
+    ? (field.value as File[] | undefined) ?? [] : undefined;
+
+  // Clear obsolete native selections after reset or acknowledgement. The form
+  // controller still holds the File objects because FileList cannot be assigned.
+  useLayoutEffect(() => {
+    const node = nativeFile.current;
+    if (!files || !node) return;
+    const selected = Array.from(node.files ?? []);
+    if (selected.some(file => !files.includes(file))) node.value = '';
+  });
+
+  if (!field || props.value !== undefined) return props;
+  if (files) {
+    return {
+      ...props, ref: fileRef, value: undefined, defaultValue: undefined, seed: undefined,
+      disabled: props.disabled || field.disabled, error: props.error ?? field.error,
+      onChange: event => {
+        props.onChange?.(event);
+        if (!event.defaultPrevented && !field.disabled) field.change(Array.from(event.currentTarget.files ?? []));
+      },
+    };
+  }
+  if (props.type === 'file' || (field.value !== undefined && typeof field.value !== 'string')) return props;
+  return {
+    ...props,
+    value: field.value ?? '',
+    disabled: props.disabled || field.disabled,
+    error: props.error ?? field.error,
+    onValueChange: (value, details) => {
+      field.change(value);
+      props.onValueChange?.(value, details);
+    },
+  };
+}
+
 /** Connects one field engine to Input's view and optional calendar. */
-export function useInput(props: WithRef<InputProps, HTMLInputElement>) {
+export function useInput(input: WithRef<InputProps, HTMLInputElement>) {
+  const props = useInputBinding(input);
   const options = inputConfig.read(props);
   const mode = useMemo(
     () =>
@@ -55,7 +97,6 @@ export function useInput(props: WithRef<InputProps, HTMLInputElement>) {
     error: field.validation.message,
     inputType: mode.inputType,
   });
-  const motion = useSharedMotion(props);
   const feedback = useFieldFeedback({
     id: field.id,
     error: field.validation.message,
@@ -71,12 +112,17 @@ export function useInput(props: WithRef<InputProps, HTMLInputElement>) {
     type: mode.inputType,
     readOnly: Boolean(props.readOnly),
     onStep: field.value.step,
-    calendar,
+    calendar: {
+      available: calendar.available,
+      open: calendar.popup.visible,
+      id: `${field.id}-calendar`,
+      toggle: calendar.toggle,
+    },
   });
-  const overflow = useInputOverflow({ enabled: mode.inputType !== 'password', active });
-  const inputRef = useMergedRefs(field.control.ref, overflow.setInputRef);
-  const anchorRef = useMergedRefs(rowRef, overflow.setAnchorRef);
-  const frameRef = useMergedRefs(rootRef, motion.setMotionNode);
+  const overflow = useTextOverflow<HTMLInputElement>();
+  const inputRef = useMergedRefs(field.control.ref, overflow.setNode);
+  const overflowText = mode.inputType !== 'password' && !active && !props.loading && overflow.isOverflowing
+    ? overflow.text : undefined;
   const cancelCalendar = calendar.cancel;
 
   useEffect(() => {
@@ -91,7 +137,7 @@ export function useInput(props: WithRef<InputProps, HTMLInputElement>) {
   }
 
   function activate(event: MouseEvent<HTMLElement>) {
-    if (props.disabled) return;
+    if (props.disabled || event.defaultPrevented) return;
     const owner = event.currentTarget.ownerDocument.defaultView;
     if (!owner || !(event.target instanceof owner.Element)) return;
     if (!event.currentTarget.contains(event.target)) return;
@@ -114,7 +160,7 @@ export function useInput(props: WithRef<InputProps, HTMLInputElement>) {
     },
     onChange(event: React.ChangeEvent<HTMLInputElement>) {
       field.events.onChange(event);
-      if (mode.calendar) calendar.open();
+      if (!event.defaultPrevented && mode.calendar) calendar.open();
     },
     onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
       field.events.onKeyDown(event);
@@ -125,10 +171,7 @@ export function useInput(props: WithRef<InputProps, HTMLInputElement>) {
   return {
     layout: {
       ...appearance.root,
-      ...motion.revealAttrs,
-      ...stateLinkProps(props.linkState, motion.motionHandlers),
-      style: { ...motion.motionStyle, ...props.style },
-      ref: frameRef,
+      ref: rootRef,
       'data-point-events': props['data-point-events'],
     },
     label: appearance.label ? { ...appearance.label, htmlFor: field.id } : undefined,
@@ -136,12 +179,11 @@ export function useInput(props: WithRef<InputProps, HTMLInputElement>) {
     control: {
       inputProps,
       inputRef,
-      rowRef: anchorRef,
+      rowRef,
       appearance: appearance.control,
       onClick: activate,
       onBlur: leave,
-      onMouseEnter: overflow.show,
-      onMouseLeave: overflow.hide,
+      overflowText,
       field: props.field,
       feedback: feedback.inline,
       loading: Boolean(props.loading),
@@ -157,6 +199,5 @@ export function useInput(props: WithRef<InputProps, HTMLInputElement>) {
         field.focus.leave(false);
       },
     },
-    tooltip: overflow,
   };
 }

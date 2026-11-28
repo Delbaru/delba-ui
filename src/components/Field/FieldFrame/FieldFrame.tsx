@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { cx, type WithRef } from '../../../core';
+import { cx, type WithRef } from '#core';
 import styles from './FieldFrame.module.scss';
 
 import type { FlexProps } from '../../Flex/Flex';

@@ -3,7 +3,6 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
-import { cx } from '../../../../../core';
 import { motionTimeCss } from '../../../../../core/base/timing';
 import { Flex } from '../../../../Flex';
 import type { TextSlideOptions } from '../types';
@@ -48,7 +47,7 @@ export function TextSlideSequence({ options }: { options: SequenceOptions }) {
   } as CSSProperties;
 
   return (
-    <Flex className={cx(styles.TextSlideSequence, 'ui-slide')} style={stageStyle}>
+    <Flex as='span' className={styles.TextSlideSequence} style={stageStyle}>
       {options.steps.map((step, index) => (
         <span
           key={index}
@@ -56,7 +55,7 @@ export function TextSlideSequence({ options }: { options: SequenceOptions }) {
           ref={(el) => {
             itemRefs.current[index] = el;
           }}
-          className={'ui-slide-item'}
+          className={styles.Item}
           style={{ top: cumHeights[index - 1] || 0 }}
         >
           {step}

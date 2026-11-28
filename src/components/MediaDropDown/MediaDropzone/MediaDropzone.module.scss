@@ -26,7 +26,7 @@
 
     &[state~='dragging'] {
       border-color: var(--primary);
-      background: var(--primary-light);
+      background: var(--secondary);
 
       .DropZoneIcon {
         color: var(--primary);

@@ -11,6 +11,7 @@ import {
 
 import { focusWhenReady } from '../../../core/base/focus';
 import { UI_MESSAGES } from '../../../core/base/messages';
+import { calendar } from '#core/Calendar';
 import * as dates from '../../../core/fields/date';
 import { Calendar } from '../../Calendar';
 import { Dropdown } from '../../Dropdown';
@@ -30,8 +31,7 @@ export interface UseDatePickerOptions {
 }
 
 function asIsoValue(value?: string): string | undefined {
-  const date = dates.parseValue(value ?? '');
-  return date ? dates.formatIso(date) : undefined;
+  return dates.parseValue(value ?? '') ?? undefined;
 }
 
 /** Owns only Input's popup lifecycle and translates Calendar values to the field model. */
@@ -96,7 +96,7 @@ export function useDatePicker({
       const date = dates.parseValue(isoValue);
       const minimum = dates.parseValue(minValue ?? '');
       const maximum = dates.parseValue(maxValue ?? '');
-      if (!date || !dates.isWithinBounds(date, minimum, maximum)) return;
+      if (!date || !calendar.isWithinBounds(date, minimum, maximum)) return;
       onCommit(dates.formatDisplay(date));
       cancel();
       onFocus();
@@ -184,7 +184,7 @@ export function InputCalendar({ calendar }: { calendar: CalendarModel }) {
         viewportPadding: 8,
         strategy: 'fixed',
         className: styles.InputCalendar,
-        animate: { when: 'open', effect: 'fade', duration: 'fast' },
+        animate: { appearance: { when: 'open', effect: 'fade', duration: 'fast' } },
       }}
     >
       <Calendar

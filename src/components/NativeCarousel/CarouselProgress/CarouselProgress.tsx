@@ -1,42 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState, type Ref } from 'react';
-import { cx, useMergedRefs } from '../../../core';
-import { Flex, type FlexProps } from '../../Flex';
-import type { NativeCarouselController } from '../controller';
+import { cx } from '#core';
+import { Flex } from '../../Flex';
+import { CAROUSEL_PROGRESS_FILL } from './CarouselProgress.config';
+import { useCarouselProgress } from './CarouselProgress.model';
 import styles from './CarouselProgress.module.scss';
 
-export interface CarouselProgressProps extends Omit<FlexProps, 'children'> {
-    /** The same controller passed to NativeCarousel. */
-    controller: NativeCarouselController;
-    /** Progress fill colour; defaults to inherited currentColor. */
-    fill?: string;
-    /** DOM ref of the outer progress bar. */
-    ref?: Ref<HTMLElement>;
-}
+import type { CarouselProgressProps } from './CarouselProgress.types';
 
 /** A leaf indicator: timing updates mutate only its fill, never render the gallery each frame. */
-export function CarouselProgress({ controller, fill = 'currentColor', ref, className, ...props }: CarouselProgressProps) {
-    const [root, setRoot] = useState<HTMLElement | null>(null);
-    const mergedRef = useMergedRefs<HTMLElement>(ref, setRoot);
-    const bar = useRef<HTMLElement>(null);
-    useEffect(() => {
-        if (!root) return;
-        const update = () => {
-            const state = controller.getPlaybackSnapshot();
-            if (bar.current) bar.current.style.transform = `scaleX(${state.progress})`;
-            // Coarse ARIA values avoid announcing a continuously changing frame stream.
-            const value = String(Math.round(state.progress * 100));
-            if (root.getAttribute('aria-valuenow') !== value) root.setAttribute('aria-valuenow', value);
-            root.dataset.paused = String(state.paused);
-            root.dataset.playing = String(state.playing);
-        };
-        update();
-        return controller.subscribePlayback(update);
-    }, [controller, root]);
+export function CarouselProgress({ controller, fill = CAROUSEL_PROGRESS_FILL, ref, className, ...props }: CarouselProgressProps) {
+    const progress = useCarouselProgress({ controller, ref });
+
     return <Flex
         {...props}
-        ref={mergedRef}
+        ref={progress.rootRef}
         className={cx(styles.CarouselProgress, className)}
         role="progressbar"
         aria-valuemin={0}
@@ -44,7 +22,7 @@ export function CarouselProgress({ controller, fill = 'currentColor', ref, class
         aria-valuenow={0}
     >
         <Flex
-            ref={bar}
+            ref={progress.fillRef}
             w={['100%', '100%', '100%']}
             h={['100%', '100%', '100%']}
             bg={[fill, fill, fill]}

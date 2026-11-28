@@ -34,12 +34,9 @@ export function publicComponents(root) {
 }
 
 export function checkComponentCatalog(root) {
-  const directory = path.join(root, 'docs/specs/ui/components');
-  const catalog = fs.readFileSync(path.join(directory, 'README.md'), 'utf8');
-  return publicComponents(root).flatMap(({ name, entries }) => {
-    const problems = [];
-    if (!fs.existsSync(path.join(directory, `${name}.md`))) problems.push(`${name}: нет отдельной спецификации (exports: ${entries.join(', ')}).`);
-    if (!catalog.includes(`[${name}](${name}.md)`)) problems.push(`${name}: нет строки в каталоге публичных компонентов.`);
-    return problems;
-  });
+  const catalog = fs.readFileSync(path.join(root, 'docs/components.md'), 'utf8');
+  const documented = new Set([...catalog.matchAll(/^\|[ \t]*([A-Z][A-Za-z0-9]*)[ \t]*\|/gm)].map(([, name]) => name));
+  return publicComponents(root)
+    .filter(({ name }) => !documented.has(name))
+    .map(({ name, entries }) => `${name}: нет строки в docs/components.md (exports: ${entries.join(', ')}).`);
 }

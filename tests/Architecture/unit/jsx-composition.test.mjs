@@ -7,7 +7,7 @@ const inspect = code => jsxCompositionRule.check(ts.createSourceFile('Fixture.ts
 
 test('complex local JSX declarations and assignments are review warnings', () => {
   const found = inspect(`function Panel() {
-    const heading = (<Box><Row><Text /></Row></Box>);
+    const heading = (<Flex><Row><Text /></Row></Flex>);
     let body;
     body = ready ? <><A /><B /><C /><D /></> : null;
     return <>{heading}{body}</>;
@@ -20,28 +20,28 @@ test('complex local JSX declarations and assignments are review warnings', () =>
 
 test('short slots, render props, direct returns, callbacks and configuration remain legitimate', () => {
   assert.deepEqual(inspect(`
-    const moduleSlot = <Box><Row><Text /></Row></Box>;
+    const moduleSlot = <Flex><Row><Text /></Row></Flex>;
     function Panel() {
       const label = <Text />;
       const slot = ok ? <Spinner /> : null;
-      const columns = [{ cell: <Box><Row><Text /></Row></Box> }];
-      const rows = items.map(item => <Box><Row><Text /></Row></Box>);
-      return <Layout renderItem={item => <Box><Row><Text /></Row></Box>}>
-        {label}{slot}{rows}<Box><Row><Text /></Row></Box>
+      const columns = [{ cell: <Flex><Row><Text /></Row></Flex> }];
+      const rows = items.map(item => <Flex><Row><Text /></Row></Flex>);
+      return <Layout renderItem={item => <Flex><Row><Text /></Row></Flex>}>
+        {label}{slot}{rows}<Flex><Row><Text /></Row></Flex>
       </Layout>;
     }`), []);
 });
 
 test('does not mistake JSX in an attribute slot for the outer layout', () => {
   assert.deepEqual(inspect(`function Panel() {
-    const icon = <Control menu={<Box><Row><Text /></Row></Box>} />;
+    const icon = <Control menu={<Flex><Row><Text /></Row></Flex>} />;
     return icon;
   }`), []);
 });
 
 test('a heading with conditional label is a review candidate, not a mechanical ban', () => {
   const found = inspect(`function Calendar() {
-    const heading = <Box><Text>{date}</Text>{info && <Text>{info.label}</Text>}</Box>;
+    const heading = <Flex><Text>{date}</Text>{info && <Text>{info.label}</Text>}</Flex>;
     return <Day>{heading}</Day>;
   }`);
   assert.equal(found.length, 1);
@@ -50,8 +50,8 @@ test('a heading with conditional label is a review candidate, not a mechanical b
 
 test('mapped layouts exceeding the short composition threshold remain review warnings', () => {
   const found = inspect(`function Panel() {
-    const rows = items.map(item => <Box><Row><Text><Icon /></Text></Row></Box>);
-    const cells = items.flatMap(item => { return <Box><A /><B /><C /><D /></Box>; });
+    const rows = items.map(item => <Flex><Row><Text><Icon /></Text></Row></Flex>);
+    const cells = items.flatMap(item => { return <Flex><A /><B /><C /><D /></Flex>; });
     return <>{rows}{cells}</>;
   }`);
   assert.deepEqual(found.map(item => item.severity), ['warning', 'warning']);

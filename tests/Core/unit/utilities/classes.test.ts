@@ -32,7 +32,7 @@ test('letter spacing accepts font-relative lengths and preserves numeric rpx val
 
 test('одинаковое значение на всех брейкпоинтах — один базовый класс', () => {
   assert.deepEqual(utilityClasses(u('gap'), [8, 8, 8]), ['gap_8']);
-  assert.deepEqual(utilityClasses(u('gap'), [8]), ['gap_8']);
+  assert.throws(() => utilityClasses(u('gap'), [8]), /three/);
   assert.deepEqual(utilityClasses(u('gap'), 8), ['gap_8']);
 });
 
@@ -43,7 +43,7 @@ test('одинаковые mobile и tablet — один класс «ниже 1
 
 test('разные брейкпоинты — база desktop и точечные переопределения', () => {
   assert.deepEqual(utilityClasses(u('columns'), [4, 1, 2]), ['columns_4', 'm_columns_1', 't_columns_2']);
-  assert.deepEqual(utilityClasses(u('gap'), [24, 12]), ['gap_24', 'm_gap_12']);
+  assert.throws(() => utilityClasses(u('gap'), [24, 12]), /three/);
   assert.deepEqual(utilityClasses(u('gap'), [24, 24, 12]), ['gap_24', 't_gap_12']);
 });
 
@@ -56,7 +56,7 @@ test('null — пропуск брейкпоинта: базы нет, толь�
 test('шорткат отступа: голые четыре значения — одно значение на все брейкпоинты', () => {
   assert.deepEqual(utilityClasses(u('p'), [16, 40, 16, 40]), ['p_16_40_16_40']);
   assert.deepEqual(utilityClasses(u('p'), [[16, 40], 24, [8, 24]]), ['p_16_40_16_40', 'm_p_24', 't_p_8_24_8_24']);
-  assert.deepEqual(utilityClasses(u('p'), [[8, 8, 8, 8]]), ['p_8']);
+  assert.deepEqual(utilityClasses(u('p'), [[8, 8, 8, 8], [8, 8, 8, 8], [8, 8, 8, 8]]), ['p_8']);
 });
 
 test('ключи: число, CSS как есть, токен по имени, остальное хешем', () => {
@@ -101,7 +101,7 @@ test('пробелы у скобок и запятых ключ не меняю�
 test('значение не своего типа класса не даёт', () => {
   assert.deepEqual(utilityClasses(u('columns'), 'wide' as unknown as number), []);
   assert.deepEqual(utilityClasses(u('dir'), 'diagonal'), []);
-  assert.deepEqual(utilityClasses(u('w'), [16, 40]), ['w_16', 'm_w_40']);
+  assert.throws(() => utilityClasses(u('w'), [16, 40]), /three/);
 });
 
 test('синонимы пропов ведут к тем же утилитам, атрибуты HTML — нет', () => {
@@ -131,10 +131,8 @@ test('explicit responsive triples preserve utility classes and CSS declarations'
   assert.deepEqual(utilityClasses(padding, sides), utilityClasses(padding, shorthand));
   assert.deepEqual(exactRules(padding, sides), exactRules(padding, shorthand));
 
-  const inputs: Array<number | [number, number?] | [number, null, number]> = [0, 24, [24, 12], [8, null, 0]];
+  const inputs: Array<readonly [number | null, number | null, number | null]> = [[0, 0, 0], [24, 12, 24], [8, null, 0]];
   for (const input of inputs) {
-    const explicit = resolveResponsive(input);
-    assert.deepEqual(utilityClasses(padding, input), utilityClasses(padding, explicit));
-    assert.deepEqual(exactRules(padding, input), exactRules(padding, explicit));
+    assert.deepEqual(utilityClasses(padding, input), utilityClasses(padding, resolveResponsive(input)));
   }
 });

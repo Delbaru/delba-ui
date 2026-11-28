@@ -10,13 +10,19 @@ const c = createLayoutClasses(
 );
 
 test('splitBoxLayout: пропсы коробки отделяются, остальное уходит на узел', () => {
-    const { box, rest } = splitBoxLayout({ p: 8, bg: 'var(--white-100)', grow: 1, id: 'card', 'aria-label': 'Карточка' });
-    assert.deepEqual(box, { p: 8, bg: 'var(--white-100)', grow: 1 });
+    const { box, rest } = splitBoxLayout({ p: [8, null, null], bg: ['var(--white-100)', null, null], grow: [1, null, null], id: 'card', 'aria-label': 'Карточка' });
+    assert.deepEqual(box, { p: [8, null, null], bg: ['var(--white-100)', null, null], grow: [1, null, null] });
     assert.deepEqual(rest, { id: 'card', 'aria-label': 'Карточка' });
 });
 
 test('boxLayout: пустая коробка не даёт классов', () => {
     assert.deepEqual(boxLayout(c, {}), []);
+});
+
+test('flex shrink is a unitless item factor and never leaks onto the DOM node', () => {
+    const { box, rest } = splitBoxLayout({ shrink: [0, 0, 0], id: 'indicator' });
+    assert.deepEqual(rest, { id: 'indicator' });
+    assert.ok(boxLayout(c, box).some(name => name.endsWith('shrink_0')));
 });
 
 test('boxLayout: responsive положение, фон и скрытие не попадают на DOM', () => {

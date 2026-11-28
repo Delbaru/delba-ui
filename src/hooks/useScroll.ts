@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
-import { subscribeWindowScroll } from '../components/SmoothScroll/scroll-events';
+import { subscribeWindowScroll } from '../core/Scroll/Smooth/scroll-events';
 import { advanceScroll, createScrollState, initialScroll, type ScrollState, type ScrollWatchOptions } from '../core/base/scroll-direction';
 
 const initialState = createScrollState(initialScroll);

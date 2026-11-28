@@ -83,6 +83,10 @@ export interface GrowProps {
   grow?: ResponsiveValue<number>;
 }
 
+export interface ShrinkProps {
+  shrink?: ResponsiveValue<number>;
+}
+
 /** Положение коробки: числа смещения измеряются в дизайн-пикселях, строки — в CSS-единицах. */
 export interface PositionProps {
   /** Способ позиционирования на каждой полосе ширины. */

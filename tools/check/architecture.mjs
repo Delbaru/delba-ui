@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 import { checkImportBoundaries, checkTestPlacement, fileLengthRule, jsxCompositionRule, responsiveTupleRule } from '@delba/eslint';
-import { componentAnatomyRule } from './rules/component-anatomy.mjs';
+import { checkComponentScaffolds, componentAnatomyRule } from './rules/component-anatomy.mjs';
 import { collapseRule } from './rules/collapse.mjs';
 import { domRefRule } from './rules/dom-ref.mjs';
 import { jsxFormatRule } from './rules/jsx-format.mjs';
@@ -64,11 +64,12 @@ export function check(root = KIT, {
       ...item, file, rule: rule.id, docs: path.join(KIT, rule.docs),
     })));
   });
+  if (root === KIT && rules.includes(componentAnatomyRule)) diagnostics.push(...checkComponentScaffolds(root));
   if (includeBoundaries) {
     diagnostics.push(...checkImportBoundaries(root, { dirs, mode }));
     diagnostics.push(...checkTestPlacement(root).map((file) => ({
       file: path.resolve(root, file), line: 1, column: 1, rule: 'test-placement',
-      severity: 'error', message: `Test files belong in root tests/ or a named tools/*/tests harness: ${file}`,
+      severity: 'error', message: `Test files belong in root tests/: ${file}`,
     })));
   }
   return diagnostics;

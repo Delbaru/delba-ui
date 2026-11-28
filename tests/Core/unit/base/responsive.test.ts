@@ -1,44 +1,30 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { getBreakpointIndex, resolveResponsive, resolveResponsiveInput, resolveResponsiveWithDefaults } from '../../../../src/core/base/responsive';
 
-import { getBreakpointIndex, resolveResponsive, resolveResponsiveAtBreakpoint } from '../../../../src/core/base/responsive';
-
-test('getBreakpointIndex: границы 767 и 1023 включительно', () => {
-    assert.equal(getBreakpointIndex(390), 1);
+test('bands use the generated single responsive definition', () => {
     assert.equal(getBreakpointIndex(767), 1);
     assert.equal(getBreakpointIndex(768), 2);
-    assert.equal(getBreakpointIndex(1023), 2);
     assert.equal(getBreakpointIndex(1024), 0);
 });
 
-test('resolveResponsiveAtBreakpoint: значение брейкпоинта, иначе запасное', () => {
-    assert.equal(resolveResponsiveAtBreakpoint(['row', 'column', null], 'none', 1), 'column');
-    assert.equal(resolveResponsiveAtBreakpoint(['row', 'column', null], 'none', 2), 'none');
-    assert.equal(resolveResponsiveAtBreakpoint(undefined, 'none', 0), 'none');
-    assert.equal(resolveResponsiveAtBreakpoint('row', 'none', 2), 'row');
+test('author tuples are exact, skip null, and never inherit desktop', () => {
+    assert.deepEqual(resolveResponsive([16, null, 0]), [16, null, 0]);
+    assert.deepEqual(resolveResponsive([null, 16, 20]), [null, 16, 20]);
+    for (const invalid of [12, [24], [24, 12], [], [0, undefined, null]]) {
+        assert.throws(() => resolveResponsive(invalid as never), /tuple|three|desktop/);
+    }
 });
 
-test('скаляр раскладывается на все три брейкпоинта', () => {
-    assert.deepEqual(resolveResponsive(12), [12, 12, 12]);
+test('internal computed scalars may broadcast without changing authored prop types', () => {
+    assert.deepEqual(resolveResponsiveInput(13.25), [13.25, 13.25, 13.25]);
 });
 
-test('пропущенная позиция наследует desktop', () => {
-    assert.deepEqual(resolveResponsive([24, 12]), [24, 12, 24]);
-    assert.deepEqual(resolveResponsive([24]), [24, 24, 24]);
-});
-
-test('null — «пропустить брейкпоинт», а не «унаследовать desktop»', () => {
-    assert.deepEqual(resolveResponsive([16, null, null]), [16, null, null]);
-    assert.deepEqual(resolveResponsive(['column', null, 'row']), ['column', null, 'row']);
-});
-
-test('desktop не наследует от мобильного и планшета', () => {
-    assert.deepEqual(resolveResponsive([null, 16, 16]), [null, 16, 16]);
-    assert.deepEqual(resolveResponsive([]), [null, null, null]);
-});
-
-test('normalizing a dynamic tuple retains zero, explicit skips and nested padding', () => {
-    assert.deepEqual(resolveResponsive([0, undefined, null]), [0, 0, null]);
-    const sides: [number, number, number, number] = [4, 8, 12, 16];
-    assert.deepEqual(resolveResponsive<number | typeof sides>([sides, null]), [sides, null, sides]);
+test('null preserves each component default instead of inheriting desktop', () => {
+    assert.deepEqual(
+        resolveResponsiveWithDefaults([null, 16, null], [24, 8, 12]),
+        [24, 16, 12],
+    );
+    assert.deepEqual(resolveResponsiveWithDefaults(undefined, [24, 8, null]), [24, 8, null]);
+    assert.throws(() => resolveResponsiveWithDefaults([16] as never, [24, 8, 12]), /desktop/);
 });

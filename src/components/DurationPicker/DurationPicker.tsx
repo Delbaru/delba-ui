@@ -1,50 +1,41 @@
 'use client';
 
-import type { ComponentProps } from 'react';
-import { cx } from '../../core';
+import { cx } from '#core';
 import { Flex } from '../Flex';
 import { Text } from '../Text';
 import { DurationWheel } from './DurationWheel/DurationWheel';
 import { resolveDurationPickerModel } from './DurationPicker.model';
+import { durationPickerDefaults } from './DurationPicker.config';
+import type { DurationPickerProps } from './DurationPicker.types';
 import styles from './DurationPicker.module.scss';
 
-export interface DurationPickerProps {
-  /** Controlled duration in whole minutes. */
-  value: number;
-  /** Called after a wheel, pointer, click or keyboard change. */
-  onValueChange: (minutes: number) => void;
-  /** Inclusive duration limit, in minutes. Defaults to 24 hours. */
-  maxMinutes?: number;
-  /** Disables both wheels and removes them from keyboard navigation. */
-  disabled?: boolean;
-  /** Accessible name of the whole control. */
-  'aria-label'?: string;
-  /** Localized accessible names of the hour and minute wheels. */
-  labels?: { hours: string; minutes: string };
-  /** Additional root class. */
-  className?: string;
-  /** Reference to the stable root Flex node. */
-  ref?: ComponentProps<typeof Flex>['ref'];
-}
+export type { DurationPickerProps } from './DurationPicker.types';
 
 /** Two bounded wheels for a controlled duration value, measured in whole minutes. */
 export function DurationPicker({
   value,
   onValueChange,
-  maxMinutes = 1440,
+  maxMinutes = durationPickerDefaults.maxMinutes,
   disabled = false,
-  labels = { hours: 'Hours', minutes: 'Minutes' },
+  labels = durationPickerDefaults.labels,
   className,
   ref,
-  'aria-label': ariaLabel = 'Duration',
+  animate,
+  perspective3d,
+  parallax,
+  'aria-label': ariaLabel = durationPickerDefaults.label,
 }: DurationPickerProps) {
   const model = resolveDurationPickerModel({ value, maxMinutes, onValueChange });
 
   return (
     <Flex
         ref={ref}
+        animate={animate}
+        perspective3d={perspective3d}
+        parallax={parallax}
         role="group"
         aria-label={ariaLabel}
+        aria-disabled={disabled || undefined}
         className={cx(styles.DurationPicker, 'ui-duration-picker', className)}
         position={['relative', 'relative', 'relative']}
         w={['max-content', 'max-content', 'max-content']}

@@ -1,33 +1,18 @@
 'use client';
 
-import styles from './ScrollArea.module.scss';
-
-import { cx, type WithRef } from '../../core';
-import { Flex, type FlexProps } from '../Flex';
-import { scrollbarProps, type ScrollbarOptions } from './scrollbar';
-import { useScrollbarActivity } from './ScrollbarActivity';
-
-export interface ScrollAreaProps extends Omit<FlexProps, 'scrollFade'> {
-    /** Ось нативной прокрутки. По умолчанию y. */
-    axis?: 'x' | 'y';
-    /** Затухание только тех краёв, за которыми есть содержимое; использует общий scrollFade. */
-    fade?: boolean;
-    /** Оформление нативной полосы. Padding содержимого задаётся обычными пропсами коробки. */
-    scrollbar?: ScrollbarOptions;
-}
+import type { WithRef } from '#core';
+import type { ScrollOptions } from '#core/Scroll';
+import { Flex } from '../Flex';
+import { DEFAULT_SCROLL_AXIS } from './ScrollArea.config';
+import type { ScrollAreaProps } from './ScrollArea.types';
 
 /** Сам узел прокрутки: ref и DOM-события относятся к viewport. Заголовок и footer размещаются снаружи. */
-export function ScrollArea({ axis = 'y', fade = false, scrollbar, className, style, ...props }: WithRef<ScrollAreaProps, HTMLDivElement>) {
-    useScrollbarActivity();
-    const decoration = scrollbarProps(scrollbar);
-
-    return (
-        <Flex
-            {...props}
-            scrollFade={fade ? axis : false}
-            data-scroll-axis={axis}
-            className={cx(styles.ScrollArea, 'ui-scroll-area', decoration.className, className)}
-            style={{ ...decoration.style, ...style }}
-        />
-    );
+export function ScrollArea({
+    axis = DEFAULT_SCROLL_AXIS, fade = false, scrollbar, ui, ...props
+}: WithRef<ScrollAreaProps, HTMLDivElement>) {
+    const scroll: ScrollOptions = ui?.scroll ?? { preset: 'default' as const, axis, fade };
+    const settings = scroll.preset === 'smooth' && scroll.target === 'window'
+        ? scroll
+        : { ...scroll, scrollbar: scrollbar ?? scroll.scrollbar };
+    return <Flex {...props} ui={{ ...ui, scroll: settings }} />;
 }

@@ -1,5 +1,5 @@
+import './styles.scss';
 export * from './components/Accordion';
-export * from './components/Box';
 export * from './components/Button';
 export * from './components/Calendar';
 export * from './components/Carousel';
@@ -80,7 +80,18 @@ export { pad, pluralize, type PluralForms } from './core/base/text-format';
 export { createUrl, createBrowserUrl, installBrowserUrl, type BrowserUrl } from './core/base/url';
 
 // Хуки и типы, которые нужны D-компонентам и страницам проекта.
-export * from './components/SmoothScroll';
+export { calendar } from './core/Calendar/Calendar';
+export type { CalendarGridOptions } from './core/Calendar/Calendar';
+export type { CalendarDay, CalendarOptions } from './core/Calendar/useCalendar';
+export { SMOOTH_SCROLL_IGNORE } from './core/Scroll/Smooth';
+export type {
+  SmoothOptions,
+  SmoothScrollApi,
+  SmoothScrollTarget,
+  SmoothScrollToOptions,
+  SmoothScrollEasing,
+  SmoothScrollOffset,
+} from './core/Scroll/Smooth';
 export { useOutsideDismiss, type DismissRef, type OutsideDismissInsideProps, type UseOutsideDismissOptions } from './hooks/useOutsideDismiss';
 export { useAnchoredFloating, type FloatingAlign, type FloatingAnchorPoint, type FloatingPlacement, type FloatingStrategy } from './hooks/useAnchoredFloating';
 export { useFloatingSurface, type FloatingDismissReason, type UseFloatingSurfaceOptions } from './hooks/useFloatingSurface';
@@ -95,15 +106,15 @@ export type { CollapseHandle } from './hooks/useCollapseMotion';
 export type { CollapseControls } from './hooks/useCollapseControls';
 export type { CollapseOptions } from './components/Collapse/CollapseWrap';
 export { useInView, type UseInViewOptions } from './core/useInView';
-export type { ComponentStateValue, GrowProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';
+export type { ComponentStateValue, GrowProps, ShrinkProps, LayoutSpaceProps, RadiusPropsShort, ResponsiveValue, SizePropsShort } from './core';
 export { useMergedRefs } from './core/useMergedRefs';
 export type { TextRole, TextVariantName } from './core/base/typography';
 export { isAppearanceAnimate, isInViewAnimate, isOpenAnimate } from './core/reveal/reveal';
 export type { AppearanceAnimate, InViewAnimate, OpenAnimate, RevealConfig, RevealKey, RevealOptions } from './core/reveal/reveal';
 export type { MotionTime, MotionTimingName } from './core/base/timing';
 export type { MotionDistance, MotionDistanceName } from './core/base/distance';
-export type { HoverTransformAnimate, HoverTransformOptions, HoverTransformValues } from './core/base/hover-motion';
-export type { SharedAnimate } from './hooks/useSharedMotion';
+export type { HoverTransformOptions, HoverTransformValues } from './core/base/hover-motion';
+export type { MotionChannels, OpenMotionChannels } from './core/Motion';
 export * from './components/PhoneField';
 
 export { useScrollProgress, type ScrollProgressOptions } from './hooks/useScrollProgress';
@@ -131,9 +142,12 @@ export { ui } from './ui';
 export { useFormField } from './core/Form';
 export type { DraftStorage, DraftConflicts, FormOptions, FormController, FormScope, FormErrors, ActionOptions } from './core/Form';
 
-export type { CollectionDefinition, CollectionController, CollectionScope, CollectionItem, CollectionOptions } from './core/Collection/Collection';
+export type { CollectionDefinition, CollectionController, CollectionScope, CollectionItem, CollectionOptions, CollectionCheckController, CollectionCheckOptions } from './core/Collection';
 
-export type { ScrollOptions } from './core/Scroll/Surface';
+export { applyCheckRange, checkRangeItems } from './core/Collection';
+
+export type { ScrollOptions } from './core/Scroll';
+export type { SurfaceAnimate, SurfaceFillHover, SurfaceIdleGlow } from './core/Motion';
 export type { ScrollbarOptions } from './components/ScrollArea/scrollbar';
 export type { CollapseDoor, CollapseDoorOptions } from './core/Collapse/Collapse';
 

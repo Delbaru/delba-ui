@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { getBreakpointIndex, resolveResponsive, resolveResponsiveAtBreakpoint } from '../../core';
+import { getBreakpointIndex, resolveResponsiveInput, resolveResponsiveAtBreakpoint } from '#core';
 import { buildLoopSlides, canEnableLoop, getPeekOffsetPx, hasScrollableSlides } from './slides';
-import type { CarouselNavigation, CarouselProps, SlidesPerViewValue } from './types';
+import type { CarouselNavigation, CarouselProps, SlidesPerViewValue } from './Carousel.types';
 
 export interface CarouselMeasurement {
   breakpoint: 0 | 1 | 2;
@@ -49,7 +49,7 @@ export const carouselLayout = {
       breakpoint: 0,
       gap: 0,
       width: 0,
-      slidesPerView: resolveResponsive(slidesPerView)[0] ?? 1,
+      slidesPerView: resolveResponsiveInput(slidesPerView)[0] ?? 1,
     };
   },
 

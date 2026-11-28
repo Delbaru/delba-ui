@@ -8,7 +8,7 @@ import type {
     UseVideoPlayerOptions,
     VideoPlayerController,
     VideoPlayerSnapshot,
-} from './types';
+} from './VideoPlayer.types';
 
 // Мелкое сравнение snapshot — чтобы getSnapshot возвращал стабильную ссылку, пока состояние не менялось
 // (требование useSyncExternalStore: без этого — бесконечный ре-рендер).

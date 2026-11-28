@@ -26,10 +26,16 @@ export interface CollectionScope {
 }
 
 export interface CollectionOptions {
-  /** Optional for a stable single-owner list; pass a changing owner/query key to reset selection. */
+  /** A new owner/query key resets local selection and the range anchor. */
   scope?: string;
   retainMissing?: boolean;
   mode?: 'single' | 'multiple';
+  /** The owner's selection when present. */
+  value?: readonly string[];
+  /** Initial local selection for each owner. */
+  defaultValue?: readonly string[];
+  /** Reports changed IDs requested by a collection action. */
+  onValueChange?: (ids: readonly string[]) => void;
 }
 
 export interface CollectionController<T> extends CollectionScope {
@@ -64,62 +70,105 @@ function hasTextSelection(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLEle
   return !!event.currentTarget.ownerDocument.defaultView?.getSelection()?.toString();
 }
 
+function normalizeIds(ids: readonly string[], mode: 'single' | 'multiple'): readonly string[] {
+  return mode === 'single' ? ids.slice(0, 1) : [...new Set(ids)];
+}
+
 /** Selection is owned by the local instance; the definition never holds user data. */
 export function useCollection<T>(
   definition: CollectionDefinition<T>, items: readonly T[],
   options: CollectionOptions = {},
 ): CollectionController<T> {
-  const { scope = '', retainMissing = false, mode = 'multiple' } = options;
+  const { scope = '', retainMissing = false, mode = 'multiple', value, defaultValue, onValueChange } = options;
+  const controlled = value !== undefined;
   const domId = useId();
-  type State = { scope: string; token: symbol; mode: typeof mode; owner: symbol; selection: Selection<T> };
+  type State = {
+    scope: string;
+    token: symbol;
+    mode: typeof mode;
+    controlled: boolean;
+    owner: symbol;
+    selection: Selection<T>;
+  };
   const createState = (): State => ({
-    scope, token: definition.token, mode, owner: Symbol(), selection: emptySelection<T>(),
+    scope,
+    token: definition.token,
+    mode,
+    controlled,
+    owner: Symbol(),
+    selection: {
+      ...emptySelection<T>(),
+      ids: !controlled && defaultValue ? normalizeIds(defaultValue, mode) : [],
+    },
   });
   const [stored, setState] = useState<State>(createState);
-  const state = stored.scope === scope && stored.token === definition.token && stored.mode === mode
-    ? stored : createState();
+  const sameOwner = stored.scope === scope && stored.token === definition.token &&
+    stored.mode === mode && stored.controlled === controlled;
+  const state = sameOwner ? stored : createState();
   const visible = new Map(items.map(item => [definition.key(item), item]));
   // Keep refreshed previews commit-bound. A caller may reconstruct every item on
   // each render, so writing previews into render-phase state would loop.
-  const committed = useRef<{ owner: symbol; retained: ReadonlyMap<string, T>; visible: ReadonlyMap<string, T>; retainMissing: boolean; mode: typeof mode } | null>(null);
-  const retained = new Map(state.selection.retained);
-  if (retainMissing && committed.current?.owner === state.owner) {
-    for (const id of state.selection.ids) {
-      if (committed.current.retained.has(id)) retained.set(id, committed.current.retained.get(id)!);
+  const committed = useRef<{
+    owner: symbol;
+    selection: Selection<T>;
+    visible: ReadonlyMap<string, T>;
+    retainMissing: boolean;
+    mode: typeof mode;
+    onValueChange: CollectionOptions['onValueChange'];
+  } | null>(null);
+  const inputIds = value === undefined ? state.selection.ids : normalizeIds(value, mode);
+  let input = state.selection;
+  if (retainMissing || controlled) {
+    const previews = committed.current?.owner === state.owner
+      ? committed.current.selection.retained : state.selection.retained;
+    const retained = new Map<string, T>();
+    for (const id of inputIds) {
+      if (previews.has(id)) retained.set(id, previews.get(id)!);
     }
+    input = { ...input, ids: inputIds, retained };
   }
-  const selection = pruneSelection(
-    retainMissing ? { ...state.selection, retained } : state.selection, visible, retainMissing,
-  );
-  if (state !== stored || !retainMissing && selection !== state.selection) setState({ ...state, selection });
+  const selection = pruneSelection(input, visible, retainMissing);
+  const localSelection = controlled ? state.selection : selection;
+  if (!sameOwner || (!retainMissing &&
+    (localSelection !== state.selection || selection.anchor !== state.selection.anchor))) {
+    setState({ ...state, selection: { ...localSelection, anchor: selection.anchor } });
+  }
   useLayoutEffect(() => {
-    committed.current = { owner: state.owner, retained: selection.retained, visible, retainMissing, mode };
+    committed.current = { owner: state.owner, selection, visible, retainMissing, mode, onValueChange };
   });
+  useLayoutEffect(() => () => {
+    committed.current = null;
+  }, []);
   const selected = selectedItems(selection, visible, retainMissing);
-  const ids = selection.ids.filter(id => retainMissing || visible.has(id));
-  const change = (operation: 'select' | 'unselect' | 'toggle' | 'range' | 'all', requested: readonly string[], origin?: string) => {
+  const ids = selection.ids;
+  const change = (
+    operation: 'select' | 'unselect' | 'toggle' | 'range' | 'all' | 'clear',
+    requested: readonly string[],
+    origin?: string,
+  ) => {
     const current = committed.current;
     if (!current || current.owner !== state.owner) return;
-    setState(previous => {
-      if (previous.owner !== current.owner) return previous;
-      const previews = new Map(previous.selection.retained);
-      for (const id of previous.selection.ids) {
-        if (current.retained.has(id)) previews.set(id, current.retained.get(id)!);
-      }
+    const previous = current.selection;
+    let targets = requested;
+    if (operation === 'range') {
+      const target = requested[0];
+      if (target === undefined) return;
+      targets = rangeKeys([...current.visible.keys()], previous.anchor, target, origin);
+    } else if (operation === 'all') {
       const keys = [...current.visible.keys()];
-      let targets = requested;
-      if (operation === 'range') {
-        const target = requested[0];
-        if (target === undefined) return previous;
-        targets = rangeKeys(keys, previous.selection.anchor, target, origin);
-      } else if (operation === 'all') {
-        targets = current.mode === 'single' ? keys.slice(0, 1) : keys;
-      }
-      return { ...previous, selection: changeSelection(
-        { ...previous.selection, retained: previews }, current.visible, targets,
-        operation === 'all' ? 'select' : operation, current.retainMissing, current.mode, origin,
-      ) };
-    });
+      targets = current.mode === 'single' ? keys.slice(0, 1) : keys;
+    }
+    const next = operation === 'clear' ? emptySelection<T>() : changeSelection(
+      previous, current.visible, targets, operation === 'all' ? 'select' : operation,
+      current.retainMissing, current.mode, origin,
+    );
+    const changed = next.ids.length !== previous.ids.length || next.ids.some((id, index) => id !== previous.ids[index]);
+    if (!changed && next.anchor === previous.anchor) return;
+    // A controlled owner always reads IDs from its latest committed value.
+    const updated = controlled ? { ...previous, anchor: next.anchor } : next;
+    current.selection = updated;
+    setState(previous => previous.owner === current.owner ? { ...previous, selection: updated } : previous);
+    if (changed) current.onValueChange?.(next.ids);
   };
   const toggle = (id: string) => change('toggle', [id]);
   const item = (id: string): CollectionItem => ({
@@ -183,7 +232,7 @@ export function useCollection<T>(
     unselect: id => change('unselect', [id]),
     toggle,
     selectAll: () => change('all', []),
-    clear: () => setState(previous => previous.owner !== state.owner ? previous : { ...previous, selection: emptySelection<T>() }),
+    clear: () => change('clear', []),
   };
 }
 

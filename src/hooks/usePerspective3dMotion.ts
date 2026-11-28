@@ -1,5 +1,7 @@
 'use client';
 
+import '../core/Motion/Perspective.module.scss';
+
 import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import type React from 'react';
 
@@ -514,7 +516,7 @@ export function usePerspective3dMotion(perspective3d: Perspective3dInput | undef
     : undefined;
 
   /**
-   * Наблюдатель нужен ТОЛЬКО включённому моушену: `useSharedMotion` зовёт почти каждый примитив
+   * Наблюдатель нужен ТОЛЬКО включённому моушену: `useSurfaceMotion` зовёт почти каждый примитив
    * ДС, и без этой проверки страница без единого 3D-узла держала наблюдатель на КАЖДЫЙ узел.
    * Идемпотентна — повторный вызов с той же парой «узел + состояние конфига» ничего не пересоздаёт.
    */

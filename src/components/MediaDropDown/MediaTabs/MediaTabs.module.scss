@@ -8,17 +8,17 @@
     width: 100%;
     height: calc(var(--rpx) * 32);
     padding: calc(var(--rpx) * 10) calc(var(--rpx) * 12);
-    background: var(--white-100);
+    background: var(--primary-foreground);
     border: calc(var(--rpx) * 1) solid var(--line);
     border-radius: var(--s-8);
     transition: var(--t-fast);
 
     &:hover {
-      background: var(--background);
+      background: var(--surface);
     }
   }
   .TypeButtonActive {
-    background: var(--background);
+    background: var(--surface);
   }
   .TypeIcon {
     flex-shrink: 0;
@@ -27,7 +27,7 @@
     color: var(--text-muted);
   }
   .TypeButtonActive .TypeLabel {
-    color: var(--black);
+    color: var(--text);
   }
   .UploadSection {
     width: 100%;
@@ -48,17 +48,17 @@
     outline: none;
 
     .UploadLabel {
-      color: var(--white-100);
+      color: var(--primary-foreground);
     }
 
     .UploadIcon {
       flex-shrink: 0;
-      color: var(--white-100);
+      color: var(--primary-foreground);
       transition: transform var(--t-fast);
     }
 
     &:hover {
-      background: var(--primary-dark);
+      background: var(--primary-pressed);
 
       .UploadIcon {
         transform: scale(1.05);
@@ -81,11 +81,11 @@
     width: 100%;
     height: calc(var(--rpx) * 40);
     padding: var(--s-16);
-    background: var(--white-100);
+    background: var(--primary-foreground);
     border: calc(var(--rpx) * 1) solid var(--line);
     border-radius: var(--s-12);
     color: var(--text-muted);
-    font: m.role-font(micro);
+    @include m.typography-role(micro);
     outline: none;
     transition: var(--t-fast);
 
@@ -95,7 +95,7 @@
 
     &:focus {
       border-color: var(--primary);
-      color: var(--black);
+      color: var(--text);
     }
   }
   .LinkHint {

@@ -1,4 +1,5 @@
-import { clamp } from '../../core';
+import { clamp } from '#core';
+import { durationPickerDefaults } from './DurationPicker.config';
 
 export interface DurationWheelModel {
   value: number;
@@ -17,10 +18,11 @@ export function resolveDurationPickerModel(options: {
   onValueChange(minutes: number): void;
 }): DurationPickerModel {
   const { value, maxMinutes, onValueChange } = options;
-  const requestedMaximum = maxMinutes ?? 1440;
+  const defaultMaximum = durationPickerDefaults.maxMinutes;
+  const requestedMaximum = maxMinutes ?? defaultMaximum;
   const maximum = Number.isFinite(requestedMaximum)
     ? Math.max(0, Math.round(requestedMaximum))
-    : 1440;
+    : defaultMaximum;
   const total = clamp(Number.isFinite(value) ? Math.round(value) : 0, 0, maximum);
   const hours = Math.floor(total / 60);
   const minutes = total % 60;

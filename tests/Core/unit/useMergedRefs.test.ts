@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { assignRef } from '../../../src/core/useMergedRefs';
+import { assignRef, mergeRefs } from '../../../src/core/useMergedRefs';
 
 test('assignRef: объектный ref получает узел', () => {
     const ref: { current: string | null } = { current: null };
@@ -35,4 +35,31 @@ test('assignRef: сохраняет функцию очистки callback-ref R
     assert.equal(typeof cleanup, 'function');
     cleanup?.();
     assert.deepEqual(calls, ['attached:node', 'cleanup']);
+});
+
+
+test('merged refs beyond three preserve attachment order and React cleanup semantics', () => {
+    const calls: string[] = [];
+    const object = { current: null as string | null };
+    const callback = (label: string) => (node: string | null) => { calls.push(`${label}:${node}`); };
+    const bind = mergeRefs(
+        callback('first'),
+        object,
+        undefined,
+        (node: string | null) => {
+            calls.push(`cleanup-ref:${node}`);
+            return () => { calls.push('cleanup'); };
+        },
+        callback('last'),
+    );
+    const cleanup = bind('node');
+    assert.equal(object.current, 'node');
+    assert.deepEqual(calls, ['first:node', 'cleanup-ref:node', 'last:node']);
+    assert.equal(typeof cleanup, 'function');
+    if (typeof cleanup === 'function') cleanup();
+    assert.equal(object.current, null);
+    assert.deepEqual(calls, [
+        'first:node', 'cleanup-ref:node', 'last:node',
+        'first:null', 'cleanup', 'last:null',
+    ]);
 });

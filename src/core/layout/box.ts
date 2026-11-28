@@ -6,13 +6,14 @@ import {
   type AspectRatioProps,
   type BorderStyleProps,
   type GrowProps,
+  type ShrinkProps,
   type LayoutSpaceProps,
   type RadiusPropsShort,
   type SizePropsShort,
   type PositionProps,
   type VisibilityProps,
 } from '../base/shared-props';
-import { resolveResponsive, type ResponsiveValue } from '../base/responsive';
+import { resolveResponsiveInput, type ResponsiveValue } from '../base/responsive';
 import type { ClassBuilder } from './layout-classes';
 
 /** Пропсы «коробки», которые одинаково понимает корень любого компонента. */
@@ -23,6 +24,7 @@ export interface BoxLayoutProps
     BorderStyleProps,
     AspectRatioProps,
     GrowProps,
+    ShrinkProps,
     PositionProps,
     VisibilityProps {
   /** Фон коробки на каждой полосе ширины. */
@@ -36,7 +38,7 @@ export const BOX_LAYOUT_KEYS = [
   'w', 'minW', 'maxW', 'h', 'minH', 'maxH',
   'r', 'tlr', 'trr', 'brr', 'blr', 'borderTLR', 'borderTRR', 'borderBRR', 'borderBLR',
   'border', 'borderC', 'borderS', 'borderW', 'borderT', 'borderR', 'borderB', 'borderL',
-  'aspectRatio', 'grow',
+  'aspectRatio', 'grow', 'shrink',
   'position', 'top', 'bottom', 'left', 'right', 'hide',
 ] as const satisfies readonly (keyof BoxLayoutProps)[];
 
@@ -65,7 +67,7 @@ export function splitBoxLayout<P extends BoxLayoutProps>(props: P): { box: BoxLa
 
 /** Классы утилит корня из пропсов коробки. Не заданный проп ничего не добавляет. */
 export function boxLayout(c: ClassBuilder, box: BoxLayoutProps): string[] {
-  const hidden = box.hide === undefined ? undefined : resolveResponsive(box.hide);
+  const hidden = box.hide === undefined ? undefined : resolveResponsiveInput(box.hide);
   return [
     ...layoutSpaceClasses(c, box),
     ...radiusClasses(c, box),
@@ -74,6 +76,7 @@ export function boxLayout(c: ClassBuilder, box: BoxLayoutProps): string[] {
     ...borderClasses(c, box),
     ...c.value('ratio', box.aspectRatio),
     ...c.value('grow', box.grow),
+    ...c.value('shrink', box.shrink),
     ...c.value('position', box.position),
     ...c.value('top', box.top),
     ...c.value('bottom', box.bottom),
@@ -83,10 +86,9 @@ export function boxLayout(c: ClassBuilder, box: BoxLayoutProps): string[] {
   ];
 }
 
-/** Колонка контента страницы — одна на Flex, Grid и Box, а не свой вариант у каждого. */
+/** Колонка контента страницы — одна на Flex и Grid, а не свой вариант у каждого. */
 export interface ContainerProp {
   /** Поля `--s-container` по бокам, `max-width: --width-container`, по центру на всю доступную ширину. */
   container?: boolean;
 }
 
-export const containerClass = (container: boolean | undefined) => (container ? 'ui-layout-container' : undefined);

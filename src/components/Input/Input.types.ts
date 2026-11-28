@@ -7,9 +7,9 @@ import type {
   FieldValueChangeHandler,
   ResponsiveValue,
   StateLinkInput,
-} from '../../core';
+} from '#core';
 import type { TextRole, TextVariantName } from '../../core/base/typography';
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
+import type { MotionChannels, SurfaceMotionOptions } from '#core/Motion';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 import type { PhoneFormat } from '../../core/fields/phone';
 
@@ -31,7 +31,9 @@ export interface InputProps
       | 'maxHeight'
     >,
     BoxLayoutProps,
-    SharedMotionProps {
+    Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
+  /** Motion channels for the field frame. */
+  animate?: MotionChannels;
   style?: CSSProperties;
   /** Настоящее событие ввода; target.value содержит текст нативного поля, до форматирования. */
   onChange?: React.ChangeEventHandler<HTMLInputElement>;

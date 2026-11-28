@@ -1,11 +1,26 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { changeSelection, emptySelection, rangeKeys, selectedItems, pruneSelection } from '../../../src/core/Collection/Selection';
+import { changeSelection, changeSelectionKeys, emptySelection, rangeKeys, selectedItems, pruneSelection } from '../../../src/core/Collection/Selection';
 
 const a = { id: 'a', label: 'old' };
 const b = { id: 'b', label: 'second' };
 const c = { id: 'c', label: 'third' };
 const visible = new Map([['a', a], ['b', b], ['c', c]]);
+
+test('key-only disclosure and record selection share single and multiple toggle semantics', () => {
+  const keys = ['a'];
+  assert.deepEqual(changeSelectionKeys(keys, ['b'], 'toggle', 'single'), ['b']);
+  assert.deepEqual(changeSelectionKeys(keys, ['a'], 'toggle', 'single'), []);
+  assert.deepEqual(changeSelectionKeys(keys, ['b'], 'toggle', 'multiple'), ['a', 'b']);
+  assert.deepEqual(changeSelectionKeys(keys, ['a'], 'select', 'single'), ['a']);
+  assert.deepEqual(keys, ['a']);
+});
+
+test('unknown records cannot replace a valid single selection', () => {
+  const selected = changeSelection(emptySelection<typeof a>(), visible, ['a'], 'select', true, 'single');
+  assert.deepEqual(changeSelection(selected, visible, ['missing'], 'select', true, 'single').ids, ['a']);
+  assert.deepEqual(changeSelection(selected, visible, ['missing'], 'toggle', true, 'single').ids, ['a']);
+});
 
 test('range follows visible order in both directions and ignores unloaded anchor', () => {
   assert.deepEqual(rangeKeys(['a', 'b', 'c'], 'c', 'a'), ['a', 'b', 'c']);

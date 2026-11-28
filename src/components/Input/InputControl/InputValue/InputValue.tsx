@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from '../../../../core';
+import { cx } from '#core';
 import { Flex } from '../../../Flex';
 import { Skeleton } from '../../../Skeleton';
 import type { InputValueProps } from '../InputControl';

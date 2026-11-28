@@ -1,6 +1,6 @@
 'use client';
 
-import { cx, type WithRef } from '../../core';
+import { cx, type WithRef } from '#core';
 import { Flex } from '../Flex';
 import { Dropdown } from '../Dropdown';
 import { useMediaDropDown } from './MediaDropDown.model';
@@ -49,7 +49,7 @@ export function MediaDropDown(props: WithRef<MediaDropDownProps, HTMLDivElement>
           trr: [0, 0, 0],
           p: media.type.dropzone ? [12, 12, 12] : [8, 8, 8],
           pb: media.type.dropzone ? [16, 16, 16] : [24, 24, 24],
-          animate: { when: 'open', effect: 'fade', duration: 'fast' },
+          animate: { appearance: { when: 'open', effect: 'fade', duration: 'fast' } },
         }}
       >
         {media.type.dropzone ? <MediaDropzone media={media} /> : <MediaTabs media={media} />}

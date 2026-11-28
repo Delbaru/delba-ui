@@ -1,7 +1,6 @@
 'use client';
-import { assetUrl, cx, composeEventHandlers, useMergedRefs, type WithRef } from '../../../core';
+import { assetUrl, cx, composeEventHandlers, useMergedRefs, type WithRef } from '#core';
 import { Flex, type FlexProps } from '../../Flex';
-import { Box } from '../../Box';
 import { Text } from '../../Text';
 import { Icon } from '../../Icon';
 import { Skeleton } from '../../Skeleton';
@@ -9,7 +8,7 @@ import { Input } from '../../Input';
 import type { SelectSearchProps } from '../Select.types';
 import type { SelectController } from '../useSelect';
 import { selectContent } from '../Select.content';
-import arrowIcon from '../../../../assets/icons/ui/arrows/arrow-2/arrow.svg';
+import arrowIcon from '#icons/controls/chevron-down.svg';
 import styles from './SelectTrigger.module.scss';
 export function SelectTrigger<T extends string>({
   select,
@@ -80,7 +79,8 @@ export function SelectTrigger<T extends string>({
           field={{ className: styles.TriggerText }}
           w={['100%', '100%', '100%']}
           h={['100%', '100%', '100%']}
-      /> : <Box
+      /> : <Flex
+        display={['flex', 'flex', 'flex']}
         className={styles.TriggerContent}
         style={{
           color: select.feedback.inline.text
@@ -92,10 +92,11 @@ export function SelectTrigger<T extends string>({
       >
         <Flex
           animate={{
-            when: 'change',
-            effect: 'fade',
-            key: loading ? 'skeleton' : 'value',
-            duration: 'fast',
+              change: {
+                  effect: 'fade',
+                  key: loading ? 'skeleton' : 'value',
+                  duration: 'fast'
+              }
           }}
           w={['100%', null, null]}
         >
@@ -116,7 +117,7 @@ export function SelectTrigger<T extends string>({
             selectContent.render(select.value.content, styles.TriggerText)
           )}
         </Flex>
-      </Box>}
+      </Flex>}
 
       <Icon
           aria-hidden

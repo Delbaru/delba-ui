@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { type WithRef } from '../../../core';
+import { type WithRef } from '#core';
 import { Text } from '../../Text';
 import { Flex } from '../../Flex';
-import type { VideoPlayerPreviewSource } from '../types';
+import type { VideoPlayerPreviewSource } from '../VideoPlayer.types';
 import { formatClock } from '../VideoPlayer.config';
 import styles from './TimelinePreview.module.scss';
 

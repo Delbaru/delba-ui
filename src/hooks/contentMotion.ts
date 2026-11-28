@@ -1,5 +1,5 @@
-// Появление, уход и смена содержимого примитива раскладки (Flex, Box). Чистая часть: словарь
-// классов (keyframes — в core/_content-motion.scss) и шаги свопа. Хук — useContentMotion.
+// Появление, уход и смена содержимого. Имена селекторов определяет ContentMotion.module.scss.
+// Хук useContentMotion связывает их с состоянием перехода.
 
 import type { MotionTime } from '../core/base/timing';
 
@@ -9,7 +9,6 @@ export type ContentAnimation = ContentEnter | ContentExit;
 export type ContentKey = string | number;
 
 export interface ContentChangeAnimate {
-  when: 'change';
   effect: 'fade' | 'up' | 'down' | 'scale';
   key: ContentKey;
   duration?: MotionTime;

@@ -1,124 +1,92 @@
 'use client';
 
-import type { KeyboardEvent } from 'react';
-
-import { assetUrl, cx, preserveFocus } from '../../../core';
+import { useState } from 'react';
+import { assetUrl, preserveFocus } from '#core';
 import { UI_MESSAGES } from '../../../core/base/messages';
+import { Button } from '../../Button';
 import { Flex } from '../../Flex';
 import { Icon } from '../../Icon';
 
-import calendarIcon from '../../../../assets/icons/ui/calendar/style-1/calendar.svg';
-import chevronIcon from '../../../../assets/icons/ui/arrows/style-3/arrow.svg';
-import gazeAwayIcon from '../../../../assets/icons/ui/eye/style-1/gaze-away.svg';
-import eyeIcon from '../../../../assets/icons/ui/eye/style-1/eye.svg';
+import calendarIcon from '#icons/controls/calendar.svg';
+import chevronIcon from '#icons/controls/chevron-down-thin.svg';
+import eyeIcon from '#icons/controls/eye.svg';
 import styles from './InputActions.module.scss';
-import { useState } from 'react';
 
 type Actions = ReturnType<typeof useInputActions>;
 
 export function InputActions({ actions }: { actions: Actions }) {
-  if (!actions.password.visible && !actions.calendar.visible && !actions.number.visible)
-    return null;
+  const { password, calendar, number } = actions;
+  if (!password.visible && !calendar.visible && !number.visible) return null;
 
   return (
     <Flex
         className={styles.InputActions}
         align={['center', 'center', 'center']}
         data-input-action="true"
-        role={actions.calendar.visible ? 'button' : undefined}
-        tabIndex={actions.calendar.visible ? 0 : undefined}
-        aria-label={actions.calendar.visible ? UI_MESSAGES.input.openCalendar : undefined}
-        onMouseDown={actions.calendar.visible ? preserveFocus : undefined}
-        onClick={(event) => {
-          preserveFocus(event);
-          if (actions.calendar.visible) actions.calendar.toggle();
-        }}
-        onKeyDown={actions.calendar.visible
-          ? (event) => activateWithKeyboard(event, actions.calendar.toggle)
-          : undefined}
     >
-      {actions.password.visible && (
-        <Icon
-          src={actions.password.revealed ? assetUrl(gazeAwayIcon) : assetUrl(eyeIcon)}
-          animate={{ when: 'change', effect: 'swap', duration: 'fast' }}
-          rootW={[24, 24, 24]}
-          rootH={[24, 24, 24]}
-          w={[24, 24, 24]}
-          h={[24, 24, 24]}
-          rootClassName={styles.passwordToggle}
-          role="button"
-          tabIndex={0}
-          aria-label={
-            actions.password.revealed
-              ? UI_MESSAGES.input.hidePassword
-              : UI_MESSAGES.input.showPassword
-          }
-          data-input-action="true"
-          onMouseDown={preserveFocus}
-          onClick={actions.password.toggle}
-          onKeyDown={(event) => activateWithKeyboard(event, actions.password.toggle)}
-        />
+      {password.visible && (
+        <Button
+            type="button"
+            p={[0, 0, 0]}
+            w={[24, 24, 24]}
+            h={[24, 24, 24]}
+            className={styles.passwordToggle}
+            aria-label={password.revealed ? UI_MESSAGES.input.hidePassword : UI_MESSAGES.input.showPassword}
+            onMouseDown={preserveFocus}
+            onClick={password.toggle}
+        >
+          <Icon src={assetUrl(eyeIcon)} w={[24, 24, 24]} h={[24, 24, 24]} aria-hidden />
+        </Button>
       )}
-      {actions.calendar.visible && (
-        <Icon
-            src={assetUrl(calendarIcon)}
-            rootW={[48, null, null]}
-            rootH={[48, null, null]}
-            w={[24, null, null]}
-            h={[24, null, null]}
-            rootR={[16, null, null]}
-            rootBg={['var(--background)', 'var(--background)', 'var(--background)']}
-            rootClassName={styles.dateToggle}
-            data-input-action="true"
-        />
+      {calendar.visible && (
+        <Button
+            type="button"
+            p={[0, 0, 0]}
+            w={[48, null, null]}
+            h={[48, null, null]}
+            r={[16, null, null]}
+            bg={['var(--background)', 'var(--background)', 'var(--background)']}
+            className={styles.dateToggle}
+            aria-label={UI_MESSAGES.input.openCalendar}
+            aria-expanded={calendar.open}
+            aria-controls={calendar.open ? calendar.id : undefined}
+            onMouseDown={preserveFocus}
+            onClick={calendar.toggle}
+        >
+          <Icon src={assetUrl(calendarIcon)} w={[24, null, null]} h={[24, null, null]} aria-hidden />
+        </Button>
       )}
-      {actions.number.visible && (
+      {number.visible && (
         <Flex
             dir={['column', 'column', 'column']}
             align={['center', 'center', 'center']}
             gap={[4, null, null]}
             className={styles.numberArrows}
         >
-          <Icon
-              src={assetUrl(chevronIcon)}
-              rootW={[12, null, null]}
-              rootH={[8, null, null]}
-              w={[16, null, null]}
-              h={['auto', null, null]}
-              rootClassName={cx(styles.btn, styles.up)}
-              data-input-action="true"
-              role="button"
-              tabIndex={0}
-              aria-label={UI_MESSAGES.input.increase}
-              onMouseDown={preserveFocus}
-              onClick={() => actions.number.step(1)}
-              onKeyDown={(event) => activateWithKeyboard(event, () => actions.number.step(1))}
-          />
-          <Icon
-              src={assetUrl(chevronIcon)}
-              rootW={[12, null, null]}
-              rootH={[8, null, null]}
-              w={[16, null, null]}
-              h={['auto', null, null]}
-              rootClassName={cx(styles.btn, styles.down)}
-              data-input-action="true"
-              role="button"
-              tabIndex={0}
-              aria-label={UI_MESSAGES.input.decrease}
-              onMouseDown={preserveFocus}
-              onClick={() => actions.number.step(-1)}
-              onKeyDown={(event) => activateWithKeyboard(event, () => actions.number.step(-1))}
-          />
+          {([1, -1] as const).map(step => (
+            <Button
+                key={step}
+                type="button"
+                p={[0, 0, 0]}
+                w={[12, null, null]}
+                h={[8, null, null]}
+                aria-label={step === 1 ? UI_MESSAGES.input.increase : UI_MESSAGES.input.decrease}
+                onMouseDown={preserveFocus}
+                onClick={() => number.step(step)}
+            >
+              <Icon
+                  src={assetUrl(chevronIcon)}
+                  w={[16, null, null]}
+                  h={['auto', null, null]}
+                  rootClassName={step === 1 ? styles.up : undefined}
+                  aria-hidden
+              />
+            </Button>
+          ))}
         </Flex>
       )}
     </Flex>
   );
-}
-
-function activateWithKeyboard(event: KeyboardEvent<Element>, activate: () => void) {
-  if (event.key !== 'Enter' && event.key !== ' ') return;
-  event.preventDefault();
-  activate();
 }
 
 interface ActionOptions {
@@ -130,7 +98,12 @@ interface ActionOptions {
   step?: string | number;
   numberOptions?: number[];
   onStep(direction: 1 | -1): void;
-  calendar: { available: boolean; toggle(): void };
+  calendar: {
+    available: boolean;
+    open: boolean;
+    id: string;
+    toggle(): void;
+  };
 }
 
 /** Owns password visibility and resolves which actions this field exposes. */
@@ -155,6 +128,8 @@ export function useInputActions(options: ActionOptions) {
     },
     calendar: {
       visible: options.calendar.available,
+      open: options.calendar.open,
+      id: options.calendar.id,
       toggle: options.calendar.toggle,
     },
   };

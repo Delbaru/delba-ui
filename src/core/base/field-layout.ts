@@ -1,7 +1,7 @@
 import type { ClassBuilder } from '../layout/layout-classes';
 import { boxLayout, type BoxLayoutProps } from '../layout/box';
 import type { ResponsiveSpaceValue, SpaceValue } from '../layout/space';
-import { resolveResponsive, type ResponsiveInput } from './responsive';
+import { resolveResponsiveInput, type ResponsiveInput } from './responsive';
 
 /**
  * Объединённый интерфейс layout-пропсов для field-компонентов
@@ -30,7 +30,7 @@ export function fieldLayoutClasses(c: ClassBuilder, props: FieldLayoutProps): st
     return [
         ...c.value('variant', props.variant),
         ...c.value('size', props.size),
-        ...boxLayout(c, { ...props, grow: undefined, position: undefined, top: undefined, bottom: undefined, left: undefined, right: undefined, hide: undefined }),
+        ...boxLayout(c, { ...props, grow: undefined, shrink: undefined, position: undefined, top: undefined, bottom: undefined, left: undefined, right: undefined, hide: undefined }),
         ...c.value('color', props.color),
         ...c.value('placeholderColor', props.placeholderColor),
     ];
@@ -38,7 +38,7 @@ export function fieldLayoutClasses(c: ClassBuilder, props: FieldLayoutProps): st
 
 /** Положение и видимость относятся ко всему полю, включая подпись и подсказки. */
 export const fieldRootLayoutClasses = (c: ClassBuilder, props: BoxLayoutProps): string[] =>
-    boxLayout(c, { grow: props.grow, position: props.position, top: props.top, bottom: props.bottom, left: props.left, right: props.right, hide: props.hide });
+    boxLayout(c, { grow: props.grow, shrink: props.shrink, position: props.position, top: props.top, bottom: props.bottom, left: props.left, right: props.right, hide: props.hide });
 
 const isSpaceToken = (value: unknown): value is number | string =>
     typeof value === 'number' || typeof value === 'string';
@@ -66,7 +66,7 @@ export function fieldHelperPaddingLeft(
     p: ResponsiveSpaceValue | undefined,
     pl: ResponsiveInput<SpaceValue> | undefined
 ): [SpaceValue | null, SpaceValue | null, SpaceValue | null] | undefined {
-    if (pl !== undefined) return resolveResponsive(pl);
+    if (pl !== undefined) return resolveResponsiveInput(pl);
     if (p === undefined) return undefined;
     if (!Array.isArray(p)) return [p, p, p];
 

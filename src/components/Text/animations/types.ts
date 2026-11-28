@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from 'react';
-import type { MotionTime } from '../../../core/base/timing';
+import type { MotionChannels } from '#core/Motion';
 
 import type { CounterOptions } from './counter/types';
 import type { TextSlideOptions } from './textSlide/types';
@@ -21,51 +21,27 @@ export interface AnimationOptionsMap {
 export type AnimationKey = keyof AnimationOptionsMap;
 export type AnimationOptions = AnimationOptionsMap[AnimationKey];
 
-/** Общая объектная форма анимаций содержимого Text. Время здесь в секундах или именем темы. */
-export type TextAnimate =
-  | TextTimelineAnimate
-  | ({ when: 'change'; effect: 'textReveal' } & TextRevealOptions)
-  | {
-      when: 'hover';
-      effect: 'textSlide';
-      duration?: MotionTime;
-      hoverColor?: string;
-    }
-  | {
-      /** change сразу показывает первое значение, затем ведёт от текущего кадра к новому; inView/load начинают со start. */
-      when: 'inView' | 'load' | 'change';
-      /** Число из содержимого или явного to. */
-      effect: 'counter';
-      /** Секунды или имя шкалы motion.timing. */
-      duration?: MotionTime;
-      /** Начальное число для load/inView, по умолчанию 0; change сохраняет показанное значение. */
-      start?: number;
-      /** Итоговое число; без него разбирается содержимое Text. */
-      to?: number;
-      /** Текст после числа; без него сохраняется суффикс содержимого. */
-      suffix?: string;
-      /** Разделять разряды по ru-RU. */
-      grouped?: boolean;
-    }
-  | {
-      /** Sequence selection changes; the selected step owns the visible content. */
-      when: 'change';
-      effect: 'textSlide' | 'textClip';
-      steps: string[];
-      currentStep: number;
-      duration?: MotionTime;
-      clipHeight?: string;
-    }
-  | {
-      /** Смена по изменению содержимого Text. */
-      when: 'change';
-      /** Посимвольный слайд только изменившихся символов. */
-      effect: 'textSlide';
-      /** По умолчанию — различающиеся символы; 'text' меняет строку целиком. */
-      by?: 'character' | 'text';
-      /** Секунды или имя шкалы motion.timing. */
-      duration?: MotionTime;
-    };
+type CounterEffect = { effect: 'counter' } & Omit<CounterOptions, 'trigger'>;
+type TextAppearance = TextTimelineAnimate | (CounterEffect & { when: 'inView' | 'load' });
+type TextHover = { effect: 'textSlide'; when?: never } & Pick<TextSlideOptions, 'duration' | 'hoverColor'>;
+type TextChange = { when?: never } & (
+  | CounterEffect
+  | ({ effect: 'textReveal' } & TextRevealOptions)
+  | ({ effect: 'textSlide' | 'textClip'; by?: never } & TextClipOptions)
+  | ({ effect: 'textSlide'; steps?: never; currentStep?: never; clipHeight?: never } & Pick<TextSlideOptions, 'by' | 'duration'>)
+);
+type TextMotion = MotionChannels<{
+  appearance: TextAppearance;
+  hover: TextHover;
+  change: TextChange;
+}>;
+
+/** Effects that render their own content share one slot inside the text host. */
+export type TextAnimate = Pick<TextMotion, 'idle'> & (
+  | { appearance?: TextMotion['appearance']; hover?: MotionChannels['hover']; change?: never }
+  | { appearance?: MotionChannels['appearance']; hover: TextHover; change?: never }
+  | { appearance?: MotionChannels['appearance']; hover?: MotionChannels['hover']; change: TextChange }
+);
 
 /** Контекст рендера, который Text передаёт активному плагину. */
 export interface TextAnimationContext<O> {

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { decodeHtmlEntities, stripHtmlTags } from '../../core';
+import { decodeHtmlEntities, stripHtmlTags } from '#core';
 import { flattenLegacyBlocks, parseLegacyRichText, type LegacyTextBlock } from './legacy-html';
 import { renderLexicalContent } from './LexicalRenderer';
 import type { LexicalDocument } from './types';

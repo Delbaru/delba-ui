@@ -1,6 +1,9 @@
 'use client';
 
-import { useLayoutEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  revealAnimationNames, revealEntryAnimationName, revealMotionClassName, revealPausedAnimationNames,
+} from '#core/Motion';
 import { MEDIA_QUERY } from '../../../core/base/breakpoints';
 import { readMotionTimeMs } from '../../../core/base/timing';
 import { normalizeObserverMargin } from '../../../core/base/observer-margin';
@@ -19,14 +22,10 @@ function ancestorsReady(node: HTMLElement): boolean {
     for (const animation of parent.getAnimations()) {
       if (
         !(animation instanceof CSSAnimationConstructor) ||
-        !animation.animationName.startsWith('ui-reveal')
+        !revealAnimationNames.has(animation.animationName)
       )
         continue;
-      if (
-        animation.animationName === 'ui-reveal-hold' ||
-        animation.animationName === 'ui-reveal-wait'
-      )
-        return false;
+      if (revealPausedAnimationNames.has(animation.animationName)) return false;
       if (animation.effect?.getComputedTiming().progress == null) return false;
       // backwards fill has progress 0 during delay: use local time, not eased progress.
       const delay = Number(animation.effect?.getTiming().delay ?? 0);
@@ -37,12 +36,14 @@ function ancestorsReady(node: HTMLElement): boolean {
 }
 
 export function useTextTimeline(
-  input: TextTimelineAnimate | undefined,
+  appearanceInput: TextTimelineAnimate | undefined,
   content: ReactNode,
-  host: RefObject<HTMLElement | null>,
+  canAnimate: boolean,
 ) {
+  const input = canAnimate ? appearanceInput : undefined;
+  const [node, setNode] = useState<HTMLElement | null>(null);
   const valueRef = useRef<HTMLSpanElement | null>(null);
-  const options = input?.effect.counter;
+  const options = appearanceInput?.effect.counter;
   const parsed =
     options && options.to == null
       ? parseCountContent(typeof content === 'number' ? String(content) : content)
@@ -80,7 +81,6 @@ export function useTextTimeline(
   });
 
   useLayoutEffect(() => {
-    const node = host.current;
     const current = latest.current;
     const config = current.input;
     if (!node || !config) return undefined;
@@ -140,7 +140,7 @@ export function useTextTimeline(
           animation = node
             .getAnimations()
             .find(
-              (item) => item instanceof view.CSSAnimation && item.animationName === 'ui-reveal',
+              (item) => item instanceof view.CSSAnimation && item.animationName === revealEntryAnimationName,
             );
         }
       }
@@ -209,7 +209,15 @@ export function useTextTimeline(
       node.style.removeProperty('--text-timeline-delay');
       node.style.removeProperty('--text-timeline-duration');
     };
-  }, [host, signature]);
+  }, [node, signature]);
 
-  return { attrs, style, valueRef, hasCounter, finalText: format(to) };
+  const finalText = hasCounter ? format(to) : undefined;
+  return {
+    ref: input ? setNode : undefined,
+    attrs,
+    className: reveal ? revealMotionClassName : undefined,
+    style,
+    counter: input && finalText !== undefined ? { valueRef, finalText } : undefined,
+    finalText,
+  };
 }

@@ -7,15 +7,19 @@ import { resolveFrontendConfiguration, frontendUtilityOptions } from './configur
 
 const KIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export { resolveFrontendConfiguration } from './configuration.mjs';
-export { generateThemeAxes, vendorEmojiAssets } from './theme-assets.mjs';
+export { vendorEmojiAssets } from './theme-assets.mjs';
 
 /** Generate from explicit owner settings, without importing any host config. */
-async function generators({ root, settings }) {
+async function generateSources({ root, settings }) {
     if (typeof root !== 'string' || !path.isAbsolute(root)) throw new Error('Frontend root must be absolute');
     const { settings: config } = await resolveFrontendConfiguration(settings);
-    const [motion, images, messages, icons, scrollbar, utilities, skins] = await Promise.all([
+    const { generateFrontendTheme } = await import('./visual/generate.ts');
+    const { collectSpacingValues } = await import('./visual/spacing.ts');
+    const spacingValues = collectSpacingValues([path.join(root, 'src'), path.join(KIT, 'src')], config);
+    generateFrontendTheme(config, spacingValues);
+    const [motion, images, messages, icons, scrollbar] = await Promise.all([
         import('./motion.ts'), import('./images.ts'), import('./messages.ts'), import('./icons.ts'),
-        import('./scrollbar.ts'), import('./utilities/generate.ts'), import('./skin.ts'),
+        import('./scrollbar.ts'),
     ]);
     motion.generateMotion(config.motion);
     images.generateImages(config.images);
@@ -23,8 +27,34 @@ async function generators({ root, settings }) {
     icons.generateInlineIcons(root);
     scrollbar.generateScrollbar(config.scrollbar);
     for (const { level, message } of icons.iconSourceNotices(root)) console[level](message);
-    if (config.skins) await skins.generateSkins(root, config.skins);
-    return utilities.createUtilities(root, frontendUtilityOptions(root, config));
+    return true;
+}
+
+const sourcePreparations = new WeakMap();
+
+/** Prepare imported source projections without running CSS extraction or any acceptance gate. */
+export function prepareFrontendSources(context) {
+    if (!context.settings || typeof context.settings !== 'object')
+        return Promise.reject(new Error('Frontend settings are required'));
+    if (typeof context.root !== 'string' || !path.isAbsolute(context.root))
+        return Promise.reject(new Error('Frontend root must be absolute'));
+    const root = path.resolve(context.root);
+    const running = sourcePreparations.get(context.settings) ?? new Map();
+    sourcePreparations.set(context.settings, running);
+    const existing = running.get(root);
+    if (existing) return existing;
+    const preparation = generateSources({ ...context, root }).finally(() => {
+        if (running.get(root) === preparation) running.delete(root);
+        if (!running.size) sourcePreparations.delete(context.settings);
+    });
+    running.set(root, preparation);
+    return preparation;
+}
+
+async function generators(context) {
+    await prepareFrontendSources(context);
+    const { createUtilities } = await import('./utilities/generate.ts');
+    return createUtilities(context.root, frontendUtilityOptions(context.root, context.settings));
 }
 
 export async function prepareFrontend(context) {
@@ -39,25 +69,39 @@ export async function prepareFrontend(context) {
 export async function watchFrontend(context) {
     let utilities = await generators(context);
     const disposers = [];
+    const [{ watchSpacingValues }, { generateFrontendTheme }] = await Promise.all([
+        import('./visual/spacing.ts'), import('./visual/generate.ts'),
+    ]);
     let closed = false;
     let closeUtilities;
     let pending = Promise.resolve();
-    const rebuild = () => {
-        pending = pending.then(async () => {
-            if (closed) return;
-            closeUtilities?.();
-            utilities = await generators(context);
-            closeUtilities = utilities.watch(rebuild);
-        }).catch(error => console.error(error));
-    };
-    closeUtilities = utilities.watch(rebuild);
-    disposers.push(() => closeUtilities?.());
-    for (const directory of [context.settings.skins?.dir, 'public/icons'].filter(Boolean)) {
-        const target = path.resolve(context.root, directory);
-        if (existsSync(target)) {
-            const watcher = watch(target, { recursive: true }, rebuild);
-            disposers.push(() => watcher.close());
+    try {
+        disposers.push(watchSpacingValues(
+            [path.join(context.root, 'src'), path.join(KIT, 'src')],
+            context.settings,
+            values => { generateFrontendTheme(context.settings, values); },
+        ));
+        const rebuild = () => {
+            pending = pending.then(async () => {
+                if (closed) return;
+                closeUtilities?.();
+                utilities = await generators(context);
+                closeUtilities = utilities.watch(rebuild);
+            }).catch(error => console.error(error));
+        };
+        closeUtilities = utilities.watch(rebuild);
+        disposers.push(() => closeUtilities?.());
+        for (const directory of ['public/icons']) {
+            const target = path.resolve(context.root, directory);
+            if (existsSync(target)) {
+                const watcher = watch(target, { recursive: true }, rebuild);
+                disposers.push(() => watcher.close());
+            }
         }
+    } catch (error) {
+        closed = true;
+        disposers.forEach(close => close());
+        throw error;
     }
     if (context.env) context.env.DELBA_FRONTEND_OWNER = path.resolve(context.root);
     return { close() { closed = true; disposers.forEach(close => close()); } };
@@ -86,17 +130,23 @@ export async function checkFrontend(context) {
 export async function testFrontend(context) {
     const { runUiChecks } = await import('./check/index.mjs');
     const args = context.args ?? [];
-    const value = flag => {
-        const index = args.indexOf(flag);
-        if (index < 0) return undefined;
-        if (!args[index + 1] || args[index + 1].startsWith('--')) throw new Error(`${flag} requires a value`);
-        return args[index + 1];
-    };
-    return runUiChecks({
-        suite: args.includes('--browser') ? 'browser' : 'library',
-        failedOnly: args.includes('--failed'), reportFile: value('--report'),
-        shard: value('--shard'), fix: args.includes('--fix'),
-    });
+    const options = { suite: 'library', failedOnly: false, fix: false };
+    for (let index = 0; index < args.length; index += 1) {
+        const argument = args[index];
+        if (argument === '--failed') {
+            options.failedOnly = true;
+        } else if (argument === '--fix') {
+            options.fix = true;
+        } else if (argument === '--report') {
+            const reportFile = args[index + 1];
+            if (!reportFile || reportFile.startsWith('--')) throw new Error('--report requires a value');
+            options.reportFile = reportFile;
+            index += 1;
+        } else {
+            throw new Error(`Unsupported Frontend test argument: ${argument}`);
+        }
+    }
+    return runUiChecks(options);
 }
 
 /** Format consumer sources through the host's native Prettier and public Frontend plugin. */
@@ -149,12 +199,12 @@ export default {
     requires: [],
     configuration: { resolve: resolveFrontendConfiguration, public: [] },
     actions: {
+        prepare: prepareFrontendSources,
         build: prepareFrontend,
         watch: watchFrontend,
         check: checkFrontend,
         test: testFrontend,
         format: formatFrontend,
-        startup: async context => (await import('./startup-check.mjs')).checkStartup(context.args ?? []),
         dev: context => runFrontendNext(context, 'dev'),
         start: context => runFrontendNext(context, 'start'),
     },

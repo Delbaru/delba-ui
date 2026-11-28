@@ -2,10 +2,11 @@ import type React from 'react';
 import type { PopupOptions } from '../../core/Popup/Popup';
 import type { AsyncOptions } from '../../core/Async/Async';
 import type { CSSProperties } from 'react';
-import type { FormScope } from '../../core/Form';
-import type { ScrollOptions } from '../../core/Scroll/Surface';
+import type { FormScope } from '#core/Form';
+import type { ScrollOptions } from '#core/Scroll';
 import type { CollapseDoor } from '../../core/Collapse/Collapse';
-import type { CollectionScope, CollectionItem } from '../../core/Collection/Collection';
+import type { CollectionScope, CollectionItem } from '#core/Collection';
+import type { DisclosureController } from '#core/Disclosure';
 import type {
   BoxLayoutProps,
   ComponentStateValue,
@@ -13,12 +14,12 @@ import type {
   ResponsiveValue,
   StateLinkInput,
   Transition,
-} from '../../core';
+} from '#core';
 import type { RevealScopeProps } from '../../core/reveal/reveal';
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
 import type { LinkPrefetchProps } from '../../hooks/useLinkPrefetch';
 import type { CollapseHandle } from '../../hooks/useCollapseMotion';
-import type { FlexContentAnimate } from '../../hooks/contentMotion';
+import type { MotionState, SurfaceAnimate, SurfaceMotionOptions } from '#core/Motion';
+import type { OpenAnimate } from '../../core/reveal/reveal';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 
 type DirectionKey = 'row' | 'row_reverse' | 'column' | 'column_reverse';
@@ -40,17 +41,22 @@ type JustifyContentKey =
   | 'space_evenly';
 type FlexCollapseOptions = CollapseOptions;
 
+export type FlexAnimate = Omit<SurfaceAnimate, 'appearance' | 'change'> & (
+  | { appearance?: SurfaceAnimate['appearance'] | OpenAnimate; change?: never }
+  | { appearance?: never; change: NonNullable<SurfaceAnimate['change']> }
+);
+
 export interface FlexProps
   extends Omit<React.HTMLAttributes<HTMLElement>, 'dir' | 'href' | 'target' | 'rel' | 'download'>,
     Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel' | 'download'>,
     BoxLayoutProps,
     ContainerProp,
-    SharedMotionProps<FlexContentAnimate>,
+    Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'>,
     RevealScopeProps,
     LinkPrefetchProps {
   children?: React.ReactNode;
   /** Scope named descendants without adding a DOM node. */
-  ui?: { popup?: PopupOptions; async?: AsyncOptions; form?: FormScope; collection?: CollectionScope; selectable?: CollectionItem; scroll?: ScrollOptions; collapse?: CollapseDoor };
+  ui?: { popup?: PopupOptions; async?: AsyncOptions; form?: FormScope; collection?: CollectionScope; selectable?: CollectionItem; scroll?: ScrollOptions; collapse?: CollapseDoor; disclosure?: DisclosureController; motion?: MotionState };
   style?: CSSProperties;
   state?: ComponentStateValue;
   /** Добавляет state="interacting" при указателе, фокусе или открытом дочернем контроле.
@@ -64,6 +70,7 @@ export interface FlexProps
   /** Тег узла без `href`: `header`, `nav`, `footer`… */
   as?:
     | 'div'
+    | 'span'
     | 'form'
     | 'header'
     | 'nav'
@@ -78,6 +85,8 @@ export interface FlexProps
     | 'figcaption';
 
   gap?: ResponsiveValue<number>;
+  /** Native flow for neutral surfaces; flex remains the default. */
+  display?: ResponsiveValue<'flex' | 'inline-flex' | 'block' | 'inline-block' | 'contents'>;
   rowGap?: ResponsiveValue<number>;
   columnGap?: ResponsiveValue<number>;
 
@@ -117,20 +126,15 @@ export interface FlexProps
    *  прокрутил бы к ещё нулевой высоте. Работает с collapse и collapseKeepMounted. */
   onCollapseFound?: () => void;
 
-  /** Появление: { when: 'load' | 'inView', effect: 'fade' }.
-   * Смена содержимого: { when: 'change', effect: 'fade', key, duration: 'fast' }.
-   * Своп сохраняет DOM ref и фокус; reduced motion меняет содержимое сразу. */
-  animate?: SharedMotionProps<FlexContentAnimate>['animate'];
+  /** Appearance or keyed content change, combined with independent hover/idle. */
+  animate?: FlexAnimate;
 
   dir?: ResponsiveValue<DirectionKey>;
   justify?: ResponsiveValue<JustifyContentKey>;
   align?: ResponsiveValue<AlignItemsKey>;
   wrap?: ResponsiveValue<WrapKey>;
 
-  /** Краевой fade скролл-контейнера: вешает глобальную утилиту .scrollFadeY (ось Y — при scrollFade или
-   *  scrollFade='y') либо .scrollFadeX (scrollFade='x') — mask + scroll-driven animations, без JS
-   *  (см. tokens.global.scss). Ставится на сам скроллящийся Flex; overflow задаёте как обычно. ВАЖНО:
-   *  mask создаёт stacking context — плавающие оверлеи держите на элементе-обёртке, не на самом скролле. */
+  /** Scroll edge fade; true selects the vertical axis. */
   scrollFade?: boolean | 'x' | 'y';
 
   linkState?: StateLinkInput;

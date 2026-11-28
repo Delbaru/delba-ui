@@ -1,0 +1,125 @@
+@use '../mixins' as m;
+
+$active: ':is(:hover, :focus-visible, :has(:focus-visible), [state~="hover"], [state~="focus-visible"])';
+$unavailable: ':disabled, [aria-disabled="true"], [state~="disabled"], [hidden], [hidden] *, [inert], [inert] *';
+
+@layer ui.components {
+  :where(.SurfaceMotion) {
+    position: relative;
+    isolation: isolate;
+    --surface-hover-fill: var(--primary-foreground);
+    --surface-hover-duration: var(--t-d-normal);
+    --surface-glow-color: var(--primary);
+    --surface-glow-color-to: var(--surface-glow-color);
+    --surface-glow-strength: var(--t-m-surface-idle-strength);
+    --surface-glow-duration: var(--t-m-surface-idle-duration);
+    --idle-animation-state: paused;
+
+    &[data-ui-hover='rise'] {
+      &:not([data-ui-idle='glow']) {
+        overflow: clip;
+      }
+
+      &:not([data-ui-idle='glow'])::before,
+      > .GlowSurface::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        background: var(--surface-hover-fill);
+        // Move past the border so the resting fill leaves no stripe.
+        transform: translateY(calc(100% + 2 * var(--rpx, 1px)));
+        transition: transform var(--surface-hover-duration) var(--t-t-f-ease);
+      }
+
+      &:not([data-ui-idle='glow'])::before {
+        z-index: -1;
+      }
+
+      @include m.reduced-motion {
+        &:not([data-ui-idle='glow'])::before,
+        > .GlowSurface::before {
+          transition: none;
+        }
+      }
+    }
+
+    &[data-ui-idle='glow'] {
+      > .Glow,
+      > .GlowSurface {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+      }
+
+      > .Glow {
+        z-index: -2;
+        transform: translateY(calc(var(--rpx) * 8));
+        filter: blur(calc(var(--rpx) * 16));
+        background: linear-gradient(105deg, var(--surface-glow-color), var(--surface-glow-color-to));
+        opacity: calc(0.35 * var(--surface-glow-strength));
+        transition: opacity var(--surface-hover-duration) var(--t-t-f-ease);
+
+        // Blend two opaque gradients without changing the halo's size.
+        &::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: linear-gradient(105deg, var(--surface-glow-color-to), var(--surface-glow-color));
+          animation: ui-surface-glow-color var(--surface-glow-duration) var(--t-t-f-ease-in-out) infinite alternate;
+          animation-play-state: var(--idle-animation-state);
+          will-change: opacity;
+        }
+      }
+
+      > .GlowSurface {
+        z-index: -1;
+        overflow: hidden;
+        background: inherit;
+      }
+
+      @include m.reduced-motion {
+        > .Glow {
+          transition: none;
+
+          &::before {
+            animation: none;
+            will-change: auto;
+          }
+        }
+      }
+    }
+  }
+}
+
+@layer ui.states {
+  .SurfaceMotion[data-ui-hover='rise']#{$active}:not(#{$unavailable}) {
+    &:not([data-ui-idle='glow'])::before,
+    > .GlowSurface::before {
+      transform: translateY(0);
+    }
+  }
+
+  .SurfaceMotion[data-ui-idle='glow'] {
+    &#{$active}:not(#{$unavailable}) > .Glow {
+      opacity: calc(0.5 * var(--surface-glow-strength));
+    }
+
+    &:is(#{$unavailable}) > .Glow {
+      visibility: hidden;
+
+      &::before {
+        animation: none;
+        will-change: auto;
+      }
+    }
+  }
+}
+
+@keyframes ui-surface-glow-color {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

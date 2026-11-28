@@ -19,10 +19,9 @@ import {
   stateProps,
   useMergedRefs,
   type WithRef,
-} from '../../core';
+} from '#core';
 import { useFloatingSurface } from '../../hooks/useFloatingSurface';
 import { useCollapseState } from '../../hooks/useCollapseState';
-import { useSharedMotion } from '../../hooks/useSharedMotion';
 import { useOpenPresence } from '../../hooks/useOpenPresence';
 import { isOpenAnimate } from '../../core/reveal/reveal';
 import type { CollapseSettings } from '../Collapse/CollapseWrap';
@@ -31,9 +30,9 @@ import { dropdownLayout } from './Dropdown.layout';
 import { composeDropdownTriggerClick } from './trigger';
 import { useInteractionActivity } from '../../core/InteractionScope';
 import type { DropdownProps, DropdownChangeReason } from './Dropdown.types';
+import { DROPDOWN_DEFAULTS } from './Dropdown.config';
 
 const NO_VARIABLES: readonly `--${string}`[] = [];
-const VIEWPORT_PADDING = 8;
 export const DropdownAncestors = createContext<readonly string[]>([]);
 
 export function useDropdown({
@@ -66,7 +65,7 @@ export function useDropdown({
   const external = !trigger;
   const {
     side = 'start',
-    offset = 8,
+    offset = DROPDOWN_DEFAULTS.offset,
     portal = external,
     matchTriggerWidth = false,
     keepMounted = true,
@@ -74,7 +73,7 @@ export function useDropdown({
     collapse: panelCollapse,
     animate: panelAnimate,
     anchorRef: geometryAnchorRef,
-    viewportPadding = VIEWPORT_PADDING,
+    viewportPadding = DROPDOWN_DEFAULTS.viewportPadding,
     strategy = 'document',
     placement = 'bottom',
     boundaryRef,
@@ -95,14 +94,9 @@ export function useDropdown({
   const anchorRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
-  const openAnimate = isOpenAnimate(panelAnimate) ? panelAnimate : undefined;
-  const { motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
-    animate: openAnimate,
-    open,
-  });
-  const presence = useOpenPresence(open, Boolean(openAnimate));
-  const setPresenceRef = useMergedRefs(presence.ref, setMotionNode);
-  const setSurfaceRef = useMergedRefs(surfaceRef, externalSurfaceRef, setPresenceRef);
+  const openAnimate = isOpenAnimate(panelAnimate?.appearance);
+  const presence = useOpenPresence(open, openAnimate);
+  const setSurfaceRef = useMergedRefs(surfaceRef, externalSurfaceRef, presence.ref);
   const pointRef = useRef<HTMLElement | null>(null);
   // A closed point menu retains its document and opener through the closing commit.
   if (point !== null) {
@@ -124,7 +118,9 @@ export function useDropdown({
   const ownIds = [...parentIds, id];
 
   useLayoutEffect(() => {
-    const triggerNode = rootRef.current?.firstElementChild;
+    const triggerNode = Array.from(rootRef.current?.children ?? []).find(
+      node => !node.matches('[data-reveal-skip][aria-hidden="true"]'),
+    );
     const owner = rootRef.current?.ownerDocument.defaultView;
     anchorRef.current =
       owner && triggerNode instanceof owner.HTMLElement
@@ -423,9 +419,8 @@ export function useDropdown({
             preserveFocus ? keepFocus : undefined,
           ),
         ),
-        animate: isOpenAnimate(panelAnimate) ? undefined : panelAnimate,
-        style: { ...motionStyle, ...panelProps.style },
-        ...revealAttrs,
+        animate: panelAnimate,
+        ui: openAnimate ? { ...panelProps.ui, motion: { open } } : panelProps.ui,
         hidden: openAnimate ? !presence.present : panelProps.hidden,
       },
     },

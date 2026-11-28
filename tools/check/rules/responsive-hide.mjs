@@ -5,7 +5,7 @@ const legacy = /^data-hide-(?:mobile|tablet|desktop|pc)$/;
 
 export const responsiveHideRule = {
   id: 'responsive-hide',
-  docs: 'docs/specs/ui/components.md',
+  docs: 'docs/components.md',
   check(source) {
     const issues = [];
     const visit = (node) => {

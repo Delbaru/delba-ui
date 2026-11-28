@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type RefCallback } from 'react';
 
-import type { CarouselApi, CarouselNavigationState } from './types';
+import type { CarouselApi, CarouselNavigationState } from './Carousel.types';
 
 const CAROUSEL_CONTROLS_EVENT = 'carousel-controls-change';
 

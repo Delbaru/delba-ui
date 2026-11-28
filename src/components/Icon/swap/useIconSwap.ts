@@ -1,10 +1,11 @@
 'use client';
 
+import styles from './IconSwap.module.scss';
 import { createElement, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
-import { cx, MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../core';
+import { cx, MOTION_END_BUFFER_MS, prefersReducedMotion } from '#core';
 import { motionTimeCss, readMotionTimeMs } from '../../../core/base/timing';
-import { normalizeIconAnimate, type IconAnimate } from './types';
+import { resolveIconChange, type IconChangeAnimate } from './types';
 import { MOTION_DEFAULTS } from '../../../core/base/motion-defaults';
 import { motionDefaults } from '../../../core/base/motion-config';
 
@@ -48,12 +49,12 @@ interface SwapState {
  * 'swap'/'spin') — passthrough: возвращает children как есть.
  */
 export function useIconSwap(
-  animate: IconAnimate | undefined,
+  change: IconChangeAnimate | undefined,
   identity: string | number | null,
   ready: boolean,
   children: ReactNode
 ): ReactNode {
-  const options = normalizeIconAnimate(animate);
+  const options = resolveIconChange(change);
   const kind = options?.effect ?? null;
   const enabled = kind != null;
   const defaults = kind === 'spin' ? SPIN_DEFAULTS : SWAP_DEFAULTS;
@@ -70,6 +71,10 @@ export function useIconSwap(
 
   const changePending = enabled && identity !== committedRef.current;
   if (!changePending) stableChildrenRef.current = children;
+  if (!enabled && (committedRef.current !== identity || swap.outgoing != null || swap.entering)) {
+    committedRef.current = identity;
+    setSwap(state => ({ ...state, outgoing: null, entering: false }));
+  }
 
   // Смена идентичности + готовность контента → старт фазы OUT (snapshot старого → outgoing).
   useEffect(() => {
@@ -89,14 +94,14 @@ export function useIconSwap(
 
   // Завершение OUT → фаза IN: снимаем уходящий слой и включаем въезд нового. Таймер детерминированный.
   useEffect(() => {
-    if (swap.outgoing == null) return undefined;
+    if (!enabled || swap.outgoing == null) return undefined;
 
     const timer = window.setTimeout(() => {
       setSwap((s) => (s.outgoing == null ? s : { ...s, outgoing: null, entering: true }));
     }, readMotionTimeMs(duration, scopeRef.current ?? undefined, kind === 'spin' ? MOTION_DEFAULTS.iconSpin.duration : MOTION_DEFAULTS.iconSwap.duration) + MOTION_END_BUFFER_MS);
 
     return () => clearTimeout(timer);
-  }, [swap.generation, swap.outgoing, duration, defaults.duration]);
+  }, [enabled, swap.generation, swap.outgoing, duration, kind]);
 
   if (!enabled) return children;
 
@@ -110,10 +115,10 @@ export function useIconSwap(
   if (swap.outgoing != null) {
     return createElement(
       'span',
-      { ref: scopeRef, className: 'ui-swap', style: vars },
+      { ref: scopeRef, className: styles.IconSwap, style: vars },
       createElement(
         'span',
-        { key: `out-${swap.generation}`, className: cx('ui-swap-layer', 'ui-swap-out'), 'aria-hidden': true },
+        { key: `out-${swap.generation}`, className: cx(styles.Layer, styles.Out), inert: true, 'aria-hidden': true },
         swap.outgoing
       )
     );
@@ -125,10 +130,10 @@ export function useIconSwap(
 
   return createElement(
     'span',
-    { ref: scopeRef, className: 'ui-swap', style: vars },
+    { ref: scopeRef, className: styles.IconSwap, style: vars },
     createElement(
       'span',
-      { key: `in-${swap.generation}`, className: cx('ui-swap-layer', swap.entering && 'ui-swap-in') },
+      { key: `in-${swap.generation}`, className: cx(styles.Layer, swap.entering && styles.In) },
       current
     )
   );

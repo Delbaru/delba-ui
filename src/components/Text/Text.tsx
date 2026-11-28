@@ -1,207 +1,37 @@
 'use client';
 'use no memo';
 
-import Link from 'next/link';
-
-import styles from './Text.module.scss';
-import type React from 'react';
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-
-import {
-  boxLayout,
-  buildClampStyle,
-  composeInteractionHandlers,
-  createLayoutClasses,
-  cx,
-  normalizeComponentState,
-  resolveLinkProps,
-  shouldUseNextLink,
-  splitBoxLayout,
-  stateLinkProps,
-  useMergedRefs,
-  type WithRef,
-} from '../../core';
-import { isSharedMotionAnimate, useSharedMotion } from '../../hooks/useSharedMotion';
-import { CollapseWrap } from '../Collapse/CollapseWrap';
-import { resolveAnimation } from './animations/resolveAnimation';
-import { isTextTimeline } from './animations/timeline';
-import { useTextTimeline } from './animations/useTextTimeline';
-import { resolveTextContent } from './formatContent';
+import type { WithRef } from '#core';
+import { ElementFrame } from '#core/Element';
+import { MotionLayers } from '#core/Motion';
+import { CounterValue } from './animations/counter/Counter';
 import { bindTextContent } from './nonBreaking';
-
+import { useText } from './Text.model';
 import type { TextProps } from './Text.types';
+
 export type { TextProps } from './Text.types';
 
-const c = createLayoutClasses();
-
-export function Text({
-  ref,
-  as = 'div',
-  variant = ['body', 'body', 'body'],
-  animate,
-  collapse,
-  fontSize,
-  fontWeight,
-  lineHeight,
-  fontFamily,
-  perspective3d,
-  parallax,
-  color,
-  textTransform,
-  letterSpacing,
-  textAlign,
-  whiteSpace,
-  rows,
-  ellipsis,
-  state,
-  className = '',
-  style,
-  children,
-  format = ['default', 'default', 'default'],
-  required = false,
-  linkState,
-  onMouseEnter,
-  onMouseLeave,
-  ...props
-}: WithRef<TextProps, HTMLElement>) {
-  'use no memo';
-  const { box, rest } = splitBoxLayout(props);
-  const layout = boxLayout(c, box);
-  const aProps = rest as React.AnchorHTMLAttributes<HTMLAnchorElement> & {
-    download?: string | boolean;
-    newTab?: boolean;
-    nofollow?: boolean;
-    noreferrer?: boolean;
-  };
-  const { href, target, rel, download, newTab, nofollow, noreferrer, ...anchorRestProps } = aProps;
-
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
-    perspective3d,
-    parallax,
-    animate,
-  });
-
-  const internalRef = useRef<HTMLElement | null>(null);
-  const setRef = useMergedRefs(internalRef, setMotionNode, ref);
-
-  const hasChildren = children != null && children !== '' && children !== false;
-
-  // Контент и анимация: формат строки → плагин анимации из реестра (или контент как есть).
-  const content = resolveTextContent(children, format);
-  const timelineInput = isTextTimeline(animate) ? animate : undefined;
-  const timeline = useTextTimeline(timelineInput, content, internalRef);
-  const contentAnimate = isSharedMotionAnimate(animate) || timelineInput ? undefined : animate;
-  const anim = resolveAnimation(contentAnimate, content);
-
-  // Классы и inline-стиль host'а — коробка из ядра (boxLayout), типографика здесь. Алгоритмика (letter-spacing,
-  // формат, разбор анимации) вынесена в ./typography, ./formatContent, ./animations.
-  const clampStyle = buildClampStyle(rows);
-  const hasRows = rows !== undefined;
-  const hasSingleLineEllipsis = Boolean(ellipsis) && !hasRows;
-
-  const inline: CSSProperties = {
-    ...clampStyle,
-    ...(motionStyle ?? null),
-    ...(timeline.style ?? null),
-    ...(timelineInput && as === 'span' ? { display: 'inline-block' } : null),
-  };
-
-  const normalizedState = normalizeComponentState(state);
-  const sharedHandlerProps = stateLinkProps(
-    linkState,
-    composeInteractionHandlers(motionHandlers, { ...rest, onMouseEnter, onMouseLeave }),
-  );
-
-  const effectiveAs = href ? 'a' : as;
-  const isAnchor = effectiveAs === 'a';
-  const Comp = (
-    isAnchor && shouldUseNextLink(href, target, download) ? Link : effectiveAs
-  ) as React.ElementType;
-  const linkProps = isAnchor
-    ? resolveLinkProps({ href, target, rel, download, newTab, nofollow, noreferrer })
-    : {};
-  const anchorProps = isAnchor ? { ...anchorRestProps, ...linkProps } : rest;
-
-  const coreClasses = [
-    ...c.value('text', variant),
-    ...c.value('fontSize', fontSize),
-    ...c.value('fontWeight', fontWeight),
-    ...c.value('lineHeight', lineHeight),
-    ...c.value('fontFamily', fontFamily),
-    ...c.value('textTransform', textTransform),
-    ...c.value('letterSpacing', letterSpacing),
-    ...c.value('textAlign', textAlign),
-    ...c.value('whiteSpace', whiteSpace),
-    ...layout,
-    ...c.value('color', color),
-  ];
-
-  // clamp/ellipsis/required не сочетаются с анимациями — добавляем их только в неанимированном пути.
-  const classNames = anim.active
-    ? cx(styles.Text, 'ui-text', ...coreClasses, className)
-    : cx(
-        styles.Text,
-        'ui-text',
-        ...coreClasses,
-        required && 'ui-text-required',
-        hasRows && 'ui-text-clamp',
-        hasSingleLineEllipsis && 'ui-text-ellipsis',
-        className,
-    );
-
-  if (!hasChildren && !collapse) return null;
-
-  const textNode = (
-    <Comp
-        ref={setRef}
-        {...(normalizedState ? { state: normalizedState } : undefined)}
-        className={classNames}
-        style={{ ...inline, ...style }}
-        {...revealAttrs}
-        {...timeline.attrs}
-        {...anchorProps}
-        {...sharedHandlerProps}
-    >
-      {timeline.hasCounter ? (
-        <span className="ui-counter">
-          <span aria-hidden className="ui-counter-reserve">{timeline.finalText}</span>
-          <span ref={timeline.valueRef} className="ui-counter-value">{timeline.finalText}</span>
-        </span>
-      ) : anim.active && anim.Inner ? (
-        <anim.Inner content={content} options={anim.options} />
-      ) : (
-        bindTextContent(content)
-      )}
-    </Comp>
-  );
-
-  if (!collapse) return textNode;
-
-  return <CollapsibleText collapse={collapse} hasChildren={
-    hasChildren
-  }>{textNode}</CollapsibleText>;
-}
-
-function CollapsibleText({
-  collapse,
-  hasChildren,
-  children,
-}: {
-  collapse: NonNullable<TextProps['collapse']>;
-  hasChildren: boolean;
-  children: React.ReactNode;
-}) {
-  // Ошибка может очиститься в тот же рендер, который закрывает блок. Держим прежний текст,
-  // чтобы он уходил вместе с высотой, а не исчезал до начала анимации.
-  const [lastChildren, setLastChildren] = useState<React.ReactNode>(hasChildren ? children : null);
-
-  useLayoutEffect(() => {
-    if (collapse.open !== false && hasChildren) setLastChildren(children);
-  }, [collapse.open, hasChildren, children]);
+export function Text(props: WithRef<TextProps, HTMLElement>) {
+  const {
+    host: Host, root, collapse, popup, effects, visible,
+    content, nativeText, timelineCounter, Inner, animationOptions,
+  } = useText(props);
+  if (!visible && !collapse) return null;
 
   return (
-    <CollapseWrap {...collapse} clip>
-      {hasChildren ? children : lastChildren}
-    </CollapseWrap>
+    <ElementFrame collapse={collapse} popup={visible ? popup : undefined}>
+      {visible && (nativeText !== undefined ? (
+        <Host {...root}>{nativeText}</Host>
+      ) : (
+        <Host {...root}>
+          {effects.glow && <MotionLayers effects={effects} />}
+          {timelineCounter ? (
+            <CounterValue {...timelineCounter} currentText={timelineCounter.finalText} />
+          ) : Inner ? (
+            <Inner content={content} options={animationOptions} />
+          ) : bindTextContent(content)}
+        </Host>
+      ))}
+    </ElementFrame>
   );
 }

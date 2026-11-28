@@ -1,3 +1,5 @@
+@use 'sass:map' as frontendMap;
+@use '../../core/responsive-generated' as frontendResponsive;
 @use '../../core/scss-utils' as utils;
 @use '../../core/mixins' as m;
 @use '../../core/field-sizes' as fields;
@@ -31,7 +33,7 @@
   }
   .Dropdown {
     box-sizing: border-box;
-    background: var(--white-100);
+    background: var(--primary-foreground);
     border: calc(1 * var(--rpx)) solid var(--select-panel-border, var(--line));
     border-top: none;
     border-radius: var(--select-dropdown-radius-top, 0) var(--select-dropdown-radius-top, 0)
@@ -89,35 +91,35 @@
     .#{$p}variant_primary,
     .#{$p}variant_primaryFill {
       --select-option-padding: calc(12 * var(--rpx)) calc(16 * var(--rpx));
-      @media (min-width: 768px) and (max-width: 1023px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
         --select-option-padding: calc(16 * var(--rpx));
       }
-      @media (min-width: 1024px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, d)} {
         --select-option-padding: calc(16 * var(--rpx)) calc(24 * var(--rpx));
       }
     }
     .#{$p}variant_primaryFill {
       border: var(--rpx) solid var(--primary);
       background: var(--primary);
-      --select-trigger-color: var(--black);
-      --select-chevron-stroke: var(--black);
+      --select-trigger-color: var(--text);
+      --select-chevron-stroke: var(--text);
       &:hover:not([state~='disabled']),
       &[state~='hover']:not([state~='disabled']),
       &[state~='open']:not([state~='disabled']) {
         border-color: var(--primary);
       }
-      @media (max-width: 767px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, m)} {
         padding: calc(12 * var(--rpx)) calc(16 * var(--rpx));
         padding-right: calc(28 * var(--rpx));
-        --select-trigger-font: #{m.role-font(body, p1)};
+
         --select-trigger-case: uppercase;
         --select-trigger-weight: 700;
       }
-      @media (min-width: 768px) and (max-width: 1023px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
         padding: calc(16 * var(--rpx));
         padding-right: calc(32 * var(--rpx));
       }
-      @media (min-width: 1024px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, d)} {
         padding: calc(16 * var(--rpx)) calc(24 * var(--rpx));
       }
     }

@@ -11,8 +11,8 @@ import type {
   RefCallback,
   RefObject,
 } from 'react';
-import type { FieldValueChangeHandler, FieldValueChangeReason } from '../../core';
-import { useMergedRefs } from '../../core';
+import type { FieldValueChangeHandler, FieldValueChangeReason } from '#core';
+import { useMergedRefs } from '#core';
 import { resolveSeedField } from '../../core/base/seed';
 import { UI_MESSAGES } from '../../core/base/messages';
 import { useFormReset } from '../../core/useFormReset';
@@ -435,9 +435,13 @@ export function useField<E extends NativeTextField = HTMLInputElement>(
       const end = event.currentTarget.selectionEnd;
       const direction = event.currentTarget.selectionDirection;
       onChange?.(event);
+      if (event.defaultPrevented) {
+        if (event.currentTarget.type !== 'file') writeDisplay(renderedValue, event.currentTarget);
+        return;
+      }
       applyEdit(raw, event, start, end, direction);
     },
-    [applyEdit, disabled, onChange, readOnly],
+    [applyEdit, disabled, onChange, readOnly, renderedValue, writeDisplay],
   );
 
   const handleKeyDown = useCallback(

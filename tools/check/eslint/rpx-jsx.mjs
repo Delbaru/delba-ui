@@ -115,7 +115,7 @@ export function hasExplicitResponsiveTupleTs(expression) {
 
 export const responsiveTupleRule = {
     id: 'responsive-tuple',
-    docs: 'docs/specs/architecture/principles.md',
+    docs: 'docs/architecture.md',
     check(source, { checker } = {}) {
         if (!checker) return [];
         const issues = [];

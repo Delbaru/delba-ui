@@ -1,3 +1,60 @@
+@use 'sass:map' as frontendMap;
+@use '../../../core/responsive-generated' as frontendResponsive;
+@use '../../../core/mixins' as m;
+
 @layer ui.components {
-  .IconGlyph {}
+  // Стили для обычной иконки (без wrapper). Дефолт цвета — в компоненте, не в SVG.
+  .IconGlyph {
+      --transition-btn: var(--t-fast);
+      --icon-stroke-width: inherit;
+      --icon-stroke-width-d: inherit;
+      --icon-stroke-width-m: inherit;
+      --icon-stroke-width-t: inherit;
+      --rotate-d: 0deg;
+      display: inline-block;
+      flex-shrink: 0;
+      vertical-align: middle;
+      color: inherit;
+      transition: var(--transition-btn, var(--t-fast));
+      transform: var(--perspective3d-transform,) rotate(var(--rotate-d, 0deg));
+      stroke-width: var(--icon-stroke-width, var(--icon-stroke-width-d, inherit));
+
+      // Пока SVG ещё грузится, иконка-плейсхолдер уже занимает своё место (без «шифта»),
+      // но прозрачна. Когда содержимое доехало, атрибут снимается и иконка плавно проявляется
+      // за счёт уже объявленного выше transition.
+      &[data-icon-loading='true'] {
+          opacity: 0;
+      }
+
+      path,
+      circle,
+      rect {
+          transition: var(--transition-btn, var(--t-fast));
+      }
+  }
+
+  @include m.reduced-motion {
+      .IconGlyph[data-icon-loading='true'] {
+          opacity: 1;
+      }
+  }
+
+  // responsive rotate (order: desktop / mobile / tablet)
+  @media #{frontendMap.get(frontendResponsive.$breakpoints, m)} {
+      .IconGlyph {
+          transform: var(--perspective3d-transform,) rotate(var(--rotate-m, var(--rotate-d, 0deg)));
+          stroke-width: var(--icon-stroke-width-m, var(--icon-stroke-width-d, inherit));
+      }
+  }
+
+  @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
+      .IconGlyph {
+          transform: var(--perspective3d-transform,) rotate(var(--rotate-t, var(--rotate-d, 0deg)));
+          stroke-width: var(--icon-stroke-width-t, var(--icon-stroke-width-d, inherit));
+      }
+  }
+
+  button:disabled .IconGlyph[data-icon-root='true'] {
+      filter: var(--disable-filter-for-icon);
+  }
 }

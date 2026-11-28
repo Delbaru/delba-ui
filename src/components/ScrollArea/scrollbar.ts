@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { scrollbarStyle } from '../../core/base/scrollbar';
-import { SCROLLBAR_CONFIG } from '../../core/scrollbar-config';
+import { SCROLLBAR_CONFIG } from '#core/scrollbar-config';
 
 export interface ScrollbarOptions {
     /** Толщина в дизайн-единицах; Firefox использует ближайший нативный thin/auto. */

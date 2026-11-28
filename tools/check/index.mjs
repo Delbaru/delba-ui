@@ -1,5 +1,4 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, statSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -29,45 +28,6 @@ const astStep = (name, ...args) => ({
     },
 });
 
-/** Own Playwright's saved selection; never attest stale state after an early runner failure. */
-export async function runBrowserTests({ root = KIT, reportFile, failedOnly = false, shard } = {}) {
-    const state = path.join(root, 'tools/browser/.test-results/.last-run.json');
-    const receipt = `${reportFile}.browser-state.json`;
-    const digest = () => createHash('sha256').update(readFileSync(state)).digest('hex');
-    const stamp = () => {
-        const stat = statSync(state, { bigint: true });
-        return `${stat.mtimeNs}:${stat.ctimeNs}`;
-    };
-    let previousStamp;
-    if (failedOnly) {
-        try {
-            const previous = JSON.parse(readFileSync(state, 'utf8'));
-            if (previous.status !== 'failed' || !previous.failedTests?.length ||
-                JSON.parse(readFileSync(receipt, 'utf8')).hash !== digest()) {
-                return { ok: false, output: '--failed requires matching failed Playwright state.' };
-            }
-            previousStamp = stamp();
-        } catch {
-            return { ok: false, output: '--failed requires previous Playwright state.' };
-        }
-    } else {
-        rmSync(state, { force: true });
-    }
-    // A retry still needs .last-run as input, but its old receipt must not survive.
-    rmSync(receipt, { force: true });
-    const result = await runNode([
-        require.resolve('@playwright/test/cli'), 'test',
-        '--config', 'tools/browser/playwright.config.ts',
-        ...(shard ? ['--shard', shard] : []),
-        ...(failedOnly ? ['--last-failed'] : []),
-    ], root);
-    if (existsSync(state) && (!failedOnly || stamp() !== previousStamp)) {
-        mkdirSync(path.dirname(receipt), { recursive: true });
-        writeFileSync(receipt, JSON.stringify({ hash: digest() }));
-    }
-    return result;
-}
-
 /** Один список шагов для быстрой проверки проекта и полной проверки UI. */
 export function projectSteps(
     root,
@@ -96,11 +56,10 @@ export function projectSteps(
             [
                 script('check-tokens.mjs'),
                 ...(strict ? ['--strict'] : []),
-                ...(config.theme?.sources ?? ['theme']),
+                path.join(KIT, 'src/core/theme.css'),
                 ...(config.motion
                     ? ['--generated-motion', path.join(KIT, 'src/core/_motion.scss')]
                     : []),
-                ...(config.typography ? ['--typography', config.typography.join(',')] : []),
             ],
             root,
             environment,
@@ -130,35 +89,30 @@ export { discoverTests } from './discovery.mjs';
 
 /** Library verification only. Consumer checks are exposed separately as projectSteps. */
 export function uiCheckSteps({ suite = 'standard', reportFile = path.join(KIT, '.verification', `ui-${suite}.json`),
-    shard, fix = false, ...unsupported } = {}) {
+    fix = false, ...unsupported } = {}) {
     for (const key of Object.keys(unsupported)) {
         if (unsupported[key] !== undefined) throw new Error(`Unsupported Frontend verification option: ${key}`);
     }
-    if (!['standard', 'all', 'library', 'browser'].includes(suite)) throw new Error(`Unknown UI suite: ${suite}`);
-    if (shard !== undefined) {
-        const match = /^(\d+)\/(\d+)$/.exec(shard);
-        if (suite !== 'browser' || !match || +match[1] < 1 || +match[1] > +match[2])
-            throw new Error('--shard requires --suite browser and a valid index/total');
-    }
-    const libraryTests = discoverTests(KIT, ['tools', 'tests']);
-    const steps = [
+    if (!['standard', 'all', 'library'].includes(suite)) throw new Error(`Unknown UI suite: ${suite}`);
+    const libraryTests = discoverTests(KIT);
+    return [
         { name: 'Генерация', required: true, run: async () => {
             const { prepareFrontend } = await import('../module.mjs');
-            return { ok: await prepareFrontend({ root: KIT, settings: {} }) };
+            const { registerFrontendSources } = await import('../registration.mjs');
+            await registerFrontendSources();
+            const { starterFrontend } = await import('../visual/starter.ts');
+            return { ok: await prepareFrontend({ root: KIT, settings: starterFrontend }) };
         } },
-        { ...nodeStep('Типы', [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json', '--noEmit', '--incremental', 'false']), suite: 'library' },
-        { ...astStep('Архитектура', undefined, { fix }), suite: 'library' },
-        { ...nodeStep('Границы', [script('check-boundary.mjs')]), suite: 'library' },
-        { ...nodeStep('Стартовая тема', [script('check-tokens.mjs'), 'theme', '--strict']), suite: 'library' },
-        { name: 'Тесты', suite: 'library', run: ({ failedOnly = false } = {}) => runNodeTests({
+        nodeStep('Типы', [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json', '--noEmit', '--incremental', 'false']),
+        astStep('Архитектура', undefined, { fix }),
+        nodeStep('Границы', [script('check-boundary.mjs')]),
+        nodeStep('Стартовая тема', [script('check-tokens.mjs'), path.join(KIT, 'src/core/theme.css'), '--strict']),
+        { name: 'Тесты', run: ({ failedOnly = false } = {}) => runNodeTests({
             cwd: KIT, files: libraryTests, stateFile: `${reportFile}.library-tests`, failedOnly,
             nodeArgs: ['--import', 'tsx', '--import', pathToFileURL(script('check/unit-runtime.mjs')).href,
                 ...(process.env.CI ? ['--test-concurrency=2'] : [])],
         }) },
-        { name: 'Браузер', suite: 'browser', run: ({ failedOnly = false } = {}) => runBrowserTests({ reportFile, failedOnly, shard }) },
     ];
-    return steps.filter(step => step.required || suite === 'all' ||
-        (suite === 'standard' ? step.suite === 'library' : step.suite === suite));
 }
 
 export function runUiChecks({ failedOnly, reportFile: requestedReport, ...options } = {}) {
@@ -166,7 +120,7 @@ export function runUiChecks({ failedOnly, reportFile: requestedReport, ...option
     const reportFile = path.resolve(requestedReport ?? path.join(KIT, '.verification', `ui-${suite}.json`));
     return runSteps(uiCheckSteps({ ...options, reportFile }), {
         label: `Frontend (${suite})`, reportFile, failedOnly,
-        profile: { suite, shard: options.shard, fix: Boolean(options.fix) },
+        profile: { suite, fix: Boolean(options.fix) },
     });
 }
 

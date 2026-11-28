@@ -1,5 +1,12 @@
 ﻿import type { ReactElement, RefObject } from 'react';
 import type { DropdownProps, DropdownTriggerProps } from '../../../src/components/Dropdown/Dropdown.types';
+import type { DropdownBackdropOptions, DropdownPanelOptions } from '../../../src/components/Dropdown';
+
+const panel: DropdownPanelOptions = {
+  animate: { appearance: { when: 'open', effect: 'fade' }, idle: { effect: 'glow' } },
+};
+const backdrop: DropdownBackdropOptions = { animate: { appearance: { when: 'open', effect: 'fade' } } };
+void [panel, backdrop];
 
 declare const anchor: RefObject<HTMLElement | null>;
 declare const trigger: ReactElement<DropdownTriggerProps>;

@@ -5,14 +5,13 @@ import { contentAnimationClass, resolveContentAnimate, stepSwap, type ContentKey
 
 test('content changes accept only object intent', () => {
   assert.deepEqual(resolveContentAnimate(undefined), {});
-  assert.deepEqual(resolveContentAnimate({ when: 'change', effect: 'up', key: 'tab-2' }), {
+  assert.deepEqual(resolveContentAnimate({ effect: 'up', key: 'tab-2' }), {
     animation: 'fadeInUp', key: 'tab-2', duration: undefined,
   });
 });
 
 test('unified change animation maps fade, key, and duration into content motion', () => {
     assert.deepEqual(resolveContentAnimate({
-        when: 'change',
         effect: 'fade',
         key: 'calendar-months',
         duration: 'fast',

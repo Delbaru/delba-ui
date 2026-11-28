@@ -172,7 +172,11 @@ export function run(mode, roots, options = {}) {
                 }
             }
         }
-        for (const name of ['agents.md', 'project.md', 'development.md', 'Library.md', 'authoring.md', 'backend.md', 'frontend.md', 'browser-verification.md']) {
+        const documentedFiles = [
+            'agents.md', 'project.md', 'development.md', 'architecture.md', 'configuration.md', 'components.md',
+            'Library.md', 'authoring.md', 'backend.md', 'frontend.md', 'browser-verification.md',
+        ];
+        for (const name of documentedFiles) {
             const file = path.join(root, 'docs', name);
             if (existsSync(file)) files.push(file);
         }

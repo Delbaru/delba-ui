@@ -1,3 +1,5 @@
+@use 'sass:map' as frontendMap;
+@use '../../../core/responsive-generated' as frontendResponsive;
 @use '../../../core/scss-utils' as utils;
 @use '../../../core/mixins' as m;
 
@@ -68,7 +70,7 @@
       pointer-events: auto;
 
       .Overlay {
-        background-color: color-mix(in srgb, var(--black) 24%, transparent);
+        background-color: color-mix(in srgb, var(--text) 24%, transparent);
         -webkit-backdrop-filter: blur(calc(2 * var(--rpx)));
         backdrop-filter: blur(calc(2 * var(--rpx)));
       }
@@ -108,15 +110,15 @@
   }
   @mixin preset-classes($p: '') {
     .#{$p}preset_default {
-      @media (max-width: 767px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, m)} {
         width: 100%;
         max-width: 100vw;
         height: 100%;
         max-height: 100dvh;
-        background: var(--background);
+        background: var(--surface);
       }
 
-      @media (min-width: 768px) and (max-width: 1023px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
         width: 100%;
         height: 100%;
         max-width: calc(100% - var(--s-container) * 2);
@@ -125,7 +127,7 @@
         justify-content: center;
       }
 
-      @media (min-width: 1024px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, d)} {
         width: 100%;
         max-width: calc(var(--rpx) * 1400);
         height: fit-content;
@@ -134,22 +136,22 @@
     }
 
     .#{$p}preset_fullWidth {
-      @media (max-width: 767px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, m)} {
         max-width: 100vw;
         max-height: 100dvh;
-        background: var(--background);
+        background: var(--surface);
       }
 
-      @media (min-width: 768px) and (max-width: 1023px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
         max-width: 100vw;
         max-height: 100dvh;
-        background: var(--background);
+        background: var(--surface);
       }
 
-      @media (min-width: 1024px) {
+      @media #{frontendMap.get(frontendResponsive.$breakpoints, d)} {
         max-width: 100vw;
         max-height: 100dvh;
-        background: var(--background);
+        background: var(--surface);
       }
     }
   }

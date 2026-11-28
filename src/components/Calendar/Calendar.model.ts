@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import * as dates from '../../core/fields/date';
+import { useEffect, useRef, useState } from 'react';
+import { calendar, useCalendar } from '#core/Calendar';
+import { parseValue } from '../../core/fields/date';
 
 interface CalendarModelOptions {
   value?: string;
@@ -11,7 +12,7 @@ interface CalendarModelOptions {
   onValueChange(value: string): void;
 }
 
-/** Owns the selected-date view, visible month, navigation, and range checks for inline Calendar. */
+/** Adapts the shared calendar to the inline month chooser and date picker. */
 export function useCalendarModel({
   value,
   minValue,
@@ -19,49 +20,40 @@ export function useCalendarModel({
   disabled,
   onValueChange,
 }: CalendarModelOptions) {
-  const [visibleMonth, setVisibleMonth] = useState(() =>
-    dates.resolveOpeningMonth(value, minValue, maxValue));
   const [choosingMonth, setChoosingMonth] = useState(false);
-  const selectedDate = useMemo(() => dates.parseValue(value ?? ''), [value]);
-  const minimum = useMemo(() => dates.parseValue(minValue ?? ''), [minValue]);
-  const maximum = useMemo(() => dates.parseValue(maxValue ?? ''), [maxValue]);
-  const days = useMemo(() => dates.buildCalendarDays(visibleMonth), [visibleMonth]);
+  const selectedDate = parseValue(value ?? '');
+  const previousValue = useRef(selectedDate);
+  const model = useCalendar({
+    value: selectedDate,
+    onPick: onValueChange,
+    disabled,
+    minValue: parseValue(minValue ?? '') ?? undefined,
+    maxValue: parseValue(maxValue ?? '') ?? undefined,
+    minWeeks: 6,
+  });
+  const setMonth = model.month.set;
+  const year = Number(model.month.current.slice(0, -3));
+  const monthIndex = Number(model.month.current.slice(-2)) - 1;
 
   useEffect(() => {
-    if (!selectedDate) return;
-    setVisibleMonth((current) => {
-      const selectedMonth = dates.getMonthStart(selectedDate);
-      return current.getFullYear() === selectedMonth.getFullYear() &&
-        current.getMonth() === selectedMonth.getMonth()
-        ? current
-        : selectedMonth;
-    });
-  }, [selectedDate]);
+    if (selectedDate === previousValue.current) return;
+    previousValue.current = selectedDate;
+    if (selectedDate) setMonth(calendar.monthOf(selectedDate));
+  }, [selectedDate, setMonth]);
 
-  function allows(day: Date): boolean {
-    return !disabled && dates.isWithinBounds(day, minimum, maximum);
-  }
-
-  function pick(day: Date): void {
-    if (!allows(day)) return;
-    onValueChange(dates.formatIso(day));
-    setVisibleMonth(dates.getMonthStart(day));
+  function pick(day: string): void {
+    if (!model.selection.pick(day)) return;
+    setMonth(calendar.monthOf(day));
     setChoosingMonth(false);
   }
 
   function changeMonth(delta: number): void {
-    if (disabled) return;
-    setVisibleMonth((current) => dates.addMonth(current, delta));
-  }
-
-  function changeYear(delta: number): void {
-    if (disabled) return;
-    setVisibleMonth((current) => new Date(current.getFullYear() + delta, current.getMonth(), 1));
+    if (!disabled) model.month.shift(delta);
   }
 
   function pickMonth(index: number): void {
     if (disabled) return;
-    setVisibleMonth((current) => new Date(current.getFullYear(), index, 1));
+    model.month.shift(index - monthIndex);
     setChoosingMonth(false);
   }
 
@@ -71,13 +63,13 @@ export function useCalendarModel({
 
   return {
     month: {
-      current: visibleMonth,
+      index: monthIndex,
       change: changeMonth,
       pick: pickMonth,
     },
-    year: { change: changeYear },
-    selection: { current: selectedDate, allows, pick },
+    year: { current: year, change: (delta: number) => changeMonth(delta * 12) },
+    selection: { pick },
     view: { choosingMonth, toggleMonth },
-    days,
+    days: model.days,
   };
 }

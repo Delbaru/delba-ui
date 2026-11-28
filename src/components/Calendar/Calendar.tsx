@@ -1,7 +1,7 @@
 'use client';
 
 import { useId } from 'react';
-import { cx } from '../../core';
+import { cx } from '#core';
 import { Flex } from '../Flex';
 import { CalendarDays } from './CalendarDays/CalendarDays';
 import { CalendarHeader } from './CalendarHeader/CalendarHeader';
@@ -45,7 +45,8 @@ export function Calendar({
     >
       <CalendarHeader
           id={calendarId}
-          month={model.month.current}
+          monthIndex={model.month.index}
+          year={model.year.current}
           disabled={disabled}
           choosingMonth={model.view.choosingMonth}
           changeMonth={model.month.change}
@@ -56,28 +57,25 @@ export function Calendar({
       <Flex
         id={`${calendarId}-calendar-grid`}
         animate={{
-          when: 'change',
-          effect: 'fade',
-          key: model.view.choosingMonth ? 'months' : 'days',
-          duration: 'fast',
+            change: {
+                effect: 'fade',
+                key: model.view.choosingMonth ? 'months' : 'days',
+                duration: 'fast'
+            }
         }}
         dir={['column', 'column', 'column']}
         h={calendarConfig.contentHeight}
       >
         {model.view.choosingMonth ? (
           <CalendarMonths
-              current={model.month.current.getMonth()}
+              current={model.month.index}
               disabled={disabled}
               pick={model.month.pick}
           />
         ) : (
           <CalendarDays
               id={controlId}
-              month={model.month.current}
-              selected={model.selection.current}
               days={model.days}
-              disabled={disabled}
-              allows={model.selection.allows}
               pick={model.selection.pick}
           />
         )}

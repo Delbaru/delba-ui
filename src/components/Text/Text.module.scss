@@ -1,4 +1,72 @@
+@use 'sass:map' as frontendMap;
+@use '../../core/responsive-generated' as frontendResponsive;
+@use '../../core/mixins' as m;
+
 @layer ui.components {
+  :where(.Text) {
+    margin: 0;
+  }
+
   .Text {
+    &[href] {
+      text-decoration: none;
+      // Стили проекта задают видимое кольцо фокуса.
+      outline: none;
+    }
+
+    font-variant-numeric: lining-nums proportional-nums !important;
+  }
+
+  // Цвет ссылки — низкоспецифичным :where (как margin выше), чтобы color-проп (утилити-класс,
+  // 0,1,0) перекрывал его без inline/!important. Без color ссылка остаётся var(--text)
+  // (author-origin бьёт UA-цвет ссылки при любой специфичности).
+  :where(.Text[href]) {
+    color: var(--text);
+  }
+
+  .Required::after {
+    content: '*';
+    display: inline-block;
+    margin-left: calc(4 * var(--rpx));
+    transform: translateY(-1cap);
+    @include m.typography-role(body);
+
+
+    color: var(--error);
+  }
+
+  .Clamp {
+    display: -webkit-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-clamp: var(--text-rows-d, 1);
+    -webkit-line-clamp: var(--text-rows-d, 1);
+  }
+
+  .Ellipsis {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Типографика (вариант, кегль, насыщенность, высота строки, трекинг…) — утилиты общего слоя
+  // (core/utilities). Анимации (textSlide/textClip/textReveal/counter) — в своих плагинах.
+
+  @media #{frontendMap.get(frontendResponsive.$breakpoints, m)} {
+    .Clamp {
+      line-clamp: var(--text-rows-m, var(--text-rows-d, 1));
+      -webkit-line-clamp: var(--text-rows-m, var(--text-rows-d, 1));
+    }
+  }
+
+  @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
+    .Clamp {
+      line-clamp: var(--text-rows-t, var(--text-rows-d, 1));
+      -webkit-line-clamp: var(--text-rows-t, var(--text-rows-d, 1));
+    }
   }
 }

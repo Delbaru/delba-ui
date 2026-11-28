@@ -17,13 +17,13 @@ src/core/_scrollbar-policy.scss
 node_modules
 .verification/
 
-# Артефакты браузерной проверки
-tools/browser/.test-results/
-test-results/
-playwright-report/
-
 # Локальная точка отсчёта project-check, не контракт библиотеки.
 /.rules-baseline.json
 
 # Локальные ссылки Claude на единственные источники в .agents/skills
 /.claude/skills/
+
+src/core/theme.css
+src/core/theme.generated.ts
+src/core/_responsive-generated.scss
+src/core/_typography-generated.scss

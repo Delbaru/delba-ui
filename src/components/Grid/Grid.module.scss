@@ -1,4 +1,19 @@
 @layer ui.components {
+  // Треки, линии, зазоры и выравнивание — утилиты общего слоя (core/utilities).
   .Grid {
+    display: grid;
+  }
+
+  .Layout {
+    position: relative;
+
+    > [data-grid-layout-key] {
+      transform-origin: top left;
+    }
+    > [data-grid-layout-exit] {
+      position: absolute;
+      pointer-events: none;
+      opacity: 0;
+    }
   }
 }

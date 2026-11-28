@@ -1,6 +1,6 @@
 'use client';
 
-import { assetUrl } from '../../../core';
+import { assetUrl } from '#core';
 import { Flex } from '../../Flex';
 import { Text } from '../../Text';
 import { Icon } from '../../Icon';
@@ -8,8 +8,9 @@ import type { MediaDropDownModel } from '../MediaDropDown.model';
 import styles from './MediaTrigger.module.scss';
 import { resolveSvgAssetSource } from '../../../core/base/svg-asset';
 import SkipNextOutlineIconAsset from '../../RichTextarea/assets/skip-next-outline.svg';
-import eyeIcon from '../../../../assets/icons/ui/eye/style-1/eye.svg';
-import deleteIcon from '../../../../assets/icons/ui/delete/style-1/delete.svg';
+import chevronDownIcon from '#icons/controls/chevron-down.svg';
+import eyeIcon from '#icons/controls/eye.svg';
+import deleteIcon from '#icons/controls/trash.svg';
 const SkipNextOutlineIcon = resolveSvgAssetSource(SkipNextOutlineIconAsset) ?? '';
 
 export function MediaTrigger({ media }: { media: Pick<MediaDropDownModel, 'popup' | 'selection' | 'type' | 'disabled'> }) {
@@ -60,7 +61,7 @@ export function MediaTrigger({ media }: { media: Pick<MediaDropDownModel, 'popup
             className={styles.TriggerIconRoot}
         >
           <Icon
-              name={media.type.selected.icon}
+              src={media.type.selected.iconSrc}
               w={[20, 20, 20]}
               h={[20, 20, 20]}
               className={styles.TriggerIcon}
@@ -122,7 +123,7 @@ export function MediaTrigger({ media }: { media: Pick<MediaDropDownModel, 'popup
           </button>
         ) : null}
         <Icon
-            name="ui/arrows/arrow-2/arrow"
+            src={assetUrl(chevronDownIcon)}
             w={[16, 16, 16]}
             h={[16, 16, 16]}
             className={styles.Arrow}

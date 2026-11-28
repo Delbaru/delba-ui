@@ -2,7 +2,7 @@
 .LexicalTextareaToolbarButton {
         position: relative;
         transition: var(--t-fast);
-        color: var(--black);
+        color: var(--text);
         flex: 0 0 auto;
 
         // Подсветка рисуется псевдоэлементом с отрицательным inset:
@@ -27,7 +27,7 @@
           color: var(--primary);
 
           path {
-            fill: var(--white-100);
+            fill: var(--primary-foreground);
           }
 
           &::before {
@@ -39,7 +39,7 @@
           color: var(--primary);
 
           path {
-            fill: var(--white-100);
+            fill: var(--primary-foreground);
           }
 
           &::before {

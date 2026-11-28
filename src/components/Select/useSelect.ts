@@ -11,11 +11,10 @@ import {
 import type React from 'react';
 import type { SelectSearchProps } from './Select.types';
 
-import { useMergedRefs } from '../../core';
+import { useMergedRefs } from '#core';
 import { useFieldFeedback, type FieldMessage } from '../Field';
 import { UI_MESSAGES, formatUiMessage } from '../../core/base/messages';
 import { useFormReset } from '../../core/useFormReset';
-import { useSharedMotion, type SharedMotionProps } from '../../hooks/useSharedMotion';
 import {
   defaultEqual,
   getFocusedOptionIndex,
@@ -34,7 +33,7 @@ export interface SelectRenderValuePayload<T extends string = string> {
 }
 
 /** Значение внутри хука — общий `T | null | T[]`; тип своей ветки `multiple` наружу отдаёт Select. */
-export interface SelectConfig<T extends string> extends SharedMotionProps {
+export interface SelectConfig<T extends string> {
   options: readonly SelectItem<T>[];
   search?: SelectSearchProps;
   value?: T | null | T[];
@@ -88,9 +87,6 @@ export function useSelect<T extends string>(
     label,
     comment,
     ariaLabel,
-    perspective3d,
-    parallax,
-    animate,
   } = config;
 
   const [uncontrolledValue, setUncontrolledValue] = useState<T | null | T[]>(
@@ -167,12 +163,6 @@ export function useSelect<T extends string>(
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<Array<HTMLElement | null>>([]);
-
-  const { motionHandlers, motionStyle, revealAttrs, setMotionNode } = useSharedMotion({
-    perspective3d,
-    parallax,
-    animate,
-  });
 
   const normalizedVisibleOptions = Math.max(1, Math.floor(visibleOptions));
   // Прокрутка нужна, только если строк БОЛЬШЕ, чем помещается в окно списка. Без этого
@@ -329,8 +319,8 @@ export function useSelect<T extends string>(
   );
 
   const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>) => {
-      if (disabled) return;
+    (event: KeyboardEvent<HTMLElement>) => {
+      if (disabled || event.defaultPrevented) return;
       if (event.nativeEvent.isComposing) return;
       if (event.key === 'Escape' && open) {
         event.preventDefault();
@@ -409,12 +399,6 @@ export function useSelect<T extends string>(
     },
     focus: { index: focusedIndex, set: setFocusedIndex, ref: setOptionRef, indexOf: optionIndexOf },
     trigger: { ref: fieldRef, inputRef: searchInputRef, accessibility: triggerAccessibilityProps, onKeyDown: handleKeyDown },
-    motion: {
-      ref: setMotionNode,
-      handlers: motionHandlers,
-      style: motionStyle,
-      attrs: revealAttrs,
-    },
   };
 }
 

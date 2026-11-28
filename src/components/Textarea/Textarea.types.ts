@@ -6,8 +6,8 @@ import type {
   FieldValueChangeHandler,
   ResponsiveValue,
   StateLinkInput,
-} from '../../core';
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
+} from '#core';
+import type { MotionChannels, SurfaceMotionOptions } from '#core/Motion';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
 type VariantKey = 'primary' | 'secondary';
 type SizeKey = 'default' | 'fullWidth';
@@ -25,7 +25,9 @@ export interface TextareaProps
       | 'maxHeight'
     >,
     BoxLayoutProps,
-    SharedMotionProps {
+    Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
+  /** Motion channels for the field frame. */
+  animate?: MotionChannels;
   style?: CSSProperties;
   /** Оформление нативного textarea; style корня относится ко всему полю. */
   field?: { className?: string; style?: CSSProperties };

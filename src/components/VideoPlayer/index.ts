@@ -13,4 +13,4 @@ export type {
     VideoPlayerObjectFit,
     VideoPlayerProps,
     VideoPlayerSnapshot,
-} from './types';
+} from './VideoPlayer.types';

@@ -9,7 +9,8 @@ test('static require sources retain the real identity and private API policy', (
   const source = { default: { src: '/api/private/photo.webp', width: 800, height: 400 } };
   const resource = prepareImage({ src: source, alt: 'Imported photo' }, { w: [160, 160, 160] }, {});
   assert.equal(imageAddress(source), source.default.src);
-  assert.equal(resource.identity, source.default.src);
+  assert.equal(resource.address, source.default.src);
+  assert.deepEqual(JSON.parse(resource.identity), [source.default.src, source.default.src, source.default.src]);
   assert.equal(resource.image.unoptimized, true);
   assert.equal(prepareImage({ src: source, alt: '' }, { w: [160, 160, 160] }, { unoptimized: false }).image.unoptimized, false);
 });
@@ -41,11 +42,11 @@ test('all explicit/null source combinations preserve the narrow-first picture ca
     const props = { src: item.src, alt: 'Cascade', unoptimized: true, w: width };
     const resource = prepareImage(props, { w: props.w }, { unoptimized: true });
     assert.deepEqual(resource.sources.map(source => source.media), item.bands);
-    assert.equal(resource.sources[0]?.srcSet ?? resource.identity, item.mobile);
+    assert.equal(resource.sources[0]?.srcSet ?? resource.address, item.mobile);
     const html = renderToStaticMarkup(createElement(Img, props));
     const rendered = [...html.matchAll(/<source media="([^"]+)" srcSet="([^"]+)"/g)];
     assert.deepEqual(rendered.map(match => match[2]), resource.sources.map(source => source.srcSet));
-    assert.equal(rendered[0]?.[2] ?? resource.identity, item.mobile);
+    assert.equal(rendered[0]?.[2] ?? resource.address, item.mobile);
   }
 });
 
@@ -79,7 +80,22 @@ test('real Img routes root markers and native image attributes without nested li
   }));
   assert.match(lightbox, /href="\/api\/private\/photo.webp"/);
   assert.match(lightbox, /aria-label="Изображение"/);
-  assert.match(lightbox, /(?:class="| )ui-img-blur(?: |")/);
+  assert.match(lightbox, /data-img-blur=""/);
   assert.doesNotMatch(lightbox, /(?:class="| )ImgBlur(?: |")/);
   assert.match(lightbox, /aria-hidden="true"/);
+});
+
+
+test('responsive resource identity changes for mobile/tablet updates without changing the lightbox address', () => {
+  const prepare = (src: [string, string | null, string | null]) =>
+    prepareImage({ src, alt: 'Responsive' }, { w: [160, 160, 160] }, {});
+  const first = prepare(['/desktop.webp', '/mobile.webp', '/tablet.webp']);
+  const mobile = prepare(['/desktop.webp', '/mobile-2.webp', '/tablet.webp']);
+  const tablet = prepare(['/desktop.webp', '/mobile.webp', '/tablet-2.webp']);
+  assert.notEqual(first.identity, mobile.identity);
+  assert.notEqual(first.identity, tablet.identity);
+  assert.equal(first.address, mobile.address);
+  assert.equal(first.address, tablet.address);
+  assert.equal(prepare(['/same.webp', null, null]).identity,
+    prepare(['/same.webp', '/same.webp', '/same.webp']).identity);
 });

@@ -1,3 +1,4 @@
-export { Grid, GridItem } from './Grid';
-export type { GridItemLayout } from './Grid';
-export type { GridLayoutAnimate } from './layout';
+export { Grid } from './Grid';
+export { GridItem } from './GridItem';
+export type { GridProps, GridLayoutAnimate } from './Grid.types';
+export type { GridItemProps, GridItemLayout } from './GridItem';

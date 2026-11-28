@@ -9,11 +9,10 @@ import {
   fieldRootLayoutClasses,
   resolveFieldLayout,
   splitBoxLayout,
-  stateLinkProps,
   stateProps,
   type WithRef,
-} from '../../core';
-import { useSharedMotion } from '../../hooks/useSharedMotion';
+} from '#core';
+import { useFormField } from '#core/Form';
 import { useField, useFieldFeedback } from '../Field';
 import { textareaConfig } from './Textarea.config';
 import type { TextareaProps } from './Textarea.types';
@@ -21,7 +20,20 @@ import styles from './Textarea.module.scss';
 
 const classes = createLayoutClasses(styles, { local: { h: 'height' } });
 
-export function useTextarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) {
+export function useTextarea(input: WithRef<TextareaProps, HTMLTextAreaElement>) {
+  const controller = useFormField<string>(input.name);
+  const bound = controller && input.value === undefined &&
+    (typeof controller.value === 'string' || controller.value === undefined);
+  const props: typeof input = bound ? {
+    ...input,
+    value: typeof controller.value === 'string' ? controller.value : '',
+    disabled: input.disabled || controller.disabled,
+    error: input.error ?? controller.error,
+    onValueChange: (value, details) => {
+      controller.change(value);
+      input.onValueChange?.(value, details);
+    },
+  } : input;
   const { box, rest } = splitBoxLayout(props);
   const {
     ref,
@@ -81,7 +93,6 @@ export function useTextarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) 
     onInvalid: native.onInvalid,
     onKeyDown: native.onKeyDown,
   });
-  const motion = useSharedMotion({ animate, perspective3d, parallax });
   const layout = resolveFieldLayout({ ...box, variant, size, color, placeholderColor });
   const feedback = useFieldFeedback({
     id: field.id,
@@ -100,12 +111,13 @@ export function useTextarea(props: WithRef<TextareaProps, HTMLTextAreaElement>) 
 
   return {
     layout: {
-      ref: motion.setMotionNode,
       collapse,
       className: cx(styles.Textarea, styles.TextareaWrapper, ...fieldRootLayoutClasses(classes, box), className),
-      style: { ...motion.motionStyle, ...style },
-      ...motion.revealAttrs,
-      ...stateLinkProps(linkState, motion.motionHandlers),
+      style,
+      animate,
+      perspective3d,
+      parallax,
+      linkState,
       'data-point-events': pointEvents,
     },
     label: label ? { text: label, color: labelColor, htmlFor: field.id, required } : undefined,

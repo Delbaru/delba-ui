@@ -1,7 +1,7 @@
 'use client';
 
 import type { Ref, SVGProps } from 'react';
-import { cx } from '../../../core';
+import { cx } from '#core';
 import type { ResolvedIconSource } from '../svg';
 import type { FetchedSvgState } from '../useFetchedSvg';
 import styles from './IconGlyph.module.scss';

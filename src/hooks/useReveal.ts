@@ -2,7 +2,8 @@
 
 import { useCallback, useLayoutEffect, useRef } from 'react';
 
-import { armReveal, releaseReveal } from '../core/reveal/observer';
+import styles from '../core/reveal/Reveal.module.scss';
+import { armReveal, releaseReveal, isRevealHost, type RevealHost } from '../core/reveal/observer';
 import { resolveReveal, revealAttrs, revealSignature, revealStyle, type RevealConfig } from '../core/reveal/reveal';
 
 /**
@@ -13,7 +14,7 @@ export function useReveal(input: RevealConfig | undefined, phaseOpen?: boolean) 
   const config = resolveReveal(input);
   const signature = revealSignature(config);
   const controlled = phaseOpen !== undefined;
-  const nodeRef = useRef<HTMLElement | null>(null);
+  const nodeRef = useRef<RevealHost | null>(null);
   const configRef = useRef(config);
   const controlledRef = useRef(controlled);
   const interrupted = useRef<number | null>(null);
@@ -25,7 +26,7 @@ export function useReveal(input: RevealConfig | undefined, phaseOpen?: boolean) 
     const node = nodeRef.current;
     if (!controlled || !node) return;
     const animation = node.getAnimations().find((item) => item instanceof CSSAnimation &&
-      (item.animationName === 'ui-reveal' || item.animationName === 'ui-reveal-out'));
+      (item.animationName === styles['ui-reveal'] || item.animationName === styles['ui-reveal-out']));
     const duration = animation?.effect?.getComputedTiming().duration;
     const delay = animation?.effect?.getTiming().delay ?? 0;
     if (animation && typeof duration === 'number' && duration > 0 && interrupted.current !== null && previousPhase.current !== phaseOpen) {
@@ -56,7 +57,7 @@ export function useReveal(input: RevealConfig | undefined, phaseOpen?: boolean) 
   }, [signature, controlled]);
 
   const setRevealNode = useCallback((node: Element | null) => {
-    const next = node instanceof HTMLElement ? node : null;
+    const next = isRevealHost(node) ? node : null;
     if (nodeRef.current === next) return;
     if (nodeRef.current) releaseReveal(nodeRef.current);
     nodeRef.current = next;
@@ -65,5 +66,5 @@ export function useReveal(input: RevealConfig | undefined, phaseOpen?: boolean) 
 
   const attrs = revealAttrs(config);
   if (attrs && controlled) attrs['data-reveal-state'] = phaseOpen ? 'in' : 'out';
-  return { revealAttrs: attrs, revealStyle: revealStyle(config), setRevealNode };
+  return { revealClassName: config ? styles.Reveal : undefined, revealAttrs: attrs, revealStyle: revealStyle(config), setRevealNode };
 }

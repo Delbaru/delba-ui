@@ -1,12 +1,11 @@
 'use client';
-import { assetUrl, stateProps } from '../../../core';
+import { assetUrl, stateProps } from '#core';
 import { Flex } from '../../Flex';
-import { Box } from '../../Box';
 import { Text } from '../../Text';
 import { Icon } from '../../Icon';
 import type { SelectController } from '../useSelect';
 import { selectContent } from '../Select.content';
-import checkIcon from '../../../../assets/icons/ui/check/succsess_check_black.svg';
+import checkIcon from '#icons/controls/check.svg';
 import styles from './SelectOptions.module.scss';
 export function SelectOptions<T extends string>({
   select,
@@ -96,9 +95,9 @@ export function SelectOptions<T extends string>({
               </Flex>
             )}
 
-            <Box className={styles.OptionContent}>
+            <Flex display={['flex', 'flex', 'flex']} className={styles.OptionContent}>
               {selectContent.render(optionContent, styles.OptionLabel)}
-            </Box>
+            </Flex>
           </Flex>
         );
       })}

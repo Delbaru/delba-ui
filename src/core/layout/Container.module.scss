@@ -1,0 +1,11 @@
+@layer ui.components {
+  // Проп `container` у Flex и Grid: колонка контента по центру, без вертикальных полей — их задаёт секция.
+  .Container {
+    padding-left: var(--s-container);
+    padding-right: var(--s-container);
+    max-width: var(--width-container);
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

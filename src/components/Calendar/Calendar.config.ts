@@ -1,4 +1,4 @@
-import type { ResponsiveValue } from '../../core';
+import type { ResponsiveValue } from '#core';
 
 const direction: ResponsiveValue<'column'> = ['column', 'column', 'column'];
 const spacing: ResponsiveValue<number> = [8, 8, 8];

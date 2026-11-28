@@ -18,7 +18,7 @@ export function prefersReducedMotion(view: Window | null | undefined = typeof wi
  * Длительность движения узла в мс: максимум по списку свойств плюс задержка. `transition` и
  * `animation` считаются одинаково, поэтому это один помощник с переключателем, а не два.
  */
-export function readMotionMs(node: HTMLElement, kind: 'transition' | 'animation' = 'transition'): number {
+export function readMotionMs(node: Element, kind: 'transition' | 'animation' = 'transition'): number {
   const style = node.ownerDocument.defaultView?.getComputedStyle(node);
   if (!style) return 0;
 

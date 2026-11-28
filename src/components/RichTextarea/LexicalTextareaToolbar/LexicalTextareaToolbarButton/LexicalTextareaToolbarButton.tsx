@@ -1,7 +1,7 @@
 import { Button } from '../../../Button';
 import { Icon } from '../../../Icon';
 import { Text } from '../../../Text';
-import { preserveFocus } from '../../../../core';
+import { preserveFocus } from '#core';
 import styles from './LexicalTextareaToolbarButton.module.scss';
 
 export function LexicalTextareaToolbarButton({
@@ -28,16 +28,22 @@ export function LexicalTextareaToolbarButton({
       bg={['transparent', 'transparent', 'transparent']}
       justifyContent={['center', 'center', 'center']}
       alignItems={['center', 'center', 'center']}
-      tooltip={
-        <Text
-            variant={['micro', null, null]}
-            bg={['color-mix(in srgb, var(--black) 80%, transparent)', 'color-mix(in srgb, var(--black) 80%, transparent)', 'color-mix(in srgb, var(--black) 80%, transparent)']}
-            color='var(--white-100)'
-            p={[4, 8, 4, 8]}
-            r={[8, null, null]}
-        >{ariaLabel}</Text>
-      }
-      tooltipDirection='bottom'
+      ui={{
+        popup: {
+          preset: 'tooltip',
+          position: 'bottom',
+          surface: false,
+          text: (
+            <Text
+              variant={['micro', null, null]}
+              bg={['color-mix(in srgb, var(--black) 80%, transparent)', 'color-mix(in srgb, var(--black) 80%, transparent)', 'color-mix(in srgb, var(--black) 80%, transparent)']}
+              color='var(--white-100)'
+              p={[4, 8, 4, 8]}
+              r={[8, null, null]}
+            >{ariaLabel}</Text>
+          ),
+        },
+      }}
       onMouseDown={preserveFocus}
       onClick={onClick}
       aria-label={ariaLabel}

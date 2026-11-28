@@ -1,7 +1,9 @@
+@use '../../core/mixins' as typography;
 @use '../../core/scss-utils' as utils;
 @use '../../core/field-sizes' as fields;
 @layer ui.components {
   .Input {
+    @include typography.typography-role(body);
     position: relative;
     transition: var(--t-fast);
     cursor: text;
@@ -9,9 +11,6 @@
   }
   .belowError {
     padding-left: var(--field-helper-inset, 0px);
-  }
-  .font {
-    --field-font: var(--field-font-variant);
   }
   .data {
     cursor: pointer;

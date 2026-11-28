@@ -1,11 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { decodeHtmlEntities, prefersReducedMotion } from '../../../core';
+import { decodeHtmlEntities, prefersReducedMotion } from '#core';
 import { motionTimeCss, readMotionTimeMs } from '../../../core/base/timing';
 import { readMotionDefaultMs } from '../../../core/base/motion-config';
-import { Box } from '../../Box';
+import { Flex } from '../../Flex';
 import { renderBlocks } from '../RichText.content';
 import { parseLegacyRichText } from '../legacy-html';
-import type { RichTextChangeAnimate } from '../RichText.types';
+import type { RichTextChangeAnimate } from '../LexicalText.types';
 import styles from './RichTextSequence.module.scss';
 
 export function RichTextSequence({ sequence, links }: {
@@ -13,7 +13,7 @@ export function RichTextSequence({ sequence, links }: {
   links: 'active' | 'text';
 }) {
   const steps = useMemo(() => sequence.steps.map(step => parseLegacyRichText(decodeHtmlEntities(step), links)), [sequence.steps, links]);
-  const items = useRef<(HTMLDivElement | null)[]>([]);
+  const items = useRef<(HTMLElement | null)[]>([]);
   const [heights, setHeights] = useState<number[]>([]);
   const [shown, setShown] = useState(sequence.currentStep);
   const [clip, setClip] = useState('inset(0 0 0 0)');
@@ -64,7 +64,8 @@ export function RichTextSequence({ sequence, links }: {
   const clipHeight = heights.length > 0 ? Math.max(...heights) : 0;
 
   return (
-    <Box
+    <Flex
+        display={['block', 'block', 'block']}
         className={styles.RichTextSequence}
         data-effect={sequence.effect}
         style={sliding ? {
@@ -78,7 +79,8 @@ export function RichTextSequence({ sequence, links }: {
         }}
     >
       {steps.map((blocks, index) => (
-        <Box
+        <Flex
+            display={['block', 'block', 'block']}
             key={index}
             ref={node => { items.current[index] = node; }}
             className={styles.item}
@@ -88,8 +90,8 @@ export function RichTextSequence({ sequence, links }: {
             }}
         >
           {renderBlocks(blocks)}
-        </Box>
+        </Flex>
       ))}
-    </Box>
+    </Flex>
   );
 }

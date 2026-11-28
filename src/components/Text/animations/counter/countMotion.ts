@@ -1,4 +1,4 @@
-import { clamp01 } from '../../../../core';
+import { clamp01 } from '#core';
 import { configuredMotionEasing } from '../../../../core/base/motion-config';
 
 /** One cancellable numeric transition; retargeting starts at the last frame actually written. */

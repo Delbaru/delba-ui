@@ -1,28 +1,13 @@
 'use client';
 
-import type { ComponentProps, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { Flex } from '../Flex';
-import { cx } from '../../core';
+import { cx } from '#core';
 import { useTabTrack } from './TabTrack.model';
 import styles from './TabTrack.module.scss';
-
-/** Чем бегунок рисует выбор: сплошной `primary`, белая пилюля на серой дорожке или линия под вкладкой. */
-export type TabTrackThumb = 'primary' | 'white' | 'line';
-
-export type TabTrackProps = Omit<ComponentProps<typeof Flex>, 'ref'> & {
-  /**
-   * Выбранная вкладка. Бегунок едет к узлу с `state~='active'` внутри дорожки, а значение нужно,
-   * только чтобы знать, КОГДА мерить заново. `null` — не выбрана ни одна, бегунок гаснет.
-   */
-  value: string | null;
-  thumb: TabTrackThumb;
-};
-
-const THUMB_BG: Record<TabTrackThumb, string | undefined> = {
-  primary: 'var(--primary)',
-  white: 'var(--white-100)',
-  line: undefined,
-};
+import { TAB_TRACK_BACKGROUNDS } from './TabTrack.config';
+import type { TabTrackProps } from './TabTrack.types';
+export type { TabTrackProps, TabTrackThumb } from './TabTrack.types';
 
 /** Active-item track with one sliding thumb. Before measurement the active item paints itself. */
 export function TabTrack({
@@ -33,7 +18,7 @@ export function TabTrack({
   ...props
 }: TabTrackProps): ReactElement {
   const track = useTabTrack(value, thumb);
-  const bg = THUMB_BG[thumb];
+  const bg = TAB_TRACK_BACKGROUNDS[thumb];
 
   return (
     <Flex

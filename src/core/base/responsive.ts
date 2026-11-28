@@ -6,48 +6,34 @@ import { BREAKPOINT } from './breakpoints';
 
 // Доп. правило: `null` внутри массива означает "не трогать этот брейкпоинт"
 // (то есть не генерировать класс/стиль и оставить значение от базового стиля/variant).
-/** Значение на входе помощников ядра: скаляр, короткий или полный кортеж. */
-export type ResponsiveInput<T> = T | [(T | null)?, (T | null)?, (T | null)?];
+/** Authored responsive values use exactly three entries. */
+export type ResponsiveValue<T> = readonly [T | null, T | null, T | null];
+/** Internal computed values may broadcast a scalar; authored props use ResponsiveValue. */
+export type ResponsiveInput<T> = T | ResponsiveValue<T>;
 
-declare global {
-  /**
-   * Правила проекта. `{ strictTuple: true }` в его глобальной декларации требует полный кортеж
-   * `[desktop, mobile, tablet]` на каждом респонсив-пропе: скаляр и короткий кортеж — ошибка типов.
-   */
-  interface UiRules {}
-}
-
-type StrictTuple = UiRules extends { strictTuple: true } ? true : false;
-
-/** Значение респонсив-пропа. */
-export type ResponsiveValue<T> = StrictTuple extends true ? [T | null, T | null, T | null] : ResponsiveInput<T>;
-
-/**
- * Нормализует ResponsiveValue к тройке [desktop, mobile, tablet].
- *
- * Важно:
- * - `undefined` в массиве = "дырка" (мы стараемся заполнить фоллбэком)
- * - `null` в массиве = "skip" (оставляем null, чтобы потом НЕ генерировать класс/стиль)
- *
- * Примеры:
- * - resolveResponsive(12) -> [12, 12, 12]
- * - resolveResponsive([24, 12]) -> [24, 12, 24]
- * - resolveResponsive([null, 16, 16]) -> [null, 16, 16]  // desktop пропускаем
- */
-export const resolveResponsive = <T,>(value: ResponsiveInput<T>): [T | null, T | null, T | null] => {
-  if (!Array.isArray(value)) return [value, value, value];
-
-  const [d0, m0, t0] = value;
-
-  // Desktop — источник правды: не наследует из мобильного/планшета.
-  const desktop = d0 ?? null;
-
-  // Mobile/Tablet: undefined наследует desktop, null остаётся explicit skip.
-  const mobile = m0 === undefined ? desktop : m0;
-  const tablet = t0 === undefined ? desktop : t0;
-
-  return [desktop, mobile, tablet];
+/** Internal scalar broadcasting never fills missing entries of an authored tuple. */
+export const resolveResponsiveInput = <T,>(value: ResponsiveInput<T>): [T | null, T | null, T | null] => {
+  if (!Array.isArray(value)) return [value as T, value as T, value as T];
+  if (value.length !== 3 || value.some(entry => entry === undefined))
+    throw new Error('Responsive values require [desktop, mobile, tablet]; use null to skip');
+  return [value[0] as T | null, value[1] as T | null, value[2] as T | null];
 };
+
+/** Authored responsive values have exactly three entries and never inherit desktop. */
+export const resolveResponsive = <T,>(value: ResponsiveValue<T>): [T | null, T | null, T | null] => {
+  if (!Array.isArray(value)) throw new Error('Responsive values require a three-entry tuple');
+  return resolveResponsiveInput(value);
+};
+
+export function resolveResponsiveWithDefaults<T>(
+  value: ResponsiveValue<T> | undefined,
+  defaults: ResponsiveValue<T>,
+): [T | null, T | null, T | null] {
+  const base = resolveResponsive(defaults);
+  if (value === undefined) return base;
+  const resolved = resolveResponsive(value);
+  return [resolved[0] ?? base[0], resolved[1] ?? base[1], resolved[2] ?? base[2]];
+}
 
 /** Индекс брейкпоинта по ширине окна: 0 — desktop (≥1024), 1 — mobile (≤767), 2 — tablet. */
 export const getBreakpointIndex = (viewportWidth: number): 0 | 1 | 2 => {
@@ -64,6 +50,6 @@ export const resolveResponsiveAtBreakpoint = <T,>(
 ): T => {
   if (value === undefined) return fallback;
 
-  return resolveResponsive(value)[breakpointIndex] ?? fallback;
+  return resolveResponsiveInput(value)[breakpointIndex] ?? fallback;
 };
 

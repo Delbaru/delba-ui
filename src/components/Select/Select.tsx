@@ -1,267 +1,28 @@
 'use client';
 
-import styles from './Select.module.scss';
-
-import { useEffect, useRef, type CSSProperties } from 'react';
-import {
-  composeEventHandlers,
-  cx,
-  createLayoutClasses,
-  stateProps,
-  stateLinkProps,
-  fieldHelperPaddingLeft,
-  type WithRef,
-  fieldLayoutClasses,
-  fieldRootLayoutClasses,
-  resolveFieldLayout,
-  splitBoxLayout,
-} from '../../core';
-import { useFormField } from '../../core/Form';
-import { FieldFrame } from '../Field';
-import { useCollapseState } from '../../hooks/useCollapseState';
+import type { WithRef } from '#core';
 import { Dropdown } from '../Dropdown';
+import { FieldFrame } from '../Field';
 import { Skeleton } from '../Skeleton';
-import { isValueArray, selectFormValues } from './options';
+import { useSelectField } from './Select.model';
+import type { SelectProps } from './Select.types';
 import { SelectOptions } from './SelectOptions/SelectOptions';
 import { SelectTrigger } from './SelectTrigger/SelectTrigger';
-import { UI_MESSAGES } from '../../core/base/messages';
-import { useSelect } from './useSelect';
-import type { SelectProps } from './Select.types';
+
 export type { SelectProps, SelectBaseProps, SelectValueProps, SelectSearchProps } from './Select.types';
 
-const c = createLayoutClasses(styles, { local: { h: 'height' } });
-
-const DEFAULT_PLACEHOLDER = UI_MESSAGES.select.placeholder;
-const DEFAULT_EMPTY_MESSAGE = UI_MESSAGES.select.required;
-const DEFAULT_VISIBLE_OPTIONS = 4;
-const PANEL_VARIABLES = [
-  '--select-height',
-  '--select-dropdown-radius',
-  '--select-dropdown-radius-top',
-  '--select-option-padding',
-  '--select-panel-border',
-] as const;
-
 export function Select<T extends string = string>(props: WithRef<SelectProps<T>, HTMLDivElement>) {
-  const geometryRef = useRef<HTMLDivElement>(null);
-  const { box, rest: fieldProps } = splitBoxLayout(props);
-  const {
-    ref,
-    className = '',
-    collapse,
-    fieldClassName,
-    style,
-    options,
-    search,
-    name,
-    form,
-    value: valueProp,
-    defaultValue,
-    onChange,
-    multiple,
-    closeOnSelect = multiple !== true,
-    showSelected = true,
-    renderValue,
-    placeholder = DEFAULT_PLACEHOLDER,
-    placeholderColor,
-    loading = false,
-    label,
-    labelColor,
-    comment,
-    variant,
-    size,
-    perspective3d,
-    parallax,
-    animate,
-    color,
-    error: errorProp,
-    disabled: disabledProp,
-    required,
-    emptyMessage = DEFAULT_EMPTY_MESSAGE,
-    visibleOptions = DEFAULT_VISIBLE_OPTIONS,
-    panel,
-    validate: validateProp,
-    id: idProp,
-    state,
-    linkState,
-    onMouseEnter,
-    onMouseMove,
-    onMouseLeave,
-    onMouseDown,
-    onMouseUp,
-    onClick,
-    onFocus,
-    onBlur,
-    'aria-label': ariaLabel,
-    'aria-describedby': describedBy,
-    'data-point-events': dataPointEvents,
-    ...restProps
-  } = fieldProps;
-  const field = useFormField<T | null | T[]>(name);
-  const bound = field && valueProp === undefined &&
-    (multiple ? isValueArray(field.value) || field.value === undefined :
-      field.value === null || typeof field.value === 'string' || field.value === undefined);
-  const boundValue = bound
-    ? multiple
-      ? (isValueArray(field.value) ? field.value as T[] : [])
-      : (typeof field.value === 'string' ? field.value as T : null)
-    : valueProp;
-  const disabled = disabledProp || Boolean(bound && field.disabled);
-  // Хук хранит общий `T | null | T[]`; наружу значение уходит типом своей ветки `multiple`.
-  const emitChange = (next: T | null | T[]) => {
-    if (multiple) {
-      if (isValueArray(next)) {
-        if (bound) field.change(next);
-        onChange?.(next);
-      }
-    } else if (!isValueArray(next)) {
-      if (bound) field.change(next);
-      onChange?.(next);
-    }
-  };
-
-  const validateValue = (next: T | null | T[]) => {
-    if (multiple) return isValueArray(next) ? validateProp?.(next) : undefined;
-    return isValueArray(next) ? undefined : validateProp?.(next);
-  };
-
-  const layoutProps = resolveFieldLayout({ ...box, variant, size, color, placeholderColor });
-
-  const select = useSelect(ref, {
-    options,
-    search,
-    form,
-    value: boundValue,
-    defaultValue,
-    onChange: emitChange,
-    multiple: multiple === true,
-    closeOnSelect,
-    showSelected,
-    renderValue,
-    placeholder,
-    loading,
-    disabled,
-    required,
-    emptyMessage,
-    visibleOptions,
-    validate: validateValue,
-    id: idProp,
-    error: errorProp ?? (bound ? field.error : undefined),
-    label,
-    comment,
-    ariaLabel,
-    describedBy,
-    helperPadding: fieldHelperPaddingLeft(layoutProps.p, layoutProps.pl),
-    perspective3d,
-    parallax,
-    animate,
-  });
-
-  const rootCollapse = useCollapseState(collapse ?? { open: true });
-  const { defaultOpen: _defaultCollapseOpen, ...collapseSettings } = collapse ?? {};
-  const isCollapsed = !rootCollapse.open;
-
-  useEffect(() => {
-    if (isCollapsed) select.popup.close(false);
-  }, [select.popup.close, isCollapsed]);
-
-  const fieldClasses = fieldLayoutClasses(c, layoutProps);
+  const field = useSelectField(props);
 
   return (
-    <FieldFrame
-      label={label ? { ...select.label, text: label, required, color: labelColor } : undefined}
-      feedback={select.feedback.below}
-      layout={{
-        collapse: collapse
-          ? {
-              ...collapseSettings,
-              open: rootCollapse.open,
-              onOpenChange: rootCollapse.changeOpen,
-            }
-          : undefined,
-        href: undefined,
-        className: cx(styles.Select, styles.SelectWrapper, ...fieldRootLayoutClasses(c, box), className),
-        style: { ...(select.motion.style ?? null), ...style },
-        ref: select.motion.ref,
-        'data-point-events': dataPointEvents,
-        ...restProps,
-        ...select.motion.attrs,
-        ...stateLinkProps(linkState, {
-          onMouseEnter: composeEventHandlers(select.motion.handlers?.onMouseEnter, onMouseEnter),
-          onMouseMove: composeEventHandlers(select.motion.handlers?.onMouseMove, onMouseMove),
-          onMouseLeave: composeEventHandlers(select.motion.handlers?.onMouseLeave, onMouseLeave),
-          onMouseDown,
-          onMouseUp,
-          onClick,
-          onFocus,
-          onBlur,
-        }),
-      }}
-    >
-      <Dropdown
-        ref={geometryRef}
-        open={select.popup.open}
-        keyboard={search ? 'content' : undefined}
-        preserveFocus={Boolean(search)}
-        returnFocus={search ? select.trigger.inputRef : undefined}
-        onOpenChange={select.popup.change}
-        onClick={(event) => {
-          if (
-            event.target === event.currentTarget &&
-            !event.defaultPrevented &&
-            !disabled &&
-            (!loading || search)
-          )
-            select.popup.change(!select.popup.open);
-        }}
-        trigger={
-          <SelectTrigger
-              data-ui-form-field={bound ? name : undefined}
-              {...(!search ? select.trigger.accessibility : {})}
-              id={search ? undefined : select.id}
-              select={select}
-              search={search ? { ...search, placeholder: search.placeholder ?? placeholder } : undefined}
-              loading={loading}
-              disabled={disabled}
-              required={required}
-              placeholderColor={placeholderColor}
-          />
-        }
-        className={cx(styles.field, ...fieldClasses, fieldClassName)}
-        style={{ '--select-visible-options': String(select.popup.visibleOptions) } as CSSProperties}
-        {...stateProps(
-          state,
-          select.feedback.error && 'error',
-          disabled && 'disabled',
-          select.popup.open && 'open',
-        )}
-        panel={{
-          portal: true,
-          offset: -1,
-          ...panel,
-          matchTriggerWidth: true,
-          anchorRef: geometryRef,
-          inheritVariables: PANEL_VARIABLES,
-          className: cx(styles.Dropdown, search && styles.SearchDropdown),
-          style: { '--select-visible-options': String(select.popup.visibleOptions) } as CSSProperties,
-          onKeyDown: select.trigger.onKeyDown,
-        }}
-      >
-        {search && loading && <Skeleton h={[16, 16, 16]} />}
-        <SelectOptions select={select} multiple={multiple} />
+    <FieldFrame {...field.frame}>
+      <Dropdown {...field.dropdown} trigger={<SelectTrigger {...field.trigger} />}>
+        {field.search && field.loading && <Skeleton h={[16, 16, 16]} />}
+        <SelectOptions select={field.select} multiple={field.multiple} />
       </Dropdown>
-
-      {name &&
-        !disabled &&
-        selectFormValues(select.value.current, multiple === true).map((itemValue, index) => (
-          <input
-              key={`${itemValue}-${index}`}
-              type="hidden"
-              name={name}
-              form={form}
-              value={itemValue}
-          />
-        ))}
+      {field.form.values.map((value, index) => (
+        <input key={`${value}-${index}`} type="hidden" name={field.form.name} form={field.form.id} value={value} />
+      ))}
     </FieldFrame>
   );
 }

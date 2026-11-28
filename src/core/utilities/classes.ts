@@ -34,10 +34,12 @@ export function utilitySlots(utility: Utility, value: ResponsiveUtilityValue | n
     return entry === null ? [] : [{ breakpoint: null, entry }];
   }
 
+  if (value.length !== 3 || value.some(entry => entry === undefined))
+    throw new Error('Responsive utility values require exactly three entries');
   const [d0, m0, t0] = value as readonly (UtilityEntry | null | undefined)[];
   const d = usable(utility, d0);
-  const m = m0 === undefined ? d : usable(utility, m0);
-  const t = t0 === undefined ? d : usable(utility, t0);
+  const m = usable(utility, m0);
+  const t = usable(utility, t0);
   const [kd, km, kt] = [d, m, t].map((entry) => (entry === null ? null : entryKey(entry)));
 
   const slots: UtilitySlot[] = [];

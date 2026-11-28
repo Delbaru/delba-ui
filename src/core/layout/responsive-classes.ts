@@ -1,4 +1,4 @@
-import { resolveResponsive, type ResponsiveInput } from '../base/responsive';
+import { resolveResponsiveInput, type ResponsiveInput } from '../base/responsive';
 
 /**
  * Классы из CSS-модуля КОМПОНЕНТА (варианты кнопки, пресеты модалки, размеры полей): модуль
@@ -21,7 +21,7 @@ export const responsiveClasses = <T,>(
 
   const classes = Array.isArray(value)
     ? (() => {
-        const [d, m, t] = resolveResponsive(value);
+        const [d, m, t] = resolveResponsiveInput(value);
         return [one('d_', d), one('m_', m), one('t_', t)];
       })()
     : [one('', value as T)];

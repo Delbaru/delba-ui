@@ -16,7 +16,7 @@
     "./rich-text": "./src/rich-text.ts",
     "./url": "./src/core/base/url.ts",
     "./validation": "./src/validation.ts",
-    "./icons/*": "./assets/icons/ui/*",
+    "./icons/*": "./assets/icons/*",
     "./next": {
       "types": "./tools/next.d.mts",
       "default": "./tools/next.mjs"
@@ -39,10 +39,14 @@
     "./next-env": {
       "types": "./tools/next-env.d.mts",
       "default": "./tools/next-env.mjs"
-    }
+    },
+    "./theme": "./src/theme.ts",
+    "./styles.scss": "./src/styles.scss",
+    "./theme.css": "./src/core/theme.css",
+    "./calendar": "./src/core/Calendar/Calendar.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit --incremental false",
+    "typecheck": "node tools/check/typecheck.mjs",
     "test": "node tools/check/test.mjs",
     "boundary": "node tools/check-boundary.mjs",
     "check": "node tools/check/index.mjs"
@@ -77,8 +81,14 @@
   "devDependencies": {
     "@delba/eslint": "workspace:*",
     "prettier": "~3.6.2",
-    "@playwright/test": "1.64.0",
-    "@types/node": "^25.6.0",
-    "vite": "8.3.4"
+    "@types/node": "^25.6.0"
+  },
+  "imports": {
+    "#core": "./src/core/index.ts",
+    "#core/*": "./src/core/*/index.ts",
+    "#ui": "./src/ui.ts",
+    "#components": "./src/components/index.ts",
+    "#components/*": "./src/components/*/index.ts",
+    "#icons/*": "./assets/icons/*"
   }
 }

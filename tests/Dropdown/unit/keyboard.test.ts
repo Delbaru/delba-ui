@@ -5,21 +5,48 @@ import { dropdownKeyboard } from '../../../src/components/Dropdown/Dropdown.keyb
 
 class MenuNode {
   children: MenuNode[] = [];
+  parent: MenuNode | null = null;
+  panel = false;
   editable = false;
+  disabled = false;
+  ariaDisabled = false;
   hidden = false;
-  ownerDocument = { defaultView: { HTMLElement: MenuNode } };
-  contains(node: unknown): boolean { return node === this || this.children.includes(node as MenuNode); }
-  querySelectorAll() { return this.children; }
-  closest() { return this.hidden ? this : null; }
+  ownerDocument = { defaultView: { Element: MenuNode } };
+
+  append(...nodes: MenuNode[]) {
+    for (const node of nodes) node.parent = this;
+    this.children.push(...nodes);
+  }
+
+  contains(node: unknown): boolean {
+    return node === this || this.children.some(child => child.contains(node));
+  }
+
+  querySelectorAll(): MenuNode[] {
+    return this.children.flatMap(child => child.panel ? child.querySelectorAll() : [child]);
+  }
+
+  closest(selector: string): MenuNode | null {
+    if (selector === '[data-dropdown-ancestors]' && this.panel) return this;
+    if (selector === '[hidden], [inert]' && this.hidden) return this;
+    if (selector.startsWith('input, textarea') && this.editable) return this;
+    return this.parent?.closest(selector) ?? null;
+  }
+
+  getAttribute(name: string) {
+    return name === 'aria-disabled' && this.ariaDisabled ? 'true' : null;
+  }
+
   getClientRects() { return [1]; }
-  matches() { return this.editable; }
+  matches(selector: string) { return selector === ':disabled' && this.disabled; }
 }
 function setup(key: string, { open = true, mode = 'menu', atTrigger = false, shiftKey = false }: { open?: boolean; mode?: 'menu' | 'content'; atTrigger?: boolean; shiftKey?: boolean } = {}) {
   const trigger = new MenuNode();
   const panel = new MenuNode();
   const first = new MenuNode();
   const last = new MenuNode();
-  panel.children = [first, last];
+  panel.panel = true;
+  panel.append(first, last);
   const target = atTrigger ? trigger : first;
   const event = { key, shiftKey, currentTarget: panel, target } as unknown as KeyboardEvent<HTMLElement>;
   const scope = { open, mode, blocked: false, trigger: trigger as unknown as HTMLElement, panel: panel as unknown as HTMLElement };
@@ -71,5 +98,25 @@ test('migrated context menu navigation retains both edges, wrap and foreign-key 
   assert.equal(dropdownKeyboard.command(event, scope), undefined);
   (scope.panel as unknown as MenuNode).children = [];
   event.key = 'ArrowDown';
+  assert.equal(dropdownKeyboard.command(event, scope), undefined);
+});
+
+test('menu navigation skips disabled entries and keeps nested panel items in their own menu', () => {
+  const { event, scope, first, last } = setup('ArrowDown');
+  const panel = scope.panel as unknown as MenuNode;
+  const disabled = new MenuNode();
+  const ariaDisabled = new MenuNode();
+  const nested = new MenuNode();
+  const inner = new MenuNode();
+  disabled.disabled = true;
+  ariaDisabled.ariaDisabled = true;
+  nested.panel = true;
+  nested.append(inner);
+  panel.children = [];
+  panel.append(first, disabled, nested, ariaDisabled, last);
+
+  assert.deepEqual(dropdownKeyboard.items(scope.panel), [first, last]);
+  assert.deepEqual(dropdownKeyboard.command(event, scope), { action: 'focus', target: last });
+  Object.assign(event, { target: inner });
   assert.equal(dropdownKeyboard.command(event, scope), undefined);
 });

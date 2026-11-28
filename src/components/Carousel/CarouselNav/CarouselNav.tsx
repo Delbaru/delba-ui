@@ -8,15 +8,10 @@ import { useNearestCarouselControls } from '../controls';
 import { Flex } from '../../Flex';
 import { Button } from '../../Button';
 import { Icon } from '../../Icon';
-import { assetUrl, cx } from '../../../core';
-import arrowIcon from '../../../../assets/icons/ui/arrows/arrow_bold.svg';
+import { assetUrl, cx } from '#core';
+import arrowIcon from '#icons/controls/arrow-up.svg';
 
-export interface CarouselNavProps {
-    /** Additional root class. */
-    className?: string;
-    /** Identifier of the carousel controlled by these arrows. */
-    carouselId?: string;
-}
+import type { CarouselNavProps } from './CarouselNav.types';
 
 export function CarouselNav({ className, carouselId }: CarouselNavProps) {
     const { setRootRef, snapshot } = useNearestCarouselControls(carouselId);

@@ -5,8 +5,17 @@ import { Dropdown, type DropdownProps } from '../../components/Dropdown';
 import { Tooltip } from '../../components/Tooltip';
 import { useTooltip } from '../../hooks/useTooltip';
 import { ContextPopup, type ContextPoint } from './Context';
+import { useMergedRefs } from '../useMergedRefs';
+import styles from './Popup.module.scss';
 
-export type TooltipPopup = { preset: 'tooltip'; text: ReactNode; position?: 'top' | 'bottom' | 'left' | 'right'; on?: 'hover' };
+export type TooltipPopup = {
+    preset: 'tooltip';
+    text: ReactNode;
+    position?: 'top' | 'bottom' | 'left' | 'right';
+    gap?: number;
+    surface?: boolean;
+    on?: 'hover';
+};
 type PopupController = { close(): void };
 type MenuContent = ReactNode | ((popup: PopupController) => ReactNode);
 type Panel = NonNullable<DropdownProps['panel']>;
@@ -16,6 +25,12 @@ export type PopupOptions =
     | TooltipPopup
     | { preset: 'context'; on?: 'rightClick'; label?: string; children: MenuContent; panel?: Panel; boundary?: (opener: HTMLElement) => HTMLElement | null }
     | { preset: 'menu'; on?: 'click' | 'hover'; label?: string; children: MenuContent; panel?: Panel; position?: MenuPosition; consume?: boolean };
+
+export function resolvePopupOptions(options?: PopupOptions) {
+    if (options?.preset === 'tooltip' &&
+        (options.text === null || options.text === undefined || options.text === false || options.text === '')) return undefined;
+    return options;
+}
 
 function inside(currentTarget: HTMLElement, target: EventTarget | null) {
     const view = currentTarget.ownerDocument.defaultView;
@@ -33,7 +48,8 @@ function coarsePointer(element: HTMLElement) {
     return element.ownerDocument.defaultView?.matchMedia('(pointer: coarse)').matches === true;
 }
 
-export function usePopup(options?: PopupOptions) {
+export function usePopup(input?: PopupOptions) {
+    const options = resolvePopupOptions(input);
     const anchor = useRef<HTMLElement | null>(null);
     const surface = useRef<HTMLElement | null>(null);
     const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,8 +70,10 @@ export function usePopup(options?: PopupOptions) {
     const tooltipId = useId();
     const tooltip = useTooltip({
         enabled: Boolean(tooltipOptions), direction: tooltipOptions?.position ?? 'top',
+        gap: tooltipOptions?.gap,
         lazyPortal: true, hoverDelayMs: 400, resetKey: tooltipOptions?.text,
     });
+    const anchorRef = useMergedRefs(anchor, tooltipOptions ? tooltip.anchorRef : undefined);
     const clearTimer = () => {
         if (timeout.current !== null) clearTimeout(timeout.current);
         timeout.current = null;
@@ -97,8 +115,9 @@ export function usePopup(options?: PopupOptions) {
         }, 150);
     }
     function onMouseEnter(event: MouseEvent<HTMLElement>) {
-        if (!inside(event.currentTarget, event.target) || nestedControl(event.currentTarget, event.target)) return;
+        if (!inside(event.currentTarget, event.target)) return;
         if (tooltipOptions) tooltip.anchorHandlers.onMouseEnter();
+        if (nestedControl(event.currentTarget, event.target)) return;
         if (hover && !coarsePointer(event.currentTarget)) { clearTimer(); setOpen(true); }
     }
     function onMouseLeave(event: MouseEvent<HTMLElement>) {
@@ -107,12 +126,12 @@ export function usePopup(options?: PopupOptions) {
         if (!coarsePointer(event.currentTarget)) leave(event.relatedTarget, true);
     }
     function onFocus(event: FocusEvent<HTMLElement>) {
+        if (tooltipOptions && tooltipOptions.on !== 'hover') tooltip.anchorHandlers.onFocus();
         if (event.target !== event.currentTarget) return;
-        if (tooltipOptions) tooltip.anchorHandlers.onFocus();
         if (hover) clearTimer();
     }
     function onBlur(event: FocusEvent<HTMLElement>) {
-        if (tooltipOptions && !inRegion(event.relatedTarget)) tooltip.anchorHandlers.onBlur();
+        if (tooltipOptions && tooltipOptions.on !== 'hover' && !inRegion(event.relatedTarget)) tooltip.anchorHandlers.onBlur();
         leave(event.relatedTarget);
     }
     function onContextMenu(event: MouseEvent<HTMLElement>) {
@@ -210,10 +229,13 @@ export function usePopup(options?: PopupOptions) {
             {closeDropdown => typeof options.children === 'function' ? options.children({ close: closeDropdown }) : options.children}
         </Dropdown>
     ) : tooltipOptions ? (
-        <Tooltip as="span" ref={tooltip.tooltipRef} id={tooltipId} {...tooltip.bubbleProps}>{tooltipOptions.text}</Tooltip>
+        <Tooltip as="span" ref={tooltip.tooltipRef} id={tooltipId}
+            surface={tooltipOptions.surface}
+            className={tooltipOptions.surface === false ? styles.Tooltip : undefined}
+            {...tooltip.bubbleProps}>{tooltipOptions.text}</Tooltip>
     ) : null;
     return {
-        anchor: tooltipOptions ? tooltip.anchorRef : anchor, popup, onContextMenu, onKeyDown, onClick,
+        anchor: anchorRef, popup, onContextMenu, onKeyDown, onClick,
         onPointerDown, onPointerMove, onPointerUp, onPointerCancel,
         onMouseEnter, onMouseLeave, onFocus, onBlur, open: visible,
         describedBy: tooltipOptions && tooltip.isActive ? tooltipId : undefined,

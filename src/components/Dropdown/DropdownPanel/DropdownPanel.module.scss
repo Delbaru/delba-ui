@@ -46,12 +46,8 @@
     min-width: 0;
     max-width: 100%;
   }
-  .surface[hidden] {
-    display: none;
-  }
 }
 
-// Collapse's structural column rule is unlayered. This single surface must shrink horizontally.
-.DropdownPanel > :global(.ui-collapse) > :global(.ui-collapse-inner) {
-  flex-direction: row;
+@layer ui.states {
+  .surface[hidden] { display: none; }
 }

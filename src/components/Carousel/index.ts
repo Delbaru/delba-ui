@@ -8,4 +8,4 @@ export type {
   CarouselNavigation,
   CarouselAutoplay,
   CarouselNavigationState
-} from './types';
+} from './Carousel.types';

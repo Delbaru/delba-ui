@@ -2,7 +2,13 @@
 // Внутри UI-компонентов импортируем общие утилиты отсюда, например `import { ... } from './'`.
 
 // base (общие утилиты — пригодятся любым компонентам)
-export { getBreakpointIndex, resolveResponsive, resolveResponsiveAtBreakpoint } from './base/responsive';
+export {
+  getBreakpointIndex,
+  resolveResponsive,
+  resolveResponsiveInput,
+  resolveResponsiveAtBreakpoint,
+  resolveResponsiveWithDefaults,
+} from './base/responsive';
 export { BREAKPOINT, MEDIA_QUERY } from './base/breakpoints';
 export { MOTION_END_BUFFER_MS, prefersReducedMotion, readMotionMs } from './base/motion';
 export { focusableElements, focusWhenReady, preserveFocus, type FocusTarget, type FocusWhenReadyOptions } from './base/focus';
@@ -28,7 +34,8 @@ export type { WithRef } from './base/with-ref';
 export { assignRef, useMergedRefs } from './useMergedRefs';
 export { composeEventHandlers, composeInteractionHandlers } from './composeEventHandlers';
 export type { FieldValueChangeDetails, FieldValueChangeHandler, FieldValueChangeReason } from './base/field-value';
-export { boxLayout, containerClass, splitBoxLayout } from './layout/box';
+export { boxLayout, splitBoxLayout } from './layout/box';
+export { containerClass } from './layout/Container';
 export type { BoxLayoutKey, BoxLayoutProps, ContainerProp } from './layout/box';
 export type { ResponsiveInput, ResponsiveValue } from './base/responsive';
 export { cx, css } from './base/cn';
@@ -51,7 +58,7 @@ export type { ResponsiveUtilityValue, UtilitySlot } from './utilities/classes';
 
 // shared prop types & class helpers
 export { layoutSpaceClasses, numericSpaceClasses, sizeClasses, radiusClasses, borderClasses, resolveRadiusInput } from './base/shared-props';
-export type { LayoutSpaceProps, NumericSpaceProps, SizePropsShort, SizeInput, RadiusPropsShort, RadiusInput, BorderStyleProps, AspectRatioProps, AspectRatioValue, GrowProps } from './base/shared-props';
+export type { LayoutSpaceProps, NumericSpaceProps, SizePropsShort, SizeInput, RadiusPropsShort, RadiusInput, BorderStyleProps, AspectRatioProps, AspectRatioValue, GrowProps, ShrinkProps } from './base/shared-props';
 
 // link utilities
 export { buildRel, isInternalHref, resolveLinkProps, shouldUseNextLink } from './base/link-utils';

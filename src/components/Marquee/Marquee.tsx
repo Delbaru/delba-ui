@@ -2,8 +2,8 @@
 
 import { Children, type ReactElement } from 'react';
 import { Flex } from '../Flex';
-import { cx } from '../../core';
-import { motionDefaults } from '../../core/base/motion-config';
+import { cx } from '#core';
+import { MARQUEE_DEFAULTS } from './Marquee.config';
 import { useMarquee } from './Marquee.model';
 import type { MarqueeProps } from './Marquee.types';
 import styles from './Marquee.module.scss';
@@ -13,13 +13,13 @@ export type { MarqueeProps } from './Marquee.types';
 /** Continuous, draggable content. Only the original copy participates in accessibility. */
 export function Marquee({
   children,
-  as = 'div',
+  as = MARQUEE_DEFAULTS.as,
   gap,
-  speed = motionDefaults.marquee.speed,
-  reverse = false,
-  paused = false,
-  draggable = true,
-  fade = false,
+  speed = MARQUEE_DEFAULTS.speed,
+  reverse = MARQUEE_DEFAULTS.reverse,
+  paused = MARQUEE_DEFAULTS.paused,
+  draggable = MARQUEE_DEFAULTS.draggable,
+  fade = MARQUEE_DEFAULTS.fade,
   className,
   ...props
 }: MarqueeProps): ReactElement {

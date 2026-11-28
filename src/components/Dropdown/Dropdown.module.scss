@@ -1,11 +1,9 @@
 @layer ui.components {
-  .Dropdown:global(.ui-box) {
+  .Dropdown {
     position: relative;
-    display: inline-flex;
   }
 
-  .PortalRoot:global(.ui-box) {
-    display: contents;
+  .PortalRoot {
     pointer-events: none;
   }
 

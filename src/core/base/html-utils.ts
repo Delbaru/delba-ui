@@ -5,7 +5,7 @@
 
 import type { CSSProperties } from 'react';
 import type { ResponsiveInput } from './responsive';
-import { resolveResponsive } from './responsive';
+import { resolveResponsiveInput } from './responsive';
 
 // ── HTML entity decoding ────────────────────────────────
 
@@ -63,7 +63,7 @@ type ClampStyle = CSSProperties & {
 
 export const buildClampStyle = (rows: ResponsiveInput<number> | undefined): ClampStyle => {
   if (rows === undefined) return {};
-  const [desktop, mobile, tablet] = resolveResponsive(rows);
+  const [desktop, mobile, tablet] = resolveResponsiveInput(rows);
   return {
     ...(normalizeRowsValue(desktop) ? { '--text-rows-d': normalizeRowsValue(desktop) } : null),
     ...(normalizeRowsValue(mobile) ? { '--text-rows-m': normalizeRowsValue(mobile) } : null),

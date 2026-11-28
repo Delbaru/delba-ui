@@ -4,6 +4,10 @@
   // Фундамент всех тултипов: фикс-позиция от useAnchoredFloating + плавное появление/исчезновение.
   // Внешний вид (плашка/карточка) — отдельно: .surface или контент потребителя.
   .Tooltip {
+    &:where(div) {
+      display: flex;
+    }
+
     position: fixed;
     left: var(--floating-left);
     top: var(--floating-top);
@@ -48,9 +52,9 @@
     max-width: min(calc(420 * var(--rpx)), calc(100vw - 32 * var(--rpx)));
     padding: calc(4 * var(--rpx)) calc(8 * var(--rpx));
     border-radius: calc(8 * var(--rpx));
-    background: color-mix(in srgb, var(--black) 80%, transparent);
-    color: var(--white-100);
-    font: m.role-font(micro);
+    background: color-mix(in srgb, var(--text) 80%, transparent);
+    color: var(--primary-foreground);
+    @include m.typography-role(micro);
     text-align: center;
     white-space: normal;
     overflow-wrap: anywhere;

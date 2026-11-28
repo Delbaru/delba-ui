@@ -2,10 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { resolveResponsive } from '../../../../src/core/base/responsive';
 
-test('single-entry responsive tuples retain control geometry on mobile and tablet', () => {
-  assert.deepEqual(resolveResponsive([14]), [14, 14, 14]);
-  assert.deepEqual(resolveResponsive([32]), [32, 32, 32]);
-  assert.deepEqual(resolveResponsive(['center']), ['center', 'center', 'center']);
+test('short responsive tuples are rejected instead of inheriting desktop', () => {
+  for (const input of [[14], [32], ['center'], [24, 16]])
+    assert.throws(() => resolveResponsive(input as never), /desktop|tuple/);
 });
 
 test('explicit null still means skip, not a desktop fallback', () => {

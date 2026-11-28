@@ -16,7 +16,11 @@ export function InputInlineError({ message, id }: { message?: string; id?: strin
         right={[0, 0, 0]}
         minW={[0, 0, 0]}
         align={['center', 'center', 'center']}
-        animate={{ when: 'load', effect: 'fade', duration: 'fast' }}
+        animate={{
+            appearance: {
+                when: 'load', effect: 'fade', duration: 'fast'
+            }
+        }}
     >
       <Text
           id={id}

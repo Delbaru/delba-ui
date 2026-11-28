@@ -4,6 +4,7 @@
 import { Flex } from '../../Flex';
 import { Text } from '../../Text';
 import { Icon } from '../../Icon';
+import { MEDIA_UPLOAD_ICON } from '../MediaDropDown.config';
 import type { MediaDropDownModel } from '../MediaDropDown.model';
 import styles from './MediaDropzone.module.scss';
 import { Button } from '../../Button';
@@ -41,7 +42,7 @@ export function MediaDropzone({ media }: { media: Pick<MediaDropDownModel, 'file
             gap={[8, 8, 8]}
         >
           <Icon
-              name="ui/upload/style-2/upload"
+              src={MEDIA_UPLOAD_ICON}
               w={[20, 20, 20]}
               h={[20, 20, 20]}
               className={styles.DropZoneIcon}

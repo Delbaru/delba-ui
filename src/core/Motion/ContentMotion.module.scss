@@ -1,0 +1,73 @@
+@use '../mixins' as m;
+
+@layer ui.components {
+  // Появление и смена содержимого по `animate`.
+  // Словарь классов и шаги свопа — hooks/contentMotion.ts. Keyframe перезапускается сменой класса
+  // вход ↔ уход на том же узле, без ремоунта.
+  // animation-fill-mode: backwards применяет from-кадр сразу до старта (без вспышки base-состояния).
+  @keyframes content-fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes content-fadeInDown {
+    from { opacity: 0; translate: 0 calc(-16 * var(--rpx)); }
+    to { opacity: 1; translate: 0 0; }
+  }
+
+  @keyframes content-fadeInUp {
+    from { opacity: 0; translate: 0 calc(16 * var(--rpx)); }
+    to { opacity: 1; translate: 0 0; }
+  }
+
+  // Въезд из чуть уменьшенного состояния — зеркало content-fadeOutScale (пара для свопа контента).
+  @keyframes content-fadeInScale {
+    from { opacity: 0; scale: 0.96; }
+    to { opacity: 1; scale: 1; }
+  }
+
+  .ui-anim-fadeIn { animation: content-fadeIn var(--t-d-fast) var(--t-t-f-ease-in-out) backwards; }
+  .ui-anim-fadeInDown { animation: content-fadeInDown var(--t-d-fast) var(--t-t-f-ease-in-out) backwards; }
+  .ui-anim-fadeInUp { animation: content-fadeInUp var(--t-d-fast) var(--t-t-f-ease-in-out) backwards; }
+  .ui-anim-fadeInScale { animation: content-fadeInScale var(--t-d-fast) var(--t-t-f-ease-in-out) backwards; }
+
+  // Уходы (зеркало входа) — для свопа: старый уходит, затем содержимое меняется.
+  // forwards держит конечный кадр (opacity 0 / смещение) до момента подмены контента.
+  @keyframes content-fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  @keyframes content-fadeOutUp {
+    from { opacity: 1; translate: 0 0; }
+    to { opacity: 0; translate: 0 calc(-16 * var(--rpx)); }
+  }
+
+  @keyframes content-fadeOutDown {
+    from { opacity: 1; translate: 0 0; }
+    to { opacity: 0; translate: 0 calc(16 * var(--rpx)); }
+  }
+
+  @keyframes content-fadeOutScale {
+    from { opacity: 1; scale: 1; }
+    to { opacity: 0; scale: 0.96; }
+  }
+
+  .ui-anim-fadeOut { animation: content-fadeOut var(--t-d-fast) var(--t-t-f-ease-in-out) forwards; }
+  .ui-anim-fadeOutUp { animation: content-fadeOutUp var(--t-d-fast) var(--t-t-f-ease-in-out) forwards; }
+  .ui-anim-fadeOutDown { animation: content-fadeOutDown var(--t-d-fast) var(--t-t-f-ease-in-out) forwards; }
+  .ui-anim-fadeOutScale { animation: content-fadeOutScale var(--t-d-fast) var(--t-t-f-ease-in-out) forwards; }
+
+  @include m.reduced-motion {
+    .ui-anim-fadeIn,
+    .ui-anim-fadeInDown,
+    .ui-anim-fadeInUp,
+    .ui-anim-fadeInScale,
+    .ui-anim-fadeOut,
+    .ui-anim-fadeOutUp,
+    .ui-anim-fadeOutDown,
+    .ui-anim-fadeOutScale {
+      animation: none;
+    }
+  }
+}

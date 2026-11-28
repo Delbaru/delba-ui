@@ -1,6 +1,6 @@
 import type React from 'react';
 
-import { sanitizeSvgMarkup } from '../../core';
+import { sanitizeSvgMarkup } from '#core';
 
 // Чистый конвейер SVG-иконки: безопасная перекраска, разбор файла, источник по пропсам.
 

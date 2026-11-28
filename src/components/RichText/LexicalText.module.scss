@@ -1,3 +1,5 @@
+@use 'sass:map' as frontendMap;
+@use '../../core/responsive-generated' as frontendResponsive;
 @use 'sass:map';
 @use '../../core/mixins' as m;
 @use '../../core/scss-utils' as utils;
@@ -20,11 +22,11 @@
     h#{$level} {
       $font: h#{$level};
       @if $level == 4 { $font: map.get($preset, h4-font); }
-      font: var(--font-#{$font},);
+      @include m.typography-role($font);
       @if $level == 4 and map.has-key($preset, h4-size) { font-size: map.get($preset, h4-size); }
       @if $level == 4 and map.has-key($preset, h4-weight) { font-weight: map.get($preset, h4-weight); }
-      text-transform: var(--tt-h#{$level},);
-      letter-spacing: var(--ls-h#{$level},);
+
+
       &:not(:last-child) {
         @if $level == 4 { margin-bottom: map.get($preset, h4-gap); }
         @else { margin-bottom: var(--s-20); }
@@ -34,7 +36,7 @@
 
   p {
     margin: 0;
-    font: var(--font-#{map.get($preset, body)},);
+    @include m.typography-role(map.get($preset, body));
     @if map.has-key($preset, body-size) { font-size: map.get($preset, body-size); }
     @if map.has-key($preset, body-weight) { font-weight: map.get($preset, body-weight); }
     &:not(:last-child) { margin-bottom: map.get($preset, paragraph-gap); }
@@ -44,7 +46,7 @@
     margin: 0;
     padding-left: map.get($preset, list-indent);
     li {
-      font: var(--font-#{map.get($preset, body)},);
+      @include m.typography-role(map.get($preset, body));
       @if map.has-key($preset, body-size) { font-size: map.get($preset, body-size); }
       @if map.has-key($preset, body-weight) { font-weight: map.get($preset, body-weight); }
       &:not(:last-child) { margin-bottom: map.get($preset, item-gap); }
@@ -55,7 +57,7 @@
   blockquote {
     margin-left: 0;
     margin-right: 0;
-    font: var(--font-#{map.get($preset, quote-font)},);
+    @include m.typography-role(map.get($preset, quote-font));
     @if map.has-key($preset, quote-weight) { font-weight: map.get($preset, quote-weight); }
     padding: map.get($preset, quote-padding);
     padding-left: map.get($preset, quote-left);
@@ -66,7 +68,7 @@
 }
 
 @layer ui.components {
-  .LexicalText {}
+  .LexicalText { display: block; }
   .sequence { overflow: hidden; }
 
   .previewText {
@@ -99,21 +101,21 @@
     gap: calc(var(--rpx) * 8);
     border-radius: calc(var(--rpx) * 8);
     border: calc(var(--rpx) * 1) solid var(--rich-text-variable-color, var(--primary));
-    background: var(--white-100);
+    background: var(--primary-foreground);
     color: var(--rich-text-variable-color, var(--primary));
-    font: m.role-font(caption);
+    @include m.typography-role(caption);
     line-height: 1;
     white-space: nowrap;
     vertical-align: middle;
   }
 
-  @media (max-width: 767px) {
+  @media #{frontendMap.get(frontendResponsive.$breakpoints, m)} {
     .clamp {
       -webkit-line-clamp: var(--text-rows-m, var(--text-rows-d, 1));
     }
   }
 
-  @media (min-width: 768px) and (max-width: 1023px) {
+  @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
     .clamp {
       -webkit-line-clamp: var(--text-rows-t, var(--text-rows-d, 1));
     }
@@ -121,7 +123,7 @@
 
   .RichText {
     li::marker { color: var(--rich-list-marker-color, currentColor); }
-    @media (max-width: 767px) {
+    @media #{frontendMap.get(frontendResponsive.$breakpoints, m)} {
       &.default {
         @include rich-preset((
           body: title,
@@ -164,7 +166,7 @@
       }
     }
 
-    @media (min-width: 768px) and (max-width: 1023px) {
+    @media #{frontendMap.get(frontendResponsive.$breakpoints, t)} {
       &.default {
         @include rich-preset((
           body: title,
@@ -210,7 +212,7 @@
       }
     }
 
-    @media (min-width: 1024px) {
+    @media #{frontendMap.get(frontendResponsive.$breakpoints, d)} {
       &.default {
         @include rich-preset((
           body: title,
@@ -265,17 +267,15 @@ $rich-roles: h1, h2, h3, title, subtitle, p, small, dop;
 
 // У роли `p` токены регистра и трекинга в договоре темы названы `--tt-p1` / `--ls-p1`
 // (шрифт при этом `--font-p`). Суффикс сводится здесь, договор темы не трогается.
-@function rich-role-suffix($role) {
-  @if $role == p {
-    @return p1;
-  }
+@function rich-typography-role($role) {
+  @if $role == p { @return body; }
+  @if $role == small { @return caption; }
+  @if $role == dop { @return micro; }
   @return $role;
 }
 
 @mixin rich-role($role) {
-  font: var(--font-#{$role},);
-  text-transform: var(--tt-#{rich-role-suffix($role)},);
-  letter-spacing: var(--ls-#{rich-role-suffix($role)},);
+  @include m.typography-role(rich-typography-role($role));
 }
 
 @layer ui.utilities {

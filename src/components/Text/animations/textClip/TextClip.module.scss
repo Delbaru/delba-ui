@@ -1,4 +1,16 @@
 @layer ui.components {
+  // Клип-сцена: единый Flex-бокс (высота пропом h) — клипует (overflow), держит контекст для absolute-шагов
+  // (position) и анимирует clip-path. Длительность приходит CSS-переменной --clip-dur (дефолт — токен).
   .TextClip {
+    position: relative;
+    overflow: hidden;
+    transition: clip-path var(--clip-dur, var(--t-m-text-clip-duration)) var(--t-t-f-ease);
+
+    .Item {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+    }
   }
 }

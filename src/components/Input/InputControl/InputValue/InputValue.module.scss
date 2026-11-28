@@ -4,7 +4,7 @@
   }
   .timeRoot {
     flex: 1;
-    font: m.role-font(body);
+    font: inherit;
     letter-spacing: normal;
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum';
@@ -37,7 +37,7 @@
     color: var(--input-value-color, inherit);
     -webkit-text-fill-color: var(--input-value-color, currentColor);
     caret-color: var(--primary);
-    font: var(--field-font, #{m.role-font(body)});
+    font: inherit;
     // The font shorthand resets numeric variants; keep this after it.
     font-variant-numeric: lining-nums proportional-nums;
     transition:

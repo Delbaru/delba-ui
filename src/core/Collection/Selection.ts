@@ -9,6 +9,24 @@ export function emptySelection<T>(): Selection<T> {
   return { ids: [], retained: new Map(), anchor: null };
 }
 
+export function changeSelectionKeys(
+  current: readonly string[],
+  requested: readonly string[],
+  operation: 'select' | 'unselect' | 'toggle' | 'range',
+  mode: 'single' | 'multiple' = 'multiple',
+): string[] {
+  const ids = new Set(current);
+  for (const key of requested) {
+    if (operation === 'unselect' || operation === 'toggle' && ids.has(key)) {
+      ids.delete(key);
+    } else {
+      if (mode === 'single') ids.clear();
+      ids.add(key);
+    }
+  }
+  return [...ids];
+}
+
 /** Keyboard extension starts at the focused item if there is no loaded anchor. */
 export function rangeKeys(keys: readonly string[], anchor: string | null, target: string, origin?: string): string[] {
   const anchored = anchor === null ? -1 : keys.indexOf(anchor);
@@ -51,29 +69,24 @@ export function changeSelection<T>(
   rangeOrigin?: string,
 ): Selection<T> {
   selection = pruneSelection(selection, visible, retainMissing);
-  const ids = new Set(selection.ids);
+  const current = new Set(selection.ids);
+  const available = keys.filter(key =>
+    operation === 'unselect' || operation === 'toggle' && current.has(key) || visible.has(key),
+  );
+  const ids = changeSelectionKeys(selection.ids, available, operation, mode);
+  const selected = new Set(ids);
   const retained = new Map(selection.retained);
-  for (const key of keys) {
-    if (operation === 'unselect' || operation === 'toggle' && ids.has(key)) {
-      ids.delete(key);
-      retained.delete(key);
-      continue;
-    }
+  for (const key of available) {
     const item = visible.get(key);
-    if (item === undefined) continue;
-    if (mode === 'single') {
-      ids.clear();
-      retained.clear();
-    }
-    ids.add(key);
-    if (retainMissing) retained.set(key, item);
+    if (retainMissing && selected.has(key) && item !== undefined) retained.set(key, item);
   }
   for (const id of retained.keys()) {
-    if (!ids.has(id)) retained.delete(id);
+    if (!selected.has(id)) retained.delete(id);
     else if (visible.has(id)) retained.set(id, visible.get(id)!);
   }
   return {
-    ids: [...ids], retained,
+    ids,
+    retained,
     anchor: operation === 'range'
       ? (selection.anchor !== null && visible.has(selection.anchor) ? selection.anchor : rangeOrigin ?? keys[0] ?? null)
       : keys.at(-1) ?? selection.anchor,

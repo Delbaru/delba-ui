@@ -1,1 +1,2 @@
-export { DurationPicker, type DurationPickerProps } from './DurationPicker';
+export { DurationPicker } from './DurationPicker';
+export type { DurationPickerProps } from './DurationPicker.types';

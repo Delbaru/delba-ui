@@ -1,5 +1,5 @@
 import { MEDIA_QUERY } from '../base/breakpoints';
-import { isTextRole, LEGACY_TEXT_VARIANTS, TEXT_ROLES, textToken } from '../base/typography';
+import { FONT_NAMES, TEXT_VARIANTS, TEXT_ROLES, TYPOGRAPHY_FIELDS, textToken } from '../base/typography';
 import { entryKey, expandShorthand, type UtilityEntry, type UtilityScalar } from './keys';
 
 /**
@@ -99,20 +99,23 @@ const ALIGN_ITEMS = { stretch: 'stretch', center: 'center', flex_start: 'flex-st
 const JUSTIFY_CONTENT = { flex_start: 'flex-start', flex_end: 'flex-end', start: 'start', end: 'end', center: 'center', space_between: 'space-between', space_around: 'space-around', space_evenly: 'space-evenly' };
 
 /** Имя варианта: вариант проекта или служебная роль кита (`core/base/typography.ts`). */
-const TEXT_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
 
 /** Токены варианта `--font-*`, `--tt-*`, `--ls-*`; у роли — с фолбэком на прежний вариант. */
 const textVariant = (value: UtilityEntry) => {
   if (value === 'inherit') return 'font: inherit; text-transform: inherit; letter-spacing: inherit';
-  if (typeof value !== 'string' || !TEXT_NAME.test(value)) return null;
+  if (typeof value !== 'string') return null;
   const token = textToken(value);
-  if (!isTextRole(value)) return `font: var(--font-${token}); text-transform: var(--tt-${token}); letter-spacing: var(--ls-${token})`;
-  const old = TEXT_ROLES[value];
-  return `font: var(--font-${token}, var(--font-${old})); text-transform: var(--tt-${token}, var(--tt-${old})); letter-spacing: var(--ls-${token}, var(--ls-${old}))`;
+  const configured = TYPOGRAPHY_FIELDS as Readonly<Record<string, Readonly<Record<'desktop' | 'mobile' | 'tablet', readonly string[]>>>>;
+  const fields = configured[value];
+  if (!fields) return null;
+  return (['desktop', 'mobile', 'tablet'] as const).map(band => {
+    const declarations = fields[band].map(property => `${property}: var(--type-${token}-${property})`).join('; ');
+    return declarations ? `@media ${MEDIA_QUERY[band]} { ${declarations}; }` : '';
+  }).filter(Boolean).join(' ');
 };
 
 /** Словарь `text`: варианты проекта (не заданы — прежний набор), роли кита и `inherit`. */
-export const textDomain = (variants: readonly string[] = LEGACY_TEXT_VARIANTS): string[] => [...variants, ...Object.keys(TEXT_ROLES), 'inherit'];
+export const textDomain = (variants: readonly string[] = TEXT_VARIANTS): string[] => [...variants, ...Object.keys(TEXT_ROLES), 'inherit'];
 
 /** Высота строки: число — доля (`1.2` → класс `lineHeight_1.2`) или `normal`. */
 const lineHeight = (value: UtilityEntry) => {
@@ -123,6 +126,7 @@ const lineHeight = (value: UtilityEntry) => {
 const range = (from: number, to: number, step = 1) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
 
 export const UTILITIES: readonly Utility[] = [
+  { name: 'display', ...enumOf('display', { flex: 'flex', block: 'block', contents: 'contents', 'inline-flex': 'inline-flex', 'inline-block': 'inline-block' }) },
   { name: 'w', declare: lengthOf('width', SIZE_WORDS) },
   { name: 'minW', declare: lengthOf('min-width', SIZE_WORDS) },
   { name: 'maxW', declare: lengthOf('max-width', MAX_WORDS) },
@@ -191,7 +195,7 @@ export const UTILITIES: readonly Utility[] = [
   { name: 'fontSize', declare: lengthOf('font-size') },
   { name: 'fontWeight', declare: numberOf('font-weight'), domain: range(100, 900, 100) },
   { name: 'lineHeight', declare: lineHeight },
-  { name: 'fontFamily', ...enumOf('font-family', { primary: 'var(--font-primary)', secondary: 'var(--font-secondary)', inherit: 'inherit' }) },
+  { name: 'fontFamily', ...enumOf('font-family', { ...Object.fromEntries(FONT_NAMES.map(name => [name, `var(--font-family-${textToken(name)})`])), inherit: 'inherit' }) },
   { name: 'textTransform', ...enumOf('text-transform', { none: 'none', uppercase: 'uppercase', lowercase: 'lowercase', capitalize: 'capitalize' }) },
   { name: 'letterSpacing', declare: lengthOf('letter-spacing', new Set(['normal'])) },
   { name: 'textAlign', ...enumOf('text-align', { left: 'left', right: 'right', center: 'center', justify: 'justify', start: 'start', end: 'end' }) },
@@ -208,6 +212,7 @@ export const UTILITIES: readonly Utility[] = [
   },
 
   { name: 'grow', declare: numberOf('flex-grow'), domain: range(0, 12) },
+  { name: 'shrink', declare: numberOf('flex-shrink'), domain: range(0, 12) },
   {
     name: 'ratio',
     declare: (value) => {

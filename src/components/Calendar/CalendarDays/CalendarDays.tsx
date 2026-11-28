@@ -1,6 +1,6 @@
-import { cx } from '../../../core';
+import { cx } from '#core';
+import type { CalendarDay } from '#core/Calendar';
 import { UI_MESSAGES } from '../../../core/base/messages';
-import * as dates from '../../../core/fields/date';
 import { Button } from '../../Button';
 import { Flex } from '../../Flex';
 import { Grid } from '../../Grid';
@@ -9,21 +9,13 @@ import styles from './CalendarDays.module.scss';
 
 interface CalendarDaysProps {
   id: string;
-  month: Date;
-  selected: Date | null;
-  days: Date[];
-  disabled: boolean;
-  allows(day: Date): boolean;
-  pick(day: Date): void;
+  days: readonly CalendarDay[];
+  pick(day: string): void;
 }
 
 export function CalendarDays({
   id,
-  month,
-  selected,
   days,
-  disabled,
-  allows,
   pick,
 }: CalendarDaysProps) {
   return (
@@ -46,21 +38,21 @@ export function CalendarDays({
 
       <Grid columns={[7, 7, 7]} gap={[4, 4, 4]}>
         {days.map((day) => {
-          const currentMonth = day.getMonth() === month.getMonth();
-          const dayDisabled = disabled || !allows(day);
-          const chosen = !dayDisabled && dates.isSameDay(selected, day);
-          const weekend = dates.isWeekend(day);
-          const dayId = `${id}-day-${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
+          const { date, inMonth, disabled, selected, weekend, number } = day;
+          const chosen = !disabled && selected;
+          const year = Number(date.slice(0, -6));
+          const monthIndex = Number(date.slice(-5, -3)) - 1;
+          const dayId = `${id}-day-${year}-${monthIndex}-${number}`;
           const state = cx(
-            !currentMonth && 'muted',
+            !inMonth && 'muted',
             weekend && 'weekend',
-            dayDisabled && 'disabled',
+            disabled && 'disabled',
             chosen && 'selected',
           );
           const background = chosen ? 'var(--primary)' : 'var(--background)';
-          let color = currentMonth ? 'var(--text)' : 'var(--text-muted)';
-          if (weekend && currentMonth) color = 'var(--error)';
-          if (dayDisabled) color = 'var(--text-muted)';
+          let color = inMonth ? 'var(--text)' : 'var(--text-muted)';
+          if (weekend && inMonth) color = 'var(--error)';
+          if (disabled) color = 'var(--text-muted)';
           if (chosen) color = 'var(--white-100)';
 
           return (
@@ -69,7 +61,7 @@ export function CalendarDays({
               key={dayId}
               type="button"
               aria-pressed={chosen}
-              disabled={dayDisabled}
+              disabled={disabled}
               w={[40, 40, 40]}
               h={[40, 40, 40]}
               r={[8, 8, 8]}
@@ -80,14 +72,14 @@ export function CalendarDays({
                 { target: dayId, on: 'hover', set: 'hover' },
                 { target: dayId, on: 'active', set: 'active' },
               ]}
-              onClick={() => pick(day)}
+              onClick={() => pick(date)}
             >
               <Text
                   className={styles.dayText}
                   variant={['caption', 'caption', 'caption']}
                   color={color}
               >
-                {day.getDate()}
+                {number}
               </Text>
             </Button>
           );

@@ -1,5 +1,7 @@
 'use client';
 
+import '../core/Motion/Parallax.module.scss';
+
 import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 
 import { MEDIA_QUERY } from '../core/base/breakpoints';
@@ -333,7 +335,7 @@ export function useParallaxMotion(parallax: ParallaxInput | undefined) {
   }, []);
 
   /**
-   * Наблюдатель нужен ТОЛЬКО включённому моушену: `useSharedMotion` зовёт почти каждый примитив
+   * Наблюдатель нужен ТОЛЬКО включённому моушену: `useSurfaceMotion` зовёт почти каждый примитив
    * ДС, и без этой проверки страница без единого параллакса держала наблюдатель на КАЖДЫЙ узел.
    * Идемпотентна — повторный вызов с той же парой «узел + состояние конфига» ничего не пересоздаёт.
    */

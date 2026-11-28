@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from '../../../core';
+import { cx } from '#core';
 import { Flex } from '../../Flex';
 import { Skeleton } from '../../Skeleton';
 import { Text } from '../../Text';
@@ -28,10 +28,11 @@ export function TextareaControl({
       <Flex
         w={['100%', '100%', '100%']}
         animate={{
-          when: 'change',
-          effect: 'fade',
-          key: control.loading ? 'skeleton' : 'value',
-          duration: 'fast',
+            change: {
+                effect: 'fade',
+                key: control.loading ? 'skeleton' : 'value',
+                duration: 'fast'
+            }
         }}
       >
         {control.loading ? (

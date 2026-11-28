@@ -1,18 +1,16 @@
 import type React from 'react';
 import type {
-  AspectRatioProps,
   BoxLayoutProps,
   ContainerProp,
-  GrowProps,
-  LayoutSpaceProps,
   ResponsiveValue,
-  SizeValue,
   StateLinkInput,
-} from '../../core';
+} from '#core';
 import type { RevealScopeProps } from '../../core/reveal/reveal';
-import type { SharedMotionProps } from '../../hooks/useSharedMotion';
+import type { MotionChannels, SurfaceMotionOptions } from '#core/Motion';
+import type { MotionTime } from '../../core/base/timing';
+import type { MotionDistance } from '../../core/base/distance';
 import type { CollapseOptions } from '../Collapse/CollapseWrap';
-import type { GridLayoutAnimate } from './layout';
+import type { GridItemLayout } from './GridItem';
 
 export type Track =
   | 1
@@ -71,24 +69,6 @@ export type Track =
 type JustifyItemsKey = 'start' | 'end' | 'center' | 'stretch';
 type AlignItemsKey = 'start' | 'end' | 'center' | 'stretch';
 
-type ItemJustifyContentKey =
-  | 'flex_start'
-  | 'flex_end'
-  | 'start'
-  | 'end'
-  | 'center'
-  | 'space_between'
-  | 'space_around'
-  | 'space_evenly';
-
-type ItemAlignItemsKey =
-  | 'stretch'
-  | 'center'
-  | 'flex_start'
-  | 'flex_end'
-  | 'start'
-  | 'end'
-  | 'baseline';
 type AlignContentKey =
   | 'start'
   | 'end'
@@ -103,11 +83,11 @@ export interface GridProps
   extends React.HTMLAttributes<HTMLDivElement>,
     BoxLayoutProps,
     ContainerProp,
-    Omit<SharedMotionProps, 'animate'>,
+    Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'>,
     RevealScopeProps {
   children?: React.ReactNode;
-  /** Появление либо точечное перестроение: `{ when: 'change', effect: 'layout' }` для keyed GridItem. */
-  animate?: SharedMotionProps['animate'] | GridLayoutAnimate;
+  /** Перестроение по стабильным ключам прямых GridItem. */
+  animate?: MotionChannels<{ change: GridLayoutAnimate }>;
   /** Сворачивает весь Grid по высоте; `open` управляется состоянием снаружи. */
   collapse?: CollapseOptions;
 
@@ -129,109 +109,13 @@ export interface GridProps
   linkState?: StateLinkInput;
 }
 
-// 1..13 (13 is useful as "end line" for 12-column grid)
-type Line =
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5
-  | 6
-  | 7
-  | 8
-  | 9
-  | 10
-  | 11
-  | 12
-  | 13
-  | 14
-  | 15
-  | 16
-  | 17
-  | 18
-  | 19
-  | 20
-  | 21
-  | 22
-  | 23
-  | 24
-  | 25
-  | 26
-  | 27
-  | 28
-  | 29
-  | 30
-  | 31
-  | 32
-  | 33
-  | 34
-  | 35
-  | 36
-  | 37
-  | 38
-  | 39
-  | 40
-  | 41
-  | 42
-  | 43
-  | 44
-  | 45
-  | 46
-  | 47
-  | 48
-  | 49
-  | 50
-  | 51
-  | 52;
-
-export interface GridItemProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    LayoutSpaceProps,
-    AspectRatioProps,
-    GrowProps,
-    SharedMotionProps {
-  children?: React.ReactNode;
-
-  area?: string;
-
-  colSpan?: ResponsiveValue<Track>;
-  rowSpan?: ResponsiveValue<Track>;
-
-  colStart?: ResponsiveValue<Line>;
-  colEnd?: ResponsiveValue<Line>;
-  rowStart?: ResponsiveValue<Line>;
-  rowEnd?: ResponsiveValue<Line>;
-
-  h?: ResponsiveValue<SizeValue>;
-  w?: ResponsiveValue<SizeValue>;
-  maxH?: ResponsiveValue<SizeValue>;
-  maxW?: ResponsiveValue<SizeValue>;
-  grow?: ResponsiveValue<number>;
-
-  justifyContent?: ResponsiveValue<ItemJustifyContentKey>;
-  alignItems?: ResponsiveValue<ItemAlignItemsKey>;
-}
-
-export interface GridItemLayout {
-  key?: React.Key;
-  className?: string;
-  style?: React.CSSProperties;
-
-  area?: string;
-
-  colSpan?: ResponsiveValue<Track>;
-  rowSpan?: ResponsiveValue<Track>;
-
-  colStart?: ResponsiveValue<Line>;
-  colEnd?: ResponsiveValue<Line>;
-  rowStart?: ResponsiveValue<Line>;
-  rowEnd?: ResponsiveValue<Line>;
-
-  h?: ResponsiveValue<SizeValue>;
-  w?: ResponsiveValue<SizeValue>;
-  grow?: ResponsiveValue<number>;
-  aspectRatio?: AspectRatioProps['aspectRatio'];
-
-  justifyContent?: ResponsiveValue<ItemJustifyContentKey>;
-  alignItems?: ResponsiveValue<ItemAlignItemsKey>;
+export interface GridLayoutAnimate {
+  /** Сохраняет DOM оставшихся элементов, а вход и выход запускает для изменившихся. */
+  effect: 'layout';
+  /** Длительность входа, выхода и перемещения. */
+  duration?: MotionTime;
+  /** Сдвиг при входе и выходе. Перемещение вычисляется из геометрии. */
+  distance?: MotionDistance;
+  /** Интервал появления новых элементов. */
+  stagger?: MotionTime;
 }

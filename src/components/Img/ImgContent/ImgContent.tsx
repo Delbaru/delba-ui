@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import type { ImgProps } from '../Img.types';
 import type { ImageResource } from '../Img.resource';
-import { cx, MEDIA_QUERY } from '../../../core';
+import { cx, MEDIA_QUERY } from '#core';
 import styles from './ImgContent.module.scss';
 
 interface ImgContentProps {
@@ -13,7 +13,7 @@ interface ImgContentProps {
 
 export function ImgContent({ resource, className, onLoad, onError }: ImgContentProps) {
   const media = { mobile: MEDIA_QUERY.mobile, tablet: MEDIA_QUERY.below };
-  const events = { onLoad, onError, draggable: false };
+  const events = { onLoad, onError, draggable: false, 'data-img-image': '' };
   if (!resource.picture) {
     return <Image {...resource.image} {...events} className={cx(styles.ImgContent, className)} />;
   }

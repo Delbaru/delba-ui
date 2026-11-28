@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { Grid, GridItem } from '../../../src/components/Grid/Grid';
+import { Grid, GridItem } from '../../../src/components/Grid';
 
 test('layout mode server-renders visible keyed content without a presence wrapper', () => {
   const html = renderToString(
     createElement(
       Grid,
-      { animate: { when: 'change', effect: 'layout' } },
+      { animate: { change: { effect: 'layout' } } },
       createElement(GridItem, { key: 'product-id' }, 'Published product'),
     ),
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../../core';
+import { MOTION_END_BUFFER_MS, prefersReducedMotion } from '#core';
 
 export interface TextSwapState {
   /** Актуальная строка (въезжающий слой). */

@@ -15,7 +15,9 @@ export function selectTypeChecks(
   setCountry: Dispatch<SetStateAction<Country | null>>,
   setCountries: Dispatch<SetStateAction<Country[]>>,
 ) {
-  const single = <Select options={options} value={country} onChange={setCountry} />;
+  const single = <Select options={options} value={country} onChange={setCountry}
+    animate={{ hover: { effect: 'rise' }, idle: { effect: 'glow' } }}
+    panel={{ animate: { appearance: { when: 'open', effect: 'fade' } } }} />;
   const searchable = <Select options={options} value={country} onChange={setCountry}
     search={{ value: '', onChange: (query: string) => { void query; } }} loading closeOnSelect={false} />;
   const multiple = <Select options={options} multiple value={countries} onChange={setCountries} />;

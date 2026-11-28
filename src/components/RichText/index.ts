@@ -1,4 +1,5 @@
-export { LexicalText, type LexicalTextProps, type LexicalTextVariant } from './RichText';
+export { LexicalText } from './LexicalText';
+export type { LexicalTextAnimate, LexicalTextProps, LexicalTextVariant, RichTextChangeAnimate } from './LexicalText.types';
 export { RICH_ROLES, isRichRole, resolveRole, roleClassKeys, isTextVariantName, tagDefaultRole, textVariantClasses, type RichRole, type RichTag } from './roles';
 
 /**
@@ -13,4 +14,3 @@ export { default as richTextClasses } from './LexicalText.module.scss';
 
 export type { LexicalDocument } from './types';
 
-export type { RichTextChangeAnimate } from './RichText.types';

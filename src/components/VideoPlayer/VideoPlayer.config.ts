@@ -1,16 +1,24 @@
-import { assetUrl, pad } from '../../core';
-import type { MediaSource, VideoPlayerControlKey } from './types';
-import playIcon from '../../../assets/icons/ui/play/style-2/play.svg';
-import pauseIcon from '../../../assets/icons/ui/pause/style-1/pause.svg';
-import volumeIcon from '../../../assets/icons/ui/volume/style-1/volume.svg';
-import volumeMutedIcon from '../../../assets/icons/ui/volume/style-1/volume-muted.svg';
-import fullscreenIcon from '../../../assets/icons/ui/fullscreen/style-1/fullscreen.svg';
-import fullscreenQuitIcon from '../../../assets/icons/ui/fullscreen/style-1/fullscreen-quit.svg';
+import { assetUrl, pad } from '#core';
+import type { FlexProps } from '../Flex';
+import type { MediaSource, VideoPlayerControlKey } from './VideoPlayer.types';
+import playIcon from '#icons/controls/play.svg';
+import pauseIcon from '#icons/controls/pause.svg';
+import volumeIcon from '#icons/controls/volume.svg';
+import volumeMutedIcon from '#icons/controls/volume-mute.svg';
+import fullscreenIcon from '#icons/controls/fullscreen.svg';
+import fullscreenQuitIcon from '#icons/controls/fullscreen-exit.svg';
 
 
 export const DEFAULT_CONTROLS: VideoPlayerControlKey[] = ['play', 'timeline', 'time', 'volume', 'fullscreen'];
 
 export const DEFAULT_RATES = [1, 1.25, 1.5, 2];
+
+export const VIDEO_PLAYER_LAYOUT = {
+    position: ['relative', 'relative', 'relative'],
+    dir: ['column', 'column', 'column'],
+    justify: ['space_between', 'space_between', 'space_between'],
+    r: [24, 24, 24],
+} satisfies Pick<FlexProps, 'position' | 'dir' | 'justify' | 'r'>;
 
 // Следующая скорость по кругу; текущей нет в списке — первая.
 export function nextRate(rates: number[], current: number): number {

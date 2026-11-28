@@ -4,7 +4,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import styles from './TextClip.module.scss';
-import { cx } from '../../../../core';
 
 import { Flex } from '../../../Flex';
 import type { TextAnimationContext } from '../types';
@@ -79,7 +78,7 @@ export function TextClip({ options }: TextAnimationContext<TextClipOptions>) {
   } as CSSProperties;
 
   return (
-    <Flex ref={stageRef} className={cx(styles.TextClip, 'ui-clip')} style={stageStyle}>
+    <Flex as='span' ref={stageRef} className={styles.TextClip} style={stageStyle}>
       {options.steps.map((step, index) => (
         <span
           key={index}
@@ -87,7 +86,7 @@ export function TextClip({ options }: TextAnimationContext<TextClipOptions>) {
           ref={(el) => {
             itemRefs.current[index] = el;
           }}
-          className={'ui-clip-item'}
+          className={styles.Item}
           style={{ opacity: index === displayedStep ? 1 : 0 }}
         >
           {step}

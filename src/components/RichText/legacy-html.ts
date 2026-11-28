@@ -1,4 +1,4 @@
-import { sanitizeRichTextHtml } from '../../core';
+import { sanitizeRichTextHtml } from '#core';
 
 export type LegacyTextBlock =
   | { type: 'heading'; level: 1 | 2 | 3 | 4 | 5 | 6; content: string }

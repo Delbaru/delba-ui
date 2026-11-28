@@ -1,3 +1,5 @@
+@forward './responsive-generated';
+@use './responsive-generated' as *;
 @use 'sass:list';
 @use 'sass:math';
 @use 'sass:string';
@@ -15,11 +17,7 @@
 }
 
 // Общие брейкпоинты (держать в синхроне с `app/globals.scss`)
-$breakpoints: (
-  m: '(max-width: 767px)',
-  t: '(min-width: 768px) and (max-width: 1023px)',
-  d: '(min-width: 1024px)'
-) !default;
+
 
 // Относительные unit-токены для size-классов.
 // Пример класса: width_vw_100 => width: 100vw;

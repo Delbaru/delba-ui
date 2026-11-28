@@ -2,7 +2,7 @@ import { register, createRequire } from 'node:module';
 import { accessSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-// Unit/SSR tests exercise behavior; actual styles are compiled and checked by the browser gate.
+// Unit and SSR tests load components through the stylesheet stub.
 register('./unit-styles.mjs', import.meta.url);
 
 // Existing SSR probes intentionally use createRequire. Keep their stylesheet handling identical.

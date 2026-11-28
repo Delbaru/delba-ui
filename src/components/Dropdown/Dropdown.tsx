@@ -2,8 +2,8 @@
 
 import { cloneElement } from 'react';
 import { createPortal } from 'react-dom';
-import { cx, stateProps, type WithRef } from '../../core';
-import { Box } from '../Box';
+import { cx, stateProps, type WithRef } from '#core';
+import { Flex } from '../Flex';
 import { DropdownAncestors, useDropdown } from './Dropdown.model';
 import { DropdownPanel } from './DropdownPanel/DropdownPanel';
 import type { DropdownProps } from './Dropdown.types';
@@ -36,23 +36,29 @@ export function Dropdown(props: WithRef<DropdownProps, HTMLDivElement>) {
 
   return (
     <DropdownAncestors.Provider value={scope.ids}>
-      <Box {...dropdown.root.props} className={cx(styles.Dropdown, scope.className)}>
+      <Flex
+          display={['inline-flex', 'inline-flex', 'inline-flex']}
+          {...dropdown.root.props}
+          data-ui-collapse-layout={undefined}
+          className={cx(styles.Dropdown, scope.className)}
+      >
         {dropdown.trigger.element && cloneElement(dropdown.trigger.element, dropdown.trigger.props)}
-        <Box {...dropdown.root.probe} className={styles.gapProbe} aria-hidden />
+        <Flex display={['block', 'block', 'block']} {...dropdown.root.probe} className={styles.gapProbe} aria-hidden />
         {scope.portal && scope.target
           ? createPortal(
-              <Box
+              <Flex
+                  display={['contents', 'contents', 'contents']}
                   ref={scope.ref}
                   className={cx(styles.PortalRoot, scope.className)}
                   style={scope.style}
                   {...stateProps(scope.state)}
               >
                 {panel}
-              </Box>,
+              </Flex>,
               scope.target,
             )
           : panel}
-      </Box>
+      </Flex>
     </DropdownAncestors.Provider>
   );
 }

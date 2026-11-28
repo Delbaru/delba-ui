@@ -1,16 +1,16 @@
 'use client';
 
 import { Component, cloneElement, type ReactNode, type RefObject } from 'react';
-import { MEDIA_QUERY, MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../core';
+import { MEDIA_QUERY, MOTION_END_BUFFER_MS, prefersReducedMotion } from '#core';
 import { readMotionTimeMs } from '../../core/base/timing';
 import { motionDistanceCss } from '../../core/base/distance';
 import { motionDefaults, readMotionDefaultMs } from '../../core/base/motion-config';
+import type { GridLayoutAnimate } from './Grid.types';
 import {
   layoutEntries,
   retainLayoutExits,
   layoutMoveFrames,
   type LayoutBox,
-  type GridLayoutAnimate,
   type LayoutEntry,
 } from './layout';
 
@@ -41,6 +41,7 @@ export class GridLayoutItems extends Component<Props, State, Snapshot> {
   >();
   private styles = new Map<HTMLElement, OwnedStyle[]>();
   private media: MediaQueryList | null = null;
+  private view: Window | null = null;
   private mounted = false;
 
   static getDerivedStateFromProps(props: Props, state: State): State | null {
@@ -53,15 +54,24 @@ export class GridLayoutItems extends Component<Props, State, Snapshot> {
 
   override componentDidMount() {
     this.mounted = true;
-    this.media =
-      this.props.host.current?.ownerDocument.defaultView?.matchMedia(MEDIA_QUERY.reducedMotion) ??
-      null;
+    // The parent host ref attaches after the child's layout lifecycle.
+    queueMicrotask(() => { if (this.mounted) this.connectMedia(); });
+  }
+
+  private connectMedia() {
+    const view = this.props.host.current?.ownerDocument.defaultView ?? null;
+    if (view === this.view) return;
+    this.media?.removeEventListener('change', this.reduceMotion);
+    this.view = view;
+    this.media = view?.matchMedia(MEDIA_QUERY.reducedMotion) ?? null;
     this.media?.addEventListener('change', this.reduceMotion);
   }
 
   override componentWillUnmount() {
     this.mounted = false;
     this.media?.removeEventListener('change', this.reduceMotion);
+    this.media = null;
+    this.view = null;
     this.cancelAnimations();
     this.styles.forEach((_value, node) => this.restoreStyle(node));
   }
@@ -91,6 +101,7 @@ export class GridLayoutItems extends Component<Props, State, Snapshot> {
   }
 
   override componentDidUpdate(_previous: Props, _state: State, snapshot: Snapshot) {
+    this.connectMedia();
     if (prefersReducedMotion(this.props.host.current?.ownerDocument.defaultView)) {
       this.reduceMotion();
       return;

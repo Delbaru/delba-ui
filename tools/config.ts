@@ -1,11 +1,10 @@
-import type { UiScale } from '../src/core/base/scale';
 import type { ScrollbarOptions } from '../src/components/ScrollArea/scrollbar';
-import type { ExtractOptions } from './utilities/extract';
 import type { ObserverMargin } from '../src/core/base/observer-margin';
 import type { UiMessageOverrides } from '../src/core/base/message-defaults';
 import type {
     CarouselBehaviorDefaults,
     MotionDefaultOverrides,
+    MotionDefaults,
 } from '../src/core/base/motion-defaults';
 import type {
     MotionEasingOverrides,
@@ -72,37 +71,106 @@ export interface UiSkins {
     readonly effects?: readonly string[];
 }
 
-/** Project theme sources and named padding values, relative to delba.config.ts. */
-export interface FrontendTheme {
-    /** Theme directories/files used by token checks, relative to delba.config.ts. */
-    readonly sources: readonly string[];
-    /** Named rpx padding: scalar, vertical/horizontal pair, or top/right/bottom/left. */
-    readonly padding?: Readonly<Record<string,
-        number | readonly [number, number] | readonly [number, number, number, number]
-    >>;
+/** Strict author tuple: desktop, mobile, tablet. Null preserves the base style. */
+export type FrontendTuple<T> = readonly [T | null, T | null, T | null];
+
+export interface FrontendResponsive {
+    readonly mobile: { readonly minWidth: 0; readonly designWidth: number; readonly scale: 'fixed' | 'fluid' };
+    readonly tablet: { readonly minWidth: number; readonly designWidth: number; readonly scale: 'fixed' | 'fluid' };
+    readonly desktop: { readonly minWidth: number; readonly designWidth: number; readonly scale: 'fixed' | 'fluid'; readonly scaleLimit: number };
 }
 
-/** Author settings in delba.config.ts → delbaFrontend. Paths are relative to that file. */
+export interface FrontendFont {
+    readonly family: string;
+    readonly fallback: string;
+    readonly faces: readonly {
+        readonly src: string;
+        readonly weight: number | string;
+        readonly style: 'normal' | 'italic';
+        readonly display: 'swap' | 'block' | 'fallback' | 'optional';
+    }[];
+}
+
+export interface FrontendInteractionColor {
+    readonly normal: string;
+    readonly hover: string;
+    readonly pressed: string;
+    readonly foreground: string;
+}
+
+export interface FrontendColors {
+    readonly primary: FrontendInteractionColor;
+    readonly secondary: FrontendInteractionColor;
+    readonly surface: string;
+    readonly text: string;
+    readonly line: string;
+    readonly error: string;
+    readonly warning: string;
+    readonly success: string;
+    readonly info: string;
+    readonly [role: string]: string | FrontendInteractionColor;
+}
+
+export interface FrontendTypography {
+    /** Key of fonts, not a repeated font stack. */
+    readonly fontFamily: FrontendTuple<string>;
+    readonly fontSize: FrontendTuple<number>;
+    readonly fontWeight: FrontendTuple<number>;
+    readonly lineHeight: FrontendTuple<number | string>;
+    readonly letterSpacing: FrontendTuple<number>;
+    readonly textTransform: FrontendTuple<'none' | 'uppercase' | 'lowercase' | 'capitalize' | 'full-width'>;
+}
+
+export type FrontendPadding = number | readonly [number, number] | readonly [number, number, number, number];
+export type FrontendLine = readonly [number, string] | readonly [number, string, string];
+export interface FrontendGeometry {
+    readonly spaces?: Readonly<Record<string, number>>;
+    readonly dimensions: Readonly<Record<string, number>>;
+    readonly positions: Readonly<Record<string, number>>;
+    readonly radii: Readonly<Record<string, number>>;
+    readonly padding: Readonly<Record<string, FrontendPadding>>;
+    readonly lines: Readonly<Record<string, FrontendLine>>;
+    readonly shadows: Readonly<Record<string, string>>;
+}
+
+/** Every shared behavior is an explicit author choice in the complete module contract. */
+export interface FrontendMotion extends UiMotion {
+    readonly distance: MotionDistances;
+    readonly defaults: MotionDefaults<string | number>;
+    readonly carousel: CarouselBehaviorDefaults;
+    readonly easing: Required<MotionEasingOverrides>;
+    readonly visibility: { readonly rootMargin: ObserverMargin };
+    readonly inView: { readonly rootMargin: ObserverMargin; readonly threshold: number };
+    readonly scroll: {
+        readonly duration?: number;
+        readonly minDuration: number;
+        readonly maxDuration: number;
+        readonly durationPerScreen: number;
+        readonly lerp: number;
+        readonly offset: string | number;
+        readonly easing: MotionEasingName | MotionEasingPreset;
+    };
+}
+
+/** One complete visual contract per application. Paths belong to its explicit host root. */
 export interface FrontendConfig {
-    /**
-     * Варианты типографики проекта: `['h1', 'p1']` → классы `text_h1`, `text_p1` на токенах
-     * `--font-h1`, `--tt-h1`, `--ls-h1`. Не задан — прежний набор кита. `UiTypography` проекта
-     * выводится из этого же списка (README, «Типографика»), второго нет.
-     */
-    readonly typography?: ExtractOptions['typography'];
-    readonly theme?: FrontendTheme;
-    readonly skins?: UiSkins;
-    /**
-     * Базовые ширины макета, px: `1rpx = окно / база` на своей полосе, десктоп шире `max` не растёт.
-     * Из них генерируются `--rpx` и `sizes` у `Img`. Умолчания: 320 / 768 / 1920, потолок 2560.
-     */
-    readonly scale?: Partial<UiScale>;
-    /** Motion duration tokens in seconds; names and values are defined together here. */
-    readonly motion?: UiMotion;
-    /** Image optimization policy. Private /api/ files stay unoptimized unless explicitly allowed. */
+    readonly responsive: FrontendResponsive;
+    readonly fonts: Readonly<Record<string, FrontendFont>> & { readonly primary: FrontendFont };
+    readonly colors: FrontendColors;
+    readonly gradients: Readonly<Record<string, string>>;
+    readonly typography: Readonly<Record<string, FrontendTypography>> & {
+        readonly body: FrontendTypography;
+        readonly caption: FrontendTypography;
+        readonly micro: FrontendTypography;
+        readonly title: FrontendTypography;
+    };
+    readonly geometry: FrontendGeometry;
+    readonly motion: FrontendMotion;
+    /** Numeric variable lengths are RPX; unitless coefficients, weights and layers are strings. */
+    readonly variables: Readonly<Record<string, string | number | FrontendTuple<string | number>>>;
+    readonly scrollbar: Required<Readonly<ScrollbarOptions>>;
     readonly images?: UiImages;
-    /** Native scrollbar defaults for ScrollArea, Modal and scrollbarProps. Durations are seconds. */
-    readonly scrollbar?: Readonly<ScrollbarOptions>;
-    /** Shared field messages and control labels; partial sections preserve the library defaults. */
     readonly messages?: UiMessageOverrides;
 }
+
+export { defaultMotion } from './visual/default-motion';

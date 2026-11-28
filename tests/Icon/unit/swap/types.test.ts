@@ -2,23 +2,25 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { motionTimeCss, readMotionTimeMs } from '../../../../src/core/base/timing';
-import { normalizeIconAnimate } from '../../../../src/components/Icon/swap/types';
+import { resolveIconChange } from '../../../../src/components/Icon/swap/types';
 
 test('normalizes modern icon changes, including zero-valued geometry', () => {
-  assert.deepEqual(normalizeIconAnimate({ when: 'change', effect: 'swap', duration: 'fast', scale: 1, rotate: 0 }), {
+  assert.deepEqual(resolveIconChange({ effect: 'swap', duration: 'fast', scale: 1, rotate: 0 }), {
     effect: 'swap', duration: 'fast', scale: 1, rotate: 0,
   });
-  assert.deepEqual(normalizeIconAnimate({ when: 'change', effect: 'spin', duration: 0, scale: 0 }), {
+  assert.deepEqual(resolveIconChange({ effect: 'spin', duration: 0, scale: 0 }), {
     effect: 'spin', duration: 0, scale: 0,
   });
 });
 
-test('rejects string and tuple aliases', () => {
-  for (const input of ['swap', ['spin'], ['spin', { duration: 0.24 }]]) assert.equal(normalizeIconAnimate(input), undefined);
+test('rejects legacy change forms', () => {
+  for (const input of ['swap', ['spin'], { when: 'change', effect: 'spin' }]) {
+    assert.equal(resolveIconChange(input), undefined);
+  }
 });
 
 test('named icon duration shares the local theme token between CSS and phase timing', () => {
-  const config = normalizeIconAnimate({ when: 'change', effect: 'spin', duration: 'fast' });
+  const config = resolveIconChange({ effect: 'spin', duration: 'fast' });
   assert.equal(config?.duration, 'fast');
   const duration = config?.duration ?? 0;
   assert.equal(motionTimeCss(duration), 'var(--t-d-fast)');
@@ -32,8 +34,8 @@ test('named icon duration shares the local theme token between CSS and phase tim
 });
 
 test('ignores appearance, hover and unsupported change effects', () => {
-  assert.equal(normalizeIconAnimate({ when: 'load', effect: 'swap' }), undefined);
-  assert.equal(normalizeIconAnimate({ when: 'hover', effect: 'transform' }), undefined);
-  assert.equal(normalizeIconAnimate({ when: 'change', effect: 'fade' }), undefined);
-  assert.equal(normalizeIconAnimate(undefined), undefined);
+  assert.equal(resolveIconChange({ when: 'load', effect: 'up' }), undefined);
+  assert.equal(resolveIconChange({ effect: 'transform' }), undefined);
+  assert.equal(resolveIconChange({ effect: 'fade' }), undefined);
+  assert.equal(resolveIconChange(undefined), undefined);
 });

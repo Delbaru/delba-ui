@@ -1,11 +1,10 @@
 import type { MouseEventHandler, ReactElement, ReactNode, RefObject } from 'react';
-import type { ComponentStateValue } from '../../core';
+import type { ComponentStateValue } from '#core';
 import type { FloatingDismissReason } from '../../hooks/useFloatingSurface';
 import type { FloatingStrategy, FloatingPlacement } from '../../hooks/useAnchoredFloating';
-import type { OpenAnimate } from '../../core/reveal/reveal';
-import type { BoxProps } from '../Box';
-import type { CollapseSettings } from '../Collapse/CollapseWrap';
-import type { DropdownBackdropOptions } from './DropdownBackdrop/DropdownBackdrop';
+import type { OpenMotionChannels } from '#core/Motion';
+import type { FlexProps } from '../Flex';
+import type { CollapseOptions, CollapseSettings } from '../Collapse/CollapseWrap';
 
 export interface DropdownTriggerProps {
   onClick?: MouseEventHandler<HTMLElement>;
@@ -15,11 +14,13 @@ export interface DropdownTriggerProps {
   'aria-controls'?: string;
 }
 
-export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'collapse' | 'animate'> {
+type DropdownSurfaceProps = Omit<FlexProps, 'as' | 'href' | 'target' | 'rel' | 'download' | 'children' | 'collapse'>;
+
+export interface DropdownPanelOptions extends DropdownSurfaceProps {
   /** Owning surface for the portal and fixed placement bounds; defaults to modal/document context. */
   boundaryRef?: RefObject<HTMLElement | null>;
-  /** An owner's open drives enter/exit; without it the existing collapse behavior is preserved. */
-  animate?: BoxProps['animate'] | OpenAnimate;
+  /** Set appearance.when to open for enter/exit. Other effects use the collapse panel. */
+  animate?: FlexProps['animate'];
   /** Geometry anchor; keyboard focus and trigger semantics remain attached to trigger. */
   anchorRef?: RefObject<HTMLElement | null>;
   /** Minimum distance from viewport edges in native pixels. Default 8. */
@@ -46,7 +47,13 @@ export interface DropdownPanelOptions extends Omit<BoxProps, 'children' | 'colla
   collapse?: Omit<CollapseSettings, 'ref' | 'onOpenChange' | 'keepMounted' | 'onFound'>;
 }
 
-interface DropdownBaseProps extends Omit<BoxProps, 'children'> {
+export interface DropdownBackdropOptions extends Pick<FlexProps, 'bg' | 'className' | 'style'> {
+  /** Shared enter/exit effect. Defaults to a fast fade. */
+  animate?: OpenMotionChannels;
+}
+
+interface DropdownBaseProps extends DropdownSurfaceProps {
+  collapse?: CollapseOptions;
   /** Dismissal rules. Outside pointer dismissal remains enabled; blur and Escape default true. */
   closeOn?: { blur?: boolean; escape?: boolean };
   /** Logical focus regions belonging to an externally anchored control. */

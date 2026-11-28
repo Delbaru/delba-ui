@@ -2,30 +2,16 @@
 
 import { UI_MESSAGES, formatUiMessage } from '../../../core/base/messages';
 
-import { Fragment, useId, type ReactNode } from 'react';
+import { Fragment, useId } from 'react';
 
 import styles from './CarouselDots.module.scss';
 
 import { useNearestCarouselControls } from '../controls';
 import { Button } from '../../Button';
-import { Flex, type FlexProps } from '../../Flex';
-import { cx } from '../../../core';
+import { Flex } from '../../Flex';
+import { cx } from '#core';
 
-export interface CarouselDotItem {
-  /** Zero-based page index from the carousel, including grouped slides. */
-  index: number;
-  /** Current page; also updates after dragging or arrow navigation. */
-  isActive: boolean;
-  /** Navigate through the carousel's own API. */
-  onSelect: () => void;
-}
-
-export interface CarouselDotsProps extends Omit<FlexProps, 'children'> {
-  /** Connect to a carousel outside the nearest enclosing element. */
-  carouselId?: string;
-  /** Replace a dot with a thumbnail or label. The renderer owns the accessible button and its styling. */
-  renderItem?: (item: CarouselDotItem) => ReactNode;
-}
+import type { CarouselDotsProps } from './CarouselDots.types';
 
 export function CarouselDots({ className, carouselId, renderItem, ...props }: CarouselDotsProps) {
   const baseId = useId().replace(/:/g, '');

@@ -27,24 +27,6 @@ export interface HoverTransformOptions extends HoverTransformValues {
     easing?: string;
 }
 
-export interface HoverTransformAnimate extends HoverTransformOptions {
-    /** Pointer hover and keyboard focus within the selected source share one CSS state. */
-    when: 'hover';
-}
-
-export function isHoverTransformAnimate(value: unknown): value is HoverTransformAnimate {
-    if (!value || typeof value !== 'object') return false;
-    return 'when' in value && value.when === 'hover' && 'effect' in value && value.effect === 'transform';
-}
-
-export function resolveHoverTransform(value: unknown): HoverTransformOptions | undefined {
-    if (isHoverTransformAnimate(value)) return value;
-    if (!value || typeof value !== 'object' || !('hover' in value)) return undefined;
-    const hover = value.hover;
-    return hover && typeof hover === 'object' && 'effect' in hover && hover.effect === 'transform'
-        ? hover as HoverTransformOptions : undefined;
-}
-
 function distance(value: MotionDistance | undefined): string {
     if (value === undefined) return '0px';
     const negative = typeof value === 'number' ? value < 0 : value.startsWith('-');

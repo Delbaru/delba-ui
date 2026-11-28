@@ -7,14 +7,13 @@ import {
     autoDurationMs,
     canScrollBy,
     clampScroll,
-    easeOutExpo,
     hashTarget,
     isManualDrift,
     lerpStep,
     offsetCss,
     tweenPosition,
     wheelDeltaPx,
-} from '../../../src/components/SmoothScroll/smooth-scroll';
+} from '../../../src/core/Scroll/Smooth/smooth-scroll';
 
 test('wheelDeltaPx приводит строки и страницы к пикселям', () => {
     assert.equal(wheelDeltaPx(100, 0, 800), 100);
@@ -45,8 +44,6 @@ test('tweenPosition идёт по функции хода и приходит р
     assert.deepEqual(tweenPosition(0, 200, 500, 1000, linear), { y: 100, done: false });
     assert.deepEqual(tweenPosition(0, 200, 1000, 1000, linear), { y: 200, done: true });
     assert.deepEqual(tweenPosition(100, 0, 0, 0, linear), { y: 0, done: true });
-    assert.equal(easeOutExpo(0), 0);
-    assert.equal(easeOutExpo(1), 1);
 });
 
 test('scroll presets preserve endpoints, monotonic motion and the symmetric curve', () => {

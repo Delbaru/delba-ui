@@ -1,0 +1,15 @@
+@layer ui.components {
+  .LexicalTextareaField {
+    transition: var(--t-fast);
+    cursor: text;
+  }
+
+  .underline {
+    text-decoration: underline;
+  }
+}
+
+@layer ui.states {
+  .LexicalTextareaField:focus-within { border-color: var(--primary); }
+  .LexicalTextareaField[data-state~='error'] { border-color: var(--error); }
+}

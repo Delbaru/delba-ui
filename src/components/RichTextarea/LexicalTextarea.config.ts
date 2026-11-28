@@ -1,8 +1,10 @@
-import type { BoxLayoutProps } from '../../core';
+import type { BoxLayoutProps } from '#core';
 import { UI_MESSAGES, formatUiMessage } from '../../core/base/messages';
 import type { LexicalTextareaChangePayload, LexicalTextareaVariable } from './types';
 
 export const NO_VARIABLES: LexicalTextareaVariable[] = [];
+export const DEFAULT_EDITOR_VARIANT = 'style-1';
+export const DEFAULT_EDITOR_PLACEHOLDER_COLOR = 'var(--field-placeholder-color, var(--text-muted))';
 
 /** Layout of the painted editor field, distinct from the outer label/feedback composition. */
 const FIELD_LAYOUT = new Set<keyof BoxLayoutProps>([

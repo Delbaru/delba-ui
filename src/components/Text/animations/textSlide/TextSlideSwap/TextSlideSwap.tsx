@@ -3,7 +3,7 @@
 
 import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 
-import { cx, MOTION_END_BUFFER_MS, prefersReducedMotion } from '../../../../../core';
+import { cx, MOTION_END_BUFFER_MS, prefersReducedMotion } from '#core';
 import { useMotionTime } from '../../../../../hooks/useMotionTime';
 import { flattenAnimatableText } from '../../flattenText';
 import { useTextSwap, commonAffixes } from '../../textReveal/useTextSwap';
@@ -90,14 +90,14 @@ export function TextSlideSwap({ content, options }: TextAnimationContext<TextSli
   const vars = { '--slide-swap-dur': `${durationMs}ms` } as CSSProperties;
   if (options?.by === 'text') {
     return (
-      <span ref={viewportRef} className="ui-slide-swap ui-slide-swap-value" style={vars}>
-        <span className="ui-slide-value-viewport">
+      <span ref={viewportRef} className={cx(styles.TextSlideSwap, styles.Value)} style={vars}>
+        <span className={styles.ValueViewport}>
           {previous !== null && (
             <span
                 key={`out-${generation}`}
                 data-swap-out=""
                 aria-hidden="true"
-                className="ui-slide-value-out"
+                className={styles.ValueOut}
             >
               {previous}
             </span>
@@ -105,7 +105,7 @@ export function TextSlideSwap({ content, options }: TextAnimationContext<TextSli
           <span
               key={`in-${generation}`}
               data-swap-in=""
-              className={previous === null ? 'ui-slide-value-static' : 'ui-slide-value-in'}
+              className={previous === null ? styles.ValueStatic : styles.ValueIn}
           >
             {current}
           </span>
@@ -123,22 +123,22 @@ export function TextSlideSwap({ content, options }: TextAnimationContext<TextSli
   const sameLen = previousChars !== null && prevLen === currentChars.length;
 
   const staticCell = (key: string, ch: string): ReactNode => (
-    <span key={key} className={'ui-slide-swap-static'}>
+    <span key={key} className={styles.Static}>
       {nbsp(ch)}
     </span>
   );
   const swapCellNode = (key: string, outStr: string, inStr: string): ReactNode => (
-    <span key={key} data-swap-cell="" className={'ui-slide-swap-cell'}>
+    <span key={key} data-swap-cell="" className={styles.Cell}>
       <span
           key={`out-${generation}`}
           data-swap-out=""
-          className={'ui-slide-swap-out'}
+          className={styles.Out}
           aria-hidden="true"
       >
         {nbsp(outStr)}
       </span>
 
-      <span key={`in-${generation}`} data-swap-in="" className={'ui-slide-swap-in'}>
+      <span key={`in-${generation}`} data-swap-in="" className={styles.In}>
         {nbsp(inStr)}
       </span>
     </span>
@@ -171,7 +171,7 @@ export function TextSlideSwap({ content, options }: TextAnimationContext<TextSli
   let wordKey = 0;
   const flushWord = () => {
     if (word.length === 0) return;
-    groups.push(<span key={`w${wordKey++}`} className={'ui-slide-swap-word'}>{word}</span>);
+    groups.push(<span key={`w${wordKey++}`} className={styles.Word}>{word}</span>);
     word = [];
   };
   cells.forEach((c) => {
@@ -183,7 +183,7 @@ export function TextSlideSwap({ content, options }: TextAnimationContext<TextSli
   flushWord();
 
   return (
-    <span ref={viewportRef} className={cx(styles.TextSlideSwap, 'ui-slide-swap')} style={vars}>
+    <span ref={viewportRef} className={styles.TextSlideSwap} style={vars}>
       {groups}
     </span>
   );

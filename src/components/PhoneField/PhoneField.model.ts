@@ -2,18 +2,19 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CountryCode } from 'libphonenumber-js/min';
-import { useMergedRefs, type FieldValueChangeDetails, type WithRef } from '../../core';
+import { useMergedRefs, type FieldValueChangeDetails, type WithRef } from '#core';
 import { scheduleCaretRestore } from '../../core/base/restore-caret';
 import { getPhoneCountries, isAllowedPhoneCountry } from './countries';
 import { phoneNumbers } from './phone-number';
-import type { PhoneFieldProps } from './PhoneField';
+import { phoneFieldDefaults } from './PhoneField.config';
+import type { PhoneFieldProps } from './PhoneField.types';
 
 /** Country selection and international formatting share one controlled model value. */
 export function usePhoneField(props: WithRef<PhoneFieldProps, HTMLInputElement>) {
   const {
     country,
     value,
-    locale = 'ru',
+    locale = phoneFieldDefaults.locale,
     onChange,
     onValueChange,
     validate,

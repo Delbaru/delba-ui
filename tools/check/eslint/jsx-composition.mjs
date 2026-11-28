@@ -95,7 +95,7 @@ export function checkJsxComposition(source) {
 
 export const jsxCompositionRule = {
     id: 'jsx-composition',
-    docs: 'docs/specs/architecture/principles.md',
+    docs: 'docs/architecture.md',
     check(source) { return checkJsxComposition(source); },
     meta: { type: 'suggestion', schema: [], messages: { layout: 'Review this local JSX layout; JSX slots and render props remain supported.' } },
     create(context) {
@@ -117,7 +117,7 @@ const skipFileLength = file => /\.(?:test|spec|type-test|typecheck|d|config)\.[c
 
 export const fileLengthRule = {
     id: 'file-length',
-    docs: 'docs/specs/architecture/principles.md',
+    docs: 'docs/architecture.md',
     check(source, { max = 200 } = {}) {
         if (skipFileLength(source.fileName)) return [];
         const lines = source.text.split(/\r?\n/).length;

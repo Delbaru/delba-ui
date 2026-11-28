@@ -1,10 +1,11 @@
 'use client';
 
-import { cx } from '../../../core';
+import { cx } from '#core';
 import { Flex } from '../../Flex';
 import { Grid } from '../../Grid';
 import { Text } from '../../Text';
 import { Icon } from '../../Icon';
+import { MEDIA_UPLOAD_ICON } from '../MediaDropDown.config';
 import type { MediaDropDownModel } from '../MediaDropDown.model';
 import styles from './MediaTabs.module.scss';
 import { Button } from '../../Button';
@@ -33,7 +34,7 @@ export function MediaTabs({ media }: { media: Pick<MediaDropDownModel, 'type' | 
                 onClick={() => media.type.choose(option.type)}
             >
               <Icon
-                  name={option.icon}
+                  src={option.iconSrc}
                   w={[16, 16, 16]}
                   h={[16, 16, 16]}
                   className={styles.TypeIcon}
@@ -58,7 +59,7 @@ export function MediaTabs({ media }: { media: Pick<MediaDropDownModel, 'type' | 
             onClick={media.file.open}
         >
           <Icon
-              name="ui/upload/style-2/upload"
+              src={MEDIA_UPLOAD_ICON}
               w={[16, 16, 16]}
               h={[16, 16, 16]}
               className={styles.UploadIcon}

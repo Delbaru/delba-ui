@@ -101,14 +101,22 @@ export function checkImportBoundaries(root, { dirs = ['src'], mode = 'os' } = {}
     return issues;
 }
 
-/** Tests belong to root tests/ or a named tool's tests harness, never beside runtime modules. */
+/** Enforce the root tests/ directory within the owning checkout. */
 export function checkTestPlacement(root) {
-    const visit = directory => !fs.existsSync(directory) ? [] : fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
-        const file = path.join(directory, entry.name);
-        if (entry.isDirectory()) return entry.name === 'node_modules' ? [] : visit(file);
-        if (!TEST_FILE.test(entry.name)) return [];
-        const relative = slash(path.relative(root, file));
-        return !relative.startsWith('src/') && relative.split('/').includes('tests') ? [] : [relative];
-    });
-    return ['src', 'tools'].flatMap(directory => visit(path.join(root, directory))).sort();
+    if (!fs.existsSync(root)) return [];
+    const violations = [];
+    function visit(directory) {
+        for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+            const file = path.join(directory, entry.name);
+            if (entry.isDirectory()) {
+                if (entry.name.startsWith('.') || entry.name === 'node_modules' || fs.existsSync(path.join(file, '.git'))) continue;
+                if (directory === root && entry.name === 'tests') continue;
+                visit(file);
+            } else if (entry.isFile() && TEST_FILE.test(entry.name)) {
+                violations.push(slash(path.relative(root, file)));
+            }
+        }
+    }
+    visit(root);
+    return violations.sort();
 }

@@ -1,7 +1,7 @@
 @layer ui.components {
   .MediaTrigger { cursor: pointer; transition: var(--t-fast); }
   .TriggerLabel {
-    color: var(--black);
+    color: var(--text);
     flex: 1;
     min-width: 0;
     white-space: nowrap;
@@ -37,14 +37,14 @@
     min-height: calc(var(--rpx) * 32);
     max-height: calc(var(--rpx) * 32);
     padding: 0;
-    background: var(--white-100);
+    background: var(--primary-foreground);
     border: calc(var(--rpx) * 1) solid var(--line);
     border-radius: var(--s-8);
     transition: var(--t-fast);
 
     &:hover {
       border-color: var(--text-muted);
-      background: var(--background);
+      background: var(--surface);
     }
   }
   .ClearIcon,
@@ -54,7 +54,7 @@
   }
   .PreviewButton:hover {
     border-color: var(--primary);
-    background: var(--background);
+    background: var(--surface);
 
     .PreviewIcon,
     .PlayIcon {
@@ -62,8 +62,8 @@
     }
   }
   .ClearButton:hover {
-    border-color: var(--error-light);
-    background: var(--error-light);
+    border-color: color-mix(in srgb, var(--error) 12%, var(--surface));
+    background: color-mix(in srgb, var(--error) 12%, var(--surface));
 
     .ClearIcon {
       color: var(--error);
@@ -79,7 +79,7 @@
       border-bottom-left-radius: 0;
 
       .TriggerIconRoot {
-        background: var(--primary-light);
+        background: var(--secondary);
         border-color: var(--primary);
       }
 

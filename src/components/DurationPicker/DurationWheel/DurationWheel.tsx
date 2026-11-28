@@ -9,7 +9,8 @@ import {
   type KeyboardEvent,
   type PointerEvent,
 } from 'react';
-import { clamp, cx } from '../../../core';
+import { clamp, cx } from '#core';
+import { beginPointerGesture, type PointerGestureSession } from '../../../core/base/pointer-gesture';
 import { readMotionTimeMs } from '../../../core/base/timing';
 import { Flex } from '../../Flex';
 import { Text } from '../../Text';
@@ -40,16 +41,10 @@ interface WheelController {
   onChange(value: number): void;
 }
 
-interface DragState {
-  startY: number;
-  startValue: number;
-  moved: boolean;
-}
-
 /** A bounded spinbutton with wheel, pointer, click, keyboard, and directional value motion. */
 export function DurationWheel({ value, max, label, disabled, onChange }: WheelProps) {
   const node = useRef<HTMLDivElement>(null);
-  const drag = useRef<DragState | null>(null);
+  const drag = useRef<PointerGestureSession | null>(null);
   const latest = useRef<WheelController>({ value, max, disabled, onChange });
   const [motionDuration, setMotionDuration] = useState(0);
 
@@ -57,9 +52,11 @@ export function DurationWheel({ value, max, label, disabled, onChange }: WheelPr
     setMotionDuration(readMotionTimeMs('fast', node.current ?? undefined));
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     latest.current = { value, max, disabled, onChange };
   }, [disabled, max, onChange, value]);
+
+  useLayoutEffect(() => () => drag.current?.cancel(), [disabled]);
 
   useEffect(() => {
     const wheelNode = node.current;
@@ -115,35 +112,33 @@ export function DurationWheel({ value, max, label, disabled, onChange }: WheelPr
   }
 
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
-    if (disabled || event.button !== 0) return;
-
-    event.currentTarget.focus();
-    drag.current = { startY: event.clientY, startValue: value, moved: false };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-
-  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
-    const currentDrag = drag.current;
-    if (!currentDrag) return;
-
-    const steps = Math.trunc((currentDrag.startY - event.clientY) / WHEEL_STEP_PX);
-    if (steps !== 0) currentDrag.moved = true;
-    if (currentDrag.moved) change(currentDrag.startValue + steps);
-  }
-
-  function handlePointerUp(event: PointerEvent<HTMLDivElement>) {
-    const currentDrag = drag.current;
-    drag.current = null;
-
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    if (!currentDrag || currentDrag.moved) return;
-
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const cellHeight = bounds.height / 3;
-    const offset = Math.floor((event.clientY - bounds.top) / cellHeight) - 1;
-    change(value + offset);
+    if (disabled || event.defaultPrevented || event.button !== 0 || !event.isPrimary) return;
+    const target = event.currentTarget;
+    const startY = event.clientY;
+    let previousSteps = 0;
+    let moved = false;
+    drag.current?.cancel();
+    target.focus();
+    drag.current = beginPointerGesture(event, {
+      onMove(pointer) {
+        const steps = Math.trunc((startY - pointer.clientY) / WHEEL_STEP_PX);
+        if (steps === previousSteps) return;
+        moved = true;
+        previousSteps = steps;
+        const current = latest.current;
+        if (!current.disabled) current.onChange(clamp(value + steps, 0, current.max));
+      },
+      onFinish(result) {
+        drag.current = null;
+        const current = latest.current;
+        if (result.reason !== 'up' || moved || current.disabled) return;
+        const bounds = target.getBoundingClientRect();
+        if (bounds.height === 0) return;
+        const cellHeight = bounds.height / 3;
+        const offset = Math.floor((result.clientY - bounds.top) / cellHeight) - 1;
+        current.onChange(clamp(current.value + offset, 0, current.max));
+      },
+    });
   }
 
   function renderLayer(layer: WheelLayer) {
@@ -213,10 +208,6 @@ export function DurationWheel({ value, max, label, disabled, onChange }: WheelPr
         tabIndex={disabled ? -1 : 0}
         onKeyDown={handleKeyDown}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={() => { drag.current = null; }}
-        onLostPointerCapture={() => { drag.current = null; }}
     >
       {layers.map(renderLayer)}
     </Flex>

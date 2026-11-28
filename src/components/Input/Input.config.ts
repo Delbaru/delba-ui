@@ -1,5 +1,4 @@
-import type { CSSProperties } from 'react';
-import type { WithRef } from '../../core';
+import type { WithRef } from '#core';
 
 import {
   createLayoutClasses,
@@ -10,8 +9,7 @@ import {
   resolveFieldLayout,
   splitBoxLayout,
   stateProps,
-} from '../../core';
-import { textFont } from '../../core/base/typography';
+} from '#core';
 import type { InputProps } from './Input.types';
 import styles from './Input.module.scss';
 
@@ -57,9 +55,6 @@ function appearance(props: AppearanceOptions, state: FieldState) {
     color: props.color,
     placeholderColor: props.placeholderColor,
   });
-  const fontStyle: CSSProperties | undefined = props.font
-    ? ({ '--field-font-variant': textFont(props.font) } as CSSProperties)
-    : undefined;
 
   return {
     helperPadding: fieldHelperPaddingLeft(layout.p, layout.pl),
@@ -73,6 +68,7 @@ function appearance(props: AppearanceOptions, state: FieldState) {
     root: {
       className: cx(
           styles.Input,
+          ...classes.value('text', props.font ? [props.font, props.font, props.font] : undefined),
           ...fieldRootLayoutClasses(classes, box),
           state.inputType,
           styles[state.inputType],
@@ -80,15 +76,18 @@ function appearance(props: AppearanceOptions, state: FieldState) {
       ),
       style: props.style,
       collapse: props.collapse,
+      animate: props.animate,
+      perspective3d: props.perspective3d,
+      parallax: props.parallax,
+      linkState: props.linkState,
       ...stateProps(state.active && 'active'),
     },
     control: {
       className: cx(
-        props.font && styles.font,
         ...fieldLayoutClasses(classes, layout),
         props.rowClassName,
       ),
-      style: fontStyle,
+      style: undefined,
       ...stateProps(
         props.state,
         state.error && 'error',

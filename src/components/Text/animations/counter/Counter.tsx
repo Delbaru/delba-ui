@@ -1,17 +1,16 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, type Ref } from 'react';
 
 import styles from './Counter.module.scss';
-import { cx } from '../../../../core';
 
 import { useInView } from '../../../../core/useInView';
 import { useCountUpNode } from './useCountUp';
-import { parseCountContent } from './parseContent';
+import { resolveCounterContent } from './parseContent';
 import type { TextAnimationContext } from '../types';
 import type { CounterOptions } from './types';
 import { motionDefaults } from '../../../../core/base/motion-config';
-import { useMergedRefs } from '../../../../core';
+import { useMergedRefs } from '#core';
 
 /**
  * Анимация счётчика: число едет от start к to. trigger='onView' (по умолчанию) запускает анимацию,
@@ -33,49 +32,36 @@ export function Counter({ options, content }: TextAnimationContext<CounterOption
   const { isInView, setTarget } = useInView(ref, { threshold: motionDefaults.counter.threshold });
   const rootRef = useMergedRefs(ref, setTarget);
 
-  const parsed = options?.to == null ? parseCountContent(content) : null;
-  const to = options?.to ?? parsed?.to ?? 0;
-  const prefix = parsed?.prefix ?? '';
-  const suffix = options?.suffix ?? parsed?.suffix ?? '';
-  const grouped = options?.grouped ?? parsed?.grouped ?? false;
+  const { to, places, text } = resolveCounterContent(content, options);
   const trigger = options?.trigger ?? 'onView';
   const changing = trigger === 'onChange';
   const shouldStart = changing || trigger === 'onLoad' || (trigger === 'onView' && isInView);
 
   const initial = useRef(changing ? to : options?.start ?? 0);
   const start = changing ? initial.current : options?.start ?? 0;
-  const decimal = parsed?.decimal;
-  const format = (value: number) => {
-    if (!decimal) return grouped ? value.toLocaleString('ru-RU') : String(value);
-    const formatted = value.toLocaleString('ru-RU', {
-      useGrouping: grouped,
-      minimumFractionDigits: decimal.places,
-      maximumFractionDigits: decimal.places,
-    });
-    return decimal.separator === ',' ? formatted : formatted.replace(',', decimal.separator);
-  };
-  const text = (value: number) => `${prefix}${format(value)}${suffix}`;
-
   useCountUpNode(
     valueRef,
     to,
-    { duration: options?.duration, start, retarget: changing, places: decimal?.places },
+    { duration: options?.duration, start, retarget: changing, places },
     shouldStart,
     !changing && !isInView,
     text,
   );
 
-  return (
-    <span ref={rootRef} className={cx(styles.Counter, 'ui-counter')}>
-      <span aria-hidden className={'ui-counter-reserve'}>
-        {prefix}
-        {format(to)}
-        {suffix}
-      </span>
+  return <CounterValue ref={rootRef} valueRef={valueRef} finalText={text(to)} currentText={text(start)} />;
+}
 
-      <span ref={valueRef} className={'ui-counter-value'}>
-        {text(start)}
-      </span>
+/** The final value reserves space for the count on both standalone and timeline paths. */
+export function CounterValue({ ref, valueRef, finalText, currentText }: {
+  ref?: Ref<HTMLSpanElement>;
+  valueRef: Ref<HTMLSpanElement>;
+  finalText: string;
+  currentText: string;
+}) {
+  return (
+    <span ref={ref} className={styles.Counter}>
+      <span aria-hidden className={styles.Reserve}>{finalText}</span>
+      <span ref={valueRef} className={styles.Value}>{currentText}</span>
     </span>
   );
 }

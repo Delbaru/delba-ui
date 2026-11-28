@@ -1,4 +1,4 @@
-import { resolveResponsive, type ResponsiveInput } from '../../core/base/responsive';
+import { resolveResponsiveInput, type ResponsiveInput } from '../../core/base/responsive';
 import { imageSizes, type UiScale } from '../../core/base/scale';
 import type { SizeValue } from '../../core/layout/size';
 
@@ -80,16 +80,16 @@ export function imageSourceSizes({
   source,
   scale,
 }: ImageSizingInput): string {
-  const widths = resolveResponsive(width ?? null);
-  const heights = resolveResponsive(height ?? null);
-  const aspects = resolveResponsive(aspectRatio ?? null);
-  const fits = resolveResponsive(objectFit);
+  const widths = resolveResponsiveInput(width ?? null);
+  const heights = resolveResponsiveInput(height ?? null);
+  const aspects = resolveResponsiveInput(aspectRatio ?? null);
+  const fits = resolveResponsiveInput(objectFit);
   const dimensions = sourceDimensions(source);
   const sourceAspect = dimensions ? dimensions.width / dimensions.height : null;
 
   const sizedWidths = widths.map((bandWidth, index) => {
     const band = ['desktop', 'mobile', 'tablet'][index] ?? 'unknown';
-    const explicitAspect = parseAspect(aspects[index] ?? aspects[0] ?? undefined);
+    const explicitAspect = parseAspect(aspects[index] ?? undefined);
     const frameWidth = bandWidth ?? null;
     const frameHeight = heights[index] ?? null;
     const frameAspect = explicitAspect ?? ratioFromDimensions(frameWidth, frameHeight);

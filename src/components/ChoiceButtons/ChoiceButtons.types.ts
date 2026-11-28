@@ -1,3 +1,5 @@
+import type { MotionChannels, SurfaceMotionOptions } from '#core/Motion';
+
 export interface ChoiceButtonsItem<T extends string = string> {
     value: T;
     label: string;
@@ -5,7 +7,10 @@ export interface ChoiceButtonsItem<T extends string = string> {
     onSelect?: (value: T) => void;
 }
 
-export interface ChoiceButtonsProps<T extends string = string> {
+export interface ChoiceButtonsProps<T extends string = string>
+    extends Pick<SurfaceMotionOptions, 'perspective3d' | 'parallax'> {
+    /** Motion channels for the visible desktop track or mobile field. */
+    animate?: MotionChannels;
     /** Варианты; `as const` сужает `T` до литералов значений. */
     items: readonly ChoiceButtonsItem<T>[];
     /** Имя выбранного значения в FormData. */
@@ -29,3 +34,4 @@ export interface ChoiceButtonsProps<T extends string = string> {
     infoClassName?: string;
     tooltipClassName?: string;
 }
+
